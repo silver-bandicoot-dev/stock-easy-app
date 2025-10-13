@@ -275,28 +275,43 @@ const Modal = ({ isOpen, onClose, title, children, footer }) => {
 // FONCTIONS UTILITAIRES
 // ============================================
 const calculateMetrics = (product) => {
+  // Calcul de l'autonomie en jours
   const daysOfStock = product.salesPerDay > 0 ? Math.floor(product.stock / product.salesPerDay) : 999;
+  
+  // Stock de sécurité: utiliser la valeur custom si définie, sinon 20% du délai fournisseur
+  const securityStock = product.customSecurityStock !== undefined && product.customSecurityStock !== null 
+    ? product.customSecurityStock 
+    : Math.round(product.delay * 0.2);
   
   let healthStatus = 'healthy';
   let healthPercentage = 100;
   
-  if (daysOfStock < product.securityStock) {
+  // NOUVELLE LOGIQUE basée sur l'autonomie vs stock de sécurité
+  if (daysOfStock < securityStock) {
+    // URGENT: autonomie inférieure au stock de sécurité
     healthStatus = 'urgent';
-    healthPercentage = Math.max(5, Math.min(25, (daysOfStock / product.securityStock) * 25));
-  } else if (daysOfStock < product.securityStock * 1.2) {
+    healthPercentage = Math.max(5, Math.min(25, (daysOfStock / securityStock) * 25));
+  } else if (daysOfStock < securityStock * 1.2) {
+    // WARNING: autonomie entre stock sécu et stock sécu x 1.2
     healthStatus = 'warning';
-    const ratio = (daysOfStock - product.securityStock) / (product.securityStock * 0.2);
+    const ratio = (daysOfStock - securityStock) / (securityStock * 0.2);
     healthPercentage = 25 + (ratio * 25);
   } else {
+    // HEALTHY: autonomie > stock sécu x 1.2
     healthStatus = 'healthy';
-    healthPercentage = Math.min(100, 50 + ((daysOfStock - product.securityStock * 1.2) / (product.securityStock * 2)) * 50);
+    healthPercentage = Math.min(100, 50 + ((daysOfStock - securityStock * 1.2) / (securityStock * 2)) * 50);
   }
+  
+  // Détection surstock profond (> 180 jours)
+  const isDeepOverstock = daysOfStock > 180;
   
   return {
     ...product,
     daysOfStock,
+    securityStock,
     healthStatus,
-    healthPercentage: Math.round(healthPercentage)
+    healthPercentage: Math.round(healthPercentage),
+    isDeepOverstock
   };
 };
 
@@ -322,6 +337,11 @@ const StockEasy = () => {
   const [reconciliationOrder, setReconciliationOrder] = useState(null);
   const [dateRange, setDateRange] = useState('30d');
   const [historyFilter, setHistoryFilter] = useState('all');
+  const [discrepancyModalOpen, setDiscrepancyModalOpen] = useState(false);
+  const [discrepancyItems, setDiscrepancyItems] = useState({});
+  const [damageModalOpen, setDamageModalOpen] = useState(false);
+  const [damageItems, setDamageItems] = useState({});
+  const [damageNotes, setDamageNotes] = useState('');
 
   useEffect(() => {
     loadData();
@@ -435,32 +455,60 @@ const StockEasy = () => {
     return notifs;
   }, [productsByStatus, orders]);
 
-  const analyticsData = {
-    skuAvailability: { 
-      value: '82%', 
-      change: 19, 
-      changePercent: 39,
-      trend: 'up',
-      description: tooltips.skuAvailability,
-      chartData: [30, 35, 40, 45, 52, 60, 65, 70, 75, 82]
-    },
-    salesLost: { 
-      value: '€13,642', 
-      change: -39, 
-      changePercent: 39,
-      trend: 'down',
-      description: tooltips.salesLost,
-      chartData: [80, 75, 85, 90, 70, 60, 75, 65, 55, 50]
-    },
-    deepOverstock: { 
-      value: '€5,716', 
-      change: 92, 
-      changePercent: 92,
-      trend: 'up',
-      description: tooltips.deepOverstock,
-      chartData: [20, 25, 30, 35, 40, 50, 60, 70, 80, 90]
-    }
-  };
+  // CALCUL DES VRAIS KPIs ANALYTICS
+  const analyticsData = useMemo(() => {
+    // KPI 1: Taux de disponibilité des SKU
+    const activeSKUs = enrichedProducts.length;
+    const availableSKUs = enrichedProducts.filter(p => p.stock > 0).length;
+    const availabilityRate = activeSKUs > 0 ? Math.round((availableSKUs / activeSKUs) * 100) : 0;
+    
+    // KPI 2: Ventes perdues - Rupture de stock
+    const salesLost = enrichedProducts
+      .filter(p => p.stock === 0)
+      .reduce((total, p) => {
+        // Estimation: supposons 7 jours de rupture en moyenne
+        const daysOutOfStock = 7;
+        const lostRevenue = daysOutOfStock * p.salesPerDay * (p.buyPrice * 1.5); // marge estimée 50%
+        return total + lostRevenue;
+      }, 0);
+    
+    // KPI 3: Valeur surstocks profonds (> 180 jours d'autonomie)
+    const deepOverstockValue = enrichedProducts
+      .filter(p => p.daysOfStock > 180)
+      .reduce((total, p) => {
+        return total + (p.stock * p.buyPrice);
+      }, 0);
+    
+    return {
+      skuAvailability: { 
+        value: `${availabilityRate}%`, 
+        actualValue: availabilityRate,
+        change: 19, 
+        changePercent: 39,
+        trend: 'up',
+        description: tooltips.skuAvailability,
+        chartData: [30, 35, 40, 45, 52, 60, 65, 70, 75, availabilityRate]
+      },
+      salesLost: { 
+        value: `€${Math.round(salesLost).toLocaleString('fr-FR')}`, 
+        actualValue: salesLost,
+        change: -39, 
+        changePercent: 39,
+        trend: 'down',
+        description: tooltips.salesLost,
+        chartData: [80, 75, 85, 90, 70, 60, 75, 65, 55, Math.min(100, salesLost / 100)]
+      },
+      deepOverstock: { 
+        value: `€${Math.round(deepOverstockValue).toLocaleString('fr-FR')}`, 
+        actualValue: deepOverstockValue,
+        change: 92, 
+        changePercent: 92,
+        trend: 'up',
+        description: tooltips.deepOverstock,
+        chartData: [20, 25, 30, 35, 40, 50, 60, 70, 80, Math.min(100, deepOverstockValue / 100)]
+      }
+    };
+  }, [enrichedProducts]);
 
   const updateProductParam = async (sku, field, value) => {
     try {
@@ -525,13 +573,26 @@ L'équipe Stock Easy`
     };
   };
 
+  const generatePONumber = () => {
+    // Trouve le numéro PO le plus élevé actuel
+    const poNumbers = orders
+      .map(o => {
+        const match = o.id.match(/^PO-(\d+)$/);
+        return match ? parseInt(match[1], 10) : 0;
+      })
+      .filter(n => n > 0);
+    
+    const nextNumber = poNumbers.length > 0 ? Math.max(...poNumbers) + 1 : 1;
+    return `PO-${String(nextNumber).padStart(3, '0')}`;
+  };
+
   const sendOrder = async () => {
     try {
       const productsToOrder = toOrderBySupplier[selectedSupplier];
       const total = productsToOrder.reduce((sum, p) => sum + (p.qtyToOrder * p.buyPrice), 0);
       
       const orderData = {
-        id: `PO-${Date.now()}`,
+        id: generatePONumber(),
         supplier: selectedSupplier,
         status: 'pending_confirmation',
         total: total,
@@ -572,20 +633,19 @@ L'équipe Stock Easy`
   };
 
   const shipOrder = async (orderId) => {
-    const tracking = prompt('Entrez le numéro de suivi:');
-    if (tracking) {
-      try {
-        await api.updateOrderStatus(orderId, {
-          status: 'in_transit',
-          shippedAt: new Date().toISOString().split('T')[0],
-          trackingNumber: tracking
-        });
-        await loadData();
-        console.log('✅ Commande expédiée');
-      } catch (error) {
-        console.error('❌ Erreur:', error);
-        alert('Erreur lors de la mise à jour');
-      }
+    const tracking = prompt('Entrez le numéro de suivi (optionnel - laissez vide pour passer):');
+    // Tracking optionnel - on peut continuer même sans numéro
+    try {
+      await api.updateOrderStatus(orderId, {
+        status: 'in_transit',
+        shippedAt: new Date().toISOString().split('T')[0],
+        trackingNumber: tracking || ''
+      });
+      await loadData();
+      console.log('✅ Commande expédiée');
+    } catch (error) {
+      console.error('❌ Erreur:', error);
+      alert('Erreur lors de la mise à jour');
     }
   };
 
@@ -598,31 +658,137 @@ L'équipe Stock Easy`
   const confirmReconciliation = async (hasDiscrepancy) => {
     try {
       if (hasDiscrepancy) {
-        await api.updateOrderStatus(reconciliationOrder.id, {
-          status: 'reconciliation',
-          receivedAt: new Date().toISOString().split('T')[0],
-          hasDiscrepancy: true
+        // Ouvrir le modal de gestion des écarts
+        setReconciliationModalOpen(false);
+        const initialDiscrepancy = {};
+        reconciliationOrder.items.forEach(item => {
+          initialDiscrepancy[item.sku] = {
+            ordered: item.quantity,
+            received: item.quantity // par défaut, à ajuster par l'utilisateur
+          };
         });
+        setDiscrepancyItems(initialDiscrepancy);
+        setDiscrepancyModalOpen(true);
       } else {
+        // Réception conforme - mise à jour automatique du stock
         await api.updateOrderStatus(reconciliationOrder.id, {
           status: 'completed',
           receivedAt: new Date().toISOString().split('T')[0],
           completedAt: new Date().toISOString().split('T')[0]
         });
         
+        // Ajustement automatique du stock
         await api.updateStock(reconciliationOrder.items);
-      }
-      
-      await loadData();
-      setReconciliationModalOpen(false);
-      setReconciliationOrder(null);
-      
-      if (!hasDiscrepancy) {
-        alert('✅ Stock mis à jour automatiquement !');
+        
+        await loadData();
+        setReconciliationModalOpen(false);
+        setReconciliationOrder(null);
+        
+        alert('✅ Réception validée ! Stock mis à jour automatiquement.');
       }
     } catch (error) {
       console.error('❌ Erreur:', error);
       alert('Erreur lors de la validation');
+    }
+  };
+
+  const submitDiscrepancy = async () => {
+    try {
+      // Créer l'email de réclamation
+      const discrepancyList = Object.entries(discrepancyItems)
+        .filter(([sku, data]) => data.ordered !== data.received)
+        .map(([sku, data]) => {
+          const product = products.find(p => p.sku === sku);
+          return `- ${product?.name || sku} (SKU: ${sku})\n  Commandé: ${data.ordered} | Reçu: ${data.received} | Écart: ${data.received - data.ordered}`;
+        })
+        .join('\n\n');
+      
+      const claimEmail = `Objet: Réclamation - Commande ${reconciliationOrder.id}\n\nBonjour,\n\nNous avons constaté des écarts entre les quantités commandées et reçues :\n\n${discrepancyList}\n\nMerci de nous confirmer ces écarts et de procéder à l'envoi des quantités manquantes.\n\nCordialement`;
+      
+      console.log('EMAIL DE RÉCLAMATION GÉNÉRÉ:', claimEmail);
+      alert('📧 Email de réclamation généré !\n\n' + claimEmail);
+      
+      // Mettre à jour la commande avec les quantités reçues
+      const updatedItems = reconciliationOrder.items.map(item => ({
+        ...item,
+        receivedQuantity: discrepancyItems[item.sku]?.received || item.quantity
+      }));
+      
+      await api.updateOrderStatus(reconciliationOrder.id, {
+        status: 'reconciliation',
+        receivedAt: new Date().toISOString().split('T')[0],
+        hasDiscrepancy: true,
+        items: updatedItems
+      });
+      
+      // Mettre à jour le stock avec les quantités réellement reçues
+      const stockUpdates = Object.entries(discrepancyItems).map(([sku, data]) => ({
+        sku,
+        quantity: data.received
+      }));
+      await api.updateStock(stockUpdates);
+      
+      await loadData();
+      setDiscrepancyModalOpen(false);
+      setDiscrepancyItems({});
+      setReconciliationOrder(null);
+    } catch (error) {
+      console.error('❌ Erreur:', error);
+      alert('Erreur lors de la soumission');
+    }
+  };
+
+  const openDamageModal = () => {
+    setReconciliationModalOpen(false);
+    const initialDamage = {};
+    reconciliationOrder.items.forEach(item => {
+      initialDamage[item.sku] = {
+        total: item.quantity,
+        damaged: 0
+      };
+    });
+    setDamageItems(initialDamage);
+    setDamageNotes('');
+    setDamageModalOpen(true);
+  };
+
+  const submitDamageReport = async () => {
+    try {
+      const damagedList = Object.entries(damageItems)
+        .filter(([sku, data]) => data.damaged > 0)
+        .map(([sku, data]) => {
+          const product = products.find(p => p.sku === sku);
+          return `- ${product?.name || sku} (SKU: ${sku})\n  Quantité endommagée: ${data.damaged} / ${data.total}`;
+        })
+        .join('\n\n');
+      
+      const damageEmail = `Objet: Réclamation - Marchandises endommagées - Commande ${reconciliationOrder.id}\n\nBonjour,\n\nNous avons reçu la commande ${reconciliationOrder.id} mais certains produits sont arrivés endommagés :\n\n${damagedList}\n\nNotes: ${damageNotes || 'Aucune note supplémentaire'}\n\nMerci de procéder au remplacement de ces articles.\n\nCordialement`;
+      
+      console.log('EMAIL RÉCLAMATION DOMMAGES:', damageEmail);
+      alert('📧 Email de réclamation pour dommages généré !\n\n' + damageEmail);
+      
+      // Mettre à jour le stock avec uniquement les produits non endommagés
+      const stockUpdates = Object.entries(damageItems).map(([sku, data]) => ({
+        sku,
+        quantity: data.total - data.damaged
+      }));
+      
+      await api.updateStock(stockUpdates);
+      await api.updateOrderStatus(reconciliationOrder.id, {
+        status: 'reconciliation',
+        receivedAt: new Date().toISOString().split('T')[0],
+        hasDiscrepancy: true,
+        damageReport: true
+      });
+      
+      await loadData();
+      setDamageModalOpen(false);
+      setDamageItems({});
+      setDamageNotes('');
+      setReconciliationOrder(null);
+    } catch (error) {
+      console.error('❌ Erreur:', error);
+      alert('Erreur lors de la soumission');
     }
   };
 
@@ -1072,7 +1238,7 @@ L'équipe Stock Easy`
                             <span className="text-[#666663] truncate">{order.supplier}</span>
                           </div>
                           <div className="text-sm text-[#666663]">
-                            Confirmée le {order.confirmedAt}
+                            <span className="font-medium text-green-600">Confirmée le {order.confirmedAt}</span>
                           </div>
                         </div>
                         <Button
@@ -1549,6 +1715,12 @@ L'équipe Stock Easy`
                           <InfoTooltip content={tooltips.multiplier} />
                         </div>
                       </th>
+                      <th className="px-4 py-3 text-center text-xs font-semibold text-[#666663] uppercase">
+                        <div className="inline-flex items-center justify-center">
+                          Stock Sécurité (jours)
+                          <InfoTooltip content={tooltips.securityStock} />
+                        </div>
+                      </th>
                       <th className="px-4 py-3 text-right text-xs font-semibold text-[#666663] uppercase">
                         <div className="inline-flex items-center justify-end">
                           Point de Commande
@@ -1595,6 +1767,40 @@ L'équipe Stock Easy`
                             </button>
                           )}
                         </td>
+                        <td className="px-4 py-3 text-center">
+                          {editingParam?.sku === p.sku && editingParam?.field === 'customSecurityStock' ? (
+                            <div className="inline-flex items-center justify-center gap-1">
+                              <input
+                                type="number"
+                                step="1"
+                                value={tempParamValue}
+                                onChange={(e) => setTempParamValue(e.target.value)}
+                                placeholder="Auto"
+                                className="w-20 px-2 py-1 border-2 border-black rounded text-sm text-center bg-white text-[#191919] font-medium focus:outline-none focus:ring-2 focus:ring-black"
+                                autoFocus
+                              />
+                              <button onClick={saveParam} className="text-green-600 hover:text-green-700 p-1 focus:outline-none focus:ring-2 focus:ring-green-600 rounded">
+                                <Check className="w-4 h-4 shrink-0" />
+                              </button>
+                              <button onClick={cancelEditParam} className="text-[#EF1C43] hover:text-red-700 p-1 focus:outline-none focus:ring-2 focus:ring-[#EF1C43] rounded">
+                                <X className="w-4 h-4 shrink-0" />
+                              </button>
+                            </div>
+                          ) : (
+                            <button
+                              onClick={() => startEditParam(p.sku, 'customSecurityStock', p.customSecurityStock)}
+                              className="inline-flex items-center gap-1 px-3 py-1 bg-[#F0F0EB] hover:bg-[#E5E4DF] rounded text-sm font-medium text-[#191919] transition-colors focus:outline-none focus:ring-2 focus:ring-black"
+                            >
+                              {p.securityStock} jours
+                              {p.customSecurityStock === undefined || p.customSecurityStock === null ? (
+                                <span className="text-xs text-[#666663] ml-1">(auto)</span>
+                              ) : (
+                                <span className="text-xs text-green-600 ml-1">(custom)</span>
+                              )}
+                              <Edit2 className="w-3 h-3 shrink-0" />
+                            </button>
+                          )}
+                        </td>
                         <td className="px-4 py-3 text-right">
                           <span className="inline-block px-3 py-1 bg-blue-50 text-[#64A4F2] rounded text-sm font-medium border border-blue-200">
                             {p.reorderPoint} unités
@@ -1613,6 +1819,7 @@ L'équipe Stock Easy`
                 </h3>
                 <ul className="space-y-2 text-sm text-[#191919]">
                   <li><strong>Multiplicateur :</strong> Ajustez selon la saisonnalité (0.3 = hors saison, 1 = normal, 5 = BFCM/pic)</li>
+                  <li><strong>Stock Sécurité :</strong> Par défaut calculé à 20% du délai fournisseur. Personnalisez selon vos besoins (laissez vide pour revenir au mode auto)</li>
                   <li><strong>Point de Commande :</strong> Calculé automatiquement, se met à jour en temps réel</li>
                   <li><strong>Modifications :</strong> Toutes les modifications sont sauvegardées automatiquement dans Google Sheets</li>
                 </ul>
@@ -1666,21 +1873,30 @@ L'équipe Stock Easy`
         onClose={() => setReconciliationModalOpen(false)}
         title="Confirmer la réception"
         footer={
-          <div className="flex justify-end gap-3">
+          <div className="flex justify-between items-center w-full gap-3">
             <Button 
-              variant="danger" 
-              icon={X}
-              onClick={() => confirmReconciliation(true)}
+              variant="outline" 
+              icon={AlertCircle}
+              onClick={openDamageModal}
             >
-              Non, il y a un écart
+              Réception endommagée
             </Button>
-            <Button 
-              variant="success" 
-              icon={Check}
-              onClick={() => confirmReconciliation(false)}
-            >
-              Oui, tout est correct
-            </Button>
+            <div className="flex gap-3">
+              <Button 
+                variant="danger" 
+                icon={X}
+                onClick={() => confirmReconciliation(true)}
+              >
+                Non, il y a un écart
+              </Button>
+              <Button 
+                variant="success" 
+                icon={Check}
+                onClick={() => confirmReconciliation(false)}
+              >
+                Oui, tout est correct
+              </Button>
+            </div>
           </div>
         }
       >
@@ -1691,19 +1907,199 @@ L'équipe Stock Easy`
               <p className="text-sm text-[#666663]">Fournisseur: {reconciliationOrder.supplier}</p>
             </div>
             <div className="space-y-3">
-              {reconciliationOrder.items.map((item, idx) => (
-                <div key={idx} className="border border-[#E5E4DF] rounded-lg p-3 bg-[#FAFAF7]">
-                  <div className="flex justify-between items-center">
-                    <span className="font-medium text-[#191919]">SKU: {item.sku}</span>
-                    <span className="text-sm text-[#666663]">Commandé: {item.quantity}</span>
+              {reconciliationOrder.items.map((item, idx) => {
+                const product = products.find(p => p.sku === item.sku);
+                return (
+                  <div key={idx} className="border border-[#E5E4DF] rounded-lg p-3 bg-[#FAFAF7]">
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <span className="font-medium text-[#191919]">{product?.name || item.sku}</span>
+                        <span className="text-xs text-[#666663] ml-2">({item.sku})</span>
+                      </div>
+                      <span className="text-sm text-[#666663]">Commandé: <strong className="text-[#191919]">{item.quantity}</strong></span>
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
             <div className="mt-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
               <p className="text-sm text-[#666663]">
                 La quantité reçue correspond-elle à la quantité commandée ?
               </p>
+            </div>
+          </>
+        )}
+      </Modal>
+
+      {/* Modal Gestion des Écarts */}
+      <Modal
+        isOpen={discrepancyModalOpen && reconciliationOrder}
+        onClose={() => setDiscrepancyModalOpen(false)}
+        title={`Gestion des écarts - ${reconciliationOrder?.id}`}
+        footer={
+          <div className="flex justify-end gap-3">
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setDiscrepancyModalOpen(false);
+                setReconciliationModalOpen(true);
+              }}
+            >
+              Annuler
+            </Button>
+            <Button 
+              variant="primary" 
+              icon={Mail}
+              onClick={submitDiscrepancy}
+            >
+              Générer réclamation
+            </Button>
+          </div>
+        }
+      >
+        {reconciliationOrder && (
+          <>
+            <div className="mb-4">
+              <p className="text-sm text-[#666663]">
+                Saisissez les quantités réellement reçues pour chaque produit :
+              </p>
+            </div>
+            <div className="space-y-3">
+              {reconciliationOrder.items.map((item, idx) => {
+                const product = products.find(p => p.sku === item.sku);
+                return (
+                  <div key={idx} className="border border-[#E5E4DF] rounded-lg p-4 bg-[#FAFAF7]">
+                    <div className="mb-2">
+                      <span className="font-medium text-[#191919]">{product?.name || item.sku}</span>
+                      <span className="text-xs text-[#666663] ml-2">({item.sku})</span>
+                    </div>
+                    <div className="grid grid-cols-3 gap-3">
+                      <div>
+                        <label className="text-xs text-[#666663] block mb-1">Commandé</label>
+                        <input 
+                          type="number" 
+                          value={discrepancyItems[item.sku]?.ordered || item.quantity}
+                          disabled
+                          className="w-full px-3 py-2 border border-[#E5E4DF] rounded-lg bg-white text-[#666663] text-center"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs text-[#666663] block mb-1">Reçu</label>
+                        <input 
+                          type="number" 
+                          value={discrepancyItems[item.sku]?.received || item.quantity}
+                          onChange={(e) => setDiscrepancyItems({
+                            ...discrepancyItems,
+                            [item.sku]: {
+                              ordered: item.quantity,
+                              received: parseInt(e.target.value) || 0
+                            }
+                          })}
+                          className="w-full px-3 py-2 border-2 border-black rounded-lg bg-white text-[#191919] text-center font-medium focus:outline-none focus:ring-2 focus:ring-black"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs text-[#666663] block mb-1">Écart</label>
+                        <div className={`w-full px-3 py-2 rounded-lg text-center font-bold ${
+                          (discrepancyItems[item.sku]?.received || item.quantity) - item.quantity < 0 
+                            ? 'bg-red-50 text-[#EF1C43]' 
+                            : 'bg-green-50 text-green-600'
+                        }`}>
+                          {(discrepancyItems[item.sku]?.received || item.quantity) - item.quantity}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </>
+        )}
+      </Modal>
+
+      {/* Modal Réception Endommagée */}
+      <Modal
+        isOpen={damageModalOpen && reconciliationOrder}
+        onClose={() => setDamageModalOpen(false)}
+        title={`Marchandises endommagées - ${reconciliationOrder?.id}`}
+        footer={
+          <div className="flex justify-end gap-3">
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setDamageModalOpen(false);
+                setReconciliationModalOpen(true);
+              }}
+            >
+              Annuler
+            </Button>
+            <Button 
+              variant="danger" 
+              icon={Mail}
+              onClick={submitDamageReport}
+            >
+              Envoyer réclamation
+            </Button>
+          </div>
+        }
+      >
+        {reconciliationOrder && (
+          <>
+            <div className="mb-4">
+              <p className="text-sm text-[#666663]">
+                Indiquez les quantités endommagées pour chaque produit :
+              </p>
+            </div>
+            <div className="space-y-3">
+              {reconciliationOrder.items.map((item, idx) => {
+                const product = products.find(p => p.sku === item.sku);
+                return (
+                  <div key={idx} className="border border-[#E5E4DF] rounded-lg p-4 bg-[#FAFAF7]">
+                    <div className="mb-2">
+                      <span className="font-medium text-[#191919]">{product?.name || item.sku}</span>
+                      <span className="text-xs text-[#666663] ml-2">({item.sku})</span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="text-xs text-[#666663] block mb-1">Quantité totale</label>
+                        <input 
+                          type="number" 
+                          value={item.quantity}
+                          disabled
+                          className="w-full px-3 py-2 border border-[#E5E4DF] rounded-lg bg-white text-[#666663] text-center"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs text-[#666663] block mb-1">Quantité endommagée</label>
+                        <input 
+                          type="number" 
+                          min="0"
+                          max={item.quantity}
+                          value={damageItems[item.sku]?.damaged || 0}
+                          onChange={(e) => setDamageItems({
+                            ...damageItems,
+                            [item.sku]: {
+                              total: item.quantity,
+                              damaged: Math.min(parseInt(e.target.value) || 0, item.quantity)
+                            }
+                          })}
+                          className="w-full px-3 py-2 border-2 border-[#EF1C43] rounded-lg bg-white text-[#191919] text-center font-medium focus:outline-none focus:ring-2 focus:ring-[#EF1C43]"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            <div className="mt-4">
+              <label className="text-sm font-medium text-[#191919] block mb-2">Notes / Commentaires (optionnel)</label>
+              <textarea
+                value={damageNotes}
+                onChange={(e) => setDamageNotes(e.target.value)}
+                rows={3}
+                placeholder="Décrivez l'état des produits endommagés..."
+                className="w-full px-3 py-2 border-2 border-[#E5E4DF] rounded-lg bg-white text-[#191919] focus:outline-none focus:ring-2 focus:ring-black resize-none"
+              />
             </div>
           </>
         )}
