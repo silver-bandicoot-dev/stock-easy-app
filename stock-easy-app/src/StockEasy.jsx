@@ -80,6 +80,24 @@ const api = {
       console.error('Erreur lors de la mise à jour du stock:', error);
       throw error;
     }
+  },
+
+  async getParameter(parameterName) {
+    try {
+      const response = await fetch(`${API_URL}?action=getParameter&name=${encodeURIComponent(parameterName)}`);
+      const data = await response.json();
+      if (data.error) throw new Error(data.error);
+      return data.value;
+    } catch (error) {
+      console.error(`Erreur lors de la lecture du paramètre "${parameterName}":`, error);
+      // Valeurs par défaut en cas d'erreur
+      const defaults = {
+        "SeuilSurstockProfond": 90,
+        "DeviseDefaut": "EUR",
+        "MultiplicateurDefaut": 1.2
+      };
+      return defaults[parameterName] || null;
+    }
   }
 };
 
@@ -122,6 +140,26 @@ const Button = ({
       {children}
     </button>
   );
+};
+
+// ============================================
+// FONCTIONS UTILITAIRES
+// ============================================
+
+/**
+ * Formate la date de confirmation pour l'affichage
+ * @param {string} isoDate - Date ISO (ex: "2025-10-14T22:00:00.000Z")
+ * @returns {string} - Ex: "14 octobre 2025"
+ */
+const formatConfirmedDate = (isoDate) => {
+  if (!isoDate) return null;
+  
+  const date = new Date(isoDate);
+  return date.toLocaleDateString('fr-FR', {
+    day: '2-digit',
+    month: 'long',
+    year: 'numeric'
+  });
 };
 
 // ============================================
@@ -324,6 +362,7 @@ const StockEasy = () => {
   const [products, setProducts] = useState([]);
   const [suppliers, setSuppliers] = useState({});
   const [orders, setOrders] = useState([]);
+  const [parameters, setParameters] = useState({});
   const [activeTab, setActiveTab] = useState('dashboard');
   const [emailModalOpen, setEmailModalOpen] = useState(false);
   const [selectedSupplier, setSelectedSupplier] = useState(null);
@@ -367,6 +406,19 @@ const StockEasy = () => {
       setSuppliers(suppliersMap);
       setProducts(data.products);
       setOrders(data.orders);
+      
+      // Charger les paramètres si disponibles
+      if (data.parameters) {
+        setParameters(data.parameters);
+      } else {
+        // Charger les paramètres individuellement si pas fournis par getAllData
+        try {
+          const seuilSurstock = await api.getParameter('SeuilSurstockProfond');
+          setParameters(prev => ({ ...prev, SeuilSurstockProfond: seuilSurstock }));
+        } catch (err) {
+          console.warn('Paramètres non disponibles, utilisation des valeurs par défaut');
+        }
+      }
       
       console.log('✅ Données chargées depuis Google Sheets');
     } catch (error) {
@@ -475,9 +527,15 @@ const StockEasy = () => {
         return total + lostRevenue;
       }, 0);
     
-    // KPI 3: Valeur surstocks profonds (> 180 jours d'autonomie)
+    // KPI 3: Valeur surstocks profonds - UTILISATION DES PARAMÈTRES
+    // Lire le seuil depuis les paramètres ou utiliser 90 jours par défaut
+    const seuilSurstock = parseInt(parameters.SeuilSurstockProfond) || 90;
+    
+    // Surstock profond = > 2x le seuil
+    const seuilSurstockProfond = seuilSurstock * 2;
+    
     const deepOverstockValue = enrichedProducts
-      .filter(p => p.daysOfStock > 180)
+      .filter(p => p.daysOfStock > seuilSurstockProfond)
       .reduce((total, p) => {
         return total + (p.stock * p.buyPrice);
       }, 0);
@@ -511,7 +569,7 @@ const StockEasy = () => {
         chartData: [20, 25, 30, 35, 40, 50, 60, 70, 80, Math.min(100, deepOverstockValue / 100)]
       }
     };
-  }, [enrichedProducts]);
+  }, [enrichedProducts, parameters]);
 
   const updateProductParam = async (sku, field, value) => {
     try {
@@ -623,12 +681,15 @@ L'équipe Stock Easy`
 
   const confirmOrder = async (orderId) => {
     try {
+      // CORRECTION 3: Sauvegarder la date ISO complète avec l'heure
+      const confirmedAt = new Date().toISOString();
+      
       await api.updateOrderStatus(orderId, {
         status: 'processing',
-        confirmedAt: new Date().toISOString().split('T')[0]
+        confirmedAt: confirmedAt
       });
       await loadData();
-      console.log('✅ Commande confirmée');
+      console.log(`✅ Commande ${orderId} confirmée le ${confirmedAt}`);
     } catch (error) {
       console.error('❌ Erreur:', error);
       alert('Erreur lors de la confirmation');
@@ -1371,7 +1432,9 @@ Cordialement,
                             <span className="text-[#666663] truncate">{order.supplier}</span>
                           </div>
                           <div className="text-sm text-[#666663]">
-                            <span className="font-medium text-green-600">Confirmée le {order.confirmedAt}</span>
+                            <span className="font-medium text-green-600">
+                              Confirmée le {formatConfirmedDate(order.confirmedAt)}
+                            </span>
                           </div>
                         </div>
                         <Button
