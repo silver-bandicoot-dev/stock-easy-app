@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { Package, Bell, Mail, X, Check, Truck, Clock, AlertCircle, CheckCircle, Eye, Settings, Info, Edit2, Activity, TrendingUp, TrendingDown, ArrowUpRight, ArrowDownRight, Upload, FileText, Calendar, RefreshCw } from 'lucide-react';
+import { Package, Bell, Mail, X, Check, Truck, Clock, AlertCircle, CheckCircle, Eye, Settings, Info, Edit2, Activity, TrendingUp, TrendingDown, ArrowUpRight, ArrowDownRight, Upload, FileText, Calendar, RefreshCw, Plus } from 'lucide-react';
 
 // ============================================
 // CONFIGURATION API GOOGLE SHEETS
@@ -97,6 +97,99 @@ const api = {
         "MultiplicateurDefaut": 1.2
       };
       return defaults[parameterName] || null;
+    }
+  },
+
+  // NOUVEAU : Paramètres
+  async updateParameter(paramName, value) {
+    try {
+      const response = await fetch(`${API_URL}?action=updateParameter`, {
+        method: 'POST',
+        body: JSON.stringify({ paramName, value })
+      });
+      const data = await response.json();
+      if (data.error) throw new Error(data.error);
+      return data;
+    } catch (error) {
+      console.error('Erreur lors de la mise à jour du paramètre:', error);
+      throw error;
+    }
+  },
+
+  // NOUVEAU : Fournisseurs
+  async createSupplier(supplierData) {
+    try {
+      const response = await fetch(`${API_URL}?action=createSupplier`, {
+        method: 'POST',
+        body: JSON.stringify(supplierData)
+      });
+      const data = await response.json();
+      if (data.error) throw new Error(data.error);
+      return data;
+    } catch (error) {
+      console.error('Erreur lors de la création du fournisseur:', error);
+      throw error;
+    }
+  },
+
+  async updateSupplier(supplierName, updates) {
+    try {
+      const response = await fetch(`${API_URL}?action=updateSupplier`, {
+        method: 'POST',
+        body: JSON.stringify({ supplierName, ...updates })
+      });
+      const data = await response.json();
+      if (data.error) throw new Error(data.error);
+      return data;
+    } catch (error) {
+      console.error('Erreur lors de la mise à jour du fournisseur:', error);
+      throw error;
+    }
+  },
+
+  async deleteSupplier(supplierName) {
+    try {
+      const response = await fetch(`${API_URL}?action=deleteSupplier`, {
+        method: 'POST',
+        body: JSON.stringify({ supplierName })
+      });
+      const data = await response.json();
+      if (data.error) throw new Error(data.error);
+      return data;
+    } catch (error) {
+      console.error('Erreur lors de la suppression du fournisseur:', error);
+      throw error;
+    }
+  },
+
+  // NOUVEAU : Mapping
+  async assignSupplierToProduct(sku, supplierName) {
+    try {
+      const response = await fetch(`${API_URL}?action=assignSupplierToProduct`, {
+        method: 'POST',
+        body: JSON.stringify({ sku, supplierName })
+      });
+      const data = await response.json();
+      if (data.error) throw new Error(data.error);
+      return data;
+    } catch (error) {
+      console.error('Erreur lors de l\'assignation du fournisseur:', error);
+      throw error;
+    }
+  },
+
+  async removeSupplierFromProduct(sku) {
+    try {
+      const response = await fetch(`${API_URL}?action=removeSupplierFromProduct`, {
+        method: 'POST',
+        body: JSON.stringify({ sku })
+      });
+      const data = await response.json();
+      if (data.error) throw new Error(data.error);
+      return data;
+    } catch (error) {
+      console.error('Erreur lors de la suppression du fournisseur:', error);
+      throw error;
     }
   }
 };
@@ -312,7 +405,7 @@ const Modal = ({ isOpen, onClose, title, children, footer }) => {
 // ============================================
 // FONCTIONS UTILITAIRES
 // ============================================
-const calculateMetrics = (product) => {
+const calculateMetrics = (product, seuil = 90) => {
   // Calcul de l'autonomie en jours
   const daysOfStock = product.salesPerDay > 0 ? Math.floor(product.stock / product.salesPerDay) : 999;
   
@@ -340,8 +433,8 @@ const calculateMetrics = (product) => {
     healthPercentage = Math.min(100, 50 + ((daysOfStock - securityStock * 1.2) / (securityStock * 2)) * 50);
   }
   
-  // Détection surstock profond (> 180 jours)
-  const isDeepOverstock = daysOfStock > 180;
+  // Détection surstock profond (utiliser le seuil paramétrable x2)
+  const isDeepOverstock = daysOfStock > (seuil * 2);
   
   return {
     ...product,
@@ -351,6 +444,689 @@ const calculateMetrics = (product) => {
     healthPercentage: Math.round(healthPercentage),
     isDeepOverstock
   };
+};
+
+// ============================================
+// COMPOSANT SUB-TABS NAVIGATION
+// ============================================
+const SubTabsNavigation = ({ activeSubTab, onSubTabChange }) => {
+  const subTabs = [
+    { id: 'general', label: 'Général', icon: Settings },
+    { id: 'products', label: 'Produits', icon: Package },
+    { id: 'suppliers', label: 'Fournisseurs', icon: Truck },
+    { id: 'mapping', label: 'Mapping', icon: Activity }
+  ];
+  
+  return (
+    <div className="flex gap-2 border-b border-[#E5E4DF] mb-6 overflow-x-auto">
+      {subTabs.map(tab => {
+        const Icon = tab.icon;
+        const isActive = activeSubTab === tab.id;
+        
+        return (
+          <button
+            key={tab.id}
+            onClick={() => onSubTabChange(tab.id)}
+            className={`
+              flex items-center gap-2 px-4 py-3 font-medium transition-all whitespace-nowrap
+              ${isActive 
+                ? 'text-[#8B5CF6] border-b-2 border-[#8B5CF6]' 
+                : 'text-[#666663] hover:text-[#191919] hover:bg-[#FAFAF7]'
+              }
+            `}
+          >
+            <Icon className="w-4 h-4 shrink-0" />
+            {tab.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+};
+
+// ============================================
+// SECTION PARAMÈTRES GÉNÉRAUX
+// ============================================
+const ParametresGeneraux = ({ 
+  seuilSurstock, 
+  onUpdateSeuil, 
+  devise, 
+  onUpdateDevise,
+  multiplicateur,
+  onUpdateMultiplicateur
+}) => {
+  return (
+    <div className="space-y-6">
+      {/* Devise */}
+      <div className="bg-white rounded-xl shadow-sm border border-[#E5E4DF] p-6">
+        <h3 className="text-lg font-semibold text-[#191919] mb-4">💰 Devise par défaut</h3>
+        <p className="text-sm text-[#666663] mb-4">
+          Devise utilisée pour afficher les prix dans l'application
+        </p>
+        
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          {['EUR', 'USD', 'GBP', 'CAD'].map(curr => (
+            <button
+              key={curr}
+              onClick={() => onUpdateDevise(curr)}
+              className={`
+                px-4 py-3 rounded-lg border-2 font-medium transition-all
+                ${devise === curr
+                  ? 'border-[#8B5CF6] bg-purple-50 text-[#8B5CF6]'
+                  : 'border-[#E5E4DF] hover:border-[#BFBFBA] text-[#666663]'
+                }
+              `}
+            >
+              {curr}
+            </button>
+          ))}
+        </div>
+        
+        <div className="mt-3 p-3 bg-[#FAFAF7] rounded-lg">
+          <span className="text-sm text-[#666663]">Devise actuelle : </span>
+          <span className="text-sm font-bold text-[#191919]">{devise}</span>
+        </div>
+      </div>
+      
+      {/* Seuil Surstock */}
+      <div className="bg-white rounded-xl shadow-sm border border-[#E5E4DF] p-6">
+        <h3 className="text-lg font-semibold text-[#191919] mb-4">📊 Seuil Surstock Profond</h3>
+        <p className="text-sm text-[#666663] mb-4">
+          Nombre de jours d'autonomie à partir duquel un produit est considéré en surstock profond
+        </p>
+        
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <button
+            onClick={() => onUpdateSeuil(60)}
+            className={`
+              px-4 py-3 rounded-lg border-2 transition-all
+              ${seuilSurstock === 60
+                ? 'border-[#8B5CF6] bg-purple-50'
+                : 'border-[#E5E4DF] hover:border-[#BFBFBA]'
+              }
+            `}
+          >
+            <div className="font-semibold text-[#191919]">60 jours</div>
+            <div className="text-xs text-[#666663]">Fashion</div>
+          </button>
+          
+          <button
+            onClick={() => onUpdateSeuil(90)}
+            className={`
+              px-4 py-3 rounded-lg border-2 transition-all
+              ${seuilSurstock === 90
+                ? 'border-[#8B5CF6] bg-purple-50'
+                : 'border-[#E5E4DF] hover:border-[#BFBFBA]'
+              }
+            `}
+          >
+            <div className="font-semibold text-[#191919]">90 jours ⭐</div>
+            <div className="text-xs text-[#666663]">Standard</div>
+          </button>
+          
+          <button
+            onClick={() => onUpdateSeuil(120)}
+            className={`
+              px-4 py-3 rounded-lg border-2 transition-all
+              ${seuilSurstock === 120
+                ? 'border-[#8B5CF6] bg-purple-50'
+                : 'border-[#E5E4DF] hover:border-[#BFBFBA]'
+              }
+            `}
+          >
+            <div className="font-semibold text-[#191919]">120 jours</div>
+            <div className="text-xs text-[#666663]">Durable</div>
+          </button>
+          
+          <button
+            onClick={() => onUpdateSeuil(180)}
+            className={`
+              px-4 py-3 rounded-lg border-2 transition-all
+              ${seuilSurstock === 180
+                ? 'border-[#8B5CF6] bg-purple-50'
+                : 'border-[#E5E4DF] hover:border-[#BFBFBA]'
+              }
+            `}
+          >
+            <div className="font-semibold text-[#191919]">180 jours</div>
+            <div className="text-xs text-[#666663]">B2B</div>
+          </button>
+        </div>
+        
+        <div className="mt-3 p-3 bg-[#FAFAF7] rounded-lg">
+          <span className="text-sm text-[#666663]">Valeur actuelle : </span>
+          <span className="text-sm font-bold text-[#191919]">{seuilSurstock} jours</span>
+        </div>
+      </div>
+      
+      {/* Multiplicateur */}
+      <div className="bg-white rounded-xl shadow-sm border border-[#E5E4DF] p-6">
+        <h3 className="text-lg font-semibold text-[#191919] mb-4">📈 Multiplicateur par défaut</h3>
+        <p className="text-sm text-[#666663] mb-4">
+          Coefficient appliqué aux nouveaux produits pour ajuster les prévisions
+        </p>
+        
+        <div className="flex items-center gap-4">
+          <button
+            onClick={() => onUpdateMultiplicateur(Math.max(1, multiplicateur - 0.1))}
+            className="w-10 h-10 flex items-center justify-center rounded-lg border-2 border-[#E5E4DF] hover:border-[#8B5CF6] hover:bg-purple-50 transition-all"
+          >
+            <span className="text-xl font-bold text-[#666663]">-</span>
+          </button>
+          
+          <div className="flex-1 text-center">
+            <div className="text-3xl font-bold text-[#191919]">{multiplicateur.toFixed(1)}</div>
+          </div>
+          
+          <button
+            onClick={() => onUpdateMultiplicateur(Math.min(3, multiplicateur + 0.1))}
+            className="w-10 h-10 flex items-center justify-center rounded-lg border-2 border-[#E5E4DF] hover:border-[#8B5CF6] hover:bg-purple-50 transition-all"
+          >
+            <span className="text-xl font-bold text-[#666663]">+</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ============================================
+// SECTION GESTION FOURNISSEURS
+// ============================================
+const GestionFournisseurs = ({ 
+  suppliers, 
+  products,
+  onOpenModal, 
+  onDelete 
+}) => {
+  const [searchTerm, setSearchTerm] = useState('');
+  
+  const suppliersList = Object.values(suppliers);
+  
+  const filteredSuppliers = suppliersList.filter(s => 
+    s.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    s.email.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+  
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+        <div>
+          <h3 className="text-lg font-semibold text-[#191919]">🏭 Gestion des Fournisseurs</h3>
+          <p className="text-sm text-[#666663] mt-1">
+            {suppliersList.length} fournisseur(s) actif(s)
+          </p>
+        </div>
+        
+        <Button 
+          onClick={() => onOpenModal(null)}
+          icon={Plus}
+          variant="primary"
+        >
+          Nouveau fournisseur
+        </Button>
+      </div>
+      
+      {/* Recherche */}
+      <div className="relative">
+        <input
+          type="text"
+          placeholder="🔍 Rechercher un fournisseur..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="w-full px-4 py-3 pl-10 border-2 border-[#E5E4DF] rounded-lg focus:outline-none focus:border-[#8B5CF6] transition-all"
+        />
+      </div>
+      
+      {/* Liste des fournisseurs */}
+      <div className="space-y-4">
+        {filteredSuppliers.length === 0 ? (
+          <div className="text-center py-12 bg-[#FAFAF7] rounded-xl">
+            <p className="text-[#666663]">
+              {searchTerm ? 'Aucun fournisseur trouvé' : 'Aucun fournisseur créé'}
+            </p>
+          </div>
+        ) : (
+          filteredSuppliers.map(supplier => {
+            const productsCount = products.filter(p => p.supplier === supplier.name).length;
+            
+            return (
+              <div 
+                key={supplier.name}
+                className="bg-white rounded-xl shadow-sm border border-[#E5E4DF] p-6 hover:shadow-md transition-shadow"
+              >
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <h4 className="text-lg font-semibold text-[#191919] mb-2">
+                      {supplier.name}
+                    </h4>
+                    
+                    <div className="space-y-1 text-sm text-[#666663]">
+                      <div className="flex items-center gap-2">
+                        <Mail className="w-4 h-4 shrink-0" />
+                        <span>{supplier.email}</span>
+                      </div>
+                      
+                      <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-2">
+                          <Clock className="w-4 h-4 shrink-0" />
+                          <span>Délai: {supplier.delay}j</span>
+                        </div>
+                        
+                        <div className="flex items-center gap-2">
+                          <Package className="w-4 h-4 shrink-0" />
+                          <span>MOQ: {supplier.moq || 'N/A'} unités</span>
+                        </div>
+                      </div>
+                      
+                      {supplier.notes && (
+                        <div className="flex items-start gap-2 mt-2">
+                          <FileText className="w-4 h-4 shrink-0 mt-0.5" />
+                          <span className="italic">{supplier.notes}</span>
+                        </div>
+                      )}
+                      
+                      <div className="flex items-center gap-2 mt-2">
+                        <Info className="w-4 h-4 shrink-0" />
+                        <span className="font-medium">
+                          {productsCount} produit(s) assigné(s)
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="flex gap-2 ml-4">
+                    <button
+                      onClick={() => onOpenModal(supplier)}
+                      className="p-2 text-[#8B5CF6] hover:bg-purple-50 rounded-lg transition-all"
+                      title="Modifier"
+                    >
+                      <Edit2 className="w-5 h-5" />
+                    </button>
+                    
+                    <button
+                      onClick={() => onDelete(supplier)}
+                      className="p-2 text-[#EF1C43] hover:bg-red-50 rounded-lg transition-all"
+                      title="Supprimer"
+                    >
+                      <X className="w-5 h-5" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            );
+          })
+        )}
+      </div>
+    </div>
+  );
+};
+
+// Modal Créer/Modifier Fournisseur
+const SupplierModal = ({ 
+  isOpen, 
+  onClose, 
+  formData, 
+  onChange, 
+  onSave, 
+  isEditing 
+}) => {
+  return (
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title={isEditing ? '✏️ Modifier le fournisseur' : '➕ Nouveau fournisseur'}
+      footer={
+        <div className="flex gap-3 justify-end">
+          <Button variant="secondary" onClick={onClose}>
+            Annuler
+          </Button>
+          <Button variant="primary" onClick={onSave}>
+            💾 Enregistrer
+          </Button>
+        </div>
+      }
+    >
+      <div className="space-y-4">
+        <div>
+          <label className="block text-sm font-medium text-[#666663] mb-2">
+            Nom du fournisseur *
+          </label>
+          <input
+            type="text"
+            value={formData.name}
+            onChange={(e) => onChange('name', e.target.value)}
+            disabled={isEditing}
+            placeholder="Ex: Fournisseur France"
+            className="w-full px-4 py-2 border-2 border-[#E5E4DF] rounded-lg focus:outline-none focus:border-[#8B5CF6] disabled:bg-gray-50 disabled:cursor-not-allowed"
+          />
+          {isEditing && (
+            <p className="text-xs text-[#666663] mt-1">
+              ℹ️ Le nom ne peut pas être modifié
+            </p>
+          )}
+        </div>
+        
+        <div>
+          <label className="block text-sm font-medium text-[#666663] mb-2">
+            Email *
+          </label>
+          <input
+            type="email"
+            value={formData.email}
+            onChange={(e) => onChange('email', e.target.value)}
+            placeholder="contact@example.com"
+            className="w-full px-4 py-2 border-2 border-[#E5E4DF] rounded-lg focus:outline-none focus:border-[#8B5CF6]"
+          />
+        </div>
+        
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-[#666663] mb-2">
+              Délai (jours) *
+            </label>
+            <input
+              type="number"
+              value={formData.delay}
+              onChange={(e) => onChange('delay', parseInt(e.target.value) || 0)}
+              min="1"
+              className="w-full px-4 py-2 border-2 border-[#E5E4DF] rounded-lg focus:outline-none focus:border-[#8B5CF6]"
+            />
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium text-[#666663] mb-2">
+              MOQ Standard *
+            </label>
+            <input
+              type="number"
+              value={formData.moq}
+              onChange={(e) => onChange('moq', parseInt(e.target.value) || 0)}
+              min="1"
+              className="w-full px-4 py-2 border-2 border-[#E5E4DF] rounded-lg focus:outline-none focus:border-[#8B5CF6]"
+            />
+          </div>
+        </div>
+        
+        <div>
+          <label className="block text-sm font-medium text-[#666663] mb-2">
+            Notes (optionnel)
+          </label>
+          <textarea
+            value={formData.notes}
+            onChange={(e) => onChange('notes', e.target.value)}
+            rows={3}
+            placeholder="Notes diverses..."
+            className="w-full px-4 py-2 border-2 border-[#E5E4DF] rounded-lg focus:outline-none focus:border-[#8B5CF6] resize-none"
+          />
+        </div>
+      </div>
+    </Modal>
+  );
+};
+
+// ============================================
+// SECTION MAPPING SKU/FOURNISSEUR
+// ============================================
+const MappingSKUFournisseur = ({ 
+  products, 
+  suppliers, 
+  onOpenAssignModal,
+  onRemoveSupplier
+}) => {
+  const [filter, setFilter] = useState('all');
+  const [searchTerm, setSearchTerm] = useState('');
+  
+  const suppliersList = Object.values(suppliers);
+  
+  const filteredProducts = products.filter(p => {
+    const matchesSearch = 
+      p.sku.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      p.name.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    if (!matchesSearch) return false;
+    
+    if (filter === 'without_supplier') return !p.supplier;
+    if (filter === 'with_supplier') return !!p.supplier;
+    return true;
+  });
+  
+  const stats = {
+    total: products.length,
+    withSupplier: products.filter(p => p.supplier).length,
+    withoutSupplier: products.filter(p => !p.supplier).length
+  };
+  
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div>
+        <h3 className="text-lg font-semibold text-[#191919]">🔗 Mapping Produits ↔ Fournisseurs</h3>
+        <p className="text-sm text-[#666663] mt-1">
+          Associez chaque produit à son fournisseur principal
+        </p>
+      </div>
+      
+      {/* Stats */}
+      <div className="grid grid-cols-3 gap-4">
+        <div className="bg-white rounded-lg border border-[#E5E4DF] p-4">
+          <div className="text-sm text-[#666663]">Total produits</div>
+          <div className="text-2xl font-bold text-[#191919]">{stats.total}</div>
+        </div>
+        
+        <div className="bg-white rounded-lg border border-[#E5E4DF] p-4">
+          <div className="text-sm text-[#666663]">Avec fournisseur</div>
+          <div className="text-2xl font-bold text-green-600">{stats.withSupplier}</div>
+        </div>
+        
+        <div className="bg-white rounded-lg border border-[#E5E4DF] p-4">
+          <div className="text-sm text-[#666663]">Sans fournisseur</div>
+          <div className="text-2xl font-bold text-[#EF1C43]">{stats.withoutSupplier}</div>
+        </div>
+      </div>
+      
+      {/* Filtres */}
+      <div className="flex flex-col sm:flex-row gap-4">
+        <div className="flex-1">
+          <input
+            type="text"
+            placeholder="🔍 Rechercher un produit..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full px-4 py-3 border-2 border-[#E5E4DF] rounded-lg focus:outline-none focus:border-[#8B5CF6]"
+          />
+        </div>
+        
+        <select
+          value={filter}
+          onChange={(e) => setFilter(e.target.value)}
+          className="px-4 py-3 border-2 border-[#E5E4DF] rounded-lg focus:outline-none focus:border-[#8B5CF6] bg-white"
+        >
+          <option value="all">Tous les produits ({stats.total})</option>
+          <option value="with_supplier">Avec fournisseur ({stats.withSupplier})</option>
+          <option value="without_supplier">Sans fournisseur ({stats.withoutSupplier})</option>
+        </select>
+      </div>
+      
+      {/* Liste des produits */}
+      <div className="space-y-4">
+        {filteredProducts.length === 0 ? (
+          <div className="text-center py-12 bg-[#FAFAF7] rounded-xl">
+            <p className="text-[#666663]">Aucun produit trouvé</p>
+          </div>
+        ) : (
+          filteredProducts.map(product => {
+            const supplier = suppliers[product.supplier];
+            const hasSupplier = !!product.supplier;
+            
+            return (
+              <div 
+                key={product.sku}
+                className={`
+                  bg-white rounded-xl shadow-sm border-2 p-6 transition-all
+                  ${hasSupplier ? 'border-[#E5E4DF]' : 'border-orange-200 bg-orange-50'}
+                `}
+              >
+                <div className="flex items-start justify-between mb-4">
+                  <div>
+                    <div className="flex items-center gap-2 mb-1">
+                      <h4 className="text-lg font-semibold text-[#191919]">
+                        {product.sku}
+                      </h4>
+                      <span className="text-sm text-[#666663]">•</span>
+                      <span className="text-sm text-[#666663]">{product.name}</span>
+                    </div>
+                    
+                    <div className="flex items-center gap-4 text-sm text-[#666663]">
+                      <span>📦 Stock: {product.stock}</span>
+                    </div>
+                  </div>
+                </div>
+                
+                {hasSupplier ? (
+                  <div className="bg-[#FAFAF7] rounded-lg p-4 border border-[#E5E4DF]">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Truck className="w-4 h-4 text-[#8B5CF6]" />
+                          <span className="font-semibold text-[#191919]">
+                            {supplier?.name || product.supplier}
+                          </span>
+                        </div>
+                        
+                        {supplier && (
+                          <div className="space-y-1 text-sm text-[#666663]">
+                            <div className="flex items-center gap-2">
+                              <Mail className="w-3 h-3" />
+                              <span>{supplier.email}</span>
+                            </div>
+                            <div className="flex items-center gap-4">
+                              <div className="flex items-center gap-2">
+                                <Clock className="w-3 h-3" />
+                                <span>Délai: {supplier.delay}j</span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <Package className="w-3 h-3" />
+                                <span>MOQ: {supplier.moq}</span>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                      
+                      <div className="flex gap-2 ml-4">
+                        <button
+                          onClick={() => onOpenAssignModal(product)}
+                          className="p-2 text-[#8B5CF6] hover:bg-purple-50 rounded-lg transition-all"
+                          title="Changer de fournisseur"
+                        >
+                          <Edit2 className="w-4 h-4" />
+                        </button>
+                        
+                        <button
+                          onClick={() => onRemoveSupplier(product.sku)}
+                          className="p-2 text-[#EF1C43] hover:bg-red-50 rounded-lg transition-all"
+                          title="Retirer le fournisseur"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-between bg-orange-100 rounded-lg p-4 border border-orange-200">
+                    <div className="flex items-center gap-2 text-orange-700">
+                      <AlertCircle className="w-5 h-5" />
+                      <span className="font-medium">Aucun fournisseur assigné</span>
+                    </div>
+                    
+                    <Button
+                      size="sm"
+                      onClick={() => onOpenAssignModal(product)}
+                      icon={Plus}
+                    >
+                      Assigner
+                    </Button>
+                  </div>
+                )}
+              </div>
+            );
+          })
+        )}
+      </div>
+    </div>
+  );
+};
+
+// Modal d'assignation
+const AssignSupplierModal = ({ 
+  isOpen, 
+  onClose, 
+  product, 
+  suppliers,
+  selectedSupplier,
+  onSelectSupplier,
+  onAssign
+}) => {
+  const suppliersList = Object.values(suppliers);
+  
+  return (
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title="🔗 Assigner un fournisseur"
+      footer={
+        <div className="flex gap-3 justify-end">
+          <Button variant="secondary" onClick={onClose}>
+            Annuler
+          </Button>
+          <Button 
+            variant="primary" 
+            onClick={onAssign}
+            disabled={!selectedSupplier}
+          >
+            💾 Assigner
+          </Button>
+        </div>
+      }
+    >
+      {product && (
+        <div className="space-y-4">
+          <div className="bg-[#FAFAF7] rounded-lg p-4 border border-[#E5E4DF]">
+            <div className="text-sm text-[#666663] mb-1">Produit</div>
+            <div className="font-semibold text-[#191919]">
+              {product.sku} - {product.name}
+            </div>
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium text-[#666663] mb-2">
+              Sélectionner un fournisseur *
+            </label>
+            <select
+              value={selectedSupplier}
+              onChange={(e) => onSelectSupplier(e.target.value)}
+              className="w-full px-4 py-3 border-2 border-[#E5E4DF] rounded-lg focus:outline-none focus:border-[#8B5CF6] bg-white"
+            >
+              <option value="">-- Choisir un fournisseur --</option>
+              {suppliersList.map(s => (
+                <option key={s.name} value={s.name}>
+                  {s.name} (Délai: {s.delay}j, MOQ: {s.moq})
+                </option>
+              ))}
+            </select>
+            
+            {suppliersList.length === 0 && (
+              <p className="text-sm text-[#EF1C43] mt-2">
+                ⚠️ Aucun fournisseur disponible. Créez d'abord un fournisseur dans l'onglet "Fournisseurs".
+              </p>
+            )}
+          </div>
+        </div>
+      )}
+    </Modal>
+  );
 };
 
 // ============================================
@@ -385,6 +1161,30 @@ const StockEasy = () => {
   const [reclamationEmailContent, setReclamationEmailContent] = useState('');
   const [currentReclamationOrder, setCurrentReclamationOrder] = useState(null);
 
+  // NOUVEAUX ÉTATS pour les sous-onglets de Paramètres
+  const [parametersSubTab, setParametersSubTab] = useState('general'); // 'general', 'products', 'suppliers', 'mapping'
+
+  // NOUVEAUX ÉTATS pour Paramètres Généraux
+  const [seuilSurstockProfond, setSeuilSurstockProfond] = useState(90);
+  const [deviseDefaut, setDeviseDefaut] = useState('EUR');
+  const [multiplicateurDefaut, setMultiplicateurDefaut] = useState(1.2);
+
+  // NOUVEAUX ÉTATS pour Gestion Fournisseurs
+  const [supplierModalOpen, setSupplierModalOpen] = useState(false);
+  const [editingSupplier, setEditingSupplier] = useState(null);
+  const [supplierFormData, setSupplierFormData] = useState({
+    name: '',
+    email: '',
+    delay: 30,
+    moq: 50,
+    notes: ''
+  });
+
+  // NOUVEAUX ÉTATS pour Mapping
+  const [assignSupplierModalOpen, setAssignSupplierModalOpen] = useState(false);
+  const [productToMap, setProductToMap] = useState(null);
+  const [selectedSupplierForMapping, setSelectedSupplierForMapping] = useState('');
+
   useEffect(() => {
     loadData();
     const interval = setInterval(() => {
@@ -410,11 +1210,15 @@ const StockEasy = () => {
       // Charger les paramètres si disponibles
       if (data.parameters) {
         setParameters(data.parameters);
+        setSeuilSurstockProfond(data.parameters.seuilSurstockProfond || 90);
+        setDeviseDefaut(data.parameters.deviseDefaut || 'EUR');
+        setMultiplicateurDefaut(data.parameters.multiplicateurDefaut || 1.2);
       } else {
         // Charger les paramètres individuellement si pas fournis par getAllData
         try {
           const seuilSurstock = await api.getParameter('SeuilSurstockProfond');
           setParameters(prev => ({ ...prev, SeuilSurstockProfond: seuilSurstock }));
+          setSeuilSurstockProfond(seuilSurstock || 90);
         } catch (err) {
           console.warn('Paramètres non disponibles, utilisation des valeurs par défaut');
         }
@@ -441,7 +1245,228 @@ const StockEasy = () => {
     }
   };
 
-  const enrichedProducts = useMemo(() => products.map(calculateMetrics), [products]);
+  // ============================================
+  // HANDLERS PARAMÈTRES GÉNÉRAUX
+  // ============================================
+
+  const handleUpdateSeuilSurstock = async (newValue) => {
+    try {
+      setSeuilSurstockProfond(newValue);
+      await api.updateParameter('SeuilSurstockProfond', newValue);
+      console.log(`✅ Seuil surstock mis à jour : ${newValue}j`);
+    } catch (error) {
+      console.error('❌ Erreur mise à jour seuil:', error);
+      alert('Erreur lors de la sauvegarde du paramètre');
+    }
+  };
+
+  const handleUpdateDevise = async (newDevise) => {
+    try {
+      setDeviseDefaut(newDevise);
+      await api.updateParameter('DeviseDefaut', newDevise);
+      console.log(`✅ Devise mise à jour : ${newDevise}`);
+    } catch (error) {
+      console.error('❌ Erreur mise à jour devise:', error);
+      alert('Erreur lors de la sauvegarde du paramètre');
+    }
+  };
+
+  const handleUpdateMultiplicateur = async (newValue) => {
+    try {
+      setMultiplicateurDefaut(newValue);
+      await api.updateParameter('MultiplicateurDefaut', newValue);
+      console.log(`✅ Multiplicateur mis à jour : ${newValue}`);
+    } catch (error) {
+      console.error('❌ Erreur mise à jour multiplicateur:', error);
+      alert('Erreur lors de la sauvegarde du paramètre');
+    }
+  };
+
+  // ============================================
+  // HANDLERS GESTION FOURNISSEURS
+  // ============================================
+
+  const handleOpenSupplierModal = (supplier = null) => {
+    if (supplier) {
+      // Mode édition
+      setEditingSupplier(supplier);
+      setSupplierFormData({
+        name: supplier.name,
+        email: supplier.email,
+        delay: supplier.delay,
+        moq: supplier.moq || 50,
+        notes: supplier.notes || ''
+      });
+    } else {
+      // Mode création
+      setEditingSupplier(null);
+      setSupplierFormData({
+        name: '',
+        email: '',
+        delay: 30,
+        moq: 50,
+        notes: ''
+      });
+    }
+    setSupplierModalOpen(true);
+  };
+
+  const handleCloseSupplierModal = () => {
+    setSupplierModalOpen(false);
+    setEditingSupplier(null);
+    setSupplierFormData({
+      name: '',
+      email: '',
+      delay: 30,
+      moq: 50,
+      notes: ''
+    });
+  };
+
+  const handleSupplierFormChange = (field, value) => {
+    setSupplierFormData(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  const validateSupplierForm = () => {
+    const errors = [];
+    
+    if (!supplierFormData.name.trim()) {
+      errors.push('Le nom du fournisseur est obligatoire');
+    }
+    
+    if (!supplierFormData.email.trim()) {
+      errors.push('L\'email est obligatoire');
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(supplierFormData.email)) {
+      errors.push('L\'email n\'est pas valide');
+    }
+    
+    if (supplierFormData.delay <= 0) {
+      errors.push('Le délai doit être supérieur à 0');
+    }
+    
+    if (supplierFormData.moq <= 0) {
+      errors.push('Le MOQ doit être supérieur à 0');
+    }
+    
+    // Vérifier que le nom n'existe pas déjà (sauf en mode édition)
+    if (!editingSupplier) {
+      const existingSupplier = Object.values(suppliers).find(
+        s => s.name.toLowerCase() === supplierFormData.name.toLowerCase()
+      );
+      if (existingSupplier) {
+        errors.push('Un fournisseur avec ce nom existe déjà');
+      }
+    }
+    
+    return errors;
+  };
+
+  const handleSaveSupplier = async () => {
+    const errors = validateSupplierForm();
+    
+    if (errors.length > 0) {
+      alert('❌ Erreurs :\n' + errors.join('\n'));
+      return;
+    }
+    
+    try {
+      if (editingSupplier) {
+        // Mode édition
+        await api.updateSupplier(editingSupplier.name, supplierFormData);
+        console.log('✅ Fournisseur mis à jour');
+      } else {
+        // Mode création
+        await api.createSupplier(supplierFormData);
+        console.log('✅ Fournisseur créé');
+      }
+      
+      await loadData();
+      handleCloseSupplierModal();
+    } catch (error) {
+      console.error('❌ Erreur sauvegarde fournisseur:', error);
+      alert('Erreur lors de la sauvegarde');
+    }
+  };
+
+  const handleDeleteSupplier = async (supplier) => {
+    // Vérifier si des produits utilisent ce fournisseur
+    const productsUsingSupplier = products.filter(p => p.supplier === supplier.name);
+    
+    if (productsUsingSupplier.length > 0) {
+      const confirmDelete = window.confirm(
+        `⚠️ ATTENTION : ${productsUsingSupplier.length} produit(s) utilisent ce fournisseur.\n\n` +
+        `Si vous supprimez ce fournisseur, ces produits n'auront plus de fournisseur assigné.\n\n` +
+        `Voulez-vous vraiment continuer ?`
+      );
+      
+      if (!confirmDelete) return;
+    }
+    
+    try {
+      await api.deleteSupplier(supplier.name);
+      console.log('✅ Fournisseur supprimé');
+      await loadData();
+    } catch (error) {
+      console.error('❌ Erreur suppression fournisseur:', error);
+      alert('Erreur lors de la suppression');
+    }
+  };
+
+  // ============================================
+  // HANDLERS MAPPING
+  // ============================================
+
+  const handleOpenAssignSupplierModal = (product) => {
+    setProductToMap(product);
+    setSelectedSupplierForMapping(product.supplier || '');
+    setAssignSupplierModalOpen(true);
+  };
+
+  const handleCloseAssignSupplierModal = () => {
+    setAssignSupplierModalOpen(false);
+    setProductToMap(null);
+    setSelectedSupplierForMapping('');
+  };
+
+  const handleAssignSupplier = async () => {
+    if (!selectedSupplierForMapping) {
+      alert('❌ Veuillez sélectionner un fournisseur');
+      return;
+    }
+    
+    try {
+      await api.assignSupplierToProduct(productToMap.sku, selectedSupplierForMapping);
+      console.log(`✅ Fournisseur assigné à ${productToMap.sku}`);
+      await loadData();
+      handleCloseAssignSupplierModal();
+    } catch (error) {
+      console.error('❌ Erreur assignation fournisseur:', error);
+      alert('Erreur lors de l\'assignation');
+    }
+  };
+
+  const handleRemoveSupplierFromProduct = async (sku) => {
+    const confirm = window.confirm(
+      `⚠️ Retirer le fournisseur de ce produit ?\n\n` +
+      `Le produit n'aura plus de fournisseur assigné.`
+    );
+    
+    if (!confirm) return;
+    
+    try {
+      await api.removeSupplierFromProduct(sku);
+      console.log(`✅ Fournisseur retiré de ${sku}`);
+      await loadData();
+    } catch (error) {
+      console.error('❌ Erreur suppression assignation:', error);
+      alert('Erreur lors de la suppression');
+    }
+  };
+
+  const enrichedProducts = useMemo(() => products.map(p => calculateMetrics(p, seuilSurstockProfond)), [products, seuilSurstockProfond]);
 
   const productsByStatus = useMemo(() => {
     return {
@@ -1902,134 +2927,200 @@ Cordialement,
         {/* ONGLET PARAMETRES */}
         {activeTab === 'settings' && (
           <div className="space-y-6">
-            <div className="bg-white rounded-xl shadow-sm border border-[#E5E4DF] p-6">
-              <div className="mb-6">
-                <h2 className="text-2xl font-bold text-[#191919] mb-2">Paramètres des produits</h2>
-                <p className="text-sm text-[#666663]">Ajustez les paramètres de prévision pour chaque produit selon vos besoins.</p>
-              </div>
-
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead className="bg-[#FAFAF7] border-b border-[#E5E4DF]">
-                    <tr>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-[#666663] uppercase">Produit</th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-[#666663] uppercase">Fournisseur</th>
-                      <th className="px-4 py-3 text-center text-xs font-semibold text-[#666663] uppercase">
-                        <div className="inline-flex items-center justify-center">
-                          Multiplicateur
-                          <InfoTooltip content={tooltips.multiplier} />
-                        </div>
-                      </th>
-                      <th className="px-4 py-3 text-center text-xs font-semibold text-[#666663] uppercase">
-                        <div className="inline-flex items-center justify-center">
-                          Stock Sécurité (jours)
-                          <InfoTooltip content={tooltips.securityStock} />
-                        </div>
-                      </th>
-                      <th className="px-4 py-3 text-right text-xs font-semibold text-[#666663] uppercase">
-                        <div className="inline-flex items-center justify-end">
-                          Point de Commande
-                          <InfoTooltip content={tooltips.reorderPoint} />
-                        </div>
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-[#E5E4DF]">
-                    {enrichedProducts.map(p => (
-                      <tr key={p.sku} className="hover:bg-[#FAFAF7] transition-colors">
-                        <td className="px-4 py-3">
-                          <div>
-                            <p className="font-medium text-[#191919] text-sm">{p.name}</p>
-                            <p className="text-xs text-[#666663]">{p.sku}</p>
-                          </div>
-                        </td>
-                        <td className="px-4 py-3 text-sm text-[#191919]">{p.supplier}</td>
-                        <td className="px-4 py-3 text-center">
-                          {editingParam?.sku === p.sku && editingParam?.field === 'multiplier' ? (
-                            <div className="inline-flex items-center justify-center gap-1">
-                              <input
-                                type="number"
-                                step="0.1"
-                                value={tempParamValue}
-                                onChange={(e) => setTempParamValue(e.target.value)}
-                                className="w-20 px-2 py-1 border-2 border-black rounded text-sm text-center bg-white text-[#191919] font-medium focus:outline-none focus:ring-2 focus:ring-black"
-                                autoFocus
-                              />
-                              <button onClick={saveParam} className="text-green-600 hover:text-green-700 p-1 focus:outline-none focus:ring-2 focus:ring-green-600 rounded">
-                                <Check className="w-4 h-4 shrink-0" />
-                              </button>
-                              <button onClick={cancelEditParam} className="text-[#EF1C43] hover:text-red-700 p-1 focus:outline-none focus:ring-2 focus:ring-[#EF1C43] rounded">
-                                <X className="w-4 h-4 shrink-0" />
-                              </button>
-                            </div>
-                          ) : (
-                            <button
-                              onClick={() => startEditParam(p.sku, 'multiplier', p.multiplier)}
-                              className="inline-flex items-center gap-1 px-3 py-1 bg-[#F0F0EB] hover:bg-[#E5E4DF] rounded text-sm font-medium text-[#191919] transition-colors focus:outline-none focus:ring-2 focus:ring-black"
-                            >
-                              {p.multiplier}×
-                              <Edit2 className="w-3 h-3 shrink-0" />
-                            </button>
-                          )}
-                        </td>
-                        <td className="px-4 py-3 text-center">
-                          {editingParam?.sku === p.sku && editingParam?.field === 'customSecurityStock' ? (
-                            <div className="inline-flex items-center justify-center gap-1">
-                              <input
-                                type="number"
-                                step="1"
-                                value={tempParamValue}
-                                onChange={(e) => setTempParamValue(e.target.value)}
-                                placeholder="Auto"
-                                className="w-20 px-2 py-1 border-2 border-black rounded text-sm text-center bg-white text-[#191919] font-medium focus:outline-none focus:ring-2 focus:ring-black"
-                                autoFocus
-                              />
-                              <button onClick={saveParam} className="text-green-600 hover:text-green-700 p-1 focus:outline-none focus:ring-2 focus:ring-green-600 rounded">
-                                <Check className="w-4 h-4 shrink-0" />
-                              </button>
-                              <button onClick={cancelEditParam} className="text-[#EF1C43] hover:text-red-700 p-1 focus:outline-none focus:ring-2 focus:ring-[#EF1C43] rounded">
-                                <X className="w-4 h-4 shrink-0" />
-                              </button>
-                            </div>
-                          ) : (
-                            <button
-                              onClick={() => startEditParam(p.sku, 'customSecurityStock', p.customSecurityStock)}
-                              className="inline-flex items-center gap-1 px-3 py-1 bg-[#F0F0EB] hover:bg-[#E5E4DF] rounded text-sm font-medium text-[#191919] transition-colors focus:outline-none focus:ring-2 focus:ring-black"
-                            >
-                              {p.securityStock} jours
-                              {p.customSecurityStock === undefined || p.customSecurityStock === null ? (
-                                <span className="text-xs text-[#666663] ml-1">(auto)</span>
-                              ) : (
-                                <span className="text-xs text-green-600 ml-1">(custom)</span>
-                              )}
-                              <Edit2 className="w-3 h-3 shrink-0" />
-                            </button>
-                          )}
-                        </td>
-                        <td className="px-4 py-3 text-right">
-                          <span className="inline-block px-3 py-1 bg-blue-50 text-[#64A4F2] rounded text-sm font-medium border border-blue-200">
-                            {p.reorderPoint} unités
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-
-              <div className="mt-6 p-4 bg-[#FAFAF7] rounded-lg border border-[#E5E4DF]">
-                <h3 className="font-semibold text-[#191919] mb-2 inline-flex items-center gap-2">
-                  <Info className="w-5 h-5 text-[#666663] shrink-0" />
-                  Guide d'utilisation
-                </h3>
-                <ul className="space-y-2 text-sm text-[#191919]">
-                  <li><strong>Multiplicateur :</strong> Ajustez selon la saisonnalité (0.3 = hors saison, 1 = normal, 5 = BFCM/pic)</li>
-                  <li><strong>Stock Sécurité :</strong> Par défaut calculé à 20% du délai fournisseur. Personnalisez selon vos besoins (laissez vide pour revenir au mode auto)</li>
-                  <li><strong>Point de Commande :</strong> Calculé automatiquement, se met à jour en temps réel</li>
-                  <li><strong>Modifications :</strong> Toutes les modifications sont sauvegardées automatiquement dans Google Sheets</li>
-                </ul>
-              </div>
+            <div>
+              <h2 className="text-3xl font-bold text-[#191919] mb-2">⚙️ Paramètres</h2>
+              <p className="text-[#666663]">Gérez la configuration de votre application</p>
             </div>
+            
+            {/* Navigation des sous-onglets */}
+            <SubTabsNavigation 
+              activeSubTab={parametersSubTab}
+              onSubTabChange={setParametersSubTab}
+            />
+            
+            {/* Contenu dynamique selon le sous-onglet */}
+            {parametersSubTab === 'general' && (
+              <ParametresGeneraux
+                seuilSurstock={seuilSurstockProfond}
+                onUpdateSeuil={handleUpdateSeuilSurstock}
+                devise={deviseDefaut}
+                onUpdateDevise={handleUpdateDevise}
+                multiplicateur={multiplicateurDefaut}
+                onUpdateMultiplicateur={handleUpdateMultiplicateur}
+              />
+            )}
+            
+            {parametersSubTab === 'products' && (
+              <div className="bg-white rounded-xl shadow-sm border border-[#E5E4DF] p-6">
+                <div className="mb-6">
+                  <h2 className="text-2xl font-bold text-[#191919] mb-2">Paramètres des produits</h2>
+                  <p className="text-sm text-[#666663]">Ajustez les paramètres de prévision pour chaque produit selon vos besoins.</p>
+                </div>
+
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead className="bg-[#FAFAF7] border-b border-[#E5E4DF]">
+                      <tr>
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-[#666663] uppercase">Produit</th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-[#666663] uppercase">Fournisseur</th>
+                        <th className="px-4 py-3 text-center text-xs font-semibold text-[#666663] uppercase">
+                          <div className="inline-flex items-center justify-center">
+                            Multiplicateur
+                            <InfoTooltip content={tooltips.multiplier} />
+                          </div>
+                        </th>
+                        <th className="px-4 py-3 text-center text-xs font-semibold text-[#666663] uppercase">
+                          <div className="inline-flex items-center justify-center">
+                            Stock Sécurité (jours)
+                            <InfoTooltip content={tooltips.securityStock} />
+                          </div>
+                        </th>
+                        <th className="px-4 py-3 text-right text-xs font-semibold text-[#666663] uppercase">
+                          <div className="inline-flex items-center justify-end">
+                            Point de Commande
+                            <InfoTooltip content={tooltips.reorderPoint} />
+                          </div>
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-[#E5E4DF]">
+                      {enrichedProducts.map(p => (
+                        <tr key={p.sku} className="hover:bg-[#FAFAF7] transition-colors">
+                          <td className="px-4 py-3">
+                            <div>
+                              <p className="font-medium text-[#191919] text-sm">{p.name}</p>
+                              <p className="text-xs text-[#666663]">{p.sku}</p>
+                            </div>
+                          </td>
+                          <td className="px-4 py-3 text-sm text-[#191919]">{p.supplier}</td>
+                          <td className="px-4 py-3 text-center">
+                            {editingParam?.sku === p.sku && editingParam?.field === 'multiplier' ? (
+                              <div className="inline-flex items-center justify-center gap-1">
+                                <input
+                                  type="number"
+                                  step="0.1"
+                                  value={tempParamValue}
+                                  onChange={(e) => setTempParamValue(e.target.value)}
+                                  className="w-20 px-2 py-1 border-2 border-black rounded text-sm text-center bg-white text-[#191919] font-medium focus:outline-none focus:ring-2 focus:ring-black"
+                                  autoFocus
+                                />
+                                <button onClick={saveParam} className="text-green-600 hover:text-green-700 p-1 focus:outline-none focus:ring-2 focus:ring-green-600 rounded">
+                                  <Check className="w-4 h-4 shrink-0" />
+                                </button>
+                                <button onClick={cancelEditParam} className="text-[#EF1C43] hover:text-red-700 p-1 focus:outline-none focus:ring-2 focus:ring-[#EF1C43] rounded">
+                                  <X className="w-4 h-4 shrink-0" />
+                                </button>
+                              </div>
+                            ) : (
+                              <button
+                                onClick={() => startEditParam(p.sku, 'multiplier', p.multiplier)}
+                                className="inline-flex items-center gap-1 px-3 py-1 bg-[#F0F0EB] hover:bg-[#E5E4DF] rounded text-sm font-medium text-[#191919] transition-colors focus:outline-none focus:ring-2 focus:ring-black"
+                              >
+                                {p.multiplier}×
+                                <Edit2 className="w-3 h-3 shrink-0" />
+                              </button>
+                            )}
+                          </td>
+                          <td className="px-4 py-3 text-center">
+                            {editingParam?.sku === p.sku && editingParam?.field === 'customSecurityStock' ? (
+                              <div className="inline-flex items-center justify-center gap-1">
+                                <input
+                                  type="number"
+                                  step="1"
+                                  value={tempParamValue}
+                                  onChange={(e) => setTempParamValue(e.target.value)}
+                                  placeholder="Auto"
+                                  className="w-20 px-2 py-1 border-2 border-black rounded text-sm text-center bg-white text-[#191919] font-medium focus:outline-none focus:ring-2 focus:ring-black"
+                                  autoFocus
+                                />
+                                <button onClick={saveParam} className="text-green-600 hover:text-green-700 p-1 focus:outline-none focus:ring-2 focus:ring-green-600 rounded">
+                                  <Check className="w-4 h-4 shrink-0" />
+                                </button>
+                                <button onClick={cancelEditParam} className="text-[#EF1C43] hover:text-red-700 p-1 focus:outline-none focus:ring-2 focus:ring-[#EF1C43] rounded">
+                                  <X className="w-4 h-4 shrink-0" />
+                                </button>
+                              </div>
+                            ) : (
+                              <button
+                                onClick={() => startEditParam(p.sku, 'customSecurityStock', p.customSecurityStock)}
+                                className="inline-flex items-center gap-1 px-3 py-1 bg-[#F0F0EB] hover:bg-[#E5E4DF] rounded text-sm font-medium text-[#191919] transition-colors focus:outline-none focus:ring-2 focus:ring-black"
+                              >
+                                {p.securityStock} jours
+                                {p.customSecurityStock === undefined || p.customSecurityStock === null ? (
+                                  <span className="text-xs text-[#666663] ml-1">(auto)</span>
+                                ) : (
+                                  <span className="text-xs text-green-600 ml-1">(custom)</span>
+                                )}
+                                <Edit2 className="w-3 h-3 shrink-0" />
+                              </button>
+                            )}
+                          </td>
+                          <td className="px-4 py-3 text-right">
+                            <span className="inline-block px-3 py-1 bg-blue-50 text-[#64A4F2] rounded text-sm font-medium border border-blue-200">
+                              {p.reorderPoint} unités
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                <div className="mt-6 p-4 bg-[#FAFAF7] rounded-lg border border-[#E5E4DF]">
+                  <h3 className="font-semibold text-[#191919] mb-2 inline-flex items-center gap-2">
+                    <Info className="w-5 h-5 text-[#666663] shrink-0" />
+                    Guide d'utilisation
+                  </h3>
+                  <ul className="space-y-2 text-sm text-[#191919]">
+                    <li><strong>Multiplicateur :</strong> Ajustez selon la saisonnalité (0.3 = hors saison, 1 = normal, 5 = BFCM/pic)</li>
+                    <li><strong>Stock Sécurité :</strong> Par défaut calculé à 20% du délai fournisseur. Personnalisez selon vos besoins (laissez vide pour revenir au mode auto)</li>
+                    <li><strong>Point de Commande :</strong> Calculé automatiquement, se met à jour en temps réel</li>
+                    <li><strong>Modifications :</strong> Toutes les modifications sont sauvegardées automatiquement dans Google Sheets</li>
+                  </ul>
+                </div>
+              </div>
+            )}
+            
+            {parametersSubTab === 'suppliers' && (
+              <>
+                <GestionFournisseurs
+                  suppliers={suppliers}
+                  products={products}
+                  onOpenModal={handleOpenSupplierModal}
+                  onDelete={handleDeleteSupplier}
+                />
+                
+                <SupplierModal
+                  isOpen={supplierModalOpen}
+                  onClose={handleCloseSupplierModal}
+                  formData={supplierFormData}
+                  onChange={handleSupplierFormChange}
+                  onSave={handleSaveSupplier}
+                  isEditing={!!editingSupplier}
+                />
+              </>
+            )}
+            
+            {parametersSubTab === 'mapping' && (
+              <>
+                <MappingSKUFournisseur
+                  products={products}
+                  suppliers={suppliers}
+                  onOpenAssignModal={handleOpenAssignSupplierModal}
+                  onRemoveSupplier={handleRemoveSupplierFromProduct}
+                />
+                
+                <AssignSupplierModal
+                  isOpen={assignSupplierModalOpen}
+                  onClose={handleCloseAssignSupplierModal}
+                  product={productToMap}
+                  suppliers={suppliers}
+                  selectedSupplier={selectedSupplierForMapping}
+                  onSelectSupplier={setSelectedSupplierForMapping}
+                  onAssign={handleAssignSupplier}
+                />
+              </>
+            )}
           </div>
         )}
 
