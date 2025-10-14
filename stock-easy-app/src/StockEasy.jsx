@@ -342,6 +342,9 @@ const StockEasy = () => {
   const [damageModalOpen, setDamageModalOpen] = useState(false);
   const [damageItems, setDamageItems] = useState({});
   const [damageNotes, setDamageNotes] = useState('');
+  const [reclamationEmailModalOpen, setReclamationEmailModalOpen] = useState(false);
+  const [reclamationEmailContent, setReclamationEmailContent] = useState('');
+  const [currentReclamationOrder, setCurrentReclamationOrder] = useState(null);
 
   useEffect(() => {
     loadData();
@@ -670,15 +673,30 @@ L'équipe Stock Easy`
         setDiscrepancyItems(initialDiscrepancy);
         setDiscrepancyModalOpen(true);
       } else {
-        // Réception conforme - mise à jour automatique du stock
+        // CORRECTION 1: Réception conforme - mise à jour automatique du stock
+        console.log('=== DEBUG CORRECTION 1 - Réception conforme ===');
+        
+        // Convertir les quantités en nombres pour éviter #NUM!
+        const stockUpdates = reconciliationOrder.items.map(item => {
+          const quantity = parseInt(item.quantity, 10) || 0;
+          console.log(`Stock ${item.sku}: +${quantity} unités (type: ${typeof quantity})`);
+          return {
+            sku: item.sku,
+            quantity: quantity
+          };
+        });
+        
+        console.log('Stock updates:', stockUpdates);
+        
+        // Mettre à jour le stock AVANT de marquer comme completed
+        await api.updateStock(stockUpdates);
+        
+        // Puis marquer la commande comme complétée
         await api.updateOrderStatus(reconciliationOrder.id, {
           status: 'completed',
           receivedAt: new Date().toISOString().split('T')[0],
           completedAt: new Date().toISOString().split('T')[0]
         });
-        
-        // Ajustement automatique du stock
-        await api.updateStock(reconciliationOrder.items);
         
         await loadData();
         setReconciliationModalOpen(false);
@@ -708,11 +726,19 @@ L'équipe Stock Easy`
       console.log('EMAIL DE RÉCLAMATION GÉNÉRÉ:', claimEmail);
       alert('📧 Email de réclamation généré !\n\n' + claimEmail);
       
-      // Mettre à jour la commande avec les quantités reçues
-      const updatedItems = reconciliationOrder.items.map(item => ({
-        ...item,
-        receivedQuantity: discrepancyItems[item.sku]?.received || item.quantity
-      }));
+      // CORRECTION 4A: Mettre à jour la commande avec les quantités reçues
+      const updatedItems = reconciliationOrder.items.map(item => {
+        const receivedQty = discrepancyItems[item.sku]?.received;
+        return {
+          sku: item.sku,
+          quantity: item.quantity,
+          pricePerUnit: item.pricePerUnit,
+          receivedQuantity: receivedQty !== undefined ? parseInt(receivedQty, 10) : parseInt(item.quantity, 10)
+        };
+      });
+      
+      console.log('=== DEBUG CORRECTION 4A ===');
+      console.log('Items mis à jour avec receivedQuantity:', updatedItems);
       
       await api.updateOrderStatus(reconciliationOrder.id, {
         status: 'reconciliation',
@@ -721,11 +747,19 @@ L'équipe Stock Easy`
         items: updatedItems
       });
       
-      // Mettre à jour le stock avec les quantités réellement reçues
-      const stockUpdates = Object.entries(discrepancyItems).map(([sku, data]) => ({
-        sku,
-        quantity: data.received
-      }));
+      // CORRECTION 1: Mettre à jour le stock avec les quantités réellement reçues (conversion en nombre)
+      const stockUpdates = Object.entries(discrepancyItems).map(([sku, data]) => {
+        const quantityReceived = parseInt(data.received, 10) || 0;
+        console.log(`Stock update pour ${sku}: +${quantityReceived} unités`);
+        return {
+          sku,
+          quantity: quantityReceived
+        };
+      });
+      
+      console.log('=== DEBUG CORRECTION 1 ===');
+      console.log('Stock updates:', stockUpdates);
+      
       await api.updateStock(stockUpdates);
       
       await loadData();
@@ -767,11 +801,15 @@ L'équipe Stock Easy`
       console.log('EMAIL RÉCLAMATION DOMMAGES:', damageEmail);
       alert('📧 Email de réclamation pour dommages généré !\n\n' + damageEmail);
       
-      // Mettre à jour le stock avec uniquement les produits non endommagés
-      const stockUpdates = Object.entries(damageItems).map(([sku, data]) => ({
-        sku,
-        quantity: data.total - data.damaged
-      }));
+      // CORRECTION 1: Mettre à jour le stock avec uniquement les produits non endommagés (conversion en nombre)
+      const stockUpdates = Object.entries(damageItems).map(([sku, data]) => {
+        const quantityGood = parseInt(data.total, 10) - parseInt(data.damaged, 10);
+        console.log(`Stock update pour ${sku}: +${quantityGood} unités (total: ${data.total}, endommagé: ${data.damaged})`);
+        return {
+          sku,
+          quantity: quantityGood
+        };
+      });
       
       await api.updateStock(stockUpdates);
       await api.updateOrderStatus(reconciliationOrder.id, {
@@ -789,6 +827,101 @@ L'équipe Stock Easy`
     } catch (error) {
       console.error('❌ Erreur:', error);
       alert('Erreur lors de la soumission');
+    }
+  };
+
+  // CORRECTION 4B: Fonction pour générer l'email de réclamation
+  const generateReclamationEmail = (order) => {
+    const dateReception = new Date(order.receivedAt).toLocaleDateString('fr-FR', {
+      day: '2-digit',
+      month: 'long',
+      year: 'numeric'
+    });
+    
+    const itemsWithGap = order.items.filter(item => 
+      item.quantity > (item.receivedQuantity || 0)
+    );
+    
+    let tableauProduits = '';
+    itemsWithGap.forEach(item => {
+      const ecart = item.quantity - (item.receivedQuantity || 0);
+      const product = products.find(p => p.sku === item.sku);
+      const skuPadded = (product?.name || item.sku).padEnd(30);
+      const orderedPadded = String(item.quantity).padEnd(10);
+      const receivedPadded = String(item.receivedQuantity || 0).padEnd(8);
+      tableauProduits += `${skuPadded} | ${orderedPadded} | ${receivedPadded} | ${ecart}\n`;
+    });
+    
+    return `Objet : Réclamation commande ${order.id} - Quantités manquantes
+
+Bonjour,
+
+Nous avons réceptionné la commande ${order.id} en date du ${dateReception}, mais nous constatons les écarts suivants :
+
+Produit                        | Commandé   | Reçu     | Manquant
+-------------------------------|------------|----------|----------
+${tableauProduits}
+Nous vous remercions de bien vouloir :
+- Soit nous réexpédier les quantités manquantes dans les plus brefs délais
+- Soit établir un avoir correspondant
+
+Cordialement,
+[Votre nom]`;
+  };
+
+  // CORRECTION 4B: Fonction pour ouvrir le modal de réclamation
+  const openReclamationModal = (order) => {
+    const emailContent = generateReclamationEmail(order);
+    setReclamationEmailContent(emailContent);
+    setCurrentReclamationOrder(order);
+    setReclamationEmailModalOpen(true);
+  };
+
+  // CORRECTION 4B: Fonction pour copier l'email dans le presse-papier
+  const copyReclamationToClipboard = () => {
+    navigator.clipboard.writeText(reclamationEmailContent);
+    alert('📋 Email copié dans le presse-papier !');
+  };
+
+  // CORRECTION 4C: Fonction pour valider sans réclamation
+  const validateWithoutReclamation = async (order) => {
+    const confirm = window.confirm(
+      `Êtes-vous sûr de vouloir valider cette commande sans envoyer de réclamation ?\n\n` +
+      `Les quantités reçues seront enregistrées comme définitives et le stock sera ajusté en conséquence.`
+    );
+    
+    if (!confirm) return;
+    
+    try {
+      console.log('=== VALIDATION SANS RÉCLAMATION ===');
+      
+      // CORRECTION 1 & 4C: Ajuster le stock avec les quantités RÉELLEMENT reçues
+      const stockUpdates = order.items.map(item => {
+        const quantityReceived = parseInt(item.receivedQuantity, 10) || 0;
+        console.log(`Stock ${item.sku}: +${quantityReceived} unités reçues`);
+        return {
+          sku: item.sku,
+          quantity: quantityReceived
+        };
+      });
+      
+      console.log('Stock updates:', stockUpdates);
+      
+      // Mettre à jour le stock
+      await api.updateStock(stockUpdates);
+      
+      // Marquer la commande comme completed
+      await api.updateOrderStatus(order.id, {
+        status: 'completed',
+        completedAt: new Date().toISOString().split('T')[0]
+      });
+      
+      await loadData();
+      
+      alert(`✅ Commande ${order.id} validée avec les quantités reçues.`);
+    } catch (error) {
+      console.error('❌ Erreur:', error);
+      alert('Erreur lors de la validation');
     }
   };
 
@@ -1342,15 +1475,24 @@ L'équipe Stock Easy`
                             </div>
                           ))}
                         </div>
-                        <Button
-                          variant="primary"
-                          size="sm"
-                          icon={Mail}
-                          onClick={() => alert('Email de réconciliation généré !')}
-                          className="shrink-0"
-                        >
-                          Envoyer réclamation
-                        </Button>
+                        <div className="flex gap-2 shrink-0">
+                          <Button
+                            variant="primary"
+                            size="sm"
+                            icon={Mail}
+                            onClick={() => openReclamationModal(order)}
+                          >
+                            Envoyer réclamation
+                          </Button>
+                          <Button
+                            variant="success"
+                            size="sm"
+                            icon={Check}
+                            onClick={() => validateWithoutReclamation(order)}
+                          >
+                            Valider sans réclamation
+                          </Button>
+                        </div>
                       </div>
                     </div>
                   ))
@@ -2099,6 +2241,48 @@ L'équipe Stock Easy`
                 rows={3}
                 placeholder="Décrivez l'état des produits endommagés..."
                 className="w-full px-3 py-2 border-2 border-[#E5E4DF] rounded-lg bg-white text-[#191919] focus:outline-none focus:ring-2 focus:ring-black resize-none"
+              />
+            </div>
+          </>
+        )}
+      </Modal>
+
+      {/* CORRECTION 4B: Modal Email de Réclamation */}
+      <Modal
+        isOpen={reclamationEmailModalOpen && currentReclamationOrder}
+        onClose={() => setReclamationEmailModalOpen(false)}
+        title={`Réclamation - ${currentReclamationOrder?.id || ''}`}
+        footer={
+          <div className="flex justify-end gap-3">
+            <Button 
+              variant="outline" 
+              onClick={() => setReclamationEmailModalOpen(false)}
+            >
+              Fermer
+            </Button>
+            <Button 
+              variant="primary" 
+              icon={Mail}
+              onClick={copyReclamationToClipboard}
+            >
+              📋 Copier dans le presse-papier
+            </Button>
+          </div>
+        }
+      >
+        {currentReclamationOrder && (
+          <>
+            <div className="mb-4">
+              <p className="text-sm text-[#666663] mb-4">
+                Vous pouvez modifier le texte ci-dessous avant de le copier
+              </p>
+            </div>
+            <div className="my-4">
+              <textarea
+                value={reclamationEmailContent}
+                onChange={(e) => setReclamationEmailContent(e.target.value)}
+                rows={20}
+                className="w-full p-4 border-2 border-[#E5E4DF] rounded-lg font-mono text-sm bg-[#FAFAF7] text-[#191919] focus:outline-none focus:ring-2 focus:ring-black resize-none"
               />
             </div>
           </>
