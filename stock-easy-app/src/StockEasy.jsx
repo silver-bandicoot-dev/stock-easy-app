@@ -1,5 +1,8 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Package, Bell, Mail, X, Check, Truck, Clock, AlertCircle, CheckCircle, Eye, Settings, Info, Edit2, Activity, TrendingUp, TrendingDown, ArrowUpRight, ArrowDownRight, Upload, FileText, Calendar, RefreshCw, Plus } from 'lucide-react';
+import { Toaster, toast } from 'sonner';
+import { motion, AnimatePresence } from 'framer-motion';
+import debounce from 'lodash.debounce';
 
 // ============================================
 // CONFIGURATION API GOOGLE SHEETS
@@ -378,13 +381,21 @@ const Modal = ({ isOpen, onClose, title, children, footer }) => {
   
   return (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
-      <div 
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
         className="absolute inset-0 bg-black/50 backdrop-blur-sm"
         onClick={onClose}
         aria-hidden="true"
       />
       
-      <div className="relative bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] flex flex-col animate-in fade-in zoom-in-95 duration-200">
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95, y: 20 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.95, y: 20 }}
+        transition={{ duration: 0.2, ease: "easeOut" }}
+        className="relative bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] flex flex-col">
         <div className="bg-[#191919] px-6 py-4 flex items-center justify-between rounded-t-xl shrink-0">
           <h3 className="text-xl font-bold text-white">{title}</h3>
           <button 
@@ -405,7 +416,7 @@ const Modal = ({ isOpen, onClose, title, children, footer }) => {
             {footer}
           </div>
         )}
-      </div>
+      </motion.div>
     </div>
   );
 };
@@ -731,11 +742,14 @@ const GestionFournisseurs = ({
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   
-  const suppliersList = Object.values(suppliers);
+  const suppliersList = useMemo(() => Object.values(suppliers), [suppliers]);
   
-  const filteredSuppliers = suppliersList.filter(s => 
-    s.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    s.email.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredSuppliers = useMemo(() => 
+    suppliersList.filter(s => 
+      s.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      s.email.toLowerCase().includes(searchTerm.toLowerCase())
+    ),
+    [suppliersList, searchTerm]
   );
   
   return (
@@ -968,19 +982,22 @@ const MappingSKUFournisseur = ({
   const [filter, setFilter] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
   
-  const suppliersList = Object.values(suppliers);
+  const suppliersList = useMemo(() => Object.values(suppliers), [suppliers]);
   
-  const filteredProducts = products.filter(p => {
-    const matchesSearch = 
-      p.sku.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      p.name.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    if (!matchesSearch) return false;
-    
-    if (filter === 'without_supplier') return !p.supplier;
-    if (filter === 'with_supplier') return !!p.supplier;
-    return true;
-  });
+  const filteredProducts = useMemo(() => 
+    products.filter(p => {
+      const matchesSearch = 
+        p.sku.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        p.name.toLowerCase().includes(searchTerm.toLowerCase());
+      
+      if (!matchesSearch) return false;
+      
+      if (filter === 'without_supplier') return !p.supplier;
+      if (filter === 'with_supplier') return !!p.supplier;
+      return true;
+    }),
+    [products, searchTerm, filter]
+  );
   
   const stats = {
     total: products.length,
@@ -1323,7 +1340,17 @@ const StockEasy = () => {
       console.log('✅ Données chargées depuis Google Sheets');
     } catch (error) {
       console.error('❌ Erreur lors du chargement:', error);
-      alert('Erreur lors du chargement des données. Vérifiez la console.');
+      if (error.message?.includes('network') || error.message?.includes('fetch')) {
+        toast.error('Problème de connexion. Vérifiez votre connexion Internet.', {
+          action: {
+            label: 'Réessayer',
+            onClick: () => loadData()
+          },
+          duration: Infinity
+        });
+      } else {
+        toast.error('Erreur lors du chargement des données. Vérifiez la console.');
+      }
     } finally {
       setLoading(false);
     }
@@ -1353,7 +1380,16 @@ const StockEasy = () => {
       return true;
     } catch (error) {
       console.error('❌ Erreur mise à jour seuil:', error);
-      alert('❌ Erreur lors de la sauvegarde du seuil de surstock. Vérifiez votre connexion et réessayez.');
+      if (error.message?.includes('network') || error.message?.includes('fetch')) {
+        toast.error('Problème de connexion. Vérifiez votre connexion Internet.', {
+          action: {
+            label: 'Réessayer',
+            onClick: () => handleUpdateSeuilSurstock(newValue)
+          }
+        });
+      } else {
+        toast.error('Erreur lors de la sauvegarde du seuil de surstock.');
+      }
       throw error;
     }
   };
@@ -1366,7 +1402,7 @@ const StockEasy = () => {
       return true;
     } catch (error) {
       console.error('❌ Erreur mise à jour devise:', error);
-      alert('❌ Erreur lors de la sauvegarde de la devise. Vérifiez votre connexion et réessayez.');
+      toast.error('Erreur lors de la sauvegarde de la devise. Vérifiez votre connexion et réessayez.');
       throw error;
     }
   };
@@ -1379,7 +1415,7 @@ const StockEasy = () => {
       return true;
     } catch (error) {
       console.error('❌ Erreur mise à jour multiplicateur:', error);
-      alert('❌ Erreur lors de la sauvegarde du multiplicateur. Vérifiez votre connexion et réessayez.');
+      toast.error('Erreur lors de la sauvegarde du multiplicateur. Vérifiez votre connexion et réessayez.');
       throw error;
     }
   };
@@ -1470,7 +1506,7 @@ const StockEasy = () => {
     const errors = validateSupplierForm();
     
     if (errors.length > 0) {
-      alert('❌ Erreurs :\n' + errors.join('\n'));
+      toast.error('Erreurs : ' + errors.join(', '));
       return;
     }
     
@@ -1489,7 +1525,7 @@ const StockEasy = () => {
       handleCloseSupplierModal();
     } catch (error) {
       console.error('❌ Erreur sauvegarde fournisseur:', error);
-      alert('Erreur lors de la sauvegarde');
+      toast.error('Erreur lors de la sauvegarde');
     }
   };
 
@@ -1513,7 +1549,7 @@ const StockEasy = () => {
       await loadData();
     } catch (error) {
       console.error('❌ Erreur suppression fournisseur:', error);
-      alert('Erreur lors de la suppression');
+      toast.error('Erreur lors de la suppression');
     }
   };
 
@@ -1535,7 +1571,7 @@ const StockEasy = () => {
 
   const handleAssignSupplier = async () => {
     if (!selectedSupplierForMapping) {
-      alert('❌ Veuillez sélectionner un fournisseur');
+      toast.warning('Veuillez sélectionner un fournisseur');
       return;
     }
     
@@ -1546,7 +1582,7 @@ const StockEasy = () => {
       handleCloseAssignSupplierModal();
     } catch (error) {
       console.error('❌ Erreur assignation fournisseur:', error);
-      alert('Erreur lors de l\'assignation');
+      toast.error('Erreur lors de l\'assignation');
     }
   };
 
@@ -1564,7 +1600,7 @@ const StockEasy = () => {
       await loadData();
     } catch (error) {
       console.error('❌ Erreur suppression assignation:', error);
-      alert('Erreur lors de la suppression');
+      toast.error('Erreur lors de la suppression');
     }
   };
 
@@ -1705,7 +1741,18 @@ const StockEasy = () => {
       console.log('✅ Produit mis à jour');
     } catch (error) {
       console.error('❌ Erreur lors de la mise à jour:', error);
-      alert('Erreur lors de la mise à jour du produit');
+      if (error.message?.includes('404')) {
+        toast.error('Produit introuvable. Actualisez la page.', {
+          action: {
+            label: 'Actualiser',
+            onClick: () => loadData()
+          }
+        });
+      } else if (error.message?.includes('network') || error.message?.includes('fetch')) {
+        toast.error('Problème de connexion. Vérifiez votre connexion Internet.');
+      } else {
+        toast.error(`Erreur lors de la mise à jour : ${error.message || 'Erreur inconnue'}`);
+      }
     }
   };
 
@@ -1799,10 +1846,16 @@ L'équipe Stock Easy`
       setEmailModalOpen(false);
       setSelectedSupplier(null);
       
-      alert('✅ Commande créée et sauvegardée dans Google Sheets !');
+      toast.success('Commande créée et sauvegardée dans Google Sheets !', {
+        action: {
+          label: 'Voir',
+          onClick: () => setActiveTab('track')
+        },
+        duration: 6000
+      });
     } catch (error) {
       console.error('❌ Erreur lors de la création de la commande:', error);
-      alert('Erreur lors de la création de la commande');
+      toast.error('Erreur lors de la création de la commande');
     }
   };
 
@@ -1831,10 +1884,16 @@ L'équipe Stock Easy`
       setEmailModalOpen(false);
       setSelectedSupplier(null);
       
-      alert('✅ Commande créée sans envoi d\'email !');
+      toast.success('Commande créée sans envoi d\'email !', {
+        action: {
+          label: 'Voir',
+          onClick: () => setActiveTab('track')
+        },
+        duration: 6000
+      });
     } catch (error) {
       console.error('❌ Erreur lors de la création de la commande:', error);
-      alert('Erreur lors de la création de la commande');
+      toast.error('Erreur lors de la création de la commande');
     }
   };
 
@@ -1851,7 +1910,7 @@ L'équipe Stock Easy`
       console.log(`✅ Commande ${orderId} confirmée le ${confirmedAt}`);
     } catch (error) {
       console.error('❌ Erreur:', error);
-      alert('Erreur lors de la confirmation');
+      toast.error('Erreur lors de la confirmation');
     }
   };
 
@@ -1868,7 +1927,7 @@ L'équipe Stock Easy`
       console.log('✅ Commande expédiée');
     } catch (error) {
       console.error('❌ Erreur:', error);
-      alert('Erreur lors de la mise à jour');
+      toast.error('Erreur lors de la mise à jour');
     }
   };
 
@@ -1924,11 +1983,11 @@ L'équipe Stock Easy`
         setReconciliationModalOpen(false);
         setReconciliationOrder(null);
         
-        alert('✅ Réception validée ! Stock mis à jour automatiquement.');
+        toast.success('Réception validée ! Stock mis à jour automatiquement.');
       }
     } catch (error) {
       console.error('❌ Erreur:', error);
-      alert('Erreur lors de la validation');
+      toast.error('Erreur lors de la validation');
     }
   };
 
@@ -1946,7 +2005,10 @@ L'équipe Stock Easy`
       const claimEmail = `Objet: Réclamation - Commande ${reconciliationOrder.id}\n\nBonjour,\n\nNous avons constaté des écarts entre les quantités commandées et reçues :\n\n${discrepancyList}\n\nMerci de nous confirmer ces écarts et de procéder à l'envoi des quantités manquantes.\n\nCordialement`;
       
       console.log('EMAIL DE RÉCLAMATION GÉNÉRÉ:', claimEmail);
-      alert('📧 Email de réclamation généré !\n\n' + claimEmail);
+      toast.success('Email de réclamation généré !', {
+        description: 'Le contenu a été préparé',
+        duration: 4000
+      });
       
       // CORRECTION 4A: Mettre à jour la commande avec les quantités reçues
       const updatedItems = reconciliationOrder.items.map(item => {
@@ -1990,7 +2052,7 @@ L'équipe Stock Easy`
       setReconciliationOrder(null);
     } catch (error) {
       console.error('❌ Erreur:', error);
-      alert('Erreur lors de la soumission');
+      toast.error('Erreur lors de la soumission');
     }
   };
 
@@ -2066,7 +2128,10 @@ L'équipe Stock Easy`
         claimEmail += `Merci de procéder aux actions correctives nécessaires.\n\nCordialement`;
         
         console.log('EMAIL DE RÉCLAMATION GÉNÉRÉ:', claimEmail);
-        alert('📧 Email de réclamation généré !\n\n' + claimEmail);
+        toast.success('Email de réclamation généré !', {
+          description: 'Le contenu a été préparé',
+          duration: 4000
+        });
       }
       
       // Mettre à jour le statut de la commande
@@ -2097,10 +2162,10 @@ L'équipe Stock Easy`
       setReconciliationNotes('');
       setReconciliationOrder(null);
       
-      alert('✅ Réconciliation enregistrée avec succès !');
+      toast.success('Réconciliation enregistrée avec succès !');
     } catch (error) {
       console.error('❌ Erreur:', error);
-      alert('Erreur lors de la soumission de la réconciliation');
+      toast.error('Erreur lors de la soumission de la réconciliation');
     }
   };
 
@@ -2117,7 +2182,10 @@ L'équipe Stock Easy`
       const damageEmail = `Objet: Réclamation - Marchandises endommagées - Commande ${reconciliationOrder.id}\n\nBonjour,\n\nNous avons reçu la commande ${reconciliationOrder.id} mais certains produits sont arrivés endommagés :\n\n${damagedList}\n\nNotes: ${damageNotes || 'Aucune note supplémentaire'}\n\nMerci de procéder au remplacement de ces articles.\n\nCordialement`;
       
       console.log('EMAIL RÉCLAMATION DOMMAGES:', damageEmail);
-      alert('📧 Email de réclamation pour dommages généré !\n\n' + damageEmail);
+      toast.success('Email de réclamation pour dommages généré !', {
+        description: 'Le contenu a été préparé',
+        duration: 4000
+      });
       
       // CORRECTION 1: Mettre à jour le stock avec uniquement les produits non endommagés (conversion en nombre)
       const stockUpdates = Object.entries(damageItems).map(([sku, data]) => {
@@ -2144,7 +2212,7 @@ L'équipe Stock Easy`
       setReconciliationOrder(null);
     } catch (error) {
       console.error('❌ Erreur:', error);
-      alert('Erreur lors de la soumission');
+      toast.error('Erreur lors de la soumission');
     }
   };
 
@@ -2198,7 +2266,7 @@ Cordialement,
   // CORRECTION 4B: Fonction pour copier l'email dans le presse-papier
   const copyReclamationToClipboard = () => {
     navigator.clipboard.writeText(reclamationEmailContent);
-    alert('📋 Email copié dans le presse-papier !');
+    toast.success('Email copié dans le presse-papier !');
   };
 
   // CORRECTION 4C: Fonction pour valider sans réclamation
@@ -2236,10 +2304,10 @@ Cordialement,
       
       await loadData();
       
-      alert(`✅ Commande ${order.id} validée avec les quantités reçues.`);
+      toast.success(`Commande ${order.id} validée avec les quantités reçues.`);
     } catch (error) {
       console.error('❌ Erreur:', error);
-      alert('Erreur lors de la validation');
+      toast.error('Erreur lors de la validation');
     }
   };
 
@@ -2304,24 +2372,41 @@ Cordialement,
     link.click();
     document.body.removeChild(link);
     
-    alert(`✅ Export CSV réussi : ${filteredOrders.length} commande(s) exportée(s)`);
+    toast.success(`Export CSV réussi : ${filteredOrders.length} commande(s) exportée(s)`);
   };
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#F0F0EB] flex items-center justify-center">
+      <motion.div 
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        className="min-h-screen bg-[#F0F0EB] flex items-center justify-center"
+      >
         <div className="text-center">
-          <RefreshCw className="w-12 h-12 text-black animate-spin mx-auto mb-4" />
+          <motion.div
+            animate={{ rotate: 360 }}
+            transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+          >
+            <RefreshCw className="w-12 h-12 text-black mx-auto mb-4" />
+          </motion.div>
           <p className="text-lg font-medium text-[#191919]">Chargement depuis Google Sheets...</p>
         </div>
-      </div>
+      </motion.div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#F0F0EB]">
-      {/* Header - Sticky */}
-      <div className="bg-[#191919] shadow-lg sticky top-0 z-[9997] relative isolate">
+    <>
+      <Toaster 
+        position="top-right" 
+        expand={true}
+        richColors 
+        closeButton
+        duration={4000}
+      />
+      <div className="min-h-screen bg-[#F0F0EB]">
+        {/* Header - Sticky */}
+        <div className="bg-[#191919] shadow-lg sticky top-0 z-[9997] relative isolate">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -2439,14 +2524,23 @@ Cordialement,
       </div>
 
       {/* Notifications Panel */}
-      {notificationsOpen && (
-        <>
-          <div 
-            className="fixed inset-0 z-[9998]" 
-            onClick={() => setNotificationsOpen(false)}
-            aria-hidden="true"
-          />
-          <div className="fixed right-4 top-20 w-96 bg-white rounded-xl shadow-2xl border border-[#E5E4DF] z-[9999] animate-in slide-in-from-top-2 duration-200">
+      <AnimatePresence>
+        {notificationsOpen && (
+          <>
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-[9998]" 
+              onClick={() => setNotificationsOpen(false)}
+              aria-hidden="true"
+            />
+            <motion.div
+              initial={{ opacity: 0, y: -20, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -20, scale: 0.95 }}
+              transition={{ duration: 0.2, ease: "easeOut" }}
+              className="fixed right-4 top-20 w-96 bg-white rounded-xl shadow-2xl border border-[#E5E4DF] z-[9999]">
             <div className="p-4 border-b border-[#E5E4DF]">
               <h3 className="font-bold text-[#191919]">Notifications</h3>
             </div>
@@ -2466,15 +2560,23 @@ Cordialement,
                 ))
               )}
             </div>
-          </div>
-        </>
-      )}
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         
         {/* DASHBOARD TAB */}
-        {activeTab === 'dashboard' && (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <AnimatePresence mode="wait">
+          {activeTab === 'dashboard' && (
+            <motion.div
+              key="dashboard"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              transition={{ duration: 0.25 }}
+              className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             
             {/* Produits à commander */}
             <div className="bg-white rounded-xl shadow-sm border border-[#E5E4DF] p-6">
@@ -2494,8 +2596,13 @@ Cordialement,
                 {productsByStatus.to_order.length === 0 ? (
                   <p className="text-[#666663] text-center py-8 text-sm">Rien à commander</p>
                 ) : (
-                  productsByStatus.to_order.map(p => (
-                    <div key={p.sku} className="flex justify-between items-center p-3 bg-[#FAFAF7] rounded-lg hover:bg-[#F0F0EB] transition-colors border border-[#E5E4DF]">
+                  productsByStatus.to_order.map((p, index) => (
+                    <motion.div
+                      key={p.sku}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: index * 0.03, duration: 0.3 }}
+                      className="flex justify-between items-center p-3 bg-[#FAFAF7] rounded-lg hover:bg-[#F0F0EB] transition-colors border border-[#E5E4DF]">
                       <div className="min-w-0">
                         <p className="font-medium text-[#191919] text-sm truncate">{p.name}</p>
                         <p className="text-xs text-[#666663] truncate">{p.supplier}</p>
@@ -2504,7 +2611,7 @@ Cordialement,
                         <p className="font-bold text-[#EF1C43] text-sm">{p.qtyToOrder} unités</p>
                         <p className="text-xs text-[#666663]">Stock: {p.stock}</p>
                       </div>
-                    </div>
+                    </motion.div>
                   ))
                 )}
               </div>
@@ -2620,12 +2727,18 @@ Cordialement,
               </div>
             </div>
 
-          </div>
-        )}
+            </motion.div>
+          )}
 
-        {/* ONGLET ACTIONS */}
-        {activeTab === 'actions' && (
-          <div className="space-y-6">
+          {/* ONGLET ACTIONS */}
+          {activeTab === 'actions' && (
+            <motion.div
+              key="actions"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              transition={{ duration: 0.25 }}
+              className="space-y-6">
             <div className="bg-white rounded-xl shadow-sm border border-[#E5E4DF] p-6">
               <div className="flex items-center gap-3 mb-6">
                 <div className="w-10 h-10 bg-red-50 rounded-lg flex items-center justify-center border border-red-200 shrink-0">
@@ -2636,6 +2749,7 @@ Cordialement,
                   <p className="text-sm text-[#666663]">{productsByStatus.to_order.length} produit(s)</p>
                 </div>
               </div>
+              <div>
               {Object.keys(toOrderBySupplier).length === 0 ? (
                 <div className="text-center py-12">
                   <CheckCircle className="w-16 h-16 text-green-400 mx-auto mb-4 shrink-0" />
@@ -2683,13 +2797,20 @@ Cordialement,
                   ))}
                 </div>
               )}
+              </div>
             </div>
-          </div>
-        )}
+            </motion.div>
+          )}
 
-        {/* TRACK & MANAGE TAB */}
-        {activeTab === 'track' && (
-          <div className="space-y-6">
+          {/* TRACK & MANAGE TAB */}
+          {activeTab === 'track' && (
+            <motion.div
+              key="track"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              transition={{ duration: 0.25 }}
+              className="space-y-6">
             {/* Commandes en attente de confirmation */}
             <div className="bg-white rounded-xl shadow-sm border border-[#E5E4DF] p-6">
               <div className="flex items-center gap-2 mb-4">
@@ -2940,12 +3061,18 @@ Cordialement,
                 )}
               </div>
             </div>
-          </div>
-        )}
+            </motion.div>
+          )}
 
-        {/* ANALYTICS TAB */}
-        {activeTab === 'analytics' && (
-          <div className="space-y-6">
+          {/* ANALYTICS TAB */}
+          {activeTab === 'analytics' && (
+            <motion.div
+              key="analytics"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              transition={{ duration: 0.25 }}
+              className="space-y-6">
             <div className="bg-white rounded-xl shadow-sm border border-[#E5E4DF] p-6">
               <h2 className="text-2xl font-bold text-[#191919] mb-2">Indicateurs Clés de l'Inventaire</h2>
               <p className="text-sm text-[#666663] mb-6">
@@ -3037,12 +3164,18 @@ Cordialement,
                 </div>
               </div>
             </div>
-          </div>
-        )}
+            </motion.div>
+          )}
 
-        {/* STOCK LEVEL TAB */}
-        {activeTab === 'stock-level' && (
-          <div className="space-y-6">
+          {/* STOCK LEVEL TAB */}
+          {activeTab === 'stock-level' && (
+            <motion.div
+              key="stock-level"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              transition={{ duration: 0.25 }}
+              className="space-y-6">
             <div className="bg-white rounded-xl shadow-sm border border-[#E5E4DF] p-6">
               <div className="mb-6">
                 <h2 className="text-2xl font-bold text-[#191919] mb-2">Santé de l'Inventaire</h2>
@@ -3148,12 +3281,18 @@ Cordialement,
                 );
               })}
             </div>
-          </div>
-        )}
+            </motion.div>
+          )}
 
-        {/* HISTORIQUE TAB */}
-        {activeTab === 'history' && (
-          <div className="space-y-6">
+          {/* HISTORIQUE TAB */}
+          {activeTab === 'history' && (
+            <motion.div
+              key="history"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              transition={{ duration: 0.25 }}
+              className="space-y-6">
             <div className="bg-white rounded-xl shadow-sm border border-[#E5E4DF] p-6">
               <div className="flex items-center justify-between mb-6 gap-4 flex-wrap">
                 <div>
@@ -3304,12 +3443,18 @@ Cordialement,
                 Exporter en CSV
               </Button>
             </div>
-          </div>
-        )}
+            </motion.div>
+          )}
 
-        {/* ONGLET PARAMETRES */}
-        {activeTab === 'settings' && (
-          <div className="space-y-6">
+          {/* ONGLET PARAMETRES */}
+          {activeTab === 'settings' && (
+            <motion.div
+              key="settings"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              transition={{ duration: 0.25 }}
+              className="space-y-6">
             <div>
               <h2 className="text-3xl font-bold text-[#191919] mb-2">⚙️ Paramètres</h2>
               <p className="text-[#666663]">Gérez la configuration de votre application</p>
@@ -3502,11 +3647,11 @@ Cordialement,
                   onSelectSupplier={setSelectedSupplierForMapping}
                   onAssign={handleAssignSupplier}
                 />
-              </>
-            )}
-          </div>
-        )}
-
+                </>
+              )}
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
       {/* Modal Email */}
@@ -3986,7 +4131,8 @@ Cordialement,
         )}
       </Modal>
 
-    </div>
+      </div>
+    </>
   );
 };
 
