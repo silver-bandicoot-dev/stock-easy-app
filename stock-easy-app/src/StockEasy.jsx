@@ -241,18 +241,26 @@ const Button = ({
 
 /**
  * Formate la date de confirmation pour l'affichage
- * @param {string} isoDate - Date ISO (ex: "2025-10-14T22:00:00.000Z")
- * @returns {string} - Ex: "14 octobre 2025"
+ * @param {string} isoDate - Date ISO (ex: "2025-10-14T22:00:00.000Z") ou date simple (ex: "2025-10-14")
+ * @returns {string} - Ex: "14 octobre 2025" ou "-" si pas de date
  */
 const formatConfirmedDate = (isoDate) => {
-  if (!isoDate) return null;
+  if (!isoDate) return '-';
   
-  const date = new Date(isoDate);
-  return date.toLocaleDateString('fr-FR', {
-    day: '2-digit',
-    month: 'long',
-    year: 'numeric'
-  });
+  try {
+    const date = new Date(isoDate);
+    // Vérifier que la date est valide
+    if (isNaN(date.getTime())) return '-';
+    
+    return date.toLocaleDateString('fr-FR', {
+      day: '2-digit',
+      month: 'long',
+      year: 'numeric'
+    });
+  } catch (error) {
+    console.error('Erreur formatage date:', isoDate, error);
+    return '-';
+  }
 };
 
 // ============================================
@@ -495,8 +503,90 @@ const ParametresGeneraux = ({
   multiplicateur,
   onUpdateMultiplicateur
 }) => {
+  const [tempSeuil, setTempSeuil] = useState(seuilSurstock);
+  const [tempDevise, setTempDevise] = useState(devise);
+  const [tempMultiplicateur, setTempMultiplicateur] = useState(multiplicateur);
+  const [hasChanges, setHasChanges] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveSuccess, setSaveSuccess] = useState(false);
+
+  useEffect(() => {
+    setTempSeuil(seuilSurstock);
+    setTempDevise(devise);
+    setTempMultiplicateur(multiplicateur);
+  }, [seuilSurstock, devise, multiplicateur]);
+
+  useEffect(() => {
+    const changed = tempSeuil !== seuilSurstock || 
+                    tempDevise !== devise || 
+                    tempMultiplicateur !== multiplicateur;
+    setHasChanges(changed);
+    if (changed) setSaveSuccess(false);
+  }, [tempSeuil, tempDevise, tempMultiplicateur, seuilSurstock, devise, multiplicateur]);
+
+  const handleSave = async () => {
+    setIsSaving(true);
+    try {
+      const promises = [];
+      if (tempSeuil !== seuilSurstock) promises.push(onUpdateSeuil(tempSeuil));
+      if (tempDevise !== devise) promises.push(onUpdateDevise(tempDevise));
+      if (tempMultiplicateur !== multiplicateur) promises.push(onUpdateMultiplicateur(tempMultiplicateur));
+      
+      await Promise.all(promises);
+      setSaveSuccess(true);
+      setTimeout(() => setSaveSuccess(false), 3000);
+    } catch (error) {
+      console.error('Erreur sauvegarde:', error);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleCancel = () => {
+    setTempSeuil(seuilSurstock);
+    setTempDevise(devise);
+    setTempMultiplicateur(multiplicateur);
+    setHasChanges(false);
+  };
+
   return (
     <div className="space-y-6">
+      {/* Message de succès */}
+      {saveSuccess && (
+        <div className="bg-green-50 border-2 border-green-500 rounded-xl p-4 flex items-center gap-3">
+          <CheckCircle className="w-5 h-5 text-green-600 shrink-0" />
+          <span className="text-green-800 font-medium">✅ Paramètres sauvegardés avec succès !</span>
+        </div>
+      )}
+
+      {/* Boutons de sauvegarde */}
+      {hasChanges && (
+        <div className="bg-yellow-50 border-2 border-yellow-400 rounded-xl p-4 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <AlertCircle className="w-5 h-5 text-yellow-600 shrink-0" />
+            <span className="text-yellow-800 font-medium">Vous avez des modifications non sauvegardées</span>
+          </div>
+          <div className="flex gap-2 shrink-0">
+            <Button 
+              variant="outline" 
+              onClick={handleCancel}
+              disabled={isSaving}
+            >
+              Annuler
+            </Button>
+            <Button 
+              variant="primary" 
+              icon={isSaving ? RefreshCw : Check}
+              onClick={handleSave}
+              disabled={isSaving}
+              className={isSaving ? 'opacity-75' : ''}
+            >
+              {isSaving ? 'Enregistrement...' : 'Enregistrer les paramètres'}
+            </Button>
+          </div>
+        </div>
+      )}
+
       {/* Devise */}
       <div className="bg-white rounded-xl shadow-sm border border-[#E5E4DF] p-6">
         <h3 className="text-lg font-semibold text-[#191919] mb-4">💰 Devise par défaut</h3>
@@ -508,10 +598,10 @@ const ParametresGeneraux = ({
           {['EUR', 'USD', 'GBP', 'CAD'].map(curr => (
             <button
               key={curr}
-              onClick={() => onUpdateDevise(curr)}
+              onClick={() => setTempDevise(curr)}
               className={`
                 px-4 py-3 rounded-lg border-2 font-medium transition-all
-                ${devise === curr
+                ${tempDevise === curr
                   ? 'border-[#8B5CF6] bg-purple-50 text-[#8B5CF6]'
                   : 'border-[#E5E4DF] hover:border-[#BFBFBA] text-[#666663]'
                 }
@@ -523,8 +613,8 @@ const ParametresGeneraux = ({
         </div>
         
         <div className="mt-3 p-3 bg-[#FAFAF7] rounded-lg">
-          <span className="text-sm text-[#666663]">Devise actuelle : </span>
-          <span className="text-sm font-bold text-[#191919]">{devise}</span>
+          <span className="text-sm text-[#666663]">Devise sélectionnée : </span>
+          <span className="text-sm font-bold text-[#191919]">{tempDevise}</span>
         </div>
       </div>
       
@@ -537,10 +627,10 @@ const ParametresGeneraux = ({
         
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           <button
-            onClick={() => onUpdateSeuil(60)}
+            onClick={() => setTempSeuil(60)}
             className={`
               px-4 py-3 rounded-lg border-2 transition-all
-              ${seuilSurstock === 60
+              ${tempSeuil === 60
                 ? 'border-[#8B5CF6] bg-purple-50'
                 : 'border-[#E5E4DF] hover:border-[#BFBFBA]'
               }
@@ -551,10 +641,10 @@ const ParametresGeneraux = ({
           </button>
           
           <button
-            onClick={() => onUpdateSeuil(90)}
+            onClick={() => setTempSeuil(90)}
             className={`
               px-4 py-3 rounded-lg border-2 transition-all
-              ${seuilSurstock === 90
+              ${tempSeuil === 90
                 ? 'border-[#8B5CF6] bg-purple-50'
                 : 'border-[#E5E4DF] hover:border-[#BFBFBA]'
               }
@@ -565,10 +655,10 @@ const ParametresGeneraux = ({
           </button>
           
           <button
-            onClick={() => onUpdateSeuil(120)}
+            onClick={() => setTempSeuil(120)}
             className={`
               px-4 py-3 rounded-lg border-2 transition-all
-              ${seuilSurstock === 120
+              ${tempSeuil === 120
                 ? 'border-[#8B5CF6] bg-purple-50'
                 : 'border-[#E5E4DF] hover:border-[#BFBFBA]'
               }
@@ -579,10 +669,10 @@ const ParametresGeneraux = ({
           </button>
           
           <button
-            onClick={() => onUpdateSeuil(180)}
+            onClick={() => setTempSeuil(180)}
             className={`
               px-4 py-3 rounded-lg border-2 transition-all
-              ${seuilSurstock === 180
+              ${tempSeuil === 180
                 ? 'border-[#8B5CF6] bg-purple-50'
                 : 'border-[#E5E4DF] hover:border-[#BFBFBA]'
               }
@@ -594,8 +684,8 @@ const ParametresGeneraux = ({
         </div>
         
         <div className="mt-3 p-3 bg-[#FAFAF7] rounded-lg">
-          <span className="text-sm text-[#666663]">Valeur actuelle : </span>
-          <span className="text-sm font-bold text-[#191919]">{seuilSurstock} jours</span>
+          <span className="text-sm text-[#666663]">Valeur sélectionnée : </span>
+          <span className="text-sm font-bold text-[#191919]">{tempSeuil} jours</span>
         </div>
       </div>
       
@@ -608,18 +698,18 @@ const ParametresGeneraux = ({
         
         <div className="flex items-center gap-4">
           <button
-            onClick={() => onUpdateMultiplicateur(Math.max(1, multiplicateur - 0.1))}
+            onClick={() => setTempMultiplicateur(Math.max(0.1, tempMultiplicateur - 0.1))}
             className="w-10 h-10 flex items-center justify-center rounded-lg border-2 border-[#E5E4DF] hover:border-[#8B5CF6] hover:bg-purple-50 transition-all"
           >
             <span className="text-xl font-bold text-[#666663]">-</span>
           </button>
           
           <div className="flex-1 text-center">
-            <div className="text-3xl font-bold text-[#191919]">{multiplicateur.toFixed(1)}</div>
+            <div className="text-3xl font-bold text-[#191919]">{tempMultiplicateur.toFixed(1)}</div>
           </div>
           
           <button
-            onClick={() => onUpdateMultiplicateur(Math.min(3, multiplicateur + 0.1))}
+            onClick={() => setTempMultiplicateur(Math.min(5, tempMultiplicateur + 0.1))}
             className="w-10 h-10 flex items-center justify-center rounded-lg border-2 border-[#E5E4DF] hover:border-[#8B5CF6] hover:bg-purple-50 transition-all"
           >
             <span className="text-xl font-bold text-[#666663]">+</span>
@@ -1159,6 +1249,10 @@ const StockEasy = () => {
   const [damageModalOpen, setDamageModalOpen] = useState(false);
   const [damageItems, setDamageItems] = useState({});
   const [damageNotes, setDamageNotes] = useState('');
+  // NOUVEAU: Modal unifié pour réconciliation complète
+  const [unifiedReconciliationModalOpen, setUnifiedReconciliationModalOpen] = useState(false);
+  const [unifiedReconciliationItems, setUnifiedReconciliationItems] = useState({});
+  const [reconciliationNotes, setReconciliationNotes] = useState('');
   const [reclamationEmailModalOpen, setReclamationEmailModalOpen] = useState(false);
   const [reclamationEmailContent, setReclamationEmailContent] = useState('');
   const [currentReclamationOrder, setCurrentReclamationOrder] = useState(null);
@@ -1253,34 +1347,40 @@ const StockEasy = () => {
 
   const handleUpdateSeuilSurstock = async (newValue) => {
     try {
-      setSeuilSurstockProfond(newValue);
       await api.updateParameter('SeuilSurstockProfond', newValue);
+      setSeuilSurstockProfond(newValue);
       console.log(`✅ Seuil surstock mis à jour : ${newValue}j`);
+      return true;
     } catch (error) {
       console.error('❌ Erreur mise à jour seuil:', error);
-      alert('Erreur lors de la sauvegarde du paramètre');
+      alert('❌ Erreur lors de la sauvegarde du seuil de surstock. Vérifiez votre connexion et réessayez.');
+      throw error;
     }
   };
 
   const handleUpdateDevise = async (newDevise) => {
     try {
-      setDeviseDefaut(newDevise);
       await api.updateParameter('DeviseDefaut', newDevise);
+      setDeviseDefaut(newDevise);
       console.log(`✅ Devise mise à jour : ${newDevise}`);
+      return true;
     } catch (error) {
       console.error('❌ Erreur mise à jour devise:', error);
-      alert('Erreur lors de la sauvegarde du paramètre');
+      alert('❌ Erreur lors de la sauvegarde de la devise. Vérifiez votre connexion et réessayez.');
+      throw error;
     }
   };
 
   const handleUpdateMultiplicateur = async (newValue) => {
     try {
-      setMultiplicateurDefaut(newValue);
       await api.updateParameter('MultiplicateurDefaut', newValue);
+      setMultiplicateurDefaut(newValue);
       console.log(`✅ Multiplicateur mis à jour : ${newValue}`);
+      return true;
     } catch (error) {
       console.error('❌ Erreur mise à jour multiplicateur:', error);
-      alert('Erreur lors de la sauvegarde du paramètre');
+      alert('❌ Erreur lors de la sauvegarde du multiplicateur. Vérifiez votre connexion et réessayez.');
+      throw error;
     }
   };
 
@@ -1781,17 +1881,19 @@ L'équipe Stock Easy`
   const confirmReconciliation = async (hasDiscrepancy) => {
     try {
       if (hasDiscrepancy) {
-        // Ouvrir le modal de gestion des écarts
+        // NOUVEAU: Ouvrir le modal unifié de réconciliation
         setReconciliationModalOpen(false);
-        const initialDiscrepancy = {};
+        const initialUnifiedData = {};
         reconciliationOrder.items.forEach(item => {
-          initialDiscrepancy[item.sku] = {
+          initialUnifiedData[item.sku] = {
             ordered: item.quantity,
-            received: item.quantity // par défaut, à ajuster par l'utilisateur
+            received: item.quantity, // par défaut, à ajuster par l'utilisateur
+            damaged: 0 // par défaut, pas d'endommagé
           };
         });
-        setDiscrepancyItems(initialDiscrepancy);
-        setDiscrepancyModalOpen(true);
+        setUnifiedReconciliationItems(initialUnifiedData);
+        setReconciliationNotes('');
+        setUnifiedReconciliationModalOpen(true);
       } else {
         // CORRECTION 1: Réception conforme - mise à jour automatique du stock
         console.log('=== DEBUG CORRECTION 1 - Réception conforme ===');
@@ -1893,17 +1995,113 @@ L'équipe Stock Easy`
   };
 
   const openDamageModal = () => {
-    setReconciliationModalOpen(false);
-    const initialDamage = {};
-    reconciliationOrder.items.forEach(item => {
-      initialDamage[item.sku] = {
-        total: item.quantity,
-        damaged: 0
-      };
-    });
-    setDamageItems(initialDamage);
-    setDamageNotes('');
-    setDamageModalOpen(true);
+    // ANCIEN: Rediriger vers le modal unifié
+    confirmReconciliation(true);
+  };
+
+  // NOUVEAU: Fonction de soumission du modal unifié de réconciliation
+  const submitUnifiedReconciliation = async () => {
+    try {
+      // Calculer les écarts et préparer les données
+      const hasQuantityDiscrepancy = Object.entries(unifiedReconciliationItems).some(
+        ([sku, data]) => data.ordered !== data.received
+      );
+      const hasDamage = Object.entries(unifiedReconciliationItems).some(
+        ([sku, data]) => data.damaged > 0
+      );
+      
+      // Mettre à jour les items avec les quantités reçues, endommagées et validées
+      const updatedItems = reconciliationOrder.items.map(item => {
+        const data = unifiedReconciliationItems[item.sku];
+        const receivedQty = parseInt(data.received, 10) || 0;
+        const damagedQty = parseInt(data.damaged, 10) || 0;
+        const validatedQty = receivedQty - damagedQty;
+        
+        return {
+          sku: item.sku,
+          quantity: item.quantity,
+          pricePerUnit: item.pricePerUnit,
+          receivedQuantity: receivedQty,
+          damagedQuantity: damagedQty,
+          validatedQuantity: validatedQty,
+          quantityDiscrepancy: item.quantity - receivedQty
+        };
+      });
+
+      console.log('=== DEBUG RÉCONCILIATION UNIFIÉE ===');
+      console.log('Items mis à jour:', updatedItems);
+      
+      // Générer les emails de réclamation si nécessaire
+      if (hasQuantityDiscrepancy || hasDamage) {
+        let claimEmail = `Objet: Réclamation - Commande ${reconciliationOrder.id}\n\nBonjour,\n\nNous avons reçu la commande ${reconciliationOrder.id} mais constatons les problèmes suivants :\n\n`;
+        
+        if (hasQuantityDiscrepancy) {
+          const discrepancyList = Object.entries(unifiedReconciliationItems)
+            .filter(([sku, data]) => data.ordered !== data.received)
+            .map(([sku, data]) => {
+              const product = products.find(p => p.sku === sku);
+              return `- ${product?.name || sku} (SKU: ${sku})\n  📦 Commandé: ${data.ordered} | Reçu: ${data.received} | Écart: ${data.received - data.ordered}`;
+            })
+            .join('\n\n');
+          
+          claimEmail += `**ÉCARTS DE QUANTITÉ:**\n\n${discrepancyList}\n\n`;
+        }
+        
+        if (hasDamage) {
+          const damagedList = Object.entries(unifiedReconciliationItems)
+            .filter(([sku, data]) => data.damaged > 0)
+            .map(([sku, data]) => {
+              const product = products.find(p => p.sku === sku);
+              return `- ${product?.name || sku} (SKU: ${sku})\n  ⚠️ Endommagé: ${data.damaged} / ${data.received} reçus`;
+            })
+            .join('\n\n');
+          
+          claimEmail += `**MARCHANDISES ENDOMMAGÉES:**\n\n${damagedList}\n\n`;
+        }
+        
+        if (reconciliationNotes) {
+          claimEmail += `**Notes supplémentaires:**\n${reconciliationNotes}\n\n`;
+        }
+        
+        claimEmail += `Merci de procéder aux actions correctives nécessaires.\n\nCordialement`;
+        
+        console.log('EMAIL DE RÉCLAMATION GÉNÉRÉ:', claimEmail);
+        alert('📧 Email de réclamation généré !\n\n' + claimEmail);
+      }
+      
+      // Mettre à jour le statut de la commande
+      await api.updateOrderStatus(reconciliationOrder.id, {
+        status: 'reconciliation',
+        receivedAt: new Date().toISOString().split('T')[0],
+        hasDiscrepancy: hasQuantityDiscrepancy,
+        hasDamage: hasDamage,
+        items: updatedItems
+      });
+      
+      // Mettre à jour le stock avec les quantités validées (reçues - endommagées)
+      const stockUpdates = Object.entries(unifiedReconciliationItems).map(([sku, data]) => {
+        const validatedQty = parseInt(data.received, 10) - parseInt(data.damaged, 10);
+        console.log(`Stock update pour ${sku}: +${validatedQty} unités (reçu: ${data.received}, endommagé: ${data.damaged})`);
+        return {
+          sku,
+          quantity: validatedQty
+        };
+      });
+      
+      console.log('Stock updates:', stockUpdates);
+      await api.updateStock(stockUpdates);
+      
+      await loadData();
+      setUnifiedReconciliationModalOpen(false);
+      setUnifiedReconciliationItems({});
+      setReconciliationNotes('');
+      setReconciliationOrder(null);
+      
+      alert('✅ Réconciliation enregistrée avec succès !');
+    } catch (error) {
+      console.error('❌ Erreur:', error);
+      alert('Erreur lors de la soumission de la réconciliation');
+    }
   };
 
   const submitDamageReport = async () => {
@@ -2555,9 +2753,15 @@ Cordialement,
                             <span className="text-[#666663] truncate">{order.supplier}</span>
                           </div>
                           <div className="text-sm text-[#666663]">
-                            <span className="font-medium text-green-600">
-                              Confirmée le {formatConfirmedDate(order.confirmedAt)}
-                            </span>
+                            {order.confirmedAt ? (
+                              <span className="font-medium text-green-600">
+                                ✅ Confirmée le {formatConfirmedDate(order.confirmedAt)}
+                              </span>
+                            ) : (
+                              <span className="font-medium text-yellow-600">
+                                ⏳ En attente de confirmation
+                              </span>
+                            )}
                           </div>
                         </div>
                         <Button
@@ -2599,7 +2803,11 @@ Cordialement,
                             <span className="text-[#666663] truncate">{order.supplier}</span>
                           </div>
                           <div className="text-sm text-[#666663] mb-2">
-                            Expédiée le {formatConfirmedDate(order.shippedAt)}
+                            {order.shippedAt ? (
+                              <span>🚚 Expédiée le {formatConfirmedDate(order.shippedAt)}</span>
+                            ) : (
+                              <span className="text-yellow-600">⏳ Date d'expédition non renseignée</span>
+                            )}
                           </div>
                           {order.trackingNumber && (
                             <div className="text-sm">
@@ -2658,16 +2866,54 @@ Cordialement,
                             </span>
                           </div>
                           <div className="text-sm text-[#666663] mb-2">
-                            Reçue le {formatConfirmedDate(order.receivedAt)}
+                            {order.receivedAt ? (
+                              <span>📦 Reçue le {formatConfirmedDate(order.receivedAt)}</span>
+                            ) : (
+                              <span className="text-yellow-600">⏳ Date de réception non renseignée</span>
+                            )}
                           </div>
-                          {order.items.map((item, idx) => (
-                            <div key={idx} className="text-sm mt-2">
-                              <span className="text-[#666663]">SKU {item.sku}: </span>
-                              <span className="text-[#EF1C43]">
-                                Commandé {item.quantity} / Reçu {item.receivedQuantity || 0}
-                              </span>
-                            </div>
-                          ))}
+                          {order.items.map((item, idx) => {
+                            const received = item.receivedQuantity !== undefined ? item.receivedQuantity : 0;
+                            const damaged = item.damagedQuantity !== undefined ? item.damagedQuantity : 0;
+                            const validated = item.validatedQuantity !== undefined ? item.validatedQuantity : received - damaged;
+                            const discrepancy = item.quantityDiscrepancy !== undefined ? item.quantityDiscrepancy : item.quantity - received;
+                            
+                            return (
+                              <div key={idx} className="text-sm mt-2 p-2 bg-white rounded border border-[#E5E4DF]">
+                                <div className="font-medium text-[#191919] mb-1">SKU {item.sku}</div>
+                                <div className="grid grid-cols-2 gap-2 text-xs">
+                                  <div>
+                                    <span className="text-[#666663]">Commandé: </span>
+                                    <span className="font-bold text-[#191919]">{item.quantity}</span>
+                                  </div>
+                                  <div>
+                                    <span className="text-[#666663]">Reçu: </span>
+                                    <span className={`font-bold ${received < item.quantity ? 'text-[#EF1C43]' : 'text-green-600'}`}>
+                                      {received}
+                                    </span>
+                                  </div>
+                                  {damaged > 0 && (
+                                    <div>
+                                      <span className="text-[#666663]">Endommagé: </span>
+                                      <span className="font-bold text-orange-600">{damaged}</span>
+                                    </div>
+                                  )}
+                                  <div>
+                                    <span className="text-[#666663]">Validé: </span>
+                                    <span className="font-bold text-green-600">{validated}</span>
+                                  </div>
+                                  {discrepancy !== 0 && (
+                                    <div className="col-span-2">
+                                      <span className="text-[#666663]">Écart: </span>
+                                      <span className={`font-bold ${discrepancy > 0 ? 'text-[#EF1C43]' : 'text-blue-600'}`}>
+                                        {discrepancy > 0 ? `-${discrepancy}` : `+${Math.abs(discrepancy)}`}
+                                      </span>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          })}
                         </div>
                         <div className="flex gap-2 shrink-0">
                           <Button
@@ -3534,6 +3780,163 @@ Cordialement,
                 onChange={(e) => setDamageNotes(e.target.value)}
                 rows={3}
                 placeholder="Décrivez l'état des produits endommagés..."
+                className="w-full px-3 py-2 border-2 border-[#E5E4DF] rounded-lg bg-white text-[#191919] focus:outline-none focus:ring-2 focus:ring-black resize-none"
+              />
+            </div>
+          </>
+        )}
+      </Modal>
+
+      {/* NOUVEAU: Modal Unifié de Réconciliation (Écarts + Endommagés) */}
+      <Modal
+        isOpen={unifiedReconciliationModalOpen && reconciliationOrder}
+        onClose={() => setUnifiedReconciliationModalOpen(false)}
+        title={`Réconciliation complète - ${reconciliationOrder?.id}`}
+        footer={
+          <div className="flex justify-end gap-3">
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setUnifiedReconciliationModalOpen(false);
+                setReconciliationModalOpen(true);
+              }}
+            >
+              Annuler
+            </Button>
+            <Button 
+              variant="primary" 
+              icon={Check}
+              onClick={submitUnifiedReconciliation}
+            >
+              Valider la réconciliation
+            </Button>
+          </div>
+        }
+      >
+        {reconciliationOrder && (
+          <>
+            <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+              <p className="text-sm text-blue-800 font-medium mb-2">
+                📋 Saisissez pour chaque produit :
+              </p>
+              <ul className="text-xs text-blue-700 space-y-1 ml-4">
+                <li>• <strong>Quantité reçue</strong> : nombre total d'unités livrées</li>
+                <li>• <strong>Quantité endommagée</strong> : nombre d'unités abîmées parmi celles reçues</li>
+                <li>• La <strong>quantité validée</strong> sera calculée automatiquement (Reçue - Endommagée)</li>
+              </ul>
+            </div>
+            
+            <div className="space-y-3">
+              {reconciliationOrder.items.map((item, idx) => {
+                const product = products.find(p => p.sku === item.sku);
+                const data = unifiedReconciliationItems[item.sku] || { 
+                  ordered: item.quantity, 
+                  received: item.quantity, 
+                  damaged: 0 
+                };
+                const validated = parseInt(data.received, 10) - parseInt(data.damaged, 10);
+                const discrepancy = parseInt(data.ordered, 10) - parseInt(data.received, 10);
+                
+                return (
+                  <div key={idx} className="border border-[#E5E4DF] rounded-lg p-4 bg-[#FAFAF7]">
+                    <div className="mb-3">
+                      <span className="font-medium text-[#191919]">{product?.name || item.sku}</span>
+                      <span className="text-xs text-[#666663] ml-2">({item.sku})</span>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                      {/* Quantité commandée */}
+                      <div>
+                        <label className="text-xs text-[#666663] block mb-1">📦 Commandé</label>
+                        <input 
+                          type="number" 
+                          value={data.ordered}
+                          disabled
+                          className="w-full px-3 py-2 border border-[#E5E4DF] rounded-lg bg-white text-[#666663] text-center font-medium"
+                        />
+                      </div>
+                      
+                      {/* Quantité reçue */}
+                      <div>
+                        <label className="text-xs text-[#666663] block mb-1">📥 Reçu</label>
+                        <input 
+                          type="number" 
+                          min="0"
+                          value={data.received}
+                          onChange={(e) => setUnifiedReconciliationItems({
+                            ...unifiedReconciliationItems,
+                            [item.sku]: {
+                              ...data,
+                              received: Math.max(0, parseInt(e.target.value) || 0)
+                            }
+                          })}
+                          className="w-full px-3 py-2 border-2 border-black rounded-lg bg-white text-[#191919] text-center font-medium focus:outline-none focus:ring-2 focus:ring-black"
+                        />
+                      </div>
+                      
+                      {/* Quantité endommagée */}
+                      <div>
+                        <label className="text-xs text-[#666663] block mb-1">⚠️ Endommagé</label>
+                        <input 
+                          type="number" 
+                          min="0"
+                          max={data.received}
+                          value={data.damaged}
+                          onChange={(e) => setUnifiedReconciliationItems({
+                            ...unifiedReconciliationItems,
+                            [item.sku]: {
+                              ...data,
+                              damaged: Math.min(Math.max(0, parseInt(e.target.value) || 0), parseInt(data.received, 10))
+                            }
+                          })}
+                          className="w-full px-3 py-2 border-2 border-[#EF1C43] rounded-lg bg-white text-[#191919] text-center font-medium focus:outline-none focus:ring-2 focus:ring-[#EF1C43]"
+                        />
+                      </div>
+                      
+                      {/* Quantité validée (calculée) */}
+                      <div>
+                        <label className="text-xs text-[#666663] block mb-1">✅ Validé</label>
+                        <div className={`w-full px-3 py-2 rounded-lg text-center font-bold ${
+                          validated >= data.ordered 
+                            ? 'bg-green-50 text-green-600 border border-green-200' 
+                            : 'bg-yellow-50 text-yellow-700 border border-yellow-200'
+                        }`}>
+                          {validated}
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {/* Résumé des écarts */}
+                    <div className="mt-3 pt-3 border-t border-[#E5E4DF] grid grid-cols-2 gap-2 text-xs">
+                      <div className={`p-2 rounded ${
+                        discrepancy === 0 ? 'bg-green-50' : discrepancy > 0 ? 'bg-red-50' : 'bg-blue-50'
+                      }`}>
+                        <span className="text-[#666663]">Écart de quantité: </span>
+                        <span className={`font-bold ${
+                          discrepancy === 0 ? 'text-green-600' : discrepancy > 0 ? 'text-[#EF1C43]' : 'text-blue-600'
+                        }`}>
+                          {discrepancy > 0 ? `-${discrepancy}` : discrepancy < 0 ? `+${Math.abs(discrepancy)}` : '0'} unités
+                        </span>
+                      </div>
+                      <div className="p-2 rounded bg-orange-50">
+                        <span className="text-[#666663]">Perte (endommagé): </span>
+                        <span className="font-bold text-orange-600">
+                          {data.damaged} unités
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            
+            <div className="mt-4">
+              <label className="text-sm font-medium text-[#191919] block mb-2">📝 Notes / Commentaires (optionnel)</label>
+              <textarea
+                value={reconciliationNotes}
+                onChange={(e) => setReconciliationNotes(e.target.value)}
+                rows={3}
+                placeholder="Ajoutez des notes sur les écarts ou les dommages constatés..."
                 className="w-full px-3 py-2 border-2 border-[#E5E4DF] rounded-lg bg-white text-[#191919] focus:outline-none focus:ring-2 focus:ring-black resize-none"
               />
             </div>
