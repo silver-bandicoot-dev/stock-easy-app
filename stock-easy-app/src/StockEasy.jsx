@@ -1152,6 +1152,8 @@ const StockEasy = () => {
   const [reconciliationOrder, setReconciliationOrder] = useState(null);
   const [dateRange, setDateRange] = useState('30d');
   const [historyFilter, setHistoryFilter] = useState('all');
+  const [historyDateStart, setHistoryDateStart] = useState('');
+  const [historyDateEnd, setHistoryDateEnd] = useState('');
   const [discrepancyModalOpen, setDiscrepancyModalOpen] = useState(false);
   const [discrepancyItems, setDiscrepancyItems] = useState({});
   const [damageModalOpen, setDamageModalOpen] = useState(false);
@@ -1704,6 +1706,38 @@ L'équipe Stock Easy`
     }
   };
 
+  const createOrderWithoutEmail = async () => {
+    try {
+      const productsToOrder = toOrderBySupplier[selectedSupplier];
+      const total = productsToOrder.reduce((sum, p) => sum + (p.qtyToOrder * p.buyPrice), 0);
+      
+      const orderData = {
+        id: generatePONumber(),
+        supplier: selectedSupplier,
+        status: 'pending_confirmation',
+        total: total,
+        createdAt: new Date().toISOString().split('T')[0],
+        items: productsToOrder.map(p => ({
+          sku: p.sku,
+          quantity: p.qtyToOrder,
+          pricePerUnit: p.buyPrice
+        })),
+        notes: ''
+      };
+      
+      await api.createOrder(orderData);
+      await loadData();
+      
+      setEmailModalOpen(false);
+      setSelectedSupplier(null);
+      
+      alert('✅ Commande créée sans envoi d\'email !');
+    } catch (error) {
+      console.error('❌ Erreur lors de la création de la commande:', error);
+      alert('Erreur lors de la création de la commande');
+    }
+  };
+
   const confirmOrder = async (orderId) => {
     try {
       // CORRECTION 3: Sauvegarder la date ISO complète avec l'heure
@@ -2009,6 +2043,70 @@ Cordialement,
       console.error('❌ Erreur:', error);
       alert('Erreur lors de la validation');
     }
+  };
+
+  // Fonction pour exporter l'historique en CSV
+  const exportHistoryToCSV = () => {
+    // Filtrer les commandes selon les critères actuels
+    const filteredOrders = orders.filter(o => {
+      // Filtrage par statut
+      if (historyFilter !== 'all' && o.status !== historyFilter) return false;
+      
+      // Filtrage par dates
+      if (historyDateStart || historyDateEnd) {
+        const orderDate = new Date(o.createdAt);
+        if (historyDateStart && orderDate < new Date(historyDateStart)) return false;
+        if (historyDateEnd && orderDate > new Date(historyDateEnd)) return false;
+      }
+      
+      return true;
+    });
+
+    // Générer le CSV
+    const headers = ['N° Commande', 'Fournisseur', 'Date Création', 'Date Confirmation', 'Date Expédition', 'Date Réception', 'Statut', 'Montant (€)', 'Nb Produits', 'Suivi'];
+    const rows = filteredOrders.map(order => {
+      const statusLabels = {
+        pending_confirmation: 'En attente',
+        processing: 'En traitement',
+        in_transit: 'En transit',
+        completed: 'Complétée',
+        reconciliation: 'À réconcilier'
+      };
+      
+      return [
+        order.id,
+        order.supplier,
+        formatConfirmedDate(order.createdAt) || order.createdAt,
+        formatConfirmedDate(order.confirmedAt) || order.confirmedAt || '-',
+        formatConfirmedDate(order.shippedAt) || order.shippedAt || '-',
+        formatConfirmedDate(order.receivedAt) || order.receivedAt || '-',
+        statusLabels[order.status] || order.status,
+        order.total,
+        order.items.length,
+        order.trackingNumber || '-'
+      ];
+    });
+
+    // Créer le contenu CSV
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(row => row.map(cell => `"${cell}"`).join(','))
+    ].join('\n');
+
+    // Créer le fichier et le télécharger
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    const today = new Date().toISOString().split('T')[0];
+    
+    link.setAttribute('href', url);
+    link.setAttribute('download', `historique-commandes-${today}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    alert(`✅ Export CSV réussi : ${filteredOrders.length} commande(s) exportée(s)`);
   };
 
   if (loading) {
@@ -2416,7 +2514,7 @@ Cordialement,
                           <span className="text-[#666663] truncate">{order.supplier}</span>
                         </div>
                         <div className="text-sm text-[#666663]">
-                          Créée le {order.createdAt} • Total: {order.total}€
+                          Créée le {formatConfirmedDate(order.createdAt)} • Total: {order.total}€
                         </div>
                       </div>
                       <Button
@@ -2501,7 +2599,7 @@ Cordialement,
                             <span className="text-[#666663] truncate">{order.supplier}</span>
                           </div>
                           <div className="text-sm text-[#666663] mb-2">
-                            Expédiée le {order.shippedAt}
+                            Expédiée le {formatConfirmedDate(order.shippedAt)}
                           </div>
                           {order.trackingNumber && (
                             <div className="text-sm">
@@ -2539,20 +2637,28 @@ Cordialement,
                 {orders.filter(o => o.status === 'reconciliation').length === 0 ? (
                   <p className="text-[#666663] text-center py-8 text-sm">Aucune commande à réconcilier</p>
                 ) : (
-                  orders.filter(o => o.status === 'reconciliation').map(order => (
-                    <div key={order.id} className="bg-red-50 rounded-lg p-4 border-l-4 border-[#EF1C43]">
+                  orders.filter(o => o.status === 'reconciliation').map(order => {
+                    const isDamage = order.damageReport === true;
+                    const bgColor = isDamage ? 'bg-orange-50' : 'bg-red-50';
+                    const borderColor = isDamage ? 'border-orange-500' : 'border-[#EF1C43]';
+                    const badgeBgColor = isDamage ? 'bg-orange-500/20' : 'bg-[#EF1C43]/20';
+                    const badgeTextColor = isDamage ? 'text-orange-600' : 'text-[#EF1C43]';
+                    const badgeText = isDamage ? '⚠️ RÉCEPTION ENDOMMAGÉE' : '📦 ÉCART DE QUANTITÉ';
+                    
+                    return (
+                    <div key={order.id} className={`${bgColor} rounded-lg p-4 border-l-4 ${borderColor}`}>
                       <div className="flex items-center justify-between mb-3 gap-4">
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-3 mb-2 flex-wrap">
                             <span className="font-bold text-[#191919]">{order.id}</span>
                             <span className="text-[#666663]">→</span>
                             <span className="text-[#666663] truncate">{order.supplier}</span>
-                            <span className="px-2 py-1 bg-[#EF1C43]/20 text-[#EF1C43] rounded text-xs font-medium shrink-0">
-                              ÉCART DÉTECTÉ
+                            <span className={`px-2 py-1 ${badgeBgColor} ${badgeTextColor} rounded text-xs font-medium shrink-0`}>
+                              {badgeText}
                             </span>
                           </div>
                           <div className="text-sm text-[#666663] mb-2">
-                            Reçue le {order.receivedAt}
+                            Reçue le {formatConfirmedDate(order.receivedAt)}
                           </div>
                           {order.items.map((item, idx) => (
                             <div key={idx} className="text-sm mt-2">
@@ -2583,7 +2689,8 @@ Cordialement,
                         </div>
                       </div>
                     </div>
-                  ))
+                    );
+                  })
                 )}
               </div>
             </div>
@@ -2807,7 +2914,25 @@ Cordialement,
                   <h2 className="text-2xl font-bold text-[#191919] mb-2">Historique des Commandes</h2>
                   <p className="text-sm text-[#666663]">Consultez toutes vos commandes passées et leur statut</p>
                 </div>
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3 flex-wrap">
+                  <div className="flex items-center gap-2">
+                    <label className="text-sm text-[#666663] font-medium">Du:</label>
+                    <input
+                      type="date"
+                      value={historyDateStart}
+                      onChange={(e) => setHistoryDateStart(e.target.value)}
+                      className="px-3 py-2 bg-[#FAFAF7] border border-[#E5E4DF] rounded-lg text-[#191919] font-medium focus:outline-none focus:ring-2 focus:ring-black"
+                    />
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <label className="text-sm text-[#666663] font-medium">Au:</label>
+                    <input
+                      type="date"
+                      value={historyDateEnd}
+                      onChange={(e) => setHistoryDateEnd(e.target.value)}
+                      className="px-3 py-2 bg-[#FAFAF7] border border-[#E5E4DF] rounded-lg text-[#191919] font-medium focus:outline-none focus:ring-2 focus:ring-black"
+                    />
+                  </div>
                   <select 
                     value={historyFilter}
                     onChange={(e) => setHistoryFilter(e.target.value)}
@@ -2864,7 +2989,19 @@ Cordialement,
                   </thead>
                   <tbody className="divide-y divide-[#E5E4DF]">
                     {orders
-                      .filter(o => historyFilter === 'all' || o.status === historyFilter)
+                      .filter(o => {
+                        // Filtrage par statut
+                        if (historyFilter !== 'all' && o.status !== historyFilter) return false;
+                        
+                        // Filtrage par dates
+                        if (historyDateStart || historyDateEnd) {
+                          const orderDate = new Date(o.createdAt);
+                          if (historyDateStart && orderDate < new Date(historyDateStart)) return false;
+                          if (historyDateEnd && orderDate > new Date(historyDateEnd)) return false;
+                        }
+                        
+                        return true;
+                      })
                       .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
                       .map(order => {
                         const statusConfig = {
@@ -2886,7 +3023,7 @@ Cordialement,
                               <span className="text-[#191919]">{order.supplier}</span>
                             </td>
                             <td className="px-6 py-4">
-                              <span className="text-[#666663] text-sm">{order.createdAt}</span>
+                              <span className="text-[#666663] text-sm">{formatConfirmedDate(order.createdAt)}</span>
                             </td>
                             <td className="px-6 py-4">
                               <div className="text-sm">
@@ -2917,7 +3054,7 @@ Cordialement,
             </div>
 
             <div className="flex justify-end">
-              <Button variant="primary" icon={Upload}>
+              <Button variant="primary" icon={Upload} onClick={exportHistoryToCSV}>
                 Exporter en CSV
               </Button>
             </div>
@@ -3136,8 +3273,11 @@ Cordialement,
             <Button variant="outline" onClick={() => setEmailModalOpen(false)}>
               Annuler
             </Button>
+            <Button variant="secondary" onClick={createOrderWithoutEmail}>
+              Créer commande sans email
+            </Button>
             <Button variant="primary" icon={Mail} onClick={sendOrder}>
-              Envoyer
+              Envoyer email et créer commande
             </Button>
           </div>
         }
