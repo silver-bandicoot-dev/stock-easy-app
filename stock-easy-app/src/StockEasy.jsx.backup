@@ -3865,10 +3865,10 @@ Cordialement,
                 </span>
               </div>
               <div className="space-y-3">
-                {orders.filter(o => o.status === 'processing').length === 0 ? (
-                  <p className="text-[#666663] text-center py-8 text-sm">Aucune commande en traitement</p>
+                {orders.filter(o => o.status === 'transit' || o.status === 'in_transit').length === 0 ? (
+                  <p className="text-[#666663] text-center py-8 text-sm">Aucune commande en transit</p>
                 ) : (
-                  orders.filter(o => o.status === 'processing').map(order => (
+                  orders.filter(o => o.status === 'transit' || o.status === 'in_transit').map(order => (
                     <div key={order.id} className="bg-[#FAFAF7] rounded-lg border border-[#E5E4DF] overflow-hidden">
                       {/* Header de la commande - Cliquable */}
                       <div 
@@ -3976,11 +3976,11 @@ Cordialement,
               />
             )}
 
-            {/* Onglet Réconciliation - Section existante */}
+            {/* Onglet Réconciliation (CORRECTION 3) */}
             {trackSubTab === 'reconciliation' && (
             <div className="bg-white rounded-xl shadow-sm border border-[#E5E4DF] p-6">
               <div className="flex items-center gap-2 mb-4">
-                <AlertCircle className="w-5 h-5 text-[#EF1C43] shrink-0" />
+                <Truck className="w-5 h-5 text-purple-600 shrink-0" />
                 <h2 className="text-lg font-bold text-[#191919]">En Cours de Transit</h2>
                 <span className="ml-auto bg-purple-50 text-purple-600 px-3 py-1 rounded-full text-sm font-bold border border-purple-200 shrink-0">
                   {orders.filter(o => o.status === 'in_transit').length}
@@ -4103,18 +4103,26 @@ Cordialement,
             {trackSubTab === 'validated' && (
             <div className="bg-white rounded-xl shadow-sm border border-[#E5E4DF] p-6">
               <div className="flex items-center gap-2 mb-4">
-                <CheckCircle className="w-5 h-5 text-green-600 shrink-0" />
-                <h2 className="text-lg font-bold text-[#191919]">Commandes Validées</h2>
-                <span className="ml-auto bg-green-50 text-green-600 px-3 py-1 rounded-full text-sm font-bold border border-green-200 shrink-0">
-                  {orders.filter(o => o.status === 'validated' || o.status === 'completed').length}
+                <AlertCircle className="w-5 h-5 text-[#EF1C43] shrink-0" />
+                <h2 className="text-lg font-bold text-[#191919]">Commandes à Réconcilier</h2>
+                <span className="ml-auto bg-red-50 text-[#EF1C43] px-3 py-1 rounded-full text-sm font-bold border border-red-200 shrink-0">
+                  {orders.filter(o => o.status === 'reconciliation').length}
                 </span>
               </div>
               <div className="space-y-3">
-                {orders.filter(o => o.status === 'validated' || o.status === 'completed').length === 0 ? (
-                  <p className="text-[#666663] text-center py-8 text-sm">Aucune commande validée</p>
+                {orders.filter(o => o.status === 'reconciliation').length === 0 ? (
+                  <p className="text-[#666663] text-center py-8 text-sm">Aucune commande à réconcilier</p>
                 ) : (
-                  orders.filter(o => o.status === 'validated' || o.status === 'completed').map(order => (
-                    <div key={order.id} className="bg-green-50 rounded-lg border-l-4 border-green-500 overflow-hidden">
+                  orders.filter(o => o.status === 'reconciliation').map(order => {
+                    const isDamage = order.damageReport === true;
+                    const bgColor = isDamage ? 'bg-orange-50' : 'bg-red-50';
+                    const borderColor = isDamage ? 'border-orange-500' : 'border-[#EF1C43]';
+                    const badgeBgColor = isDamage ? 'bg-orange-500/20' : 'bg-[#EF1C43]/20';
+                    const badgeTextColor = isDamage ? 'text-orange-600' : 'text-[#EF1C43]';
+                    const badgeText = isDamage ? '⚠️ RÉCEPTION ENDOMMAGÉE' : '📦 ÉCART DE QUANTITÉ';
+                    
+                    return (
+                    <div key={order.id} className={`${bgColor} rounded-lg border-l-4 ${borderColor} overflow-hidden`}>
                       {/* Header de la commande - Cliquable */}
                       <div 
                         className="p-4 cursor-pointer hover:bg-opacity-80 transition-colors"
@@ -4237,12 +4245,11 @@ Cordialement,
                         )}
                       </AnimatePresence>
                     </div>
-                  ))
+                    );
+                  })
                 )}
               </div>
             </div>
-            )}
-
             </motion.div>
           )}
 
