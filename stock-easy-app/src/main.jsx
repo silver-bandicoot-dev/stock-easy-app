@@ -1,6 +1,7 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
-import StockEasy from './StockEasy.jsx'
+import App from './App.jsx'                    // ← NOUVELLE APP
+// import StockEasy from './StockEasy.jsx'     // ← Ancienne (commentée)
 import './index.css'
 import { testApiConnection, validateDataStructure } from './utils/testApi'
 
@@ -24,6 +25,6 @@ testApiConnection().then(result => {
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
-    <StockEasy />
+    <App />
   </React.StrictMode>,
 )
