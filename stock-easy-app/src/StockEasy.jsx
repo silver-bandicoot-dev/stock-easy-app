@@ -2319,7 +2319,7 @@ L'équipe Stock Easy`
           console.log(`Stock ${item.sku}: +${quantity} unités (type: ${typeof quantity})`);
           return {
             sku: item.sku,
-            quantity: quantity
+            quantityToAdd: quantity
           };
         });
         
@@ -2393,7 +2393,7 @@ L'équipe Stock Easy`
         console.log(`Stock update pour ${sku}: +${quantityReceived} unités`);
         return {
           sku,
-          quantity: quantityReceived
+          quantityToAdd: quantityReceived
         };
       });
       
@@ -2505,7 +2505,7 @@ L'équipe Stock Easy`
         console.log(`Stock update pour ${sku}: +${validatedQty} unités (reçu: ${data.received}, endommagé: ${data.damaged})`);
         return {
           sku,
-          quantity: validatedQty
+          quantityToAdd: validatedQty
         };
       });
       
@@ -2549,7 +2549,7 @@ L'équipe Stock Easy`
         console.log(`Stock update pour ${sku}: +${quantityGood} unités (total: ${data.total}, endommagé: ${data.damaged})`);
         return {
           sku,
-          quantity: quantityGood
+          quantityToAdd: quantityGood
         };
       });
       
@@ -2643,7 +2643,7 @@ Cordialement,
         console.log(`Stock ${item.sku}: +${quantityReceived} unités reçues`);
         return {
           sku: item.sku,
-          quantity: quantityReceived
+          quantityToAdd: quantityReceived
         };
       });
       
