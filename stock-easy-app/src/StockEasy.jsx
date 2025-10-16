@@ -1438,8 +1438,13 @@ const StockEasy = () => {
             onClick: () => handleUpdateSeuilSurstock(newValue)
           }
         });
+      } else if (error.message?.includes('Action non reconnue') || error.message?.includes('Action inconnue')) {
+        toast.error('❌ Erreur Backend: L\'action "updateParameter" n\'est pas configurée dans Google Apps Script', {
+          description: 'Consultez le fichier GOOGLE_APPS_SCRIPT_BACKEND_V1.md pour ajouter cette fonction',
+          duration: 10000
+        });
       } else {
-        toast.error('Erreur lors de la sauvegarde du seuil de surstock.');
+        toast.error(`Erreur lors de la sauvegarde: ${error.message}`);
       }
       throw error;
     }
@@ -1453,7 +1458,14 @@ const StockEasy = () => {
       return true;
     } catch (error) {
       console.error('❌ Erreur mise à jour devise:', error);
-      toast.error('Erreur lors de la sauvegarde de la devise. Vérifiez votre connexion et réessayez.');
+      if (error.message?.includes('Action non reconnue') || error.message?.includes('Action inconnue')) {
+        toast.error('❌ Erreur Backend: L\'action "updateParameter" n\'est pas configurée dans Google Apps Script', {
+          description: 'Consultez le fichier GOOGLE_APPS_SCRIPT_BACKEND_V1.md pour ajouter cette fonction',
+          duration: 10000
+        });
+      } else {
+        toast.error(`Erreur lors de la sauvegarde de la devise: ${error.message}`);
+      }
       throw error;
     }
   };
@@ -1466,7 +1478,14 @@ const StockEasy = () => {
       return true;
     } catch (error) {
       console.error('❌ Erreur mise à jour multiplicateur:', error);
-      toast.error('Erreur lors de la sauvegarde du multiplicateur. Vérifiez votre connexion et réessayez.');
+      if (error.message?.includes('Action non reconnue') || error.message?.includes('Action inconnue')) {
+        toast.error('❌ Erreur Backend: L\'action "updateParameter" n\'est pas configurée dans Google Apps Script', {
+          description: 'Consultez le fichier GOOGLE_APPS_SCRIPT_BACKEND_V1.md pour ajouter cette fonction',
+          duration: 10000
+        });
+      } else {
+        toast.error(`Erreur lors de la sauvegarde du multiplicateur: ${error.message}`);
+      }
       throw error;
     }
   };
@@ -3483,8 +3502,45 @@ Cordialement,
                 </span>
               </div>
               <div className="space-y-3">
+                {/* DEBUG INFO */}
+                {(() => {
+                  const reconciliationOrders = orders.filter(o => o.status === 'reconciliation');
+                  const receivedOrders = orders.filter(o => o.status === 'received');
+                  const ordersWithDiscrepancy = orders.filter(o => o.hasDiscrepancy === true);
+                  
+                  console.log('=== DEBUG RÉCONCILIATION ===');
+                  console.log('Total commandes:', orders.length);
+                  console.log('Commandes status=reconciliation:', reconciliationOrders.length);
+                  console.log('Commandes status=received:', receivedOrders.length);
+                  console.log('Commandes avec hasDiscrepancy:', ordersWithDiscrepancy.length);
+                  console.log('Détails commandes avec écarts:', ordersWithDiscrepancy);
+                  
+                  return null;
+                })()}
+                
                 {orders.filter(o => o.status === 'reconciliation').length === 0 ? (
-                  <p className="text-[#666663] text-center py-8 text-sm">Aucune commande à réconcilier</p>
+                  <div className="text-center py-8">
+                    <p className="text-[#666663] text-sm mb-2">Aucune commande à réconcilier</p>
+                    <p className="text-xs text-[#999] mt-4">
+                      Debug: {orders.length} commandes totales • 
+                      {orders.filter(o => o.hasDiscrepancy).length} avec écarts détectés • 
+                      {orders.filter(o => o.status === 'received').length} avec status 'received'
+                    </p>
+                    {orders.filter(o => o.hasDiscrepancy).length > 0 && (
+                      <div className="mt-4 p-4 bg-yellow-50 rounded-lg border border-yellow-200 text-left">
+                        <p className="text-sm text-yellow-800 font-medium mb-2">
+                          ⚠️ Attention: {orders.filter(o => o.hasDiscrepancy).length} commande(s) avec écarts détectés mais pas en statut 'reconciliation'
+                        </p>
+                        <div className="text-xs text-yellow-700 space-y-1">
+                          {orders.filter(o => o.hasDiscrepancy).map(o => (
+                            <div key={o.id}>
+                              • {o.id} - Status actuel: {o.status}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 ) : (
                   orders.filter(o => o.status === 'reconciliation').map(order => {
                     const isDamage = order.damageReport === true;
