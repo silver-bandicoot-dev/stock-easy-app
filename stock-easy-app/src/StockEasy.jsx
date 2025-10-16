@@ -248,12 +248,19 @@ const Button = ({
  * @returns {string} - Ex: "14 octobre 2025" ou "-" si pas de date
  */
 const formatConfirmedDate = (isoDate) => {
-  if (!isoDate) return '-';
+  if (!isoDate) {
+    console.warn('formatConfirmedDate: date vide ou null');
+    return null;
+  }
   
   try {
     const date = new Date(isoDate);
+    
     // Vérifier que la date est valide
-    if (isNaN(date.getTime())) return '-';
+    if (isNaN(date.getTime())) {
+      console.error('formatConfirmedDate: date invalide:', isoDate);
+      return 'Date invalide';
+    }
     
     return date.toLocaleDateString('fr-FR', {
       day: '2-digit',
@@ -261,8 +268,8 @@ const formatConfirmedDate = (isoDate) => {
       year: 'numeric'
     });
   } catch (error) {
-    console.error('Erreur formatage date:', isoDate, error);
-    return '-';
+    console.error('Erreur formatage date:', error, 'Date reçue:', isoDate);
+    return 'Erreur de date';
   }
 };
 
@@ -424,11 +431,37 @@ const Modal = ({ isOpen, onClose, title, children, footer }) => {
 // ============================================
 // FONCTIONS UTILITAIRES
 // ============================================
+
+/**
+ * Calcul des métriques de santé d'un produit
+ * 
+ * Le pourcentage de santé (0-100%) est calculé selon l'autonomie (jours de stock) :
+ * 
+ * 🔴 ZONE URGENT (0-25%) : Autonomie < Stock de sécurité
+ *    - Formule: (autonomie / stock_sécu) × 25
+ *    - Minimum: 5%, Maximum: 25%
+ *    - Exemple: autonomie 10j, stock sécu 20j → 12.5%
+ * 
+ * 🟡 ZONE WARNING (25-50%) : Stock sécu < Autonomie < Stock sécu × 1.2
+ *    - Formule: 25 + ((autonomie - stock_sécu) / (stock_sécu × 0.2)) × 25
+ *    - Progression linéaire de 25% à 50%
+ *    - Exemple: autonomie 22j, stock sécu 20j → 37.5%
+ * 
+ * 🟢 ZONE HEALTHY (50-100%) : Autonomie > Stock sécu × 1.2
+ *    - Formule: 50 + ((autonomie - stock_sécu × 1.2) / (stock_sécu × 2)) × 50
+ *    - Progression linéaire de 50% à 100%
+ *    - Maximum: 100% atteint quand autonomie = stock_sécu × 3.2
+ *    - Exemple: autonomie 50j, stock sécu 20j → 87.5%
+ * 
+ * @param {Object} product - Produit avec stock, salesPerDay, delay
+ * @param {number} seuil - Seuil de surstock profond (défaut: 90 jours)
+ * @returns {Object} Produit enrichi avec métriques calculées
+ */
 const calculateMetrics = (product, seuil = 90) => {
   // Calcul de l'autonomie en jours
   const daysOfStock = product.salesPerDay > 0 ? Math.floor(product.stock / product.salesPerDay) : 999;
   
-  // Stock de sécurité: utiliser la valeur custom si définie, sinon 20% du délai fournisseur
+  // Stock de sécurité: valeur custom ou 20% du délai fournisseur
   const securityStock = product.customSecurityStock !== undefined && product.customSecurityStock !== null 
     ? product.customSecurityStock 
     : Math.round(product.delay * 0.2);
@@ -436,23 +469,23 @@ const calculateMetrics = (product, seuil = 90) => {
   let healthStatus = 'healthy';
   let healthPercentage = 100;
   
-  // NOUVELLE LOGIQUE basée sur l'autonomie vs stock de sécurité
+  // LOGIQUE DE CALCUL DU % SANTÉ
   if (daysOfStock < securityStock) {
-    // URGENT: autonomie inférieure au stock de sécurité
+    // 🔴 URGENT: autonomie inférieure au stock de sécurité
     healthStatus = 'urgent';
     healthPercentage = Math.max(5, Math.min(25, (daysOfStock / securityStock) * 25));
   } else if (daysOfStock < securityStock * 1.2) {
-    // WARNING: autonomie entre stock sécu et stock sécu x 1.2
+    // 🟡 WARNING: autonomie entre stock sécu et stock sécu × 1.2
     healthStatus = 'warning';
     const ratio = (daysOfStock - securityStock) / (securityStock * 0.2);
     healthPercentage = 25 + (ratio * 25);
   } else {
-    // HEALTHY: autonomie > stock sécu x 1.2
+    // 🟢 HEALTHY: autonomie > stock sécu × 1.2
     healthStatus = 'healthy';
     healthPercentage = Math.min(100, 50 + ((daysOfStock - securityStock * 1.2) / (securityStock * 2)) * 50);
   }
   
-  // Détection surstock profond (utiliser le seuil paramétrable x2)
+  // Détection surstock profond (seuil × 2)
   const isDeepOverstock = daysOfStock > (seuil * 2);
   
   return {
@@ -1277,6 +1310,19 @@ const StockEasy = () => {
   // NOUVEAUX ÉTATS pour les sous-onglets de Paramètres
   const [parametersSubTab, setParametersSubTab] = useState('general'); // 'general', 'products', 'suppliers', 'mapping'
 
+  // CORRECTION 1: Gestion des quantités éditables dans la modal de commande
+  const [orderQuantities, setOrderQuantities] = useState({});
+
+  // CORRECTION 3: Gestion de l'expansion des détails de commandes
+  const [expandedOrders, setExpandedOrders] = useState({});
+
+  // CORRECTION 5: Gestion des types de problèmes de réception
+  const [discrepancyTypes, setDiscrepancyTypes] = useState({});
+
+  // CORRECTION 6: Gestion des modifications non sauvegardées des paramètres
+  const [unsavedParameterChanges, setUnsavedParameterChanges] = useState({});
+  const [isSavingParameters, setIsSavingParameters] = useState(false);
+
   // NOUVEAUX ÉTATS pour Paramètres Généraux
   const [seuilSurstockProfond, setSeuilSurstockProfond] = useState(90);
   const [deviseDefaut, setDeviseDefaut] = useState('EUR');
@@ -1319,6 +1365,13 @@ const StockEasy = () => {
       setSuppliers(suppliersMap);
       setProducts(data.products);
       setOrders(data.orders);
+      
+      // Debugging temporaire: afficher les dates des commandes
+      console.log('Orders chargés:', data.orders.map(o => ({
+        id: o.id,
+        confirmedAt: o.confirmedAt,
+        createdAt: o.createdAt
+      })));
       
       // Charger les paramètres si disponibles
       if (data.parameters) {
@@ -1776,17 +1829,36 @@ const StockEasy = () => {
   };
 
   const openEmailModal = (supplier) => {
+    // Initialiser les quantités éditables avec les recommandations
+    const products = toOrderBySupplier[supplier];
+    const quantities = {};
+    products.forEach(p => {
+      quantities[p.sku] = p.qtyToOrder; // Quantité recommandée par défaut
+    });
+    setOrderQuantities(quantities);
     setSelectedSupplier(supplier);
     setEmailModalOpen(true);
   };
 
+  const updateOrderQuantity = (sku, newQuantity) => {
+    const qty = parseInt(newQuantity, 10);
+    setOrderQuantities(prev => ({
+      ...prev,
+      [sku]: isNaN(qty) || qty < 0 ? 0 : qty
+    }));
+  };
+
   const generateEmailDraft = (supplier, products) => {
     const supplierInfo = suppliers[supplier];
-    const productList = products.map(p => 
-      `- ${p.name} (SKU: ${p.sku}) - Quantité: ${p.qtyToOrder} unités - Prix unitaire: ${p.buyPrice}€`
-    ).join('\n');
+    const productList = products.map(p => {
+      const qty = orderQuantities[p.sku] || p.qtyToOrder;
+      return `- ${p.name} (SKU: ${p.sku}) - Quantité: ${qty} unités - Prix unitaire: ${p.buyPrice}€`;
+    }).join('\n');
     
-    const total = products.reduce((sum, p) => sum + (p.qtyToOrder * p.buyPrice), 0);
+    const total = products.reduce((sum, p) => {
+      const qty = orderQuantities[p.sku] || p.qtyToOrder;
+      return sum + (qty * p.buyPrice);
+    }, 0);
     
     return {
       to: supplierInfo.email || 'email@fournisseur.com',
@@ -1824,7 +1896,10 @@ L'équipe Stock Easy`
   const sendOrder = async () => {
     try {
       const productsToOrder = toOrderBySupplier[selectedSupplier];
-      const total = productsToOrder.reduce((sum, p) => sum + (p.qtyToOrder * p.buyPrice), 0);
+      const total = productsToOrder.reduce((sum, p) => {
+        const qty = orderQuantities[p.sku] || p.qtyToOrder;
+        return sum + (qty * p.buyPrice);
+      }, 0);
       
       const orderData = {
         id: generatePONumber(),
@@ -1834,7 +1909,7 @@ L'équipe Stock Easy`
         createdAt: new Date().toISOString().split('T')[0],
         items: productsToOrder.map(p => ({
           sku: p.sku,
-          quantity: p.qtyToOrder,
+          quantity: orderQuantities[p.sku] || p.qtyToOrder,
           pricePerUnit: p.buyPrice
         })),
         notes: ''
@@ -1862,7 +1937,10 @@ L'équipe Stock Easy`
   const createOrderWithoutEmail = async () => {
     try {
       const productsToOrder = toOrderBySupplier[selectedSupplier];
-      const total = productsToOrder.reduce((sum, p) => sum + (p.qtyToOrder * p.buyPrice), 0);
+      const total = productsToOrder.reduce((sum, p) => {
+        const qty = orderQuantities[p.sku] || p.qtyToOrder;
+        return sum + (qty * p.buyPrice);
+      }, 0);
       
       const orderData = {
         id: generatePONumber(),
@@ -1872,7 +1950,7 @@ L'équipe Stock Easy`
         createdAt: new Date().toISOString().split('T')[0],
         items: productsToOrder.map(p => ({
           sku: p.sku,
-          quantity: p.qtyToOrder,
+          quantity: orderQuantities[p.sku] || p.qtyToOrder,
           pricePerUnit: p.buyPrice
         })),
         notes: ''
@@ -1899,19 +1977,27 @@ L'équipe Stock Easy`
 
   const confirmOrder = async (orderId) => {
     try {
-      // CORRECTION 3: Sauvegarder la date ISO complète avec l'heure
       const confirmedAt = new Date().toISOString();
+      console.log('Confirmation commande:', orderId, 'Date:', confirmedAt);
       
       await api.updateOrderStatus(orderId, {
         status: 'processing',
         confirmedAt: confirmedAt
       });
+      
       await loadData();
-      console.log(`✅ Commande ${orderId} confirmée le ${confirmedAt}`);
+      toast.success('Commande confirmée!');
     } catch (error) {
-      console.error('❌ Erreur:', error);
+      console.error('❌ Erreur confirmation:', error);
       toast.error('Erreur lors de la confirmation');
     }
+  };
+
+  const toggleOrderDetails = (orderId) => {
+    setExpandedOrders(prev => ({
+      ...prev,
+      [orderId]: !prev[orderId]
+    }));
   };
 
   const shipOrder = async (orderId) => {
@@ -2825,26 +2911,91 @@ Cordialement,
                   <p className="text-[#666663] text-center py-8 text-sm">Aucune commande en attente</p>
                 ) : (
                   orders.filter(o => o.status === 'pending_confirmation').map(order => (
-                    <div key={order.id} className="bg-[#FAFAF7] rounded-lg p-4 flex items-center justify-between border border-[#E5E4DF] gap-4">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-3 mb-2">
-                          <span className="font-bold text-[#191919]">{order.id}</span>
-                          <span className="text-[#666663]">→</span>
-                          <span className="text-[#666663] truncate">{order.supplier}</span>
-                        </div>
-                        <div className="text-sm text-[#666663]">
-                          Créée le {formatConfirmedDate(order.createdAt)} • Total: {order.total}€
-                        </div>
-                      </div>
-                      <Button
-                        variant="success"
-                        size="sm"
-                        icon={Check}
-                        onClick={() => confirmOrder(order.id)}
-                        className="shrink-0"
+                    <div key={order.id} className="bg-[#FAFAF7] rounded-lg border border-[#E5E4DF] overflow-hidden">
+                      {/* Header de la commande - Cliquable */}
+                      <div 
+                        className="p-4 flex items-center justify-between gap-4 cursor-pointer hover:bg-[#F5F5F0] transition-colors"
+                        onClick={() => toggleOrderDetails(order.id)}
                       >
-                        Confirmer réception email
-                      </Button>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-3 mb-2">
+                            <span className="font-bold text-[#191919]">{order.id}</span>
+                            <span className="text-[#666663]">→</span>
+                            <span className="text-[#666663] truncate">{order.supplier}</span>
+                            {/* Icône chevron */}
+                            <motion.div
+                              animate={{ rotate: expandedOrders[order.id] ? 180 : 0 }}
+                              transition={{ duration: 0.2 }}
+                            >
+                              <ArrowDownRight className="w-4 h-4 text-[#666663]" />
+                            </motion.div>
+                          </div>
+                          <div className="text-sm text-[#666663]">
+                            Créée le {formatConfirmedDate(order.createdAt)} • Total: {order.total}€
+                          </div>
+                        </div>
+                        <Button
+                          variant="success"
+                          size="sm"
+                          icon={Check}
+                          onClick={(e) => {
+                            e.stopPropagation(); // Empêcher le toggle
+                            confirmOrder(order.id);
+                          }}
+                          className="shrink-0"
+                        >
+                          Confirmer réception email
+                        </Button>
+                      </div>
+                      
+                      {/* Détails des produits - Expansible */}
+                      <AnimatePresence>
+                        {expandedOrders[order.id] && (
+                          <motion.div
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: 'auto', opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            transition={{ duration: 0.3 }}
+                            className="border-t border-[#E5E4DF] bg-white"
+                          >
+                            <div className="p-4">
+                              <h4 className="font-semibold text-sm text-[#666663] mb-3">Produits commandés:</h4>
+                              <div className="space-y-2">
+                                {order.items.map((item, idx) => {
+                                  const product = products.find(p => p.sku === item.sku);
+                                  return (
+                                    <div key={idx} className="flex justify-between items-center p-2 bg-[#FAFAF7] rounded border border-[#E5E4DF]">
+                                      <div className="flex-1">
+                                        <div className="font-medium text-[#191919] text-sm">
+                                          {product?.name || item.sku}
+                                        </div>
+                                        <div className="text-xs text-[#666663]">
+                                          SKU: {item.sku}
+                                        </div>
+                                      </div>
+                                      <div className="text-right">
+                                        <div className="font-bold text-[#191919]">
+                                          {item.quantity} unités
+                                        </div>
+                                        <div className="text-xs text-[#666663]">
+                                          {item.pricePerUnit}€/unité
+                                        </div>
+                                      </div>
+                                      <div className="ml-4 text-right font-bold text-[#191919] min-w-[80px]">
+                                        {(item.quantity * item.pricePerUnit).toFixed(2)}€
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                              <div className="mt-3 pt-3 border-t border-[#E5E4DF] flex justify-between">
+                                <span className="font-semibold text-[#666663]">Total:</span>
+                                <span className="font-bold text-[#191919] text-lg">{order.total.toFixed(2)}€</span>
+                              </div>
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
                     </div>
                   ))
                 )}
@@ -2865,36 +3016,96 @@ Cordialement,
                   <p className="text-[#666663] text-center py-8 text-sm">Aucune commande en traitement</p>
                 ) : (
                   orders.filter(o => o.status === 'processing').map(order => (
-                    <div key={order.id} className="bg-[#FAFAF7] rounded-lg p-4 border border-[#E5E4DF]">
-                      <div className="flex items-center justify-between mb-3 gap-4">
+                    <div key={order.id} className="bg-[#FAFAF7] rounded-lg border border-[#E5E4DF] overflow-hidden">
+                      {/* Header de la commande - Cliquable */}
+                      <div 
+                        className="p-4 flex items-center justify-between gap-4 cursor-pointer hover:bg-[#F5F5F0] transition-colors"
+                        onClick={() => toggleOrderDetails(order.id)}
+                      >
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-3 mb-2">
                             <span className="font-bold text-[#191919]">{order.id}</span>
                             <span className="text-[#666663]">→</span>
                             <span className="text-[#666663] truncate">{order.supplier}</span>
+                            {/* Icône chevron */}
+                            <motion.div
+                              animate={{ rotate: expandedOrders[order.id] ? 180 : 0 }}
+                              transition={{ duration: 0.2 }}
+                            >
+                              <ArrowDownRight className="w-4 h-4 text-[#666663]" />
+                            </motion.div>
                           </div>
                           <div className="text-sm text-[#666663]">
-                            {order.confirmedAt ? (
-                              <span className="font-medium text-green-600">
-                                ✅ Confirmée le {formatConfirmedDate(order.confirmedAt)}
-                              </span>
-                            ) : (
-                              <span className="font-medium text-yellow-600">
-                                ⏳ En attente de confirmation
-                              </span>
-                            )}
+                            Créée le {formatConfirmedDate(order.createdAt)} • Total: {order.total}€
                           </div>
+                          {order.confirmedAt && (
+                            <div className="text-sm text-green-600 mt-1">
+                              ✓ Confirmée le {formatConfirmedDate(order.confirmedAt)}
+                            </div>
+                          )}
                         </div>
                         <Button
                           variant="primary"
                           size="sm"
                           icon={Truck}
-                          onClick={() => shipOrder(order.id)}
+                          onClick={(e) => {
+                            e.stopPropagation(); // Empêcher le toggle
+                            shipOrder(order.id);
+                          }}
                           className="shrink-0"
                         >
                           Marquer comme expédiée
                         </Button>
                       </div>
+                      
+                      {/* Détails des produits - Expansible */}
+                      <AnimatePresence>
+                        {expandedOrders[order.id] && (
+                          <motion.div
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: 'auto', opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            transition={{ duration: 0.3 }}
+                            className="border-t border-[#E5E4DF] bg-white"
+                          >
+                            <div className="p-4">
+                              <h4 className="font-semibold text-sm text-[#666663] mb-3">Produits commandés:</h4>
+                              <div className="space-y-2">
+                                {order.items.map((item, idx) => {
+                                  const product = products.find(p => p.sku === item.sku);
+                                  return (
+                                    <div key={idx} className="flex justify-between items-center p-2 bg-[#FAFAF7] rounded border border-[#E5E4DF]">
+                                      <div className="flex-1">
+                                        <div className="font-medium text-[#191919] text-sm">
+                                          {product?.name || item.sku}
+                                        </div>
+                                        <div className="text-xs text-[#666663]">
+                                          SKU: {item.sku}
+                                        </div>
+                                      </div>
+                                      <div className="text-right">
+                                        <div className="font-bold text-[#191919]">
+                                          {item.quantity} unités
+                                        </div>
+                                        <div className="text-xs text-[#666663]">
+                                          {item.pricePerUnit}€/unité
+                                        </div>
+                                      </div>
+                                      <div className="ml-4 text-right font-bold text-[#191919] min-w-[80px]">
+                                        {(item.quantity * item.pricePerUnit).toFixed(2)}€
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                              <div className="mt-3 pt-3 border-t border-[#E5E4DF] flex justify-between">
+                                <span className="font-semibold text-[#666663]">Total:</span>
+                                <span className="font-bold text-[#191919] text-lg">{order.total.toFixed(2)}€</span>
+                              </div>
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
                     </div>
                   ))
                 )}
@@ -2915,23 +3126,40 @@ Cordialement,
                   <p className="text-[#666663] text-center py-8 text-sm">Aucune commande en transit</p>
                 ) : (
                   orders.filter(o => o.status === 'in_transit').map(order => (
-                    <div key={order.id} className="bg-[#FAFAF7] rounded-lg p-4 border border-[#E5E4DF]">
-                      <div className="flex items-center justify-between mb-3 gap-4">
+                    <div key={order.id} className="bg-[#FAFAF7] rounded-lg border border-[#E5E4DF] overflow-hidden">
+                      {/* Header de la commande - Cliquable */}
+                      <div 
+                        className="p-4 flex items-center justify-between gap-4 cursor-pointer hover:bg-[#F5F5F0] transition-colors"
+                        onClick={() => toggleOrderDetails(order.id)}
+                      >
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-3 mb-2">
                             <span className="font-bold text-[#191919]">{order.id}</span>
                             <span className="text-[#666663]">→</span>
                             <span className="text-[#666663] truncate">{order.supplier}</span>
+                            {/* Icône chevron */}
+                            <motion.div
+                              animate={{ rotate: expandedOrders[order.id] ? 180 : 0 }}
+                              transition={{ duration: 0.2 }}
+                            >
+                              <ArrowDownRight className="w-4 h-4 text-[#666663]" />
+                            </motion.div>
                           </div>
-                          <div className="text-sm text-[#666663] mb-2">
-                            {order.shippedAt ? (
-                              <span>🚚 Expédiée le {formatConfirmedDate(order.shippedAt)}</span>
-                            ) : (
-                              <span className="text-yellow-600">⏳ Date d'expédition non renseignée</span>
-                            )}
+                          <div className="text-sm text-[#666663]">
+                            Créée le {formatConfirmedDate(order.createdAt)} • Total: {order.total}€
                           </div>
+                          {order.confirmedAt && (
+                            <div className="text-sm text-green-600 mt-1">
+                              ✓ Confirmée le {formatConfirmedDate(order.confirmedAt)}
+                            </div>
+                          )}
+                          {order.shippedAt && (
+                            <div className="text-sm text-purple-600 mt-1">
+                              🚚 Expédiée le {formatConfirmedDate(order.shippedAt)}
+                            </div>
+                          )}
                           {order.trackingNumber && (
-                            <div className="text-sm">
+                            <div className="text-sm mt-1">
                               <span className="text-[#666663]">Suivi: </span>
                               <span className="text-purple-600 font-mono text-xs">{order.trackingNumber}</span>
                             </div>
@@ -2941,12 +3169,64 @@ Cordialement,
                           variant="success"
                           size="sm"
                           icon={CheckCircle}
-                          onClick={() => receiveOrder(order.id)}
+                          onClick={(e) => {
+                            e.stopPropagation(); // Empêcher le toggle
+                            receiveOrder(order.id);
+                          }}
                           className="shrink-0"
                         >
                           Confirmer réception
                         </Button>
                       </div>
+                      
+                      {/* Détails des produits - Expansible */}
+                      <AnimatePresence>
+                        {expandedOrders[order.id] && (
+                          <motion.div
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: 'auto', opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            transition={{ duration: 0.3 }}
+                            className="border-t border-[#E5E4DF] bg-white"
+                          >
+                            <div className="p-4">
+                              <h4 className="font-semibold text-sm text-[#666663] mb-3">Produits commandés:</h4>
+                              <div className="space-y-2">
+                                {order.items.map((item, idx) => {
+                                  const product = products.find(p => p.sku === item.sku);
+                                  return (
+                                    <div key={idx} className="flex justify-between items-center p-2 bg-[#FAFAF7] rounded border border-[#E5E4DF]">
+                                      <div className="flex-1">
+                                        <div className="font-medium text-[#191919] text-sm">
+                                          {product?.name || item.sku}
+                                        </div>
+                                        <div className="text-xs text-[#666663]">
+                                          SKU: {item.sku}
+                                        </div>
+                                      </div>
+                                      <div className="text-right">
+                                        <div className="font-bold text-[#191919]">
+                                          {item.quantity} unités
+                                        </div>
+                                        <div className="text-xs text-[#666663]">
+                                          {item.pricePerUnit}€/unité
+                                        </div>
+                                      </div>
+                                      <div className="ml-4 text-right font-bold text-[#191919] min-w-[80px]">
+                                        {(item.quantity * item.pricePerUnit).toFixed(2)}€
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                              <div className="mt-3 pt-3 border-t border-[#E5E4DF] flex justify-between">
+                                <span className="font-semibold text-[#666663]">Total:</span>
+                                <span className="font-bold text-[#191919] text-lg">{order.total.toFixed(2)}€</span>
+                              </div>
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
                     </div>
                   ))
                 )}
@@ -2975,86 +3255,128 @@ Cordialement,
                     const badgeText = isDamage ? '⚠️ RÉCEPTION ENDOMMAGÉE' : '📦 ÉCART DE QUANTITÉ';
                     
                     return (
-                    <div key={order.id} className={`${bgColor} rounded-lg p-4 border-l-4 ${borderColor}`}>
-                      <div className="flex items-center justify-between mb-3 gap-4">
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-3 mb-2 flex-wrap">
-                            <span className="font-bold text-[#191919]">{order.id}</span>
-                            <span className="text-[#666663]">→</span>
-                            <span className="text-[#666663] truncate">{order.supplier}</span>
-                            <span className={`px-2 py-1 ${badgeBgColor} ${badgeTextColor} rounded text-xs font-medium shrink-0`}>
-                              {badgeText}
-                            </span>
-                          </div>
-                          <div className="text-sm text-[#666663] mb-2">
-                            {order.receivedAt ? (
-                              <span>📦 Reçue le {formatConfirmedDate(order.receivedAt)}</span>
-                            ) : (
-                              <span className="text-yellow-600">⏳ Date de réception non renseignée</span>
+                    <div key={order.id} className={`${bgColor} rounded-lg border-l-4 ${borderColor} overflow-hidden`}>
+                      {/* Header de la commande - Cliquable */}
+                      <div 
+                        className="p-4 cursor-pointer hover:bg-opacity-80 transition-colors"
+                        onClick={() => toggleOrderDetails(order.id)}
+                      >
+                        <div className="flex items-center justify-between gap-4">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-3 mb-2 flex-wrap">
+                              <span className="font-bold text-[#191919]">{order.id}</span>
+                              <span className="text-[#666663]">→</span>
+                              <span className="text-[#666663] truncate">{order.supplier}</span>
+                              <span className={`px-2 py-1 ${badgeBgColor} ${badgeTextColor} rounded text-xs font-medium shrink-0`}>
+                                {badgeText}
+                              </span>
+                              {/* Icône chevron */}
+                              <motion.div
+                                animate={{ rotate: expandedOrders[order.id] ? 180 : 0 }}
+                                transition={{ duration: 0.2 }}
+                              >
+                                <ArrowDownRight className="w-4 h-4 text-[#666663]" />
+                              </motion.div>
+                            </div>
+                            <div className="text-sm text-[#666663]">
+                              Créée le {formatConfirmedDate(order.createdAt)} • Total: {order.total}€
+                            </div>
+                            {order.receivedAt && (
+                              <div className="text-sm text-[#666663] mt-1">
+                                📦 Reçue le {formatConfirmedDate(order.receivedAt)}
+                              </div>
                             )}
                           </div>
-                          {order.items.map((item, idx) => {
-                            const received = item.receivedQuantity !== undefined ? item.receivedQuantity : 0;
-                            const damaged = item.damagedQuantity !== undefined ? item.damagedQuantity : 0;
-                            const validated = item.validatedQuantity !== undefined ? item.validatedQuantity : received - damaged;
-                            const discrepancy = item.quantityDiscrepancy !== undefined ? item.quantityDiscrepancy : item.quantity - received;
-                            
-                            return (
-                              <div key={idx} className="text-sm mt-2 p-2 bg-white rounded border border-[#E5E4DF]">
-                                <div className="font-medium text-[#191919] mb-1">SKU {item.sku}</div>
-                                <div className="grid grid-cols-2 gap-2 text-xs">
-                                  <div>
-                                    <span className="text-[#666663]">Commandé: </span>
-                                    <span className="font-bold text-[#191919]">{item.quantity}</span>
-                                  </div>
-                                  <div>
-                                    <span className="text-[#666663]">Reçu: </span>
-                                    <span className={`font-bold ${received < item.quantity ? 'text-[#EF1C43]' : 'text-green-600'}`}>
-                                      {received}
-                                    </span>
-                                  </div>
-                                  {damaged > 0 && (
-                                    <div>
-                                      <span className="text-[#666663]">Endommagé: </span>
-                                      <span className="font-bold text-orange-600">{damaged}</span>
-                                    </div>
-                                  )}
-                                  <div>
-                                    <span className="text-[#666663]">Validé: </span>
-                                    <span className="font-bold text-green-600">{validated}</span>
-                                  </div>
-                                  {discrepancy !== 0 && (
-                                    <div className="col-span-2">
-                                      <span className="text-[#666663]">Écart: </span>
-                                      <span className={`font-bold ${discrepancy > 0 ? 'text-[#EF1C43]' : 'text-blue-600'}`}>
-                                        {discrepancy > 0 ? `-${discrepancy}` : `+${Math.abs(discrepancy)}`}
-                                      </span>
-                                    </div>
-                                  )}
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
-                        <div className="flex gap-2 shrink-0">
-                          <Button
-                            variant="primary"
-                            size="sm"
-                            icon={Mail}
-                            onClick={() => openReclamationModal(order)}
-                          >
-                            Envoyer réclamation
-                          </Button>
-                          <Button
-                            variant="success"
-                            size="sm"
-                            icon={Check}
-                            onClick={() => validateWithoutReclamation(order)}
-                          >
-                            Valider sans réclamation
-                          </Button>
+                          <div className="flex gap-2 shrink-0">
+                            <Button
+                              variant="primary"
+                              size="sm"
+                              icon={Mail}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                openReclamationModal(order);
+                              }}
+                            >
+                              Envoyer réclamation
+                            </Button>
+                            <Button
+                              variant="success"
+                              size="sm"
+                              icon={Check}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                validateWithoutReclamation(order);
+                              }}
+                            >
+                              Valider sans réclamation
+                            </Button>
+                          </div>
                         </div>
                       </div>
+                      
+                      {/* Détails des produits - Expansible */}
+                      <AnimatePresence>
+                        {expandedOrders[order.id] && (
+                          <motion.div
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: 'auto', opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            transition={{ duration: 0.3 }}
+                            className="border-t border-[#E5E4DF] bg-white"
+                          >
+                            <div className="p-4">
+                              <h4 className="font-semibold text-sm text-[#666663] mb-3">Détails de réconciliation:</h4>
+                              <div className="space-y-2">
+                                {order.items.map((item, idx) => {
+                                  const product = products.find(p => p.sku === item.sku);
+                                  const received = item.receivedQuantity !== undefined ? item.receivedQuantity : 0;
+                                  const damaged = item.damagedQuantity !== undefined ? item.damagedQuantity : 0;
+                                  const validated = item.validatedQuantity !== undefined ? item.validatedQuantity : received - damaged;
+                                  const discrepancy = item.quantityDiscrepancy !== undefined ? item.quantityDiscrepancy : item.quantity - received;
+                                  
+                                  return (
+                                    <div key={idx} className="p-3 bg-white rounded border border-[#E5E4DF]">
+                                      <div className="font-medium text-[#191919] mb-2">
+                                        {product?.name || item.sku} <span className="text-xs text-[#666663]">(SKU: {item.sku})</span>
+                                      </div>
+                                      <div className="grid grid-cols-2 gap-2 text-xs">
+                                        <div>
+                                          <span className="text-[#666663]">Commandé: </span>
+                                          <span className="font-bold text-[#191919]">{item.quantity}</span>
+                                        </div>
+                                        <div>
+                                          <span className="text-[#666663]">Reçu: </span>
+                                          <span className={`font-bold ${received < item.quantity ? 'text-[#EF1C43]' : 'text-green-600'}`}>
+                                            {received}
+                                          </span>
+                                        </div>
+                                        {damaged > 0 && (
+                                          <div>
+                                            <span className="text-[#666663]">Endommagé: </span>
+                                            <span className="font-bold text-orange-600">{damaged}</span>
+                                          </div>
+                                        )}
+                                        <div>
+                                          <span className="text-[#666663]">Validé: </span>
+                                          <span className="font-bold text-green-600">{validated}</span>
+                                        </div>
+                                        {discrepancy !== 0 && (
+                                          <div className="col-span-2">
+                                            <span className="text-[#666663]">Écart: </span>
+                                            <span className={`font-bold ${discrepancy > 0 ? 'text-[#EF1C43]' : 'text-blue-600'}`}>
+                                              {discrepancy > 0 ? `-${discrepancy}` : `+${Math.abs(discrepancy)}`}
+                                            </span>
+                                          </div>
+                                        )}
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
                     </div>
                     );
                   })
@@ -3657,11 +3979,17 @@ Cordialement,
       {/* Modal Email */}
       <Modal
         isOpen={emailModalOpen && selectedSupplier}
-        onClose={() => setEmailModalOpen(false)}
+        onClose={() => {
+          setEmailModalOpen(false);
+          setOrderQuantities({});
+        }}
         title={`Commande - ${selectedSupplier}`}
         footer={
           <div className="flex justify-end gap-3">
-            <Button variant="outline" onClick={() => setEmailModalOpen(false)}>
+            <Button variant="outline" onClick={() => {
+              setEmailModalOpen(false);
+              setOrderQuantities({});
+            }}>
               Annuler
             </Button>
             <Button variant="secondary" onClick={createOrderWithoutEmail}>
@@ -3674,20 +4002,65 @@ Cordialement,
         }
       >
         {selectedSupplier && (() => {
-          const email = generateEmailDraft(selectedSupplier, toOrderBySupplier[selectedSupplier]);
+          const productsToOrder = toOrderBySupplier[selectedSupplier];
+          const email = generateEmailDraft(selectedSupplier, productsToOrder);
+          const totalAmount = productsToOrder.reduce((sum, p) => {
+            const qty = orderQuantities[p.sku] || p.qtyToOrder;
+            return sum + (qty * p.buyPrice);
+          }, 0);
+          
           return (
             <>
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-[#191919] mb-1">À:</label>
-                <input value={email.to} readOnly className="w-full px-3 py-2 border-2 border-[#E5E4DF] rounded-lg bg-[#FAFAF7] text-[#191919] font-medium" />
+              {/* Section d'édition des quantités */}
+              <div className="mb-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <h4 className="font-semibold text-[#191919] mb-3">Ajuster les quantités</h4>
+                <div className="space-y-3">
+                  {productsToOrder.map(p => (
+                    <div key={p.sku} className="bg-white rounded-lg p-3 border border-[#E5E4DF]">
+                      <div className="grid grid-cols-3 gap-3 items-center">
+                        <div className="col-span-2">
+                          <div className="font-medium text-[#191919] text-sm">{p.name}</div>
+                          <div className="text-xs text-[#666663]">
+                            SKU: {p.sku} • Recommandé: {p.qtyToOrder} unités
+                          </div>
+                        </div>
+                        <div>
+                          <input
+                            type="number"
+                            min="0"
+                            value={orderQuantities[p.sku] !== undefined ? orderQuantities[p.sku] : p.qtyToOrder}
+                            onChange={(e) => updateOrderQuantity(p.sku, e.target.value)}
+                            className="w-full px-3 py-2 border-2 border-[#E5E4DF] rounded-lg text-center font-bold"
+                          />
+                          <div className="text-xs text-right text-[#666663] mt-1">
+                            {((orderQuantities[p.sku] || p.qtyToOrder) * p.buyPrice).toFixed(2)}€
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div className="mt-3 pt-3 border-t border-blue-200 flex justify-between items-center">
+                  <span className="text-sm text-[#666663]">Total de la commande:</span>
+                  <span className="text-xl font-bold text-[#191919]">{totalAmount.toFixed(2)}€</span>
+                </div>
               </div>
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-[#191919] mb-1">Objet:</label>
-                <input value={email.subject} readOnly className="w-full px-3 py-2 border-2 border-[#E5E4DF] rounded-lg bg-[#FAFAF7] text-[#191919] font-medium" />
-              </div>
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-[#191919] mb-1">Message:</label>
-                <textarea value={email.body} readOnly rows={12} className="w-full px-3 py-2 border-2 border-[#E5E4DF] rounded-lg bg-[#FAFAF7] text-[#191919] font-mono text-sm" />
+              
+              {/* Prévisualisation email */}
+              <div className="space-y-3">
+                <h4 className="font-semibold text-[#191919]">Prévisualisation email</h4>
+                <div>
+                  <label className="block text-sm font-medium text-[#666663] mb-1">À:</label>
+                  <input value={email.to} readOnly className="w-full px-3 py-2 border-2 border-[#E5E4DF] rounded-lg bg-[#FAFAF7] text-[#191919] text-sm" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-[#666663] mb-1">Objet:</label>
+                  <input value={email.subject} readOnly className="w-full px-3 py-2 border-2 border-[#E5E4DF] rounded-lg bg-[#FAFAF7] text-[#191919] text-sm" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-[#666663] mb-1">Message:</label>
+                  <textarea value={email.body} readOnly rows={10} className="w-full px-3 py-2 border-2 border-[#E5E4DF] rounded-lg bg-[#FAFAF7] text-[#191919] font-mono text-xs" />
+                </div>
               </div>
             </>
           );
