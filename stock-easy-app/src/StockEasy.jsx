@@ -1280,6 +1280,7 @@ const StockEasy = () => {
   const [orders, setOrders] = useState([]);
   const [parameters, setParameters] = useState({});
   const [activeTab, setActiveTab] = useState('dashboard');
+  const [trackTabSection, setTrackTabSection] = useState('en_cours_commande');
   const [emailModalOpen, setEmailModalOpen] = useState(false);
   const [selectedSupplier, setSelectedSupplier] = useState(null);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
@@ -2052,12 +2053,12 @@ L'équipe Stock Easy`
       console.log('Confirmation commande:', orderId, 'Date:', confirmedAt);
       
       await api.updateOrderStatus(orderId, {
-        status: 'processing',
+        status: 'preparing',
         confirmedAt: confirmedAt
       });
       
       await loadData();
-      toast.success('Commande confirmée!');
+      toast.success('Commande confirmée et en cours de préparation!');
     } catch (error) {
       console.error('❌ Erreur confirmation:', error);
       toast.error('Erreur lors de la confirmation');
@@ -2997,7 +2998,7 @@ Cordialement,
             </div>
 
             {/* En cours de livraison */}
-            <div className="bg-white rounded-xl shadow-sm border border-[#E5E4DF] p-6">
+            <div className="bg-white rounded-xl shadow-sm border border-[#E5E4DF] p-6 cursor-pointer hover:shadow-md transition-shadow" onClick={() => { setActiveTab('track'); setTrackTabSection('en_transit'); }}>
               <div className="flex items-center gap-2 mb-4">
                 <div className="w-10 h-10 bg-blue-50 rounded-lg flex items-center justify-center border border-blue-200 shrink-0">
                   <Truck className="w-6 h-6 text-[#64A4F2] shrink-0" />
@@ -3039,7 +3040,7 @@ Cordialement,
             </div>
 
             {/* Commandes reçues */}
-            <div className="bg-white rounded-xl shadow-sm border border-[#E5E4DF] p-6">
+            <div className="bg-white rounded-xl shadow-sm border border-[#E5E4DF] p-6 cursor-pointer hover:shadow-md transition-shadow" onClick={() => { setActiveTab('track'); setTrackTabSection('commandes_recues'); }}>
               <div className="flex items-center gap-2 mb-4">
                 <div className="w-10 h-10 bg-green-50 rounded-lg flex items-center justify-center border border-green-200 shrink-0">
                   <CheckCircle className="w-6 h-6 text-green-600 shrink-0" />
@@ -3156,14 +3157,76 @@ Cordialement,
               exit={{ opacity: 0, x: -20 }}
               transition={{ duration: 0.25 }}
               className="space-y-6">
-            {/* Commandes en attente de confirmation */}
+            
+            {/* Header avec titre et sous-titre */}
+            <div className="bg-white rounded-xl shadow-sm border border-[#E5E4DF] p-6">
+              <div className="flex items-center gap-3 mb-2">
+                <Truck className="w-8 h-8 text-[#191919]" />
+                <h1 className="text-2xl font-bold text-[#191919]">Track & Manage</h1>
+              </div>
+              <p className="text-[#666663] ml-11">Suivez vos commandes et gérez les réceptions</p>
+              
+              {/* Onglets de navigation */}
+              <div className="flex gap-2 mt-6 overflow-x-auto pb-2">
+                <button
+                  onClick={() => setTrackTabSection('en_cours_commande')}
+                  className={`px-4 py-2 rounded-lg font-medium text-sm whitespace-nowrap transition-all ${
+                    trackTabSection === 'en_cours_commande'
+                      ? 'bg-black text-white'
+                      : 'bg-[#FAFAF7] text-[#666663] hover:bg-[#F0F0EB]'
+                  }`}
+                >
+                  En Cours de Commande ({orders.filter(o => o.status === 'pending_confirmation').length})
+                </button>
+                <button
+                  onClick={() => setTrackTabSection('preparation')}
+                  className={`px-4 py-2 rounded-lg font-medium text-sm whitespace-nowrap transition-all ${
+                    trackTabSection === 'preparation'
+                      ? 'bg-black text-white'
+                      : 'bg-[#FAFAF7] text-[#666663] hover:bg-[#F0F0EB]'
+                  }`}
+                >
+                  En cours de préparation ({orders.filter(o => o.status === 'preparing').length})
+                </button>
+                <button
+                  onClick={() => setTrackTabSection('en_transit')}
+                  className={`px-4 py-2 rounded-lg font-medium text-sm whitespace-nowrap transition-all ${
+                    trackTabSection === 'en_transit'
+                      ? 'bg-black text-white'
+                      : 'bg-[#FAFAF7] text-[#666663] hover:bg-[#F0F0EB]'
+                  }`}
+                >
+                  En Transit ({orders.filter(o => o.status === 'in_transit').length})
+                </button>
+                <button
+                  onClick={() => setTrackTabSection('commandes_recues')}
+                  className={`px-4 py-2 rounded-lg font-medium text-sm whitespace-nowrap transition-all ${
+                    trackTabSection === 'commandes_recues'
+                      ? 'bg-black text-white'
+                      : 'bg-[#FAFAF7] text-[#666663] hover:bg-[#F0F0EB]'
+                  }`}
+                >
+                  Commandes Reçues ({orders.filter(o => o.status === 'received').length})
+                </button>
+                <button
+                  onClick={() => setTrackTabSection('reconciliation')}
+                  className={`px-4 py-2 rounded-lg font-medium text-sm whitespace-nowrap transition-all ${
+                    trackTabSection === 'reconciliation'
+                      ? 'bg-black text-white'
+                      : 'bg-[#FAFAF7] text-[#666663] hover:bg-[#F0F0EB]'
+                  }`}
+                >
+                  Réconciliation ({orders.filter(o => o.status === 'reconciliation').length})
+                </button>
+              </div>
+            </div>
+
+            {/* Contenu de chaque section */}
+            {trackTabSection === 'en_cours_commande' && (
             <div className="bg-white rounded-xl shadow-sm border border-[#E5E4DF] p-6">
               <div className="flex items-center gap-2 mb-4">
                 <Clock className="w-5 h-5 text-yellow-600 shrink-0" />
-                <h2 className="text-lg font-bold text-[#191919]">Commandes Créées - En Attente de Confirmation</h2>
-                <span className="ml-auto bg-yellow-50 text-yellow-600 px-3 py-1 rounded-full text-sm font-bold border border-yellow-200 shrink-0">
-                  {orders.filter(o => o.status === 'pending_confirmation').length}
-                </span>
+                <h2 className="text-lg font-bold text-[#191919]">En Cours de Commande</h2>
               </div>
               <div className="space-y-3">
                 {orders.filter(o => o.status === 'pending_confirmation').length === 0 ? (
@@ -3260,21 +3323,20 @@ Cordialement,
                 )}
               </div>
             </div>
+            )}
 
-            {/* Commandes en traitement */}
+            {/* En cours de préparation */}
+            {trackTabSection === 'preparation' && (
             <div className="bg-white rounded-xl shadow-sm border border-[#E5E4DF] p-6">
               <div className="flex items-center gap-2 mb-4">
                 <Package className="w-5 h-5 text-[#64A4F2] shrink-0" />
-                <h2 className="text-lg font-bold text-[#191919]">Commandes en Traitement</h2>
-                <span className="ml-auto bg-blue-50 text-[#64A4F2] px-3 py-1 rounded-full text-sm font-bold border border-blue-200 shrink-0">
-                  {orders.filter(o => o.status === 'processing').length}
-                </span>
+                <h2 className="text-lg font-bold text-[#191919]">En cours de préparation</h2>
               </div>
               <div className="space-y-3">
-                {orders.filter(o => o.status === 'processing').length === 0 ? (
-                  <p className="text-[#666663] text-center py-8 text-sm">Aucune commande en traitement</p>
+                {orders.filter(o => o.status === 'preparing').length === 0 ? (
+                  <p className="text-[#666663] text-center py-8 text-sm">Aucune commande en préparation</p>
                 ) : (
-                  orders.filter(o => o.status === 'processing').map(order => (
+                  orders.filter(o => o.status === 'preparing').map(order => (
                     <div key={order.id} className="bg-[#FAFAF7] rounded-lg border border-[#E5E4DF] overflow-hidden">
                       {/* Header de la commande - Cliquable */}
                       <div 
@@ -3313,7 +3375,7 @@ Cordialement,
                           }}
                           className="shrink-0"
                         >
-                          Marquer comme expédiée
+                          Marquer comme expédier
                         </Button>
                       </div>
                       
@@ -3370,15 +3432,14 @@ Cordialement,
                 )}
               </div>
             </div>
+            )}
 
-            {/* Commandes en transit */}
+            {/* En Transit */}
+            {trackTabSection === 'en_transit' && (
             <div className="bg-white rounded-xl shadow-sm border border-[#E5E4DF] p-6">
               <div className="flex items-center gap-2 mb-4">
                 <Truck className="w-5 h-5 text-purple-600 shrink-0" />
-                <h2 className="text-lg font-bold text-[#191919]">En Cours de Transit</h2>
-                <span className="ml-auto bg-purple-50 text-purple-600 px-3 py-1 rounded-full text-sm font-bold border border-purple-200 shrink-0">
-                  {orders.filter(o => o.status === 'in_transit').length}
-                </span>
+                <h2 className="text-lg font-bold text-[#191919]">En Transit</h2>
               </div>
               <div className="space-y-3">
                 {orders.filter(o => o.status === 'in_transit').length === 0 ? (
@@ -3491,15 +3552,123 @@ Cordialement,
                 )}
               </div>
             </div>
+            )}
 
-            {/* Commandes à réconcilier */}
+            {/* Commandes Reçues */}
+            {trackTabSection === 'commandes_recues' && (
+            <div className="bg-white rounded-xl shadow-sm border border-[#E5E4DF] p-6">
+              <div className="flex items-center gap-2 mb-4">
+                <CheckCircle className="w-5 h-5 text-green-600 shrink-0" />
+                <h2 className="text-lg font-bold text-[#191919]">Commandes Reçues</h2>
+              </div>
+              <div className="space-y-3">
+                {orders.filter(o => o.status === 'received').length === 0 ? (
+                  <p className="text-[#666663] text-center py-8 text-sm">Aucune commande reçue</p>
+                ) : (
+                  orders.filter(o => o.status === 'received').map(order => (
+                    <div key={order.id} className="bg-[#FAFAF7] rounded-lg border border-[#E5E4DF] overflow-hidden">
+                      {/* Header de la commande */}
+                      <div 
+                        className="p-4 flex items-center justify-between gap-4 cursor-pointer hover:bg-[#F5F5F0] transition-colors"
+                        onClick={() => toggleOrderDetails(order.id)}
+                      >
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-3 mb-2">
+                            <span className="font-bold text-[#191919]">{order.id}</span>
+                            <span className="text-[#666663]">→</span>
+                            <span className="text-[#666663] truncate">{order.supplier}</span>
+                            <motion.div
+                              animate={{ rotate: expandedOrders[order.id] ? 180 : 0 }}
+                              transition={{ duration: 0.2 }}
+                            >
+                              <ArrowDownRight className="w-4 h-4 text-[#666663]" />
+                            </motion.div>
+                          </div>
+                          <div className="text-sm text-[#666663]">
+                            Créée le {formatConfirmedDate(order.createdAt)} • Total: {order.total}€
+                          </div>
+                          {order.receivedAt && (
+                            <div className="text-sm text-green-600 mt-1">
+                              ✓ Reçue le {formatConfirmedDate(order.receivedAt)}
+                            </div>
+                          )}
+                        </div>
+                        <Button
+                          variant="success"
+                          size="sm"
+                          icon={Check}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            // Fonction pour valider la commande reçue
+                            console.log('Valider commande reçue:', order.id);
+                          }}
+                          className="shrink-0"
+                        >
+                          Valider
+                        </Button>
+                      </div>
+                      
+                      {/* Détails des produits */}
+                      <AnimatePresence>
+                        {expandedOrders[order.id] && (
+                          <motion.div
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: 'auto', opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            transition={{ duration: 0.3 }}
+                            className="border-t border-[#E5E4DF] bg-white"
+                          >
+                            <div className="p-4">
+                              <h4 className="font-semibold text-sm text-[#666663] mb-3">Produits commandés:</h4>
+                              <div className="space-y-2">
+                                {order.items.map((item, idx) => {
+                                  const product = products.find(p => p.sku === item.sku);
+                                  return (
+                                    <div key={idx} className="flex justify-between items-center p-2 bg-[#FAFAF7] rounded border border-[#E5E4DF]">
+                                      <div className="flex-1">
+                                        <div className="font-medium text-[#191919] text-sm">
+                                          {product?.name || item.sku}
+                                        </div>
+                                        <div className="text-xs text-[#666663]">
+                                          SKU: {item.sku}
+                                        </div>
+                                      </div>
+                                      <div className="text-right">
+                                        <div className="font-bold text-[#191919]">
+                                          {item.quantity} unités
+                                        </div>
+                                        <div className="text-xs text-[#666663]">
+                                          {item.pricePerUnit}€/unité
+                                        </div>
+                                      </div>
+                                      <div className="ml-4 text-right font-bold text-[#191919] min-w-[80px]">
+                                        {(item.quantity * item.pricePerUnit).toFixed(2)}€
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                              <div className="mt-3 pt-3 border-t border-[#E5E4DF] flex justify-between">
+                                <span className="font-semibold text-[#666663]">Total:</span>
+                                <span className="font-bold text-[#191919] text-lg">{order.total.toFixed(2)}€</span>
+                              </div>
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+            )}
+
+            {/* Réconciliation */}
+            {trackTabSection === 'reconciliation' && (
             <div className="bg-white rounded-xl shadow-sm border border-[#E5E4DF] p-6">
               <div className="flex items-center gap-2 mb-4">
                 <AlertCircle className="w-5 h-5 text-[#EF1C43] shrink-0" />
-                <h2 className="text-lg font-bold text-[#191919]">Commandes à Réconcilier</h2>
-                <span className="ml-auto bg-red-50 text-[#EF1C43] px-3 py-1 rounded-full text-sm font-bold border border-red-200 shrink-0">
-                  {orders.filter(o => o.status === 'reconciliation').length}
-                </span>
+                <h2 className="text-lg font-bold text-[#191919]">Réconciliation</h2>
               </div>
               <div className="space-y-3">
                 {/* DEBUG INFO */}
@@ -3679,6 +3848,8 @@ Cordialement,
                 )}
               </div>
             </div>
+            )}
+
             </motion.div>
           )}
 
@@ -3963,7 +4134,7 @@ Cordialement,
                 </div>
                 <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
                   <div className="text-2xl font-bold text-[#64A4F2]">
-                    {orders.filter(o => o.status === 'in_transit' || o.status === 'processing').length}
+                    {orders.filter(o => o.status === 'in_transit' || o.status === 'preparing' || o.status === 'pending_confirmation').length}
                   </div>
                   <div className="text-sm text-[#666663]">En cours</div>
                 </div>
