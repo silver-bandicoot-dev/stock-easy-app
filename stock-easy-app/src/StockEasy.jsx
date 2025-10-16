@@ -464,7 +464,7 @@ const calculateMetrics = (product, seuil = 90) => {
   // Stock de sécurité: valeur custom ou 20% du délai fournisseur
   const securityStock = product.customSecurityStock !== undefined && product.customSecurityStock !== null 
     ? product.customSecurityStock 
-    : Math.round(product.delay * 0.2);
+    : Math.round(product.leadTimeDays * 0.2);
   
   let healthStatus = 'healthy';
   let healthPercentage = 100;
@@ -848,7 +848,7 @@ const GestionFournisseurs = ({
                       <div className="flex items-center gap-4">
                         <div className="flex items-center gap-2">
                           <Clock className="w-4 h-4 shrink-0" />
-                          <span>Délai: {supplier.delay}j</span>
+                          <span>Délai: {supplier.leadTimeDays}j</span>
                         </div>
                         
                         <div className="flex items-center gap-2">
@@ -965,8 +965,8 @@ const SupplierModal = ({
             </label>
             <input
               type="number"
-              value={formData.delay}
-              onChange={(e) => onChange('delay', parseInt(e.target.value) || 0)}
+              value={formData.leadTimeDays}
+              onChange={(e) => onChange('leadTimeDays', parseInt(e.target.value) || 0)}
               min="1"
               className="w-full px-4 py-2 border-2 border-[#E5E4DF] rounded-lg focus:outline-none focus:border-[#8B5CF6]"
             />
@@ -1144,7 +1144,7 @@ const MappingSKUFournisseur = ({
                             <div className="flex items-center gap-4">
                               <div className="flex items-center gap-2">
                                 <Clock className="w-3 h-3" />
-                                <span>Délai: {supplier.delay}j</span>
+                                <span>Délai: {supplier.leadTimeDays}j</span>
                               </div>
                               <div className="flex items-center gap-2">
                                 <Package className="w-3 h-3" />
@@ -1252,7 +1252,7 @@ const AssignSupplierModal = ({
               <option value="">-- Choisir un fournisseur --</option>
               {suppliersList.map(s => (
                 <option key={s.name} value={s.name}>
-                  {s.name} (Délai: {s.delay}j, MOQ: {s.moq})
+                  {s.name} (Délai: {s.leadTimeDays}j, MOQ: {s.moq})
                 </option>
               ))}
             </select>
@@ -1332,7 +1332,7 @@ const StockEasy = () => {
   const [supplierFormData, setSupplierFormData] = useState({
     name: '',
     email: '',
-    delay: 30,
+    leadTimeDays: 30,
     moq: 50,
     notes: ''
   });
@@ -1501,7 +1501,7 @@ const StockEasy = () => {
       setSupplierFormData({
         name: supplier.name,
         email: supplier.email,
-        delay: supplier.delay,
+        leadTimeDays: supplier.leadTimeDays,
         moq: supplier.moq || 50,
         notes: supplier.notes || ''
       });
@@ -1511,7 +1511,7 @@ const StockEasy = () => {
       setSupplierFormData({
         name: '',
         email: '',
-        delay: 30,
+        leadTimeDays: 30,
         moq: 50,
         notes: ''
       });
@@ -1525,7 +1525,7 @@ const StockEasy = () => {
     setSupplierFormData({
       name: '',
       email: '',
-      delay: 30,
+      leadTimeDays: 30,
       moq: 50,
       notes: ''
     });
@@ -1551,7 +1551,7 @@ const StockEasy = () => {
       errors.push('L\'email n\'est pas valide');
     }
     
-    if (supplierFormData.delay <= 0) {
+    if (supplierFormData.leadTimeDays <= 0) {
       errors.push('Le délai doit être supérieur à 0');
     }
     
@@ -1721,7 +1721,7 @@ const StockEasy = () => {
       const order = orders.find(o => o.items.some(item => item.sku === p.sku) && o.status === 'in_transit');
       if (order && order.shippedAt) {
         const daysSinceShip = Math.floor((new Date() - new Date(order.shippedAt)) / (1000 * 60 * 60 * 24));
-        const daysRemaining = p.delay - daysSinceShip;
+        const daysRemaining = p.leadTimeDays - daysSinceShip;
         if (daysRemaining <= 3) {
           notifs.push({
             type: 'info',
@@ -1944,7 +1944,7 @@ TOTAL: ${total.toFixed(2)}€
 
 Merci de nous confirmer la disponibilité et la date de livraison estimée.
 
-Conditions habituelles: ${supplierInfo.delay} jours - MOQ respecté
+Conditions habituelles: ${supplierInfo.leadTimeDays} jours - MOQ respecté
 
 Cordialement,
 L'équipe Stock Easy`
@@ -3016,7 +3016,7 @@ Cordialement,
                 ) : (
                   orders.filter(o => o.status === 'in_transit').map(order => {
                     const daysSinceShip = order.shippedAt ? Math.floor((new Date() - new Date(order.shippedAt)) / (1000 * 60 * 60 * 24)) : 0;
-                    const supplierDelay = suppliers[order.supplier]?.delay || 30;
+                    const supplierDelay = suppliers[order.supplier]?.leadTimeDays || 30;
                     const daysRemaining = Math.max(0, supplierDelay - daysSinceShip);
                     
                     return (
@@ -3821,7 +3821,7 @@ Cordialement,
                         <div className="flex-1">
                           <h3 className="text-lg font-bold text-[#191919]">{supplier}</h3>
                           <p className="text-sm text-[#666663] mt-1">
-                            {products.length} produit(s) • Délai: {products[0].delay} jours
+                            {products.length} produit(s) • Délai: {products[0].leadTimeDays} jours
                           </p>
                         </div>
                         <div className="flex items-center gap-4">
