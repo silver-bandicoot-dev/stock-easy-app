@@ -198,6 +198,84 @@ const api = {
 };
 
 // ============================================
+// FONCTIONS UTILITAIRES - ETA (CORRECTION 4)
+// ============================================
+
+/**
+ * Formate et calcule les informations ETA
+ * @param {string} eta - Date ISO de l'ETA
+ * @returns {object} - Informations formatées de l'ETA
+ */
+const formatETA = (eta) => {
+  if (!eta) {
+    return {
+      date: 'Non disponible',
+      status: 'unknown',
+      daysUntil: null,
+      text: 'Date inconnue'
+    };
+  }
+
+  const etaDate = new Date(eta);
+  const today = new Date();
+  const daysUntil = Math.ceil((etaDate - today) / (1000 * 60 * 60 * 24));
+  
+  let status = 'success';
+  let text = '';
+  
+  if (daysUntil < 0) {
+    status = 'critical';
+    text = `En retard de ${Math.abs(daysUntil)} jour(s)`;
+  } else if (daysUntil === 0) {
+    status = 'warning';
+    text = "Aujourd'hui";
+  } else if (daysUntil === 1) {
+    status = 'warning';
+    text = 'Demain';
+  } else if (daysUntil <= 3) {
+    status = 'warning';
+    text = `Dans ${daysUntil} jours`;
+  } else if (daysUntil <= 7) {
+    status = 'info';
+    text = `Dans ${daysUntil} jours`;
+  } else {
+    status = 'success';
+    text = `Dans ${daysUntil} jours`;
+  }
+  
+  return {
+    date: etaDate.toLocaleDateString('fr-FR'),
+    status,
+    daysUntil,
+    text
+  };
+};
+
+// ============================================
+// COMPOSANT ETA BADGE (CORRECTION 4)
+// ============================================
+const ETABadge = ({ eta }) => {
+  const etaInfo = formatETA(eta);
+  
+  const statusColors = {
+    critical: 'bg-red-100 text-red-800 border-red-200',
+    warning: 'bg-yellow-100 text-yellow-800 border-yellow-200',
+    info: 'bg-blue-100 text-blue-800 border-blue-200',
+    success: 'bg-green-100 text-green-800 border-green-200',
+    unknown: 'bg-gray-100 text-gray-600 border-gray-200'
+  };
+
+  return (
+    <div className="text-center">
+      <div className={`inline-flex flex-col px-3 py-2 rounded-lg border ${statusColors[etaInfo.status]}`}>
+        <span className="text-xs font-medium mb-1">{etaInfo.text}</span>
+        <span className="text-sm font-bold">{etaInfo.date}</span>
+      </div>
+    </div>
+  );
+};
+
+// ============================================
 // COMPOSANT BUTTON UNIFIÉ
 // ============================================
 const Button = ({ 
@@ -1270,6 +1348,363 @@ const AssignSupplierModal = ({
 };
 
 // ============================================
+// MODAL DÉTAILS COMMANDE (CORRECTION 5)
+// ============================================
+const OrderDetailsModal = ({ order, onClose, products }) => {
+  if (!order) return null;
+
+  const totalAmount = order.items?.reduce(
+    (sum, item) => sum + ((parseInt(item.quantity) || 0) * (parseFloat(item.pricePerUnit) || 0)),
+    0
+  ) || 0;
+
+  const etaInfo = formatETA(order.eta);
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999] p-4">
+      <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+        {/* Header */}
+        <div className="sticky top-0 bg-gradient-to-r from-gray-900 to-gray-800 text-white p-6 flex justify-between items-center">
+          <div>
+            <h2 className="text-2xl font-bold mb-1">{order.id}</h2>
+            <p className="text-gray-300 text-sm">
+              Fournisseur: {order.supplier}
+            </p>
+          </div>
+          <button
+            onClick={onClose}
+            className="text-white hover:bg-white/20 p-2 rounded-lg transition"
+          >
+            <X className="w-6 h-6" />
+          </button>
+        </div>
+
+        {/* Informations générales */}
+        <div className="p-6 bg-gray-50 border-b border-gray-200">
+          <div className="grid grid-cols-4 gap-4">
+            <div>
+              <p className="text-xs text-gray-500 mb-1">Date de commande</p>
+              <p className="font-semibold text-gray-900">
+                {new Date(order.createdAt).toLocaleDateString('fr-FR')}
+              </p>
+            </div>
+            <div>
+              <p className="text-xs text-gray-500 mb-1">ETA</p>
+              <ETABadge eta={order.eta} />
+            </div>
+            <div>
+              <p className="text-xs text-gray-500 mb-1">Statut</p>
+              <span className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${
+                order.status === 'validated' ? 'bg-green-100 text-green-800' :
+                order.status === 'reconciliation' ? 'bg-yellow-100 text-yellow-800' :
+                order.status === 'received' ? 'bg-blue-100 text-blue-800' :
+                order.status === 'transit' ? 'bg-purple-100 text-purple-800' :
+                'bg-gray-100 text-gray-800'
+              }`}>
+                {order.status === 'validated' ? 'Validée' :
+                 order.status === 'reconciliation' ? 'Réconciliation' :
+                 order.status === 'received' ? 'Reçue' :
+                 order.status === 'transit' ? 'En Transit' :
+                 'En cours'}
+              </span>
+            </div>
+            <div>
+              <p className="text-xs text-gray-500 mb-1">Montant total</p>
+              <p className="font-bold text-gray-900 text-lg">
+                {totalAmount.toFixed(2)} €
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Tableau des produits */}
+        <div className="p-6">
+          <h3 className="text-lg font-bold text-gray-900 mb-4">
+            Détail des articles
+          </h3>
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-gray-100 border-b-2 border-gray-300">
+                <tr>
+                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-900">
+                    SKU
+                  </th>
+                  <th className="text-right py-3 px-4 text-sm font-semibold text-gray-900">
+                    Qté Commandée
+                  </th>
+                  {(order.status === 'received' || order.status === 'validated' || order.status === 'reconciliation') && (
+                    <th className="text-right py-3 px-4 text-sm font-semibold text-gray-900">
+                      Qté Reçue
+                    </th>
+                  )}
+                  {(order.status === 'validated' || order.status === 'reconciliation') && (
+                    <th className="text-right py-3 px-4 text-sm font-semibold text-gray-900">
+                      Écart
+                    </th>
+                  )}
+                  <th className="text-right py-3 px-4 text-sm font-semibold text-gray-900">
+                    Prix Unitaire
+                  </th>
+                  <th className="text-right py-3 px-4 text-sm font-semibold text-gray-900">
+                    Total
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {order.items?.map((item, index) => {
+                  const ordered = parseInt(item.quantity) || 0;
+                  const received = parseInt(item.receivedQuantity) || 0;
+                  const diff = received - ordered;
+                  const price = parseFloat(item.pricePerUnit) || 0;
+                  const total = ordered * price;
+
+                  return (
+                    <tr 
+                      key={index}
+                      className="border-b border-gray-200 hover:bg-gray-50"
+                    >
+                      <td className="py-3 px-4">
+                        <span className="font-medium text-gray-900">
+                          {item.sku}
+                        </span>
+                      </td>
+                      <td className="text-right py-3 px-4 font-semibold text-gray-900">
+                        {ordered}
+                      </td>
+                      {(order.status === 'received' || order.status === 'validated' || order.status === 'reconciliation') && (
+                        <td className="text-right py-3 px-4 font-semibold text-gray-900">
+                          {received}
+                        </td>
+                      )}
+                      {(order.status === 'validated' || order.status === 'reconciliation') && (
+                        <td className="text-right py-3 px-4">
+                          {diff !== 0 && (
+                            <span className={`font-bold ${
+                              diff < 0 ? 'text-red-600' : 'text-blue-600'
+                            }`}>
+                              {diff > 0 ? '+' : ''}{diff}
+                            </span>
+                          )}
+                          {diff === 0 && (
+                            <span className="text-green-600 font-bold">✓</span>
+                          )}
+                        </td>
+                      )}
+                      <td className="text-right py-3 px-4 text-gray-700">
+                        {price.toFixed(2)} €
+                      </td>
+                      <td className="text-right py-3 px-4 font-semibold text-gray-900">
+                        {total.toFixed(2)} €
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+              <tfoot className="bg-gray-100 border-t-2 border-gray-300">
+                <tr>
+                  <td colSpan={order.status === 'validated' || order.status === 'reconciliation' ? 4 : 3} 
+                      className="text-right py-3 px-4 font-bold text-gray-900">
+                    Total:
+                  </td>
+                  <td className="text-right py-3 px-4 font-bold text-gray-900 text-lg">
+                    {totalAmount.toFixed(2)} €
+                  </td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        </div>
+
+        {/* Notes de réconciliation si présentes */}
+        {order.reconciliationNotes && (
+          <div className="p-6 bg-yellow-50 border-t border-yellow-200">
+            <h4 className="text-sm font-semibold text-gray-900 mb-2">
+              Notes de réconciliation:
+            </h4>
+            <p className="text-sm text-gray-700">
+              {order.reconciliationNotes}
+            </p>
+          </div>
+        )}
+
+        {/* Footer */}
+        <div className="p-6 bg-gray-50 border-t border-gray-200 flex justify-end">
+          <button
+            onClick={onClose}
+            className="px-6 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition font-semibold"
+          >
+            Fermer
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ============================================
+// ONGLET COMMANDES REÇUES (CORRECTION 3)
+// ============================================
+const ReceivedOrdersTab = ({ orders, products, onValidate, onReconcile }) => {
+  const receivedOrders = useMemo(() => {
+    return orders?.filter(order => order.status === 'received') || [];
+  }, [orders]);
+
+  if (receivedOrders.length === 0) {
+    return (
+      <div className="bg-white rounded-xl shadow-sm border border-[#E5E4DF] p-8 text-center">
+        <Package className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+        <h3 className="text-lg font-medium text-gray-900 mb-2">
+          Aucune commande reçue en attente
+        </h3>
+        <p className="text-gray-500">
+          Les commandes confirmées comme reçues apparaîtront ici pour vérification avant validation finale.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="bg-blue-50 border-l-4 border-blue-400 p-4 rounded-r-lg">
+        <div className="flex items-center">
+          <CheckCircle className="w-5 h-5 text-blue-700 mr-2" />
+          <p className="text-sm text-blue-700">
+            <strong>{receivedOrders.length}</strong> commande(s) reçue(s) en attente de vérification
+          </p>
+        </div>
+      </div>
+
+      {receivedOrders.map(order => {
+        const hasDiscrepancies = order.items?.some(item => {
+          const ordered = parseInt(item.quantity) || 0;
+          const received = parseInt(item.receivedQuantity) || 0;
+          return ordered !== received;
+        });
+
+        const totalItems = order.items?.length || 0;
+        const totalOrdered = order.items?.reduce((sum, item) => sum + (parseInt(item.quantity) || 0), 0) || 0;
+        const totalReceived = order.items?.reduce((sum, item) => sum + (parseInt(item.receivedQuantity) || 0), 0) || 0;
+
+        return (
+          <div 
+            key={order.id}
+            className={`bg-white rounded-xl shadow-sm border-l-4 p-6 ${
+              hasDiscrepancies ? 'border-yellow-500' : 'border-green-500'
+            }`}
+          >
+            <div className="flex justify-between items-start mb-4">
+              <div>
+                <h3 className="text-lg font-bold text-gray-900">{order.id}</h3>
+                <p className="text-sm text-gray-600">
+                  Fournisseur: <span className="font-medium">{order.supplier}</span>
+                </p>
+                <p className="text-xs text-gray-500 mt-1">
+                  Reçue le {new Date(order.receivedAt || order.createdAt).toLocaleDateString('fr-FR')}
+                </p>
+              </div>
+              <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
+                hasDiscrepancies 
+                  ? 'bg-yellow-100 text-yellow-800' 
+                  : 'bg-green-100 text-green-800'
+              }`}>
+                {hasDiscrepancies ? (
+                  <>
+                    <AlertCircle className="w-4 h-4 mr-1" />
+                    Écart détecté
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle className="w-4 h-4 mr-1" />
+                    Conforme
+                  </>
+                )}
+              </span>
+            </div>
+
+            {/* Résumé */}
+            <div className="grid grid-cols-3 gap-4 mb-4 p-4 bg-gray-50 rounded-lg">
+              <div className="text-center">
+                <p className="text-xs text-gray-500 mb-1">Articles</p>
+                <p className="text-xl font-bold text-gray-900">{totalItems}</p>
+              </div>
+              <div className="text-center">
+                <p className="text-xs text-gray-500 mb-1">Qté Commandée</p>
+                <p className="text-xl font-bold text-gray-900">{totalOrdered}</p>
+              </div>
+              <div className="text-center">
+                <p className="text-xs text-gray-500 mb-1">Qté Reçue</p>
+                <p className="text-xl font-bold text-gray-900">{totalReceived}</p>
+              </div>
+            </div>
+
+            {/* Liste des produits */}
+            <div className="mb-4">
+              <p className="text-sm font-medium text-gray-700 mb-2">Détail des articles:</p>
+              <div className="space-y-2 max-h-48 overflow-y-auto">
+                {order.items?.map(item => {
+                  const ordered = parseInt(item.quantity) || 0;
+                  const received = parseInt(item.receivedQuantity) || 0;
+                  const diff = received - ordered;
+
+                  return (
+                    <div 
+                      key={item.sku}
+                      className="flex items-center justify-between p-2 bg-white rounded border border-gray-200"
+                    >
+                      <span className="text-sm font-medium text-gray-900">{item.sku}</span>
+                      <div className="flex items-center gap-3">
+                        <span className="text-xs text-gray-600">
+                          Commandé: <strong>{ordered}</strong> | Reçu: <strong>{received}</strong>
+                        </span>
+                        {diff !== 0 && (
+                          <span className={`text-xs font-bold ${
+                            diff < 0 ? 'text-red-600' : 'text-blue-600'
+                          }`}>
+                            ({diff > 0 ? '+' : ''}{diff})
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="flex gap-3">
+              <button
+                onClick={() => onValidate(order.id)}
+                disabled={hasDiscrepancies}
+                className={`flex-1 px-4 py-3 rounded-lg font-semibold flex items-center justify-center gap-2 transition ${
+                  hasDiscrepancies
+                    ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                    : 'bg-green-600 text-white hover:bg-green-700'
+                }`}
+              >
+                <Check className="w-4 h-4" />
+                Valider la commande
+              </button>
+              <button
+                onClick={() => onReconcile(order.id)}
+                disabled={!hasDiscrepancies}
+                className={`flex-1 px-4 py-3 rounded-lg font-semibold flex items-center justify-center gap-2 transition ${
+                  !hasDiscrepancies
+                    ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                    : 'bg-yellow-600 text-white hover:bg-yellow-700'
+                }`}
+              >
+                <Edit2 className="w-4 h-4" />
+                Réconcilier les écarts
+              </button>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+};
+
+// ============================================
 // COMPOSANT PRINCIPAL
 // ============================================
 const StockEasy = () => {
@@ -1320,6 +1755,15 @@ const StockEasy = () => {
 
   // CORRECTION 3: Gestion de l'expansion des détails de commandes
   const [expandedOrders, setExpandedOrders] = useState({});
+  
+  // CORRECTION 3: Sous-onglet Track & Manage
+  const [trackSubTab, setTrackSubTab] = useState('pending'); // 'pending', 'transit', 'received', 'reconciliation', 'validated'
+  
+  // CORRECTION 3: État pour modal de réception
+  const [receivingOrder, setReceivingOrder] = useState(null);
+  
+  // CORRECTION 5: Modal détails commande dans historique
+  const [selectedOrderForDetails, setSelectedOrderForDetails] = useState(null);
 
   // NOUVEAUX ÉTATS pour Paramètres Généraux
   const [seuilSurstockProfond, setSeuilSurstockProfond] = useState(90);
@@ -2656,6 +3100,109 @@ Cordialement,
     }
   };
 
+  // CORRECTION 3: Handler pour valider une commande reçue
+  const handleValidateOrder = async (orderId) => {
+    try {
+      const response = await fetch(`${API_URL}?action=updateOrderStatus`, {
+        method: 'POST',
+        body: JSON.stringify({
+          action: 'updateOrderStatus',
+          orderId,
+          status: 'validated',
+          validatedAt: new Date().toISOString()
+        })
+      });
+
+      const data = await response.json();
+
+      if (data.error) {
+        throw new Error(data.error);
+      }
+
+      toast.success('✅ Commande validée avec succès!');
+      await loadData();
+
+    } catch (error) {
+      console.error('❌ Erreur validation:', error);
+      toast.error('Erreur lors de la validation: ' + error.message);
+    }
+  };
+
+  // CORRECTION 3: Handler pour déplacer vers réconciliation
+  const handleMoveToReconciliation = async (orderId) => {
+    try {
+      const response = await fetch(`${API_URL}?action=updateOrderStatus`, {
+        method: 'POST',
+        body: JSON.stringify({
+          action: 'updateOrderStatus',
+          orderId,
+          status: 'reconciliation'
+        })
+      });
+
+      const data = await response.json();
+
+      if (data.error) {
+        throw new Error(data.error);
+      }
+
+      // Changer d'onglet vers réconciliation
+      setTrackSubTab('reconciliation');
+      await loadData();
+
+    } catch (error) {
+      console.error('❌ Erreur:', error);
+      toast.error('Erreur: ' + error.message);
+    }
+  };
+
+  // CORRECTION 3: Handler pour confirmer réception avec quantités
+  const handleConfirmReceipt = async (orderId) => {
+    try {
+      // Ouvrir un modal pour saisir les quantités reçues
+      setReceivingOrder(orderId);
+      setReceivingModalOpen(true);
+      
+    } catch (error) {
+      console.error('❌ Erreur:', error);
+      toast.error('Erreur: ' + error.message);
+    }
+  };
+
+  // CORRECTION 3: Handler pour sauvegarder les quantités reçues
+  const handleSaveReceivedQuantities = async () => {
+    try {
+      const response = await fetch(`${API_URL}?action=confirmReceipt`, {
+        method: 'POST',
+        body: JSON.stringify({
+          action: 'confirmReceipt',
+          orderId: receivingOrder,
+          receivedQuantities: tempReceivedQty,
+          receivedAt: new Date().toISOString()
+        })
+      });
+
+      const data = await response.json();
+
+      if (data.error) {
+        throw new Error(data.error);
+      }
+
+      toast.success('✅ Réception confirmée!');
+      setReceivingModalOpen(false);
+      setReceivingOrder(null);
+      setTempReceivedQty({});
+      
+      // Changer d'onglet vers "Commandes Reçues"
+      setTrackSubTab('received');
+      await loadData();
+
+    } catch (error) {
+      console.error('❌ Erreur:', error);
+      toast.error('Erreur: ' + error.message);
+    }
+  };
+
   // Fonction pour exporter l'historique en CSV
   const exportHistoryToCSV = () => {
     // Filtrer les commandes selon les critères actuels
@@ -3147,7 +3694,7 @@ Cordialement,
             </motion.div>
           )}
 
-          {/* TRACK & MANAGE TAB */}
+          {/* TRACK & MANAGE TAB (CORRECTION 3) */}
           {activeTab === 'track' && (
             <motion.div
               key="track"
@@ -3156,7 +3703,71 @@ Cordialement,
               exit={{ opacity: 0, x: -20 }}
               transition={{ duration: 0.25 }}
               className="space-y-6">
-            {/* Commandes en attente de confirmation */}
+            
+            {/* Titre principal */}
+            <div>
+              <h2 className="text-3xl font-bold text-[#191919] mb-2">🚚 Track & Manage</h2>
+              <p className="text-[#666663]">Suivez vos commandes et gérez les réceptions</p>
+            </div>
+
+            {/* Navigation sous-onglets (CORRECTION 3) */}
+            <div className="bg-white rounded-xl shadow-sm border border-[#E5E4DF] p-2">
+              <div className="flex gap-2 overflow-x-auto">
+                <button
+                  onClick={() => setTrackSubTab('pending')}
+                  className={`px-4 py-2.5 rounded-lg text-sm font-semibold transition-all whitespace-nowrap ${
+                    trackSubTab === 'pending'
+                      ? 'bg-black text-white'
+                      : 'text-gray-600 hover:bg-gray-100'
+                  }`}
+                >
+                  En Cours de Commande ({orders.filter(o => o.status === 'pending_confirmation').length})
+                </button>
+                <button
+                  onClick={() => setTrackSubTab('transit')}
+                  className={`px-4 py-2.5 rounded-lg text-sm font-semibold transition-all whitespace-nowrap ${
+                    trackSubTab === 'transit'
+                      ? 'bg-black text-white'
+                      : 'text-gray-600 hover:bg-gray-100'
+                  }`}
+                >
+                  En Transit ({orders.filter(o => o.status === 'transit' || o.status === 'in_transit').length})
+                </button>
+                <button
+                  onClick={() => setTrackSubTab('received')}
+                  className={`px-4 py-2.5 rounded-lg text-sm font-semibold transition-all whitespace-nowrap ${
+                    trackSubTab === 'received'
+                      ? 'bg-black text-white'
+                      : 'text-gray-600 hover:bg-gray-100'
+                  }`}
+                >
+                  Commandes Reçues ({orders.filter(o => o.status === 'received').length})
+                </button>
+                <button
+                  onClick={() => setTrackSubTab('reconciliation')}
+                  className={`px-4 py-2.5 rounded-lg text-sm font-semibold transition-all whitespace-nowrap ${
+                    trackSubTab === 'reconciliation'
+                      ? 'bg-black text-white'
+                      : 'text-gray-600 hover:bg-gray-100'
+                  }`}
+                >
+                  Réconciliation ({orders.filter(o => o.status === 'reconciliation').length})
+                </button>
+                <button
+                  onClick={() => setTrackSubTab('validated')}
+                  className={`px-4 py-2.5 rounded-lg text-sm font-semibold transition-all whitespace-nowrap ${
+                    trackSubTab === 'validated'
+                      ? 'bg-black text-white'
+                      : 'text-gray-600 hover:bg-gray-100'
+                  }`}
+                >
+                  Validées ({orders.filter(o => o.status === 'validated' || o.status === 'completed').length})
+                </button>
+              </div>
+            </div>
+
+            {/* Onglet En Cours de Commande (CORRECTION 3) */}
+            {trackSubTab === 'pending' && (
             <div className="bg-white rounded-xl shadow-sm border border-[#E5E4DF] p-6">
               <div className="flex items-center gap-2 mb-4">
                 <Clock className="w-5 h-5 text-yellow-600 shrink-0" />
@@ -3260,14 +3871,17 @@ Cordialement,
                 )}
               </div>
             </div>
+            </div>
+            )}
 
-            {/* Commandes en traitement */}
+            {/* Onglet En Transit (CORRECTION 3) */}
+            {trackSubTab === 'transit' && (
             <div className="bg-white rounded-xl shadow-sm border border-[#E5E4DF] p-6">
               <div className="flex items-center gap-2 mb-4">
-                <Package className="w-5 h-5 text-[#64A4F2] shrink-0" />
-                <h2 className="text-lg font-bold text-[#191919]">Commandes en Traitement</h2>
-                <span className="ml-auto bg-blue-50 text-[#64A4F2] px-3 py-1 rounded-full text-sm font-bold border border-blue-200 shrink-0">
-                  {orders.filter(o => o.status === 'processing').length}
+                <Truck className="w-5 h-5 text-purple-600 shrink-0" />
+                <h2 className="text-lg font-bold text-[#191919]">Commandes en Transit</h2>
+                <span className="ml-auto bg-purple-50 text-purple-600 px-3 py-1 rounded-full text-sm font-bold border border-purple-200 shrink-0">
+                  {orders.filter(o => o.status === 'transit' || o.status === 'in_transit').length}
                 </span>
               </div>
               <div className="space-y-3">
@@ -4020,7 +4634,12 @@ Cordialement,
                         return (
                           <tr key={order.id} className="hover:bg-[#FAFAF7] transition-colors">
                             <td className="px-6 py-4">
-                              <span className="font-bold text-[#191919]">{order.id}</span>
+                              <button
+                                onClick={() => setSelectedOrderForDetails(order)}
+                                className="font-bold text-blue-600 hover:text-blue-800 hover:underline transition"
+                              >
+                                {order.id}
+                              </button>
                             </td>
                             <td className="px-6 py-4">
                               <span className="text-[#191919]">{order.supplier}</span>
@@ -4061,6 +4680,15 @@ Cordialement,
                 Exporter en CSV
               </Button>
             </div>
+
+            {/* Modal détails commande (CORRECTION 5) */}
+            {selectedOrderForDetails && (
+              <OrderDetailsModal
+                order={selectedOrderForDetails}
+                products={products}
+                onClose={() => setSelectedOrderForDetails(null)}
+              />
+            )}
             </motion.div>
           )}
 
