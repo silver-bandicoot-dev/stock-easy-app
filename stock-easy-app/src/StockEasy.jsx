@@ -1309,6 +1309,11 @@ const StockEasy = () => {
 
   // NOUVEAUX ÉTATS pour les sous-onglets de Paramètres
   const [parametersSubTab, setParametersSubTab] = useState('general'); // 'general', 'products', 'suppliers', 'mapping'
+  
+  // NOUVEAUX ÉTATS pour CORRECTION 5 et 6
+  const [discrepancyTypes, setDiscrepancyTypes] = useState({});
+  const [unsavedParameterChanges, setUnsavedParameterChanges] = useState({});
+  const [isSavingParameters, setIsSavingParameters] = useState(false);
 
   // CORRECTION 1: Gestion des quantités éditables dans la modal de commande
   const [orderQuantities, setOrderQuantities] = useState({});
@@ -1827,6 +1832,60 @@ const StockEasy = () => {
     setEditingParam(null);
     setTempParamValue('');
   };
+  
+  const handleParameterChange = (paramName, value) => {
+    console.log('Modification paramètre:', paramName, '=', value);
+    setUnsavedParameterChanges(prev => ({
+      ...prev,
+      [paramName]: value
+    }));
+  };
+  
+  const saveAllParameters = async () => {
+    if (Object.keys(unsavedParameterChanges).length === 0) {
+      toast.info('Aucune modification à sauvegarder');
+      return;
+    }
+    
+    setIsSavingParameters(true);
+    
+    try {
+      console.log('💾 Sauvegarde des paramètres:', unsavedParameterChanges);
+      
+      // Sauvegarder chaque paramètre modifié
+      const savePromises = Object.entries(unsavedParameterChanges).map(([paramName, value]) => {
+        console.log(`  - ${paramName}: ${value}`);
+        return api.updateParameter(paramName, value);
+      });
+      
+      const results = await Promise.all(savePromises);
+      console.log('Résultats de sauvegarde:', results);
+      
+      // Vérifier les erreurs
+      const errors = results.filter(r => r.error);
+      if (errors.length > 0) {
+        throw new Error(`Erreurs: ${errors.map(e => e.error).join(', ')}`);
+      }
+      
+      // Recharger les données pour obtenir les paramètres mis à jour
+      await loadData();
+      
+      // Nettoyer les modifications non sauvegardées
+      setUnsavedParameterChanges({});
+      
+      toast.success(`${Object.keys(unsavedParameterChanges).length} paramètre(s) sauvegardé(s) avec succès!`, {
+        duration: 4000
+      });
+      
+    } catch (error) {
+      console.error('❌ Erreur sauvegarde paramètres:', error);
+      toast.error('Erreur lors de la sauvegarde: ' + error.message, {
+        duration: 6000
+      });
+    } finally {
+      setIsSavingParameters(false);
+    }
+  };
 
   const openEmailModal = (supplier) => {
     // Initialiser les quantités éditables avec les recommandations
@@ -2019,8 +2078,196 @@ L'équipe Stock Easy`
 
   const receiveOrder = (orderId) => {
     const order = orders.find(o => o.id === orderId);
+    openReconciliationModal(order);
+  };
+  
+  const openReconciliationModal = (order) => {
     setReconciliationOrder(order);
+    
+    // Initialiser les quantités reçues avec les quantités commandées par défaut
+    const initialItems = {};
+    const initialTypes = {};
+    
+    order.items.forEach(item => {
+      initialItems[item.sku] = {
+        received: item.receivedQuantity !== undefined ? item.receivedQuantity : item.quantity,
+        notes: item.discrepancyNotes || ''
+      };
+      initialTypes[item.sku] = item.discrepancyType || 'none';
+    });
+    
+    setDiscrepancyItems(initialItems);
+    setDiscrepancyTypes(initialTypes);
     setReconciliationModalOpen(true);
+  };
+  
+  const updateDiscrepancyItem = (sku, field, value) => {
+    setDiscrepancyItems(prev => ({
+      ...prev,
+      [sku]: {
+        ...prev[sku],
+        [field]: value
+      }
+    }));
+  };
+  
+  const confirmReconciliationWithQuantities = async () => {
+    try {
+      if (!reconciliationOrder) return;
+      
+      console.log('🔍 Début de la réconciliation:', reconciliationOrder.id);
+      console.log('Quantités reçues:', discrepancyItems);
+      console.log('Types de problèmes:', discrepancyTypes);
+      
+      // Préparer les items avec quantités et types de problèmes
+      const updatedItems = reconciliationOrder.items.map(item => {
+        const receivedQty = parseInt(discrepancyItems[item.sku]?.received, 10);
+        const itemType = discrepancyTypes[item.sku] || 'none';
+        const notes = discrepancyItems[item.sku]?.notes || '';
+        
+        // Validation
+        if (isNaN(receivedQty) || receivedQty < 0) {
+          throw new Error(`Quantité invalide pour ${item.sku}`);
+        }
+        
+        return {
+          sku: item.sku,
+          quantity: item.quantity,
+          pricePerUnit: item.pricePerUnit,
+          receivedQuantity: receivedQty,
+          discrepancyType: itemType,
+          discrepancyNotes: notes
+        };
+      });
+      
+      console.log('Items mis à jour:', updatedItems);
+      
+      // Vérifier s'il y a des problèmes
+      const hasProblems = updatedItems.some(item => 
+        item.receivedQuantity < item.quantity || 
+        item.discrepancyType !== 'none'
+      );
+      
+      console.log('A des problèmes:', hasProblems);
+      
+      // Sauvegarder dans la base de données
+      const updatePayload = {
+        status: hasProblems ? 'reconciliation' : 'completed',
+        receivedAt: new Date().toISOString().split('T')[0],
+        hasDiscrepancy: hasProblems,
+        items: updatedItems
+      };
+      
+      console.log('Payload de mise à jour:', updatePayload);
+      
+      await api.updateOrderStatus(reconciliationOrder.id, updatePayload);
+      
+      // Mettre à jour le stock uniquement pour les quantités reçues conformes
+      // NE PAS ajouter les produits endommagés au stock
+      const stockUpdates = updatedItems
+        .filter(item => item.discrepancyType !== 'damaged') // Exclure les endommagés
+        .map(item => ({
+          sku: item.sku,
+          quantityToAdd: item.receivedQuantity // Quantité réellement reçue et conforme
+        }))
+        .filter(update => update.quantityToAdd > 0); // Ne traiter que les quantités > 0
+      
+      console.log('Mises à jour du stock:', stockUpdates);
+      
+      if (stockUpdates.length > 0) {
+        await api.updateStock(stockUpdates);
+        console.log('✅ Stock mis à jour avec succès');
+      }
+      
+      // Générer email de réclamation si nécessaire
+      if (hasProblems) {
+        generateClaimEmail(updatedItems);
+      }
+      
+      // Recharger les données
+      await loadData();
+      
+      // Fermer la modal et nettoyer les états
+      setReconciliationModalOpen(false);
+      setReconciliationOrder(null);
+      setDiscrepancyItems({});
+      setDiscrepancyTypes({});
+      
+      toast.success(
+        hasProblems ? 
+          'Réception enregistrée. Email de réclamation généré.' : 
+          'Réception validée et stock mis à jour avec succès!',
+        { duration: 5000 }
+      );
+      
+    } catch (error) {
+      console.error('❌ Erreur lors de la validation:', error);
+      toast.error('Erreur lors de la validation de la réception: ' + error.message);
+    }
+  };
+  
+  const generateClaimEmail = (items) => {
+    if (!reconciliationOrder) return;
+    
+    const missingItems = items.filter(i => 
+      i.discrepancyType === 'missing' || 
+      (i.receivedQuantity < i.quantity && i.discrepancyType === 'none')
+    );
+    const damagedItems = items.filter(i => i.discrepancyType === 'damaged');
+    
+    let email = `Objet: Réclamation - Commande ${reconciliationOrder.id}\n\n`;
+    email += `Bonjour,\n\n`;
+    email += `Nous avons réceptionné la commande ${reconciliationOrder.id} mais constatons les problèmes suivants :\n\n`;
+    
+    if (missingItems.length > 0) {
+      email += `🔴 QUANTITÉS MANQUANTES:\n`;
+      email += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+      missingItems.forEach(item => {
+        const product = products.find(p => p.sku === item.sku);
+        const missing = item.quantity - item.receivedQuantity;
+        email += `\n▸ ${product?.name || item.sku}\n`;
+        email += `  SKU: ${item.sku}\n`;
+        email += `  Commandé: ${item.quantity} unités\n`;
+        email += `  Reçu: ${item.receivedQuantity} unités\n`;
+        email += `  Manquant: ${missing} unités\n`;
+        if (item.discrepancyNotes) {
+          email += `  Notes: ${item.discrepancyNotes}\n`;
+        }
+      });
+      email += `\n`;
+    }
+    
+    if (damagedItems.length > 0) {
+      email += `⚠️ PRODUITS ENDOMMAGÉS:\n`;
+      email += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+      damagedItems.forEach(item => {
+        const product = products.find(p => p.sku === item.sku);
+        email += `\n▸ ${product?.name || item.sku}\n`;
+        email += `  SKU: ${item.sku}\n`;
+        email += `  Quantité endommagée: ${item.receivedQuantity} unités\n`;
+        if (item.discrepancyNotes) {
+          email += `  Description des dommages: ${item.discrepancyNotes}\n`;
+        }
+      });
+      email += `\n`;
+    }
+    
+    email += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
+    email += `Merci de procéder rapidement au remplacement ou à l'envoi des articles manquants.\n\n`;
+    email += `Cordialement,\n`;
+    email += `L'équipe Stock Easy`;
+    
+    // Afficher l'email dans une alerte ou ouvrir dans un client email
+    console.log('📧 Email de réclamation généré:\n', email);
+    alert(email);
+    
+    // Optionnel: copier dans le presse-papiers
+    try {
+      navigator.clipboard.writeText(email);
+      toast.info('Email de réclamation copié dans le presse-papiers');
+    } catch (err) {
+      console.warn('Impossible de copier dans le presse-papiers:', err);
+    }
   };
 
   const confirmReconciliation = async (hasDiscrepancy) => {
@@ -3790,14 +4037,168 @@ Cordialement,
             
             {/* Contenu dynamique selon le sous-onglet */}
             {parametersSubTab === 'general' && (
-              <ParametresGeneraux
-                seuilSurstock={seuilSurstockProfond}
-                onUpdateSeuil={handleUpdateSeuilSurstock}
-                devise={deviseDefaut}
-                onUpdateDevise={handleUpdateDevise}
-                multiplicateur={multiplicateurDefaut}
-                onUpdateMultiplicateur={handleUpdateMultiplicateur}
-              />
+              <div className="space-y-6">
+                {/* Indicateur de modifications non sauvegardées */}
+                {Object.keys(unsavedParameterChanges).length > 0 && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="bg-yellow-50 border-2 border-yellow-300 rounded-lg p-4"
+                  >
+                    <div className="flex items-center justify-between gap-4">
+                      <div className="flex items-center gap-3">
+                        <AlertCircle className="w-5 h-5 text-yellow-600 shrink-0" />
+                        <div>
+                          <span className="text-sm font-semibold text-yellow-800">
+                            {Object.keys(unsavedParameterChanges).length} modification(s) non sauvegardée(s)
+                          </span>
+                          <div className="text-xs text-yellow-700 mt-1">
+                            Cliquez sur "Sauvegarder" pour appliquer vos modifications
+                          </div>
+                        </div>
+                      </div>
+                      <Button
+                        variant="primary"
+                        onClick={saveAllParameters}
+                        disabled={isSavingParameters}
+                        icon={isSavingParameters ? RefreshCw : Check}
+                        className={isSavingParameters ? 'animate-pulse' : ''}
+                      >
+                        {isSavingParameters ? 'Sauvegarde...' : 'Sauvegarder'}
+                      </Button>
+                    </div>
+                  </motion.div>
+                )}
+                
+                {/* Formulaire des paramètres */}
+                <div className="bg-white rounded-xl shadow-sm border border-[#E5E4DF] p-6 space-y-6">
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="block text-sm font-semibold text-[#191919]">
+                        Multiplicateur par défaut
+                      </label>
+                      {unsavedParameterChanges.MultiplicateurDefaut !== undefined && (
+                        <span className="text-xs text-yellow-600 font-medium">● Modifié</span>
+                      )}
+                    </div>
+                    <input
+                      type="number"
+                      step="0.1"
+                      min="1"
+                      max="3"
+                      value={
+                        unsavedParameterChanges.MultiplicateurDefaut !== undefined 
+                          ? unsavedParameterChanges.MultiplicateurDefaut 
+                          : (parameters.MultiplicateurDefaut || 1.2)
+                      }
+                      onChange={(e) => handleParameterChange('MultiplicateurDefaut', parseFloat(e.target.value))}
+                      className="w-full px-4 py-3 border-2 border-[#E5E4DF] rounded-lg text-[#191919] font-semibold focus:border-[#8B5CF6] focus:ring-2 focus:ring-[#8B5CF6]/20 outline-none transition-colors"
+                    />
+                    <p className="text-xs text-[#666663] mt-2">
+                      📊 Coefficient appliqué aux ventes moyennes pour calculer les quantités à commander (recommandé: 1.2 à 1.5)
+                    </p>
+                  </div>
+                  
+                  <div className="border-t border-[#E5E4DF] pt-6">
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="block text-sm font-semibold text-[#191919]">
+                        Devise par défaut
+                      </label>
+                      {unsavedParameterChanges.DeviseDefaut !== undefined && (
+                        <span className="text-xs text-yellow-600 font-medium">● Modifié</span>
+                      )}
+                    </div>
+                    <select
+                      value={
+                        unsavedParameterChanges.DeviseDefaut !== undefined 
+                          ? unsavedParameterChanges.DeviseDefaut 
+                          : (parameters.DeviseDefaut || 'EUR')
+                      }
+                      onChange={(e) => handleParameterChange('DeviseDefaut', e.target.value)}
+                      className="w-full px-4 py-3 border-2 border-[#E5E4DF] rounded-lg text-[#191919] font-semibold focus:border-[#8B5CF6] focus:ring-2 focus:ring-[#8B5CF6]/20 outline-none transition-colors"
+                    >
+                      <option value="EUR">EUR (€) - Euro</option>
+                      <option value="USD">USD ($) - Dollar américain</option>
+                      <option value="GBP">GBP (£) - Livre sterling</option>
+                      <option value="CHF">CHF (Fr.) - Franc suisse</option>
+                    </select>
+                    <p className="text-xs text-[#666663] mt-2">
+                      💰 Devise utilisée pour l'affichage des prix dans l'application
+                    </p>
+                  </div>
+                  
+                  <div className="border-t border-[#E5E4DF] pt-6">
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="block text-sm font-semibold text-[#191919]">
+                        Seuil surstock profond (jours)
+                      </label>
+                      {unsavedParameterChanges.SeuilSurstockProfond !== undefined && (
+                        <span className="text-xs text-yellow-600 font-medium">● Modifié</span>
+                      )}
+                    </div>
+                    <input
+                      type="number"
+                      min="30"
+                      max="365"
+                      value={
+                        unsavedParameterChanges.SeuilSurstockProfond !== undefined 
+                          ? unsavedParameterChanges.SeuilSurstockProfond 
+                          : (parameters.SeuilSurstockProfond || 90)
+                      }
+                      onChange={(e) => handleParameterChange('SeuilSurstockProfond', parseInt(e.target.value))}
+                      className="w-full px-4 py-3 border-2 border-[#E5E4DF] rounded-lg text-[#191919] font-semibold focus:border-[#8B5CF6] focus:ring-2 focus:ring-[#8B5CF6]/20 outline-none transition-colors"
+                    />
+                    <p className="text-xs text-[#666663] mt-2">
+                      ⚠️ Au-delà de ce seuil × 2, le produit est considéré en surstock profond et apparaît dans les alertes
+                    </p>
+                    <div className="mt-2 text-xs text-[#191919] bg-[#FAFAF7] border border-[#E5E4DF] rounded px-3 py-2">
+                      Seuil actuel: <strong>{(unsavedParameterChanges.SeuilSurstockProfond || parameters.SeuilSurstockProfond || 90) * 2} jours</strong>
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Bouton de sauvegarde répété en bas */}
+                {Object.keys(unsavedParameterChanges).length > 0 && (
+                  <div className="flex justify-end gap-3">
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setUnsavedParameterChanges({});
+                        toast.info('Modifications annulées');
+                      }}
+                      disabled={isSavingParameters}
+                    >
+                      Annuler les modifications
+                    </Button>
+                    <Button
+                      variant="primary"
+                      size="lg"
+                      onClick={saveAllParameters}
+                      disabled={isSavingParameters}
+                      icon={isSavingParameters ? RefreshCw : Check}
+                      className={isSavingParameters ? 'animate-pulse' : ''}
+                    >
+                      {isSavingParameters ? 'Sauvegarde en cours...' : 'Sauvegarder tous les paramètres'}
+                    </Button>
+                  </div>
+                )}
+                
+                {/* Section d'aide */}
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <div className="flex items-start gap-3">
+                    <Info className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
+                    <div className="text-sm text-blue-900">
+                      <strong>Comment ça marche ?</strong>
+                      <ul className="mt-2 space-y-1 list-disc list-inside text-blue-800">
+                        <li>Modifiez les valeurs selon vos besoins</li>
+                        <li>Un indicateur jaune apparaît pour les modifications non sauvegardées</li>
+                        <li>Cliquez sur "Sauvegarder" pour appliquer définitivement les changements</li>
+                        <li>Les paramètres sont stockés dans Google Sheets et persistants</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              </div>
             )}
             
             {parametersSubTab === 'products' && (
@@ -4070,64 +4471,155 @@ Cordialement,
       {/* Modal Reconciliation */}
       <Modal
         isOpen={reconciliationModalOpen && reconciliationOrder}
-        onClose={() => setReconciliationModalOpen(false)}
-        title="Confirmer la réception"
+        onClose={() => {
+          setReconciliationModalOpen(false);
+          setReconciliationOrder(null);
+          setDiscrepancyItems({});
+          setDiscrepancyTypes({});
+        }}
+        title="Vérification de la réception"
         footer={
-          <div className="flex justify-between items-center w-full gap-3">
+          <div className="flex justify-end gap-3">
             <Button 
               variant="outline" 
-              icon={AlertCircle}
-              onClick={openDamageModal}
+              onClick={() => {
+                setReconciliationModalOpen(false);
+                setReconciliationOrder(null);
+                setDiscrepancyItems({});
+                setDiscrepancyTypes({});
+              }}
             >
-              Réception endommagée
+              Annuler
             </Button>
-            <div className="flex gap-3">
-              <Button 
-                variant="danger" 
-                icon={X}
-                onClick={() => confirmReconciliation(true)}
-              >
-                Non, il y a un écart
-              </Button>
-              <Button 
-                variant="success" 
-                icon={Check}
-                onClick={() => confirmReconciliation(false)}
-              >
-                Oui, tout est correct
-              </Button>
-            </div>
+            <Button 
+              variant="success" 
+              icon={Check}
+              onClick={confirmReconciliationWithQuantities}
+            >
+              Valider la réception
+            </Button>
           </div>
         }
       >
         {reconciliationOrder && (
-          <>
-            <div className="mb-4">
-              <h4 className="font-bold text-[#191919] mb-2">Commande: {reconciliationOrder.id}</h4>
-              <p className="text-sm text-[#666663]">Fournisseur: {reconciliationOrder.supplier}</p>
+          <div className="space-y-4">
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <div className="flex items-start gap-3">
+                <Info className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
+                <div>
+                  <h4 className="font-semibold text-blue-900 mb-1">Commande: {reconciliationOrder.id}</h4>
+                  <p className="text-sm text-blue-700">
+                    Fournisseur: {reconciliationOrder.supplier}<br />
+                    Saisissez les quantités réellement reçues et leur état pour chaque produit.
+                  </p>
+                </div>
+              </div>
             </div>
+            
             <div className="space-y-3">
               {reconciliationOrder.items.map((item, idx) => {
                 const product = products.find(p => p.sku === item.sku);
+                const currentType = discrepancyTypes[item.sku] || 'none';
+                const currentReceived = discrepancyItems[item.sku]?.received !== undefined 
+                  ? discrepancyItems[item.sku].received 
+                  : item.quantity;
+                
                 return (
-                  <div key={idx} className="border border-[#E5E4DF] rounded-lg p-3 bg-[#FAFAF7]">
-                    <div className="flex justify-between items-center">
-                      <div>
-                        <span className="font-medium text-[#191919]">{product?.name || item.sku}</span>
-                        <span className="text-xs text-[#666663] ml-2">({item.sku})</span>
+                  <div key={idx} className="border border-[#E5E4DF] rounded-lg p-4 bg-[#FAFAF7]">
+                    <div className="mb-3">
+                      <div className="flex items-start justify-between mb-1">
+                        <div>
+                          <span className="font-medium text-[#191919]">{product?.name || item.sku}</span>
+                          <span className="text-xs text-[#666663] ml-2">({item.sku})</span>
+                        </div>
+                        <span className="text-sm text-[#666663] font-semibold">
+                          Commandé: {item.quantity}
+                        </span>
                       </div>
-                      <span className="text-sm text-[#666663]">Commandé: <strong className="text-[#191919]">{item.quantity}</strong></span>
                     </div>
+                    
+                    <div className="grid grid-cols-2 gap-3 mb-3">
+                      <div>
+                        <label className="text-xs font-medium text-[#666663] mb-1 block">
+                          Quantité reçue
+                        </label>
+                        <input
+                          type="number"
+                          min="0"
+                          max={item.quantity}
+                          value={currentReceived}
+                          onChange={(e) => updateDiscrepancyItem(item.sku, 'received', e.target.value)}
+                          className="w-full px-3 py-2 border-2 border-[#E5E4DF] rounded-lg text-[#191919] font-semibold focus:border-[#8B5CF6] focus:ring-1 focus:ring-[#8B5CF6] outline-none"
+                        />
+                      </div>
+                      
+                      <div>
+                        <label className="text-xs font-medium text-[#666663] mb-1 block">
+                          État de la réception
+                        </label>
+                        <select
+                          value={currentType}
+                          onChange={(e) => setDiscrepancyTypes(prev => ({
+                            ...prev,
+                            [item.sku]: e.target.value
+                          }))}
+                          className={`w-full px-3 py-2 border-2 rounded-lg font-medium focus:border-[#8B5CF6] focus:ring-1 focus:ring-[#8B5CF6] outline-none
+                            ${currentType === 'none' ? 'border-green-300 bg-green-50 text-green-700' : 
+                              currentType === 'missing' ? 'border-yellow-300 bg-yellow-50 text-yellow-700' :
+                              'border-red-300 bg-red-50 text-red-700'}
+                          `}
+                        >
+                          <option value="none">✓ Conforme</option>
+                          <option value="missing">⚠️ Quantité manquante</option>
+                          <option value="damaged">🔴 Produit endommagé</option>
+                        </select>
+                      </div>
+                    </div>
+                    
+                    {currentType !== 'none' && (
+                      <div className="border-t border-[#E5E4DF] pt-3">
+                        <label className="text-xs font-medium text-[#666663] mb-1 block">
+                          {currentType === 'damaged' ? 'Description des dommages' : 'Notes sur l\'écart'}
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="Détails du problème..."
+                          value={discrepancyItems[item.sku]?.notes || ''}
+                          onChange={(e) => updateDiscrepancyItem(item.sku, 'notes', e.target.value)}
+                          className="w-full px-3 py-2 border-2 border-[#E5E4DF] rounded-lg text-sm text-[#191919] focus:border-[#8B5CF6] focus:ring-1 focus:ring-[#8B5CF6] outline-none"
+                        />
+                      </div>
+                    )}
+                    
+                    {/* Indicateur visuel */}
+                    {currentType !== 'none' && (
+                      <div className={`mt-3 p-2 rounded text-xs ${
+                        currentType === 'missing' ? 'bg-yellow-100 text-yellow-800' :
+                        'bg-red-100 text-red-800'
+                      }`}>
+                        {currentType === 'missing' && `⚠️ Écart: ${item.quantity - parseInt(currentReceived || 0)} unités manquantes`}
+                        {currentType === 'damaged' && `🔴 ${currentReceived} unités endommagées ne seront pas ajoutées au stock`}
+                      </div>
+                    )}
                   </div>
                 );
               })}
             </div>
-            <div className="mt-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-              <p className="text-sm text-[#666663]">
-                La quantité reçue correspond-elle à la quantité commandée ?
-              </p>
+            
+            <div className="bg-[#FAFAF7] border border-[#E5E4DF] rounded-lg p-4">
+              <div className="flex items-start gap-3">
+                <AlertCircle className="w-5 h-5 text-[#666663] shrink-0 mt-0.5" />
+                <div className="text-sm text-[#666663]">
+                  <strong className="text-[#191919]">Important:</strong>
+                  <ul className="mt-2 space-y-1 list-disc list-inside">
+                    <li>Les produits "Conformes" seront ajoutés au stock</li>
+                    <li>Les produits "Endommagés" ne seront PAS ajoutés au stock</li>
+                    <li>Un email de réclamation sera généré automatiquement si nécessaire</li>
+                  </ul>
+                </div>
+              </div>
             </div>
-          </>
+          </div>
         )}
       </Modal>
 
