@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { Package, Bell, Mail, X, Check, Truck, Clock, AlertCircle, CheckCircle, Eye, Settings, Info, Edit2, Activity, TrendingUp, TrendingDown, ArrowUpRight, ArrowDownRight, Upload, FileText, Calendar, RefreshCw, Plus, Menu, Moon, Sun, ChevronLeft, ChevronRight, LayoutDashboard, Zap, BarChart3, Package2, History } from 'lucide-react';
+import { Package, Bell, Mail, X, Check, Truck, Clock, AlertCircle, CheckCircle, Eye, Settings, Info, Edit2, Activity, TrendingUp, TrendingDown, ArrowUpRight, ArrowDownRight, Upload, FileText, Calendar, RefreshCw, Plus } from 'lucide-react';
 import { Toaster, toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
 import debounce from 'lodash.debounce';
@@ -392,7 +392,7 @@ const Modal = ({ isOpen, onClose, title, children, footer }) => {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+        className="absolute inset-0 bg-black/50 backdrop-blur-sm"
         onClick={onClose}
         aria-hidden="true"
       />
@@ -402,15 +402,15 @@ const Modal = ({ isOpen, onClose, title, children, footer }) => {
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.95, y: 20 }}
         transition={{ duration: 0.2, ease: "easeOut" }}
-        className="relative card shadow-large max-w-2xl w-full max-h-[90vh] flex flex-col">
-        <div className="gradient-primary px-6 py-4 flex items-center justify-between rounded-t-xl shrink-0">
+        className="relative bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] flex flex-col">
+        <div className="bg-[#191919] px-6 py-4 flex items-center justify-between rounded-t-xl shrink-0">
           <h3 className="text-xl font-bold text-white">{title}</h3>
           <button 
             onClick={onClose} 
-            className="text-white/90 hover:text-white transition-colors focus:outline-none focus:ring-2 focus:ring-white rounded-lg p-1.5"
+            className="text-white hover:text-[#BFBFBA] transition-colors focus:outline-none focus:ring-2 focus:ring-white rounded p-1"
             aria-label="Fermer"
           >
-            <X className="w-5 h-5 shrink-0" />
+            <X className="w-6 h-6 shrink-0" />
           </button>
         </div>
         
@@ -1273,7 +1273,6 @@ const AssignSupplierModal = ({
 // COMPOSANT PRINCIPAL
 // ============================================
 const StockEasy = () => {
-  // États de base
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
   const [products, setProducts] = useState([]);
@@ -1281,13 +1280,6 @@ const StockEasy = () => {
   const [orders, setOrders] = useState([]);
   const [parameters, setParameters] = useState({});
   const [activeTab, setActiveTab] = useState('dashboard');
-  
-  // États UI moderne
-  const [darkMode, setDarkMode] = useState(false);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  
-  // États modaux et notifications
   const [emailModalOpen, setEmailModalOpen] = useState(false);
   const [selectedSupplier, setSelectedSupplier] = useState(null);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
@@ -1307,8 +1299,7 @@ const StockEasy = () => {
   const [damageModalOpen, setDamageModalOpen] = useState(false);
   const [damageItems, setDamageItems] = useState({});
   const [damageNotes, setDamageNotes] = useState('');
-  
-  // Modal unifié pour réconciliation complète
+  // NOUVEAU: Modal unifié pour réconciliation complète
   const [unifiedReconciliationModalOpen, setUnifiedReconciliationModalOpen] = useState(false);
   const [unifiedReconciliationItems, setUnifiedReconciliationItems] = useState({});
   const [reconciliationNotes, setReconciliationNotes] = useState('');
@@ -1316,22 +1307,26 @@ const StockEasy = () => {
   const [reclamationEmailContent, setReclamationEmailContent] = useState('');
   const [currentReclamationOrder, setCurrentReclamationOrder] = useState(null);
 
-  // Sous-onglets de Paramètres
-  const [parametersSubTab, setParametersSubTab] = useState('general');
+  // NOUVEAUX ÉTATS pour les sous-onglets de Paramètres
+  const [parametersSubTab, setParametersSubTab] = useState('general'); // 'general', 'products', 'suppliers', 'mapping'
   
-  // États pour corrections
+  // NOUVEAUX ÉTATS pour CORRECTION 5 et 6
   const [discrepancyTypes, setDiscrepancyTypes] = useState({});
   const [unsavedParameterChanges, setUnsavedParameterChanges] = useState({});
   const [isSavingParameters, setIsSavingParameters] = useState(false);
+
+  // CORRECTION 1: Gestion des quantités éditables dans la modal de commande
   const [orderQuantities, setOrderQuantities] = useState({});
+
+  // CORRECTION 3: Gestion de l'expansion des détails de commandes
   const [expandedOrders, setExpandedOrders] = useState({});
 
-  // Paramètres Généraux
+  // NOUVEAUX ÉTATS pour Paramètres Généraux
   const [seuilSurstockProfond, setSeuilSurstockProfond] = useState(90);
   const [deviseDefaut, setDeviseDefaut] = useState('EUR');
   const [multiplicateurDefaut, setMultiplicateurDefaut] = useState(1.2);
 
-  // Gestion Fournisseurs
+  // NOUVEAUX ÉTATS pour Gestion Fournisseurs
   const [supplierModalOpen, setSupplierModalOpen] = useState(false);
   const [editingSupplier, setEditingSupplier] = useState(null);
   const [supplierFormData, setSupplierFormData] = useState({
@@ -1342,19 +1337,10 @@ const StockEasy = () => {
     notes: ''
   });
 
-  // Mapping
+  // NOUVEAUX ÉTATS pour Mapping
   const [assignSupplierModalOpen, setAssignSupplierModalOpen] = useState(false);
   const [productToMap, setProductToMap] = useState(null);
   const [selectedSupplierForMapping, setSelectedSupplierForMapping] = useState('');
-
-  // Dark Mode Toggle
-  useEffect(() => {
-    if (darkMode) {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
-  }, [darkMode]);
 
   useEffect(() => {
     loadData();
@@ -2754,17 +2740,6 @@ Cordialement,
     );
   }
 
-  // Navigation items
-  const navItems = [
-    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { id: 'actions', label: 'Actions', icon: Zap },
-    { id: 'track', label: 'Track & Manage', icon: Truck },
-    { id: 'analytics', label: 'Analytics', icon: BarChart3 },
-    { id: 'stock-level', label: 'Stock Level', icon: Package2 },
-    { id: 'history', label: 'Historique', icon: History },
-    { id: 'settings', label: 'Paramètres', icon: Settings },
-  ];
-
   return (
     <>
       <Toaster 
@@ -2774,231 +2749,168 @@ Cordialement,
         closeButton
         duration={4000}
       />
-      
-      <div className="flex h-screen overflow-hidden">
-        {/* Sidebar moderne */}
-        <motion.aside
-          initial={false}
-          animate={{ width: sidebarCollapsed ? 80 : 280 }}
-          className={`hidden lg:flex flex-col bg-white dark:bg-neutral-900 border-r border-neutral-200 dark:border-neutral-800 transition-all duration-300 ${
-            sidebarCollapsed ? 'items-center' : ''
-          }`}
-        >
-          {/* Logo et toggle */}
-          <div className="h-16 flex items-center justify-between px-4 border-b border-neutral-200 dark:border-neutral-800">
-            {!sidebarCollapsed && (
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-gradient-to-br from-primary-600 to-primary-700 rounded-xl flex items-center justify-center shadow-lg">
-                  <Package className="w-6 h-6 text-white" />
-                </div>
-                <div>
-                  <h1 className="text-lg font-bold text-neutral-900 dark:text-white">Stock Easy</h1>
-                  <p className="text-xs text-neutral-500 dark:text-neutral-400">Gestion intelligente</p>
-                </div>
-              </div>
-            )}
-            {sidebarCollapsed && (
-              <div className="w-10 h-10 bg-gradient-to-br from-primary-600 to-primary-700 rounded-xl flex items-center justify-center shadow-lg">
-                <Package className="w-6 h-6 text-white" />
-              </div>
-            )}
-          </div>
-
-          {/* Navigation */}
-          <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
-            {navItems.map((item) => {
-              const Icon = item.icon;
-              const isActive = activeTab === item.id;
-              return (
-                <button
-                  key={item.id}
-                  onClick={() => setActiveTab(item.id)}
-                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200 ${
-                    isActive
-                      ? 'bg-primary-600 text-white shadow-md'
-                      : 'text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800'
-                  } ${sidebarCollapsed ? 'justify-center' : ''}`}
-                  title={sidebarCollapsed ? item.label : ''}
-                >
-                  <Icon className="w-5 h-5 shrink-0" />
-                  {!sidebarCollapsed && <span className="font-medium">{item.label}</span>}
-                </button>
-              );
-            })}
-          </nav>
-
-          {/* Collapse toggle */}
-          <button
-            onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-            className="m-3 p-2 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-600 dark:text-neutral-400 transition-colors"
-          >
-            {sidebarCollapsed ? <ChevronRight className="w-5 h-5" /> : <ChevronLeft className="w-5 h-5" />}
-          </button>
-        </motion.aside>
-
-        {/* Main content */}
-        <div className="flex-1 flex flex-col overflow-hidden">
-          {/* Header moderne */}
-          <header className="h-16 bg-white dark:bg-neutral-900 border-b border-neutral-200 dark:border-neutral-800 flex items-center justify-between px-4 lg:px-6">
-            {/* Mobile menu + sync status */}
+      <div className="min-h-screen bg-[#F0F0EB]">
+        {/* Header - Sticky */}
+        <div className="bg-[#191919] shadow-lg sticky top-0 z-[9997] relative isolate">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+          <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <button
-                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                className="lg:hidden p-2 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-600 dark:text-neutral-400"
-              >
-                <Menu className="w-5 h-5" />
-              </button>
-              {syncing && (
-                <div className="flex items-center gap-2 text-sm text-neutral-600 dark:text-neutral-400">
-                  <RefreshCw className="w-4 h-4 animate-spin" />
-                  <span className="hidden sm:inline">Synchronisation...</span>
-                </div>
-              )}
+              <div className="w-10 h-10 bg-black rounded-lg flex items-center justify-center shadow-lg shrink-0">
+                <Package className="w-6 h-6 text-white shrink-0" />
+              </div>
+              <div className="flex items-center gap-2">
+                <h1 className="text-xl font-bold text-white">Stock Easy</h1>
+                {syncing && (
+                  <RefreshCw className="w-4 h-4 text-white animate-spin shrink-0" />
+                )}
+              </div>
             </div>
-
-            {/* Actions */}
-            <div className="flex items-center gap-2">
-              <button
+            <div className="flex items-center gap-4">
+              <div className="flex gap-2 ml-8">
+                <button 
+                  onClick={() => setActiveTab('dashboard')}
+                  className={`inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm rounded-lg font-semibold transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-white ${
+                    activeTab === 'dashboard' 
+                      ? 'bg-black text-white shadow-lg' 
+                      : 'bg-[#40403E] text-[#FAFAF7] hover:bg-[#666663]'
+                  }`}
+                >
+                  Dashboard
+                </button>
+                <button 
+                  onClick={() => setActiveTab('actions')}
+                  className={`inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm rounded-lg font-semibold transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-white ${
+                    activeTab === 'actions' 
+                      ? 'bg-black text-white shadow-lg' 
+                      : 'bg-[#40403E] text-[#FAFAF7] hover:bg-[#666663]'
+                  }`}
+                >
+                  Actions
+                </button>
+                <button 
+                  onClick={() => setActiveTab('track')}
+                  className={`inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm rounded-lg font-semibold transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-white ${
+                    activeTab === 'track' 
+                      ? 'bg-black text-white shadow-lg' 
+                      : 'bg-[#40403E] text-[#FAFAF7] hover:bg-[#666663]'
+                  }`}
+                >
+                  <Truck className="w-4 h-4 shrink-0" />
+                  Track & Manage
+                </button>
+                <button 
+                  onClick={() => setActiveTab('analytics')}
+                  className={`inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm rounded-lg font-semibold transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-white ${
+                    activeTab === 'analytics' 
+                      ? 'bg-black text-white shadow-lg' 
+                      : 'bg-[#40403E] text-[#FAFAF7] hover:bg-[#666663]'
+                  }`}
+                >
+                  <TrendingUp className="w-4 h-4 shrink-0" />
+                  Analytics
+                </button>
+                <button 
+                  onClick={() => setActiveTab('stock-level')}
+                  className={`inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm rounded-lg font-semibold transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-white ${
+                    activeTab === 'stock-level' 
+                      ? 'bg-black text-white shadow-lg' 
+                      : 'bg-[#40403E] text-[#FAFAF7] hover:bg-[#666663]'
+                  }`}
+                >
+                  <Activity className="w-4 h-4 shrink-0" />
+                  Stock Level
+                </button>
+                <button 
+                  onClick={() => setActiveTab('history')}
+                  className={`inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm rounded-lg font-semibold transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-white ${
+                    activeTab === 'history' 
+                      ? 'bg-black text-white shadow-lg' 
+                      : 'bg-[#40403E] text-[#FAFAF7] hover:bg-[#666663]'
+                  }`}
+                >
+                  <FileText className="w-4 h-4 shrink-0" />
+                  Historique
+                </button>
+                <button 
+                  onClick={() => setActiveTab('settings')}
+                  className={`inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm rounded-lg font-semibold transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-white ${
+                    activeTab === 'settings' 
+                      ? 'bg-black text-white shadow-lg' 
+                      : 'bg-[#40403E] text-[#FAFAF7] hover:bg-[#666663]'
+                  }`}
+                >
+                  <Settings className="w-4 h-4 shrink-0" />
+                  Paramètres
+                </button>
+              </div>
+              <button 
                 onClick={syncData}
+                className="p-2.5 rounded-lg bg-white hover:bg-gray-100 transition-colors focus:outline-none focus:ring-2 focus:ring-black shrink-0"
+                aria-label="Synchroniser"
                 disabled={syncing}
-                className="p-2 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-600 dark:text-neutral-400 transition-colors disabled:opacity-50"
-                title="Synchroniser"
               >
-                <RefreshCw className={`w-5 h-5 ${syncing ? 'animate-spin' : ''}`} />
+                <RefreshCw className={`w-5 h-5 text-black shrink-0 ${syncing ? 'animate-spin' : ''}`} />
               </button>
-              
-              <button
+              <button 
                 onClick={() => setNotificationsOpen(!notificationsOpen)}
-                className="relative p-2 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-600 dark:text-neutral-400 transition-colors"
-                title="Notifications"
+                className="relative p-2.5 rounded-lg bg-white hover:bg-gray-100 transition-colors focus:outline-none focus:ring-2 focus:ring-black shrink-0"
+                aria-label="Notifications"
               >
-                <Bell className="w-5 h-5" />
+                <Bell className="w-5 h-5 text-black shrink-0" />
                 {notifications.length > 0 && (
-                  <span className="absolute -top-1 -right-1 w-5 h-5 bg-danger-500 text-white text-xs rounded-full flex items-center justify-center font-bold">
+                  <span className="absolute -top-1 -right-1 w-5 h-5 bg-[#EF1C43] text-white text-xs rounded-full flex items-center justify-center font-bold">
                     {notifications.length}
                   </span>
                 )}
               </button>
-
-              <button
-                onClick={() => setDarkMode(!darkMode)}
-                className="p-2 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-600 dark:text-neutral-400 transition-colors"
-                title={darkMode ? 'Mode clair' : 'Mode sombre'}
-              >
-                {darkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
-              </button>
             </div>
-          </header>
+          </div>
+        </div>
+      </div>
 
-          {/* Mobile menu */}
-          <AnimatePresence>
-            {mobileMenuOpen && (
-              <>
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  className="fixed inset-0 bg-black/50 z-40 lg:hidden"
-                  onClick={() => setMobileMenuOpen(false)}
-                />
-                <motion.div
-                  initial={{ x: -280 }}
-                  animate={{ x: 0 }}
-                  exit={{ x: -280 }}
-                  transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-                  className="fixed left-0 top-0 bottom-0 w-72 bg-white dark:bg-neutral-900 z-50 lg:hidden flex flex-col shadow-2xl"
-                >
-                  <div className="h-16 flex items-center justify-between px-4 border-b border-neutral-200 dark:border-neutral-800">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-gradient-to-br from-primary-600 to-primary-700 rounded-xl flex items-center justify-center">
-                        <Package className="w-6 h-6 text-white" />
-                      </div>
-                      <h1 className="text-lg font-bold text-neutral-900 dark:text-white">Stock Easy</h1>
-                    </div>
-                    <button
-                      onClick={() => setMobileMenuOpen(false)}
-                      className="p-2 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800"
-                    >
-                      <X className="w-5 h-5" />
-                    </button>
+      {/* Notifications Panel */}
+      <AnimatePresence>
+        {notificationsOpen && (
+          <>
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-[9998]" 
+              onClick={() => setNotificationsOpen(false)}
+              aria-hidden="true"
+            />
+            <motion.div
+              initial={{ opacity: 0, y: -20, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -20, scale: 0.95 }}
+              transition={{ duration: 0.2, ease: "easeOut" }}
+              className="fixed right-4 top-20 w-96 bg-white rounded-xl shadow-2xl border border-[#E5E4DF] z-[9999]">
+            <div className="p-4 border-b border-[#E5E4DF]">
+              <h3 className="font-bold text-[#191919]">Notifications</h3>
+            </div>
+            <div className="max-h-96 overflow-y-auto">
+              {notifications.length === 0 ? (
+                <div className="p-8 text-center text-[#666663]">
+                  Aucune notification
+                </div>
+              ) : (
+                notifications.map((notif, idx) => (
+                  <div key={idx} className={`p-4 border-b border-[#E5E4DF] hover:bg-[#FAFAF7] transition-colors ${
+                    notif.type === 'warning' ? 'bg-red-50' : 
+                    notif.type === 'info' ? 'bg-yellow-50' : 'bg-green-50'
+                  }`}>
+                    <p className="text-sm text-[#191919]">{notif.message}</p>
                   </div>
-                  <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
-                    {navItems.map((item) => {
-                      const Icon = item.icon;
-                      const isActive = activeTab === item.id;
-                      return (
-                        <button
-                          key={item.id}
-                          onClick={() => {
-                            setActiveTab(item.id);
-                            setMobileMenuOpen(false);
-                          }}
-                          className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all ${
-                            isActive
-                              ? 'bg-primary-600 text-white'
-                              : 'text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800'
-                          }`}
-                        >
-                          <Icon className="w-5 h-5" />
-                          <span className="font-medium">{item.label}</span>
-                        </button>
-                      );
-                    })}
-                  </nav>
-                </motion.div>
-              </>
-            )}
-          </AnimatePresence>
+                ))
+              )}
+            </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
 
-          {/* Notifications Panel */}
-          <AnimatePresence>
-            {notificationsOpen && (
-              <>
-                <motion.div 
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  className="fixed inset-0 z-40" 
-                  onClick={() => setNotificationsOpen(false)}
-                />
-                <motion.div
-                  initial={{ opacity: 0, y: -20, scale: 0.95 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                  exit={{ opacity: 0, y: -20, scale: 0.95 }}
-                  transition={{ duration: 0.2 }}
-                  className="fixed right-4 top-20 w-96 max-w-[calc(100vw-2rem)] card shadow-large z-50"
-                >
-                  <div className="p-4 border-b border-neutral-200 dark:border-neutral-800">
-                    <h3 className="font-bold text-neutral-900 dark:text-white">Notifications</h3>
-                  </div>
-                  <div className="max-h-96 overflow-y-auto">
-                    {notifications.length === 0 ? (
-                      <div className="p-8 text-center text-neutral-500 dark:text-neutral-400">
-                        Aucune notification
-                      </div>
-                    ) : (
-                      notifications.map((notif, idx) => (
-                        <div 
-                          key={idx} 
-                          className={`p-4 border-b border-neutral-200 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors ${
-                            notif.type === 'warning' ? 'bg-danger-50 dark:bg-danger-900/20' : 
-                            notif.type === 'info' ? 'bg-warning-50 dark:bg-warning-900/20' : 
-                            'bg-success-50 dark:bg-success-900/20'
-                          }`}
-                        >
-                          <p className="text-sm text-neutral-900 dark:text-white">{notif.message}</p>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                </motion.div>
-              </>
-            )}
-          </AnimatePresence>
-
-          {/* Main content area */}
-          <main className="flex-1 overflow-y-auto bg-neutral-50 dark:bg-neutral-950">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         
         {/* DASHBOARD TAB */}
         <AnimatePresence mode="wait">
@@ -3012,17 +2924,17 @@ Cordialement,
               className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             
             {/* Produits à commander */}
-            <div className="card card-hover p-6">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-12 h-12 bg-danger-100 dark:bg-danger-900/30 rounded-xl flex items-center justify-center shrink-0">
-                  <AlertCircle className="w-6 h-6 text-danger-600 dark:text-danger-400 shrink-0" />
+            <div className="bg-white rounded-xl shadow-sm border border-[#E5E4DF] p-6">
+              <div className="flex items-center gap-2 mb-4">
+                <div className="w-10 h-10 bg-red-50 rounded-lg flex items-center justify-center border border-red-200 shrink-0">
+                  <AlertCircle className="w-6 h-6 text-[#EF1C43] shrink-0" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <h2 className="text-lg font-bold text-neutral-900 dark:text-white">Produits à commander</h2>
+                  <div className="flex items-center">
+                    <h2 className="text-lg font-bold text-[#191919]">Produits à commander</h2>
                     <InfoTooltip content={tooltips.toOrder} />
                   </div>
-                  <p className="text-sm text-neutral-500 dark:text-neutral-400">{productsByStatus.to_order.length} produit(s)</p>
+                  <p className="text-sm text-[#666663]">{productsByStatus.to_order.length} produit(s)</p>
                 </div>
               </div>
               <div className="space-y-2 max-h-96 overflow-y-auto">
@@ -3051,17 +2963,17 @@ Cordialement,
             </div>
 
             {/* Produits à surveiller */}
-            <div className="card card-hover p-6">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-12 h-12 bg-warning-100 dark:bg-warning-900/30 rounded-xl flex items-center justify-center shrink-0">
-                  <Eye className="w-6 h-6 text-warning-600 dark:text-warning-400 shrink-0" />
+            <div className="bg-white rounded-xl shadow-sm border border-[#E5E4DF] p-6">
+              <div className="flex items-center gap-2 mb-4">
+                <div className="w-10 h-10 bg-yellow-50 rounded-lg flex items-center justify-center border border-yellow-200 shrink-0">
+                  <Eye className="w-6 h-6 text-yellow-600 shrink-0" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <h2 className="text-lg font-bold text-neutral-900 dark:text-white">Produits à surveiller</h2>
+                  <div className="flex items-center">
+                    <h2 className="text-lg font-bold text-[#191919]">Produits à surveiller</h2>
                     <InfoTooltip content={tooltips.watch} />
                   </div>
-                  <p className="text-sm text-neutral-500 dark:text-neutral-400">{productsByStatus.watch.length} produit(s)</p>
+                  <p className="text-sm text-[#666663]">{productsByStatus.watch.length} produit(s)</p>
                 </div>
               </div>
               <div className="space-y-2 max-h-96 overflow-y-auto">
@@ -3085,17 +2997,17 @@ Cordialement,
             </div>
 
             {/* En cours de livraison */}
-            <div className="card card-hover p-6">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-12 h-12 bg-primary-100 dark:bg-primary-900/30 rounded-xl flex items-center justify-center shrink-0">
-                  <Truck className="w-6 h-6 text-primary-600 dark:text-primary-400 shrink-0" />
+            <div className="bg-white rounded-xl shadow-sm border border-[#E5E4DF] p-6">
+              <div className="flex items-center gap-2 mb-4">
+                <div className="w-10 h-10 bg-blue-50 rounded-lg flex items-center justify-center border border-blue-200 shrink-0">
+                  <Truck className="w-6 h-6 text-[#64A4F2] shrink-0" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <h2 className="text-lg font-bold text-neutral-900 dark:text-white">En cours de livraison</h2>
+                  <div className="flex items-center">
+                    <h2 className="text-lg font-bold text-[#191919]">En cours de livraison</h2>
                     <InfoTooltip content={tooltips.inTransit} />
                   </div>
-                  <p className="text-sm text-neutral-500 dark:text-neutral-400">{orders.filter(o => o.status === 'in_transit').length} commande(s)</p>
+                  <p className="text-sm text-[#666663]">{orders.filter(o => o.status === 'in_transit').length} commande(s)</p>
                 </div>
               </div>
               <div className="space-y-2 max-h-96 overflow-y-auto">
@@ -5133,9 +5045,6 @@ Cordialement,
         )}
       </Modal>
 
-            </div>
-          </main>
-        </div>
       </div>
     </>
   );
