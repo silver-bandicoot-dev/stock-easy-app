@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { Package, Bell, Mail, X, Check, Truck, Clock, AlertCircle, CheckCircle, Eye, Settings, Info, Edit2, Activity, TrendingUp, TrendingDown, ArrowUpRight, ArrowDownRight, Upload, FileText, Calendar, RefreshCw, Plus } from 'lucide-react';
+import { Package, Bell, Mail, X, Check, Truck, Clock, AlertCircle, CheckCircle, Eye, Settings, Info, Edit2, Activity, TrendingUp, TrendingDown, ArrowUpRight, ArrowDownRight, Upload, FileText, Calendar, RefreshCw, Plus, Moon, Sun } from 'lucide-react';
 import { Toaster, toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
 import debounce from 'lodash.debounce';
@@ -1281,7 +1281,17 @@ const StockEasy = () => {
   const [parameters, setParameters] = useState({});
   const [activeTab, setActiveTab] = useState('dashboard');
   const [trackTabSection, setTrackTabSection] = useState('en_cours_commande');
+  const [darkMode, setDarkMode] = useState(false);
   const [emailModalOpen, setEmailModalOpen] = useState(false);
+  
+  // Dark Mode
+  useEffect(() => {
+    if (darkMode) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  }, [darkMode]);
   const [selectedSupplier, setSelectedSupplier] = useState(null);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [receivingModalOpen, setReceivingModalOpen] = useState(false);
@@ -2854,15 +2864,24 @@ Cordialement,
               </button>
               <button 
                 onClick={() => setNotificationsOpen(!notificationsOpen)}
-                className="relative p-2.5 rounded-lg bg-white hover:bg-gray-100 transition-colors focus:outline-none focus:ring-2 focus:ring-black shrink-0"
+                className="relative p-2.5 rounded-lg bg-white dark:bg-neutral-800 hover:bg-gray-100 dark:hover:bg-neutral-700 transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 shrink-0"
                 aria-label="Notifications"
               >
-                <Bell className="w-5 h-5 text-black shrink-0" />
+                <Bell className="w-5 h-5 text-neutral-900 dark:text-neutral-100 shrink-0" />
                 {notifications.length > 0 && (
-                  <span className="absolute -top-1 -right-1 w-5 h-5 bg-[#EF1C43] text-white text-xs rounded-full flex items-center justify-center font-bold">
+                  <span className="absolute -top-1 -right-1 w-5 h-5 bg-danger-500 text-white text-xs rounded-full flex items-center justify-center font-bold">
                     {notifications.length}
                   </span>
                 )}
+              </button>
+              
+              <button 
+                onClick={() => setDarkMode(!darkMode)}
+                className="p-2.5 rounded-lg bg-white dark:bg-neutral-800 hover:bg-gray-100 dark:hover:bg-neutral-700 transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 shrink-0"
+                aria-label={darkMode ? 'Mode clair' : 'Mode sombre'}
+                title={darkMode ? 'Mode clair' : 'Mode sombre'}
+              >
+                {darkMode ? <Sun className="w-5 h-5 text-neutral-100 shrink-0" /> : <Moon className="w-5 h-5 text-neutral-900 shrink-0" />}
               </button>
             </div>
           </div>
