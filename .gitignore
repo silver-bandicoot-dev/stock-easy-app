@@ -1,0 +1,15 @@
+# Dependencies à la racine (l'application est dans stock-easy-app/)
+/node_modules/
+/package-lock.json
+/package.json
+
+# Fichiers système
+.DS_Store
+*.log
+.env
+.env.local
+
+# Fichiers temporaires
+*.tmp
+*.temp
+.cache/
