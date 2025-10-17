@@ -1,0 +1,2 @@
+export { GestionFournisseurs } from './GestionFournisseurs';
+
