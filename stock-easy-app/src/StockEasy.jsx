@@ -4,6 +4,9 @@ import { Toaster, toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
 import debounce from 'lodash.debounce';
 import api from './services/apiService';
+import { InfoTooltip, tooltips } from './components/ui/InfoTooltip';
+import { HealthBar } from './components/ui/HealthBar';
+import { Modal } from './components/ui/Modal';
 
 // ============================================
 // FONCTIONS API - Importées depuis apiService
@@ -88,71 +91,6 @@ const formatConfirmedDate = (isoDate) => {
 };
 
 // ============================================
-// COMPOSANT TOOLTIP INFO
-// ============================================
-const InfoTooltip = ({ content }) => {
-  const [show, setShow] = useState(false);
-  
-  return (
-    <div className="relative inline-block">
-      <button
-        type="button"
-        onMouseEnter={() => setShow(true)}
-        onMouseLeave={() => setShow(false)}
-        className="ml-1 text-[#666663] hover:text-black transition-colors focus:outline-none focus:ring-2 focus:ring-black rounded"
-        aria-label="Plus d'informations"
-      >
-        <Info className="w-4 h-4 shrink-0" />
-      </button>
-      {show && (
-        <div className="absolute left-0 top-6 w-72 bg-black text-white text-xs rounded-lg p-3 shadow-2xl border-2 border-black z-[100]">
-          <div className="absolute -top-2 left-4 w-0 h-0 border-l-4 border-r-4 border-b-8 border-transparent border-b-black"></div>
-          {content}
-        </div>
-      )}
-    </div>
-  );
-};
-
-const tooltips = {
-  toOrder: "Produits dont le stock actuel est en-dessous du point de commande. Il faut passer commande maintenant pour éviter une rupture de stock.",
-  watch: "Produits dont le stock approche du point de commande (dans les 20% au-dessus). À surveiller de près pour anticiper la prochaine commande.",
-  inTransit: "Commandes déjà passées auprès des fournisseurs et en cours d'acheminement. Le délai estimé est calculé selon les délais habituels du fournisseur.",
-  received: "Commandes arrivées à l'entrepôt et en attente de validation. Vérifiez les quantités reçues avant de valider pour mettre à jour le stock.",
-  multiplier: "Coefficient pour ajuster les prévisions selon la saisonnalité ou les événements (BFCM, soldes). 1 = normal, 0.5 = hors saison, 5 = pic majeur.",
-  securityStock: "Nombre de jours de ventes supplémentaires à garder en stock pour absorber les imprévus (retards fournisseur, pics de ventes). Calculé automatiquement à 20% du délai fournisseur.",
-  reorderPoint: "Niveau de stock critique qui déclenche une alerte de commande. Calculé pour couvrir les ventes pendant le délai de réapprovisionnement + stock de sécurité.",
-  stockHealth: "Indicateur visuel de la santé du stock. Vert = bon niveau, Orange = surveillance nécessaire, Rouge = urgent à commander.",
-  skuAvailability: "Pourcentage de produits disponibles en stock par rapport au total des SKU actifs.",
-  salesLost: "Montant estimé des ventes manquées en raison d'une indisponibilité produit.",
-  deepOverstock: "Valeur financière des produits dont le stock dépasse largement la demande prévue."
-};
-
-// ============================================
-// COMPOSANT HEALTH BAR
-// ============================================
-const HealthBar = ({ percentage, status }) => {
-  const colors = {
-    healthy: 'bg-green-600',
-    warning: 'bg-orange-500',
-    urgent: 'bg-red-600'
-  };
-  
-  return (
-    <div className="w-full bg-[#E5E4DF] rounded-full h-3 overflow-hidden">
-      <div 
-        className={`h-full rounded-full transition-all duration-300 ${colors[status]}`}
-        style={{ width: `${Math.max(5, Math.min(percentage, 100))}%` }}
-        role="progressbar"
-        aria-valuenow={percentage}
-        aria-valuemin="0"
-        aria-valuemax="100"
-      />
-    </div>
-  );
-};
-
-// ============================================
 // COMPOSANT KPI CARD
 // ============================================
 const KPICard = ({ title, value, change, changePercent, trend, description, chartData }) => {
@@ -190,54 +128,6 @@ const KPICard = ({ title, value, change, changePercent, trend, description, char
           />
         </svg>
       </div>
-    </div>
-  );
-};
-
-// ============================================
-// COMPOSANT MODAL OVERLAY UNIFIÉ
-// ============================================
-const Modal = ({ isOpen, onClose, title, children, footer }) => {
-  if (!isOpen) return null;
-  
-  return (
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        className="absolute inset-0 bg-black/50 backdrop-blur-sm"
-        onClick={onClose}
-        aria-hidden="true"
-      />
-      
-      <motion.div
-        initial={{ opacity: 0, scale: 0.95, y: 20 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.95, y: 20 }}
-        transition={{ duration: 0.2, ease: "easeOut" }}
-        className="relative bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] flex flex-col">
-        <div className="bg-[#191919] px-6 py-4 flex items-center justify-between rounded-t-xl shrink-0">
-          <h3 className="text-xl font-bold text-white">{title}</h3>
-          <button 
-            onClick={onClose} 
-            className="text-white hover:text-[#BFBFBA] transition-colors focus:outline-none focus:ring-2 focus:ring-white rounded p-1"
-            aria-label="Fermer"
-          >
-            <X className="w-6 h-6 shrink-0" />
-          </button>
-        </div>
-        
-        <div className="p-6 overflow-y-auto flex-1">
-          {children}
-        </div>
-        
-        {footer && (
-          <div className="px-6 py-4 bg-[#FAFAF7] border-t border-[#E5E4DF] rounded-b-xl shrink-0">
-            {footer}
-          </div>
-        )}
-      </motion.div>
     </div>
   );
 };
