@@ -1,0 +1,105 @@
+# STOCK EASY APP - REFACTORING RULES
+
+Vous êtes un expert en refactoring React. Votre mission est d'aider à transformer Stock Easy App d'un fichier monolithique (5,057 lignes) en une architecture modulaire.
+
+## OBJECTIFS PRIORITAIRES
+
+1. **Extraire les composants** de StockEasy.jsx vers des fichiers séparés
+2. **Créer des tests** pour chaque nouveau composant/hook
+3. **Maintenir la fonctionnalité** (zéro régression)
+4. **Suivre le plan** dans PLAN_ACTION_EXECUTABLE.md
+
+## RÈGLES DE CODE
+
+### Structure de Fichiers
+- Maximum 300 lignes par fichier
+- Un composant = un fichier
+- Toujours créer __tests__/ à côté du code
+
+### Conventions
+- Composants : PascalCase (ProductCard.jsx)
+- Hooks : camelCase avec préfixe use (useProducts.js)
+- Indentation : 2 espaces
+- Quotes : Simples
+- Semicolons : Oui
+
+### Tests Obligatoires
+Pour CHAQUE nouveau composant/hook créé :
+```javascript
+// ComponentName.test.jsx
+import { describe, it, expect } from 'vitest';
+import { render, screen } from '@testing-library/react';
+import { ComponentName } from '../ComponentName';
+
+describe('ComponentName', () => {
+  it('should render correctly', () => {
+    render(<ComponentName />);
+    expect(screen.getByText('...')).toBeInTheDocument();
+  });
+});
+```
+
+### Workflow pour Extraction
+1. Identifier le composant dans StockEasy.jsx
+2. Créer le nouveau fichier dans la bonne structure
+3. Copier le code du composant
+4. Ajuster les imports
+5. Créer le test
+6. Vérifier que tout fonctionne (npm run dev)
+7. Commit Git avec message clair
+
+## ARCHITECTURE CIBLE
+```
+src/
+├── App.jsx (200 lignes max)
+├── views/
+│   ├── ProductsView/
+│   ├── OrdersView/
+│   └── DashboardView/
+├── components/
+│   ├── ui/ (Button, Card, Modal...)
+│   ├── features/ (StockHealthBadge...)
+│   └── layout/ (Header, Sidebar...)
+├── hooks/
+│   ├── useProducts.js
+│   ├── useOrders.js
+│   └── useFetch.js
+└── services/ (déjà OK)
+```
+
+## DOCUMENTS DE RÉFÉRENCE
+
+Toujours consulter :
+- PLAN_ACTION_EXECUTABLE.md (étapes détaillées)
+- STOCK_EASY_APP_AUDIT_COMPLET.md (context technique)
+- ARCHITECTURE_DIAGRAM.txt (structure cible)
+
+## AIDE-MÉMOIRE COMMANDES
+```bash
+# Tester que tout fonctionne
+npm run dev
+
+# Lancer les tests
+npm test
+
+# Build de production
+npm run build
+
+# Commit
+git add .
+git commit -m "refactor: Extract Button component from StockEasy.jsx"
+```
+
+## PRIORITÉS
+
+1. ✅ TOUJOURS tester après chaque extraction
+2. ✅ TOUJOURS créer un test pour le nouveau code
+3. ✅ TOUJOURS committer après chaque composant extrait
+4. ✅ Suivre l'ordre du PLAN_ACTION_EXECUTABLE.md
+
+## EN CAS D'ERREUR
+
+1. Lire l'erreur attentivement
+2. Vérifier les imports
+3. Vérifier que npm run dev fonctionne
+4. Si bloqué, revenir en arrière avec Git
