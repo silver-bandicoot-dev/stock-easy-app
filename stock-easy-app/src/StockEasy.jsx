@@ -9,6 +9,8 @@ import { HealthBar } from './components/ui/HealthBar';
 import { Modal } from './components/ui/Modal';
 import { KPICard } from './components/features/KPICard';
 import { SubTabsNavigation } from './components/features/SubTabsNavigation';
+import { AssignSupplierModal } from './components/settings/AssignSupplierModal';
+import { SupplierModal } from './components/settings/SupplierModal';
 
 // ============================================
 // FONCTIONS API - Importées depuis apiService
@@ -526,109 +528,6 @@ const GestionFournisseurs = ({
   );
 };
 
-// Modal Créer/Modifier Fournisseur
-const SupplierModal = ({ 
-  isOpen, 
-  onClose, 
-  formData, 
-  onChange, 
-  onSave, 
-  isEditing 
-}) => {
-  return (
-    <Modal
-      isOpen={isOpen}
-      onClose={onClose}
-      title={isEditing ? '✏️ Modifier le fournisseur' : '➕ Nouveau fournisseur'}
-      footer={
-        <div className="flex gap-3 justify-end">
-          <Button variant="secondary" onClick={onClose}>
-            Annuler
-          </Button>
-          <Button variant="primary" onClick={onSave}>
-            💾 Enregistrer
-          </Button>
-        </div>
-      }
-    >
-      <div className="space-y-4">
-        <div>
-          <label className="block text-sm font-medium text-[#666663] mb-2">
-            Nom du fournisseur *
-          </label>
-          <input
-            type="text"
-            value={formData.name}
-            onChange={(e) => onChange('name', e.target.value)}
-            disabled={isEditing}
-            placeholder="Ex: Fournisseur France"
-            className="w-full px-4 py-2 border-2 border-[#E5E4DF] rounded-lg focus:outline-none focus:border-[#8B5CF6] disabled:bg-gray-50 disabled:cursor-not-allowed"
-          />
-          {isEditing && (
-            <p className="text-xs text-[#666663] mt-1">
-              ℹ️ Le nom ne peut pas être modifié
-            </p>
-          )}
-        </div>
-        
-        <div>
-          <label className="block text-sm font-medium text-[#666663] mb-2">
-            Email *
-          </label>
-          <input
-            type="email"
-            value={formData.email}
-            onChange={(e) => onChange('email', e.target.value)}
-            placeholder="contact@example.com"
-            className="w-full px-4 py-2 border-2 border-[#E5E4DF] rounded-lg focus:outline-none focus:border-[#8B5CF6]"
-          />
-        </div>
-        
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-[#666663] mb-2">
-              Délai (jours) *
-            </label>
-            <input
-              type="number"
-              value={formData.leadTimeDays}
-              onChange={(e) => onChange('leadTimeDays', parseInt(e.target.value) || 0)}
-              min="1"
-              className="w-full px-4 py-2 border-2 border-[#E5E4DF] rounded-lg focus:outline-none focus:border-[#8B5CF6]"
-            />
-          </div>
-          
-          <div>
-            <label className="block text-sm font-medium text-[#666663] mb-2">
-              MOQ Standard *
-            </label>
-            <input
-              type="number"
-              value={formData.moq}
-              onChange={(e) => onChange('moq', parseInt(e.target.value) || 0)}
-              min="1"
-              className="w-full px-4 py-2 border-2 border-[#E5E4DF] rounded-lg focus:outline-none focus:border-[#8B5CF6]"
-            />
-          </div>
-        </div>
-        
-        <div>
-          <label className="block text-sm font-medium text-[#666663] mb-2">
-            Notes (optionnel)
-          </label>
-          <textarea
-            value={formData.notes}
-            onChange={(e) => onChange('notes', e.target.value)}
-            rows={3}
-            placeholder="Notes diverses..."
-            className="w-full px-4 py-2 border-2 border-[#E5E4DF] rounded-lg focus:outline-none focus:border-[#8B5CF6] resize-none"
-          />
-        </div>
-      </div>
-    </Modal>
-  );
-};
-
 // ============================================
 // SECTION MAPPING SKU/FOURNISSEUR
 // ============================================
@@ -822,76 +721,6 @@ const MappingSKUFournisseur = ({
         )}
       </div>
     </div>
-  );
-};
-
-// Modal d'assignation
-const AssignSupplierModal = ({ 
-  isOpen, 
-  onClose, 
-  product, 
-  suppliers,
-  selectedSupplier,
-  onSelectSupplier,
-  onAssign
-}) => {
-  const suppliersList = Object.values(suppliers);
-  
-  return (
-    <Modal
-      isOpen={isOpen}
-      onClose={onClose}
-      title="🔗 Assigner un fournisseur"
-      footer={
-        <div className="flex gap-3 justify-end">
-          <Button variant="secondary" onClick={onClose}>
-            Annuler
-          </Button>
-          <Button 
-            variant="primary" 
-            onClick={onAssign}
-            disabled={!selectedSupplier}
-          >
-            💾 Assigner
-          </Button>
-        </div>
-      }
-    >
-      {product && (
-        <div className="space-y-4">
-          <div className="bg-[#FAFAF7] rounded-lg p-4 border border-[#E5E4DF]">
-            <div className="text-sm text-[#666663] mb-1">Produit</div>
-            <div className="font-semibold text-[#191919]">
-              {product.sku} - {product.name}
-            </div>
-          </div>
-          
-          <div>
-            <label className="block text-sm font-medium text-[#666663] mb-2">
-              Sélectionner un fournisseur *
-            </label>
-            <select
-              value={selectedSupplier}
-              onChange={(e) => onSelectSupplier(e.target.value)}
-              className="w-full px-4 py-3 border-2 border-[#E5E4DF] rounded-lg focus:outline-none focus:border-[#8B5CF6] bg-white"
-            >
-              <option value="">-- Choisir un fournisseur --</option>
-              {suppliersList.map(s => (
-                <option key={s.name} value={s.name}>
-                  {s.name} (Délai: {s.leadTimeDays}j, MOQ: {s.moq})
-                </option>
-              ))}
-            </select>
-            
-            {suppliersList.length === 0 && (
-              <p className="text-sm text-[#EF1C43] mt-2">
-                ⚠️ Aucun fournisseur disponible. Créez d'abord un fournisseur dans l'onglet "Fournisseurs".
-              </p>
-            )}
-          </div>
-        </div>
-      )}
-    </Modal>
   );
 };
 

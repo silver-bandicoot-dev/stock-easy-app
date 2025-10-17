@@ -1,0 +1,2 @@
+export { SupplierModal } from './SupplierModal';
+

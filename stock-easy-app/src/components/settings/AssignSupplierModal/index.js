@@ -1,0 +1,2 @@
+export { AssignSupplierModal } from './AssignSupplierModal';
+
