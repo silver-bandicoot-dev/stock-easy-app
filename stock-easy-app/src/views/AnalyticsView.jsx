@@ -4,7 +4,7 @@ import {
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer
 } from 'recharts';
 import { TrendingUp, TrendingDown, DollarSign, Package, ShoppingCart } from 'lucide-react';
-import { KPICard } from '../components/features/Dashboard/KPICard';
+import KPICard from '../components/features/Dashboard/KPICard';
 
 export const AnalyticsView = () => {
   const [timeRange, setTimeRange] = useState('30d');
