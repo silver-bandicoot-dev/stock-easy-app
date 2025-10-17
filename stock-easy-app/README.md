@@ -1,35 +1,33 @@
-# Stock Easy - Application de Gestion de Stock
+# Stock Easy App
 
-## 🚀 Instructions de Déploiement
+Application de gestion de stock construite avec React et Vite.
 
-### Étape 1 : Préparer le projet
-1. Téléchargez tous les fichiers
-2. Placez-les dans un dossier `stock-easy-app`
-3. Créez le dossier `src` avec les fichiers fournis
+## 🚀 Commandes
 
-### Étape 2 : Pousser vers GitHub
+### Développement
 ```bash
-git init
-git add .
-git commit -m "Initial commit"
-git branch -M main
-git remote add origin https://github.com/VOTRE_USERNAME/stock-easy-app.git
-git push -u origin main
+npm run dev
 ```
 
-### Étape 3 : Déployer sur Vercel
-1. Allez sur https://vercel.com
-2. Importez votre repo GitHub
-3. Vercel détectera automatiquement Vite
-4. Cliquez sur "Deploy"
+### Build
+```bash
+npm run build
+```
 
-## 🎯 Configuration Google Sheets
+### Preview
+```bash
+npm run preview
+```
 
-L'API URL est déjà configurée dans le code pour pointer vers votre Google Sheets.
+## 📦 Technologies
 
-## 📦 Technologies utilisées
-- React 18
-- Vite
-- Tailwind CSS
-- Lucide React (icônes)
-- Google Sheets API
+- React 18.2
+- Vite 5.0
+- Tailwind CSS 3.3
+- Framer Motion 11.0
+- Lucide React
+- Sonner (notifications)
+
+## 📝 Configuration
+
+L'application utilise l'API Google Sheets pour la gestion des données. La configuration se trouve dans `src/config/api.js`.

@@ -13,3 +13,6 @@
 *.tmp
 *.temp
 .cache/
+
+# Documentation d'archive
+/docs/archive/
