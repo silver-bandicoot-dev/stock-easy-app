@@ -1,0 +1,2 @@
+export { ParametresGeneraux } from './ParametresGeneraux';
+
