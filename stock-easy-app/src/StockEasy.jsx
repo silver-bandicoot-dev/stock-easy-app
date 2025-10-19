@@ -1,5 +1,8 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { Package, Bell, Mail, X, Check, Truck, Clock, AlertCircle, CheckCircle, Eye, Settings, Info, Edit2, Activity, TrendingUp, TrendingDown, ArrowUpRight, ArrowDownRight, Upload, FileText, Calendar, RefreshCw, Plus, Moon, Sun } from 'lucide-react';
+import { Package, Bell, Mail, X, Check, Truck, Clock, AlertCircle, CheckCircle, Eye, Settings, Info, Edit2, Activity, TrendingUp, TrendingDown, ArrowUpRight, ArrowDownRight, Upload, FileText, Calendar, RefreshCw, Plus, Moon, Sun, User, LogOut } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from './contexts/AuthContext';
+import NotificationBell from './components/notifications/NotificationBell';
 import { Toaster, toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
 import debounce from 'lodash.debounce';
@@ -171,6 +174,21 @@ const calculateMetrics = (product, seuil = 90) => {
 // COMPOSANT PRINCIPAL
 // ============================================
 const StockEasy = () => {
+  // Auth et Navigation
+  const navigate = useNavigate();
+  const { currentUser, logout } = useAuth();
+
+  // Handler pour la déconnexion
+  const handleLogout = async () => {
+    try {
+      await logout();
+      navigate('/login');
+      toast.success('Déconnexion réussie');
+    } catch (error) {
+      toast.error('Erreur lors de la déconnexion');
+    }
+  };
+
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
   const [products, setProducts] = useState([]);
@@ -1760,17 +1778,27 @@ Cordialement,
               >
                 <RefreshCw className={`w-5 h-5 text-black shrink-0 ${syncing ? 'animate-spin' : ''}`} />
               </button>
+              {/* Notification Bell Component */}
+              <NotificationBell />
+
+              {/* Profile Button */}
               <button 
-                onClick={() => setNotificationsOpen(!notificationsOpen)}
-                className="relative p-2.5 rounded-lg bg-white dark:bg-neutral-800 hover:bg-gray-100 dark:hover:bg-neutral-700 transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 shrink-0"
-                aria-label="Notifications"
+                onClick={() => navigate('/profile')}
+                className="p-2.5 rounded-lg bg-white hover:bg-gray-100 transition-colors focus:outline-none focus:ring-2 focus:ring-black shrink-0"
+                aria-label="Profil utilisateur"
+                title="Mon profil"
               >
-                <Bell className="w-5 h-5 text-neutral-900 dark:text-neutral-100 shrink-0" />
-                {notifications.length > 0 && (
-                  <span className="absolute -top-1 -right-1 w-5 h-5 bg-danger-500 text-white text-xs rounded-full flex items-center justify-center font-bold">
-                    {notifications.length}
-                  </span>
-                )}
+                <User className="w-5 h-5 text-black shrink-0" />
+              </button>
+
+              {/* Logout Button */}
+              <button 
+                onClick={handleLogout}
+                className="p-2.5 rounded-lg bg-white hover:bg-gray-100 transition-colors focus:outline-none focus:ring-2 focus:ring-black shrink-0"
+                aria-label="Déconnexion"
+                title="Se déconnecter"
+              >
+                <LogOut className="w-5 h-5 text-black shrink-0" />
               </button>
               
               <button 
