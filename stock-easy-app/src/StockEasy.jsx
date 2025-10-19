@@ -17,6 +17,7 @@ import { SupplierModal } from './components/settings/SupplierModal';
 import { GestionFournisseurs } from './components/settings/GestionFournisseurs';
 import { MappingSKUFournisseur } from './components/settings/MappingSKUFournisseur';
 import { ParametresGeneraux } from './components/settings/ParametresGeneraux';
+import CommentSection from './components/comments/CommentSection';
 
 // ============================================
 // FONCTIONS API - Importées depuis apiService
@@ -2259,6 +2260,14 @@ Cordialement,
                                 <span className="font-semibold text-[#666663]">Total:</span>
                                 <span className="font-bold text-[#191919] text-lg">{order.total.toFixed(2)}€</span>
                               </div>
+                              
+                              {/* Section Commentaires */}
+                              <div className="mt-6 pt-6 border-t border-[#E5E4DF]">
+                                <CommentSection 
+                                  purchaseOrderId={order.id}
+                                  purchaseOrderNumber={order.id}
+                                />
+                              </div>
                             </div>
                           </motion.div>
                         )}
@@ -2367,6 +2376,14 @@ Cordialement,
                               <div className="mt-3 pt-3 border-t border-[#E5E4DF] flex justify-between">
                                 <span className="font-semibold text-[#666663]">Total:</span>
                                 <span className="font-bold text-[#191919] text-lg">{order.total.toFixed(2)}€</span>
+                              </div>
+                              
+                              {/* Section Commentaires */}
+                              <div className="mt-6 pt-6 border-t border-[#E5E4DF]">
+                                <CommentSection 
+                                  purchaseOrderId={order.id}
+                                  purchaseOrderNumber={order.id}
+                                />
                               </div>
                             </div>
                           </motion.div>
@@ -2488,6 +2505,14 @@ Cordialement,
                                 <span className="font-semibold text-[#666663]">Total:</span>
                                 <span className="font-bold text-[#191919] text-lg">{order.total.toFixed(2)}€</span>
                               </div>
+                              
+                              {/* Section Commentaires */}
+                              <div className="mt-6 pt-6 border-t border-[#E5E4DF]">
+                                <CommentSection 
+                                  purchaseOrderId={order.id}
+                                  purchaseOrderNumber={order.id}
+                                />
+                              </div>
                             </div>
                           </motion.div>
                         )}
@@ -2596,6 +2621,14 @@ Cordialement,
                               <div className="mt-3 pt-3 border-t border-[#E5E4DF] flex justify-between">
                                 <span className="font-semibold text-[#666663]">Total:</span>
                                 <span className="font-bold text-[#191919] text-lg">{order.total.toFixed(2)}€</span>
+                              </div>
+                              
+                              {/* Section Commentaires */}
+                              <div className="mt-6 pt-6 border-t border-[#E5E4DF]">
+                                <CommentSection 
+                                  purchaseOrderId={order.id}
+                                  purchaseOrderNumber={order.id}
+                                />
                               </div>
                             </div>
                           </motion.div>
@@ -2782,6 +2815,14 @@ Cordialement,
                                     </div>
                                   );
                                 })}
+                              </div>
+                              
+                              {/* Section Commentaires */}
+                              <div className="mt-6 pt-6 border-t border-[#E5E4DF]">
+                                <CommentSection 
+                                  purchaseOrderId={order.id}
+                                  purchaseOrderNumber={order.id}
+                                />
                               </div>
                             </div>
                           </motion.div>

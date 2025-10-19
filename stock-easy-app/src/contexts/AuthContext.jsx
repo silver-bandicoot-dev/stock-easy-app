@@ -85,14 +85,20 @@ export const AuthProvider = ({ children }) => {
       if (user) {
         // Get additional user data from Firestore
         const userData = await getUserData(user.uid);
-        setCurrentUser({
-          ...user,
-          ...userData
-        });
+        // Utiliser setTimeout pour éviter le warning de setState pendant le rendu
+        setTimeout(() => {
+          setCurrentUser({
+            ...user,
+            ...userData
+          });
+          setLoading(false);
+        }, 0);
       } else {
-        setCurrentUser(null);
+        setTimeout(() => {
+          setCurrentUser(null);
+          setLoading(false);
+        }, 0);
       }
-      setLoading(false);
     });
 
     return unsubscribe;

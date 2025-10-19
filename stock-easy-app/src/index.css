@@ -2,6 +2,77 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Profile page enhancements */
+.bg-grid-slate-100 {
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32' width='32' height='32' fill='none' stroke='rgb(15 23 42 / 0.04)'%3e%3cpath d='m0 .5h32m-32 32v-32'/%3e%3c/svg%3e");
+}
+
+/* Glass morphism effect */
+.backdrop-blur-sm {
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+/* Custom scrollbar for profile */
+.profile-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+
+.profile-scroll::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.1);
+  border-radius: 10px;
+}
+
+.profile-scroll::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 10px;
+}
+
+.profile-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.5);
+}
+
+/* Animation keyframes */
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-10px); }
+}
+
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 20px rgba(59, 130, 246, 0.3); }
+  50% { box-shadow: 0 0 30px rgba(59, 130, 246, 0.6); }
+}
+
+.animate-float {
+  animation: float 3s ease-in-out infinite;
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+/* Gradient text */
+.gradient-text {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Mentions styles */
+.mentions-input {
+  font-family: inherit;
+  font-size: inherit;
+  line-height: inherit;
+  color: inherit;
+  background: transparent;
+  border: none;
+  outline: none;
+  resize: none;
+  width: 100%;
+  min-height: 80px;
+}
+
 * {
   margin: 0;
   padding: 0;
@@ -19,4 +90,61 @@ body {
 #root {
   width: 100%;
   min-height: 100vh;
+}
+
+/* Styles pour react-mentions */
+.mentions-input {
+  width: 100%;
+}
+
+.mentions-input__control {
+  font-size: 14px;
+  min-height: 80px;
+}
+
+.mentions-input__highlighter {
+  padding: 12px;
+  border: 1px solid #E5E7EB;
+  border-radius: 8px;
+}
+
+.mentions-input__input {
+  padding: 12px;
+  border: 1px solid #E5E7EB;
+  border-radius: 8px;
+  outline: none;
+  resize: vertical;
+}
+
+.mentions-input__input:focus {
+  border-color: #000;
+  box-shadow: 0 0 0 1px #000;
+}
+
+.mentions-input__suggestions__list {
+  background-color: white;
+  border: 1px solid #E5E7EB;
+  border-radius: 8px;
+  font-size: 14px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.mentions-input__suggestions__item {
+  padding: 8px 12px;
+  border-bottom: 1px solid #F3F4F6;
+  cursor: pointer;
+}
+
+.mentions-input__suggestions__item--focused {
+  background-color: #F3F4F6;
+}
+
+.mentions-input__mention {
+  background-color: #DBEAFE;
+  color: #1E40AF;
+  padding: 2px 4px;
+  border-radius: 4px;
+  font-weight: 500;
 }
