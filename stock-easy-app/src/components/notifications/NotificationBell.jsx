@@ -5,7 +5,7 @@ import { collection, query, where, onSnapshot, doc, updateDoc } from 'firebase/f
 import { db } from '../../config/firebase';
 import { useAuth } from '../../contexts/AuthContext';
 
-const NotificationBell = () => {
+const NotificationBell = ({ variant = 'default' }) => {
   const { currentUser } = useAuth();
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [notifications, setNotifications] = useState([]);
@@ -52,14 +52,23 @@ const NotificationBell = () => {
     }
   };
 
+  // Styles selon la variante
+  const buttonStyles = variant === 'mobile' 
+    ? "relative p-2 rounded-lg bg-[#40403E] hover:bg-[#666663] transition-colors focus:outline-none focus:ring-2 focus:ring-white shrink-0"
+    : "relative p-2.5 rounded-lg bg-white hover:bg-gray-100 transition-colors focus:outline-none focus:ring-2 focus:ring-black shrink-0";
+  
+  const iconStyles = variant === 'mobile'
+    ? "w-6 h-6 text-white shrink-0"
+    : "w-5 h-5 text-black shrink-0";
+
   return (
     <>
       <button
         onClick={() => setNotificationsOpen(!notificationsOpen)}
-        className="relative p-2.5 rounded-lg bg-white hover:bg-gray-100 transition-colors focus:outline-none focus:ring-2 focus:ring-black shrink-0"
+        className={buttonStyles}
         aria-label="Notifications"
       >
-        <Bell className="w-5 h-5 text-black shrink-0" />
+        <Bell className={iconStyles} />
         {notifications.length > 0 && (
           <span className="absolute -top-1 -right-1 w-5 h-5 bg-[#EF1C43] text-white text-xs rounded-full flex items-center justify-center font-bold">
             {notifications.length}

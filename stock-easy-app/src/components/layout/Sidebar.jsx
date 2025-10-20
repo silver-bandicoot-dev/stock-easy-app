@@ -129,9 +129,7 @@ const Sidebar = ({
         
         <div className="flex items-center gap-2">
           {/* Icône de notification */}
-          <div className="p-2 rounded-lg bg-[#40403E] hover:bg-[#666663] transition-colors">
-            <NotificationBell />
-          </div>
+          <NotificationBell variant="mobile" />
           
           {/* Bouton hamburger */}
           <button
