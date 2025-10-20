@@ -18,6 +18,7 @@ import { GestionFournisseurs } from './components/settings/GestionFournisseurs';
 import { MappingSKUFournisseur } from './components/settings/MappingSKUFournisseur';
 import { ParametresGeneraux } from './components/settings/ParametresGeneraux';
 import CommentSection from './components/comments/CommentSection';
+import Sidebar from './components/layout/Sidebar';
 
 // ============================================
 // FONCTIONS API - Importées depuis apiService
@@ -1678,186 +1679,35 @@ Cordialement,
         duration={4000}
       />
       <div className="min-h-screen bg-[#F0F0EB]">
-        {/* Header - Sticky */}
-        <div className="bg-[#191919] shadow-lg sticky top-0 z-[9997] relative isolate">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-black rounded-lg flex items-center justify-center shadow-lg shrink-0">
-                <Package className="w-6 h-6 text-white shrink-0" />
+        {/* Sidebar Component */}
+        <Sidebar 
+          activeTab={activeTab}
+          setActiveTab={setActiveTab}
+          darkMode={darkMode}
+          setDarkMode={setDarkMode}
+          handleLogout={handleLogout}
+          syncData={syncData}
+          syncing={syncing}
+        />
+
+        {/* Main Content - Pleine hauteur avec padding pour sidebar desktop */}
+        <div className="md:ml-64 min-h-screen">
+          {/* Spacer pour le header mobile uniquement */}
+          <div className="md:hidden h-[72px]" />
+          
+          {/* Content Area avec NotificationBell intégré */}
+          <div className="relative min-h-screen">
+            {/* NotificationBell flottant en haut à droite avec fond */}
+            <div className="absolute top-4 right-4 sm:top-6 sm:right-6 z-30">
+              <div className="bg-white rounded-lg shadow-md p-2">
+                <NotificationBell />
               </div>
-              <div className="flex items-center gap-2">
-                <h1 className="text-xl font-bold text-white">Stock Easy</h1>
-                {syncing && (
-                  <RefreshCw className="w-4 h-4 text-white animate-spin shrink-0" />
-                )}
-              </div>
             </div>
-            <div className="flex items-center gap-4">
-              <div className="flex gap-2 ml-8">
-                <button 
-                  onClick={() => setActiveTab('dashboard')}
-                  className={`inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm rounded-lg font-semibold transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-white ${
-                    activeTab === 'dashboard' 
-                      ? 'bg-black text-white shadow-lg' 
-                      : 'bg-[#40403E] text-[#FAFAF7] hover:bg-[#666663]'
-                  }`}
-                >
-                  Dashboard
-                </button>
-                <button 
-                  onClick={() => setActiveTab('actions')}
-                  className={`inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm rounded-lg font-semibold transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-white ${
-                    activeTab === 'actions' 
-                      ? 'bg-black text-white shadow-lg' 
-                      : 'bg-[#40403E] text-[#FAFAF7] hover:bg-[#666663]'
-                  }`}
-                >
-                  Actions
-                </button>
-                <button 
-                  onClick={() => setActiveTab('track')}
-                  className={`inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm rounded-lg font-semibold transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-white ${
-                    activeTab === 'track' 
-                      ? 'bg-black text-white shadow-lg' 
-                      : 'bg-[#40403E] text-[#FAFAF7] hover:bg-[#666663]'
-                  }`}
-                >
-                  <Truck className="w-4 h-4 shrink-0" />
-                  Track & Manage
-                </button>
-                <button 
-                  onClick={() => setActiveTab('analytics')}
-                  className={`inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm rounded-lg font-semibold transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-white ${
-                    activeTab === 'analytics' 
-                      ? 'bg-black text-white shadow-lg' 
-                      : 'bg-[#40403E] text-[#FAFAF7] hover:bg-[#666663]'
-                  }`}
-                >
-                  <TrendingUp className="w-4 h-4 shrink-0" />
-                  Analytics
-                </button>
-                <button 
-                  onClick={() => setActiveTab('stock-level')}
-                  className={`inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm rounded-lg font-semibold transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-white ${
-                    activeTab === 'stock-level' 
-                      ? 'bg-black text-white shadow-lg' 
-                      : 'bg-[#40403E] text-[#FAFAF7] hover:bg-[#666663]'
-                  }`}
-                >
-                  <Activity className="w-4 h-4 shrink-0" />
-                  Stock Level
-                </button>
-                <button 
-                  onClick={() => setActiveTab('history')}
-                  className={`inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm rounded-lg font-semibold transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-white ${
-                    activeTab === 'history' 
-                      ? 'bg-black text-white shadow-lg' 
-                      : 'bg-[#40403E] text-[#FAFAF7] hover:bg-[#666663]'
-                  }`}
-                >
-                  <FileText className="w-4 h-4 shrink-0" />
-                  Historique
-                </button>
-                <button 
-                  onClick={() => setActiveTab('settings')}
-                  className={`inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm rounded-lg font-semibold transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-white ${
-                    activeTab === 'settings' 
-                      ? 'bg-black text-white shadow-lg' 
-                      : 'bg-[#40403E] text-[#FAFAF7] hover:bg-[#666663]'
-                  }`}
-                >
-                  <Settings className="w-4 h-4 shrink-0" />
-                  Paramètres
-                </button>
-              </div>
-              <button 
-                onClick={syncData}
-                className="p-2.5 rounded-lg bg-white hover:bg-gray-100 transition-colors focus:outline-none focus:ring-2 focus:ring-black shrink-0"
-                aria-label="Synchroniser"
-                disabled={syncing}
-              >
-                <RefreshCw className={`w-5 h-5 text-black shrink-0 ${syncing ? 'animate-spin' : ''}`} />
-              </button>
-              {/* Notification Bell Component */}
-              <NotificationBell />
 
-              {/* Profile Button */}
-              <button 
-                onClick={() => navigate('/profile')}
-                className="p-2.5 rounded-lg bg-white hover:bg-gray-100 transition-colors focus:outline-none focus:ring-2 focus:ring-black shrink-0"
-                aria-label="Profil utilisateur"
-                title="Mon profil"
-              >
-                <User className="w-5 h-5 text-black shrink-0" />
-              </button>
+            {/* Contenu principal avec padding */}
+            <div className="p-4 sm:p-6 lg:p-8 pt-16 sm:pt-20">
 
-              {/* Logout Button */}
-              <button 
-                onClick={handleLogout}
-                className="p-2.5 rounded-lg bg-white hover:bg-gray-100 transition-colors focus:outline-none focus:ring-2 focus:ring-black shrink-0"
-                aria-label="Déconnexion"
-                title="Se déconnecter"
-              >
-                <LogOut className="w-5 h-5 text-black shrink-0" />
-              </button>
-              
-              <button 
-                onClick={() => setDarkMode(!darkMode)}
-                className="p-2.5 rounded-lg bg-white dark:bg-neutral-800 hover:bg-gray-100 dark:hover:bg-neutral-700 transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 shrink-0"
-                aria-label={darkMode ? 'Mode clair' : 'Mode sombre'}
-                title={darkMode ? 'Mode clair' : 'Mode sombre'}
-              >
-                {darkMode ? <Sun className="w-5 h-5 text-neutral-100 shrink-0" /> : <Moon className="w-5 h-5 text-neutral-900 shrink-0" />}
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Notifications Panel */}
-      <AnimatePresence>
-        {notificationsOpen && (
-          <>
-            <motion.div 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="fixed inset-0 z-[9998]" 
-              onClick={() => setNotificationsOpen(false)}
-              aria-hidden="true"
-            />
-            <motion.div
-              initial={{ opacity: 0, y: -20, scale: 0.95 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: -20, scale: 0.95 }}
-              transition={{ duration: 0.2, ease: "easeOut" }}
-              className="fixed right-4 top-20 w-96 bg-white rounded-xl shadow-2xl border border-[#E5E4DF] z-[9999]">
-            <div className="p-4 border-b border-[#E5E4DF]">
-              <h3 className="font-bold text-[#191919]">Notifications</h3>
-            </div>
-            <div className="max-h-96 overflow-y-auto">
-              {notifications.length === 0 ? (
-                <div className="p-8 text-center text-[#666663]">
-                  Aucune notification
-                </div>
-              ) : (
-                notifications.map((notif, idx) => (
-                  <div key={idx} className={`p-4 border-b border-[#E5E4DF] hover:bg-[#FAFAF7] transition-colors ${
-                    notif.type === 'warning' ? 'bg-red-50' : 
-                    notif.type === 'info' ? 'bg-yellow-50' : 'bg-green-50'
-                  }`}>
-                    <p className="text-sm text-[#191919]">{notif.message}</p>
-                  </div>
-                ))
-              )}
-            </div>
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
-
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-7xl mx-auto">
         
         {/* DASHBOARD TAB */}
         <AnimatePresence mode="wait">
@@ -3583,6 +3433,48 @@ Cordialement,
         </AnimatePresence>
       </div>
 
+      {/* Notifications Panel */}
+      <AnimatePresence>
+        {notificationsOpen && (
+          <>
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-[65]" 
+              onClick={() => setNotificationsOpen(false)}
+              aria-hidden="true"
+            />
+            <motion.div
+              initial={{ opacity: 0, y: -20, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -20, scale: 0.95 }}
+              transition={{ duration: 0.2, ease: "easeOut" }}
+              className="fixed right-4 top-20 w-96 bg-white rounded-xl shadow-2xl border border-[#E5E4DF] z-[70]">
+            <div className="p-4 border-b border-[#E5E4DF]">
+              <h3 className="font-bold text-[#191919]">Notifications</h3>
+            </div>
+            <div className="max-h-96 overflow-y-auto">
+              {notifications.length === 0 ? (
+                <div className="p-8 text-center text-[#666663]">
+                  Aucune notification
+                </div>
+              ) : (
+                notifications.map((notif, idx) => (
+                  <div key={idx} className={`p-4 border-b border-[#E5E4DF] hover:bg-[#FAFAF7] transition-colors ${
+                    notif.type === 'warning' ? 'bg-red-50' : 
+                    notif.type === 'info' ? 'bg-yellow-50' : 'bg-green-50'
+                  }`}>
+                    <p className="text-sm text-[#191919]">{notif.message}</p>
+                  </div>
+                ))
+              )}
+            </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
       {/* Modal Email */}
       <Modal
         isOpen={emailModalOpen && selectedSupplier}
@@ -4202,7 +4094,10 @@ Cordialement,
         )}
       </Modal>
 
-      </div>
+            </div> {/* Fin contenu principal avec padding */}
+          </div> {/* Fin Content Area relative */}
+        </div> {/* Fin Main Content md:ml-64 */}
+      </div> {/* Fin min-h-screen */}
     </>
   );
 };
