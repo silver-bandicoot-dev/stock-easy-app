@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { 
   Package, 
   DollarSign, 
+  Activity,
   TrendingUp, 
   Truck, 
   FileText, 
@@ -34,7 +35,7 @@ const Sidebar = ({
     { id: 'actions', label: 'Order', icon: DollarSign, type: 'tab' },
     { id: 'track', label: 'Track & Manage', icon: Truck, type: 'tab' },
     { id: 'analytics', label: 'Analytics', icon: TrendingUp, type: 'tab' },
-    { id: 'stock-level', label: 'Stock Level', icon: DollarSign, type: 'tab' },
+    { id: 'stock-level', label: 'Stock Level', icon: Activity, type: 'tab' },
     { id: 'history', label: 'Historique', icon: FileText, type: 'tab' },
     { id: 'profile', label: 'Mon Profil', icon: User, type: 'route', path: '/profile' },
     { id: 'settings', label: 'Paramètres', icon: Settings, type: 'tab' },
