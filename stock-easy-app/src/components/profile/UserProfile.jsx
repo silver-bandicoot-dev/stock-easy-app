@@ -152,7 +152,9 @@ export default function UserProfile() {
           const companySnap = await getDoc(companyRef);
           
           if (companySnap.exists()) {
-            setCompanyData({ id: companySnap.id, ...companySnap.data() });
+            const company = { id: companySnap.id, ...companySnap.data() };
+            setCompanyData(company);
+            console.log('✅ Company chargée:', company.name);
           }
           
           // Charger les membres de l'équipe
@@ -549,28 +551,36 @@ export default function UserProfile() {
                 </div>
               </div>
 
-              {/* Carte Entreprise */}
+              {/* Carte Mon Entreprise */}
               {companyData && (
                 <div className="bg-white rounded-lg shadow-lg border border-[#E5E4DF] p-6">
                   <h3 className="text-lg font-bold text-[#191919] mb-6 flex items-center gap-2">
                     <Briefcase className="w-4 h-4 text-black" />
-                    Informations entreprise
+                    Mon Entreprise
                   </h3>
                   
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-4">
                     <div>
-                      <label className="block text-sm font-semibold text-[#666663] mb-2">
-                        Nom de l'entreprise
-                      </label>
-                      <p className="text-lg font-medium text-[#191919]">{companyData.name}</p>
+                      <p className="text-sm text-[#666663] mb-1">Nom de l'entreprise</p>
+                      <p className="text-lg font-semibold text-[#191919]">{companyData.name}</p>
                     </div>
                     
                     <div>
-                      <label className="block text-sm font-semibold text-[#666663] mb-2">
-                        Langue par défaut
-                      </label>
-                      <p className="text-lg font-medium text-[#191919]">{companyData.defaultLanguage?.toUpperCase()}</p>
+                      <p className="text-sm text-[#666663] mb-1">Nombre de collaborateurs</p>
+                      <p className="text-lg font-semibold text-[#191919]">{teamMembers.length}</p>
                     </div>
+                    
+                    <div>
+                      <p className="text-sm text-[#666663] mb-1">Langue par défaut</p>
+                      <p className="text-lg font-semibold text-[#191919]">{companyData.defaultLanguage?.toUpperCase()}</p>
+                    </div>
+                    
+                    {companyData.industry && (
+                      <div>
+                        <p className="text-sm text-[#666663] mb-1">Secteur d'activité</p>
+                        <p className="text-lg font-semibold text-[#191919]">{companyData.industry}</p>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
@@ -768,3 +778,5 @@ export default function UserProfile() {
     </div>
   );
 }
+
+export default UserProfile;
