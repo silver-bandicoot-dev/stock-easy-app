@@ -2,7 +2,10 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { toast } from 'sonner';
-import { Mail, Lock, User as UserIcon, Eye, EyeOff, UserPlus } from 'lucide-react';
+import { Mail, Lock, User as UserIcon, Eye, EyeOff, UserPlus, Building2 } from 'lucide-react';
+import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { doc, setDoc, addDoc, collection, serverTimestamp } from 'firebase/firestore';
+import { auth, db } from '../../config/firebase';
 
 const Signup = () => {
   const navigate = useNavigate();
@@ -11,7 +14,8 @@ const Signup = () => {
     displayName: '',
     email: '',
     password: '',
-    confirmPassword: ''
+    confirmPassword: '',
+    companyName: ''
   });
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -38,14 +42,58 @@ const Signup = () => {
       return;
     }
 
+    if (!formData.companyName.trim()) {
+      toast.error('Veuillez renseigner le nom de votre entreprise');
+      return;
+    }
+
     setLoading(true);
 
     try {
-      await signup(formData.email, formData.password, formData.displayName);
-      toast.success('Compte créé avec succès !');
+      console.log('🚀 Création du compte...');
+      
+      // 1. Créer l'utilisateur dans Firebase Auth
+      const userCredential = await createUserWithEmailAndPassword(auth, formData.email, formData.password);
+      const user = userCredential.user;
+      
+      console.log('✅ Utilisateur créé dans Auth:', user.uid);
+
+      // 2. Créer la company avec le nom renseigné
+      const companyRef = await addDoc(collection(db, 'companies'), {
+        name: formData.companyName.trim(),
+        defaultLanguage: 'fr',
+        createdAt: serverTimestamp(),
+        industry: null,
+        logo: null
+      });
+      
+      console.log('✅ Company créée:', companyRef.id, '- Nom:', formData.companyName);
+
+      // 3. Extraire prénom et nom du displayName
+      const nameParts = formData.displayName.trim().split(' ');
+      const firstName = nameParts[0] || 'Prénom';
+      const lastName = nameParts.slice(1).join(' ') || 'Nom';
+
+      // 4. Créer le profil utilisateur dans Firestore
+      await setDoc(doc(db, 'users', user.uid), {
+        email: formData.email,
+        firstName: firstName,
+        lastName: lastName,
+        companyId: companyRef.id,
+        role: 'admin', // Le créateur de la company est admin
+        profilePhoto: null,
+        preferredLanguage: 'fr',
+        emailVerified: user.emailVerified,
+        createdAt: serverTimestamp()
+      });
+      
+      console.log('✅ Profil utilisateur créé');
+
+      toast.success('Compte créé avec succès!');
       navigate('/');
     } catch (error) {
-      console.error('Signup error:', error);
+      console.error('❌ Erreur lors de la création du compte:', error);
+      
       let errorMessage = 'Erreur lors de la création du compte';
       
       if (error.code === 'auth/email-already-in-use') {
@@ -53,7 +101,7 @@ const Signup = () => {
       } else if (error.code === 'auth/invalid-email') {
         errorMessage = 'Email invalide';
       } else if (error.code === 'auth/weak-password') {
-        errorMessage = 'Mot de passe trop faible';
+        errorMessage = 'Le mot de passe doit contenir au moins 6 caractères';
       }
       
       toast.error(errorMessage);
@@ -112,6 +160,26 @@ const Signup = () => {
                   required
                   className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent transition-all"
                   placeholder="votre@email.com"
+                />
+              </div>
+            </div>
+
+            {/* Company Name Field - NOUVEAU */}
+            <div>
+              <label htmlFor="companyName" className="block text-sm font-medium text-gray-700 mb-2">
+                Nom de l'entreprise
+              </label>
+              <div className="relative">
+                <Building2 className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <input
+                  type="text"
+                  id="companyName"
+                  name="companyName"
+                  value={formData.companyName}
+                  onChange={handleChange}
+                  required
+                  className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent transition-all"
+                  placeholder="Ex: Acme Corp"
                 />
               </div>
             </div>
