@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
+import NotificationBell from '../notifications/NotificationBell';
 
 const Sidebar = ({ 
   activeTab, 
@@ -117,7 +118,7 @@ const Sidebar = ({
   // Menu Mobile (hamburger + overlay)
   const MobileSidebar = () => (
     <>
-      {/* Mobile Header - Minimaliste avec juste logo et hamburger */}
+      {/* Mobile Header - Logo, notification et hamburger */}
       <div className="md:hidden fixed top-0 left-0 right-0 bg-[#191919] z-50 px-4 py-4 flex items-center justify-between shadow-lg">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 bg-black rounded-lg flex items-center justify-center shadow-lg">
@@ -126,17 +127,25 @@ const Sidebar = ({
           <h1 className="text-xl font-bold text-white">Stock Easy</h1>
         </div>
         
-        <button
-          onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-          className="p-2 rounded-lg bg-[#40403E] hover:bg-[#666663] transition-colors"
-          aria-label={mobileMenuOpen ? 'Fermer le menu' : 'Ouvrir le menu'}
-        >
-          {mobileMenuOpen ? (
-            <X className="w-6 h-6 text-white" />
-          ) : (
-            <Menu className="w-6 h-6 text-white" />
-          )}
-        </button>
+        <div className="flex items-center gap-2">
+          {/* Icône de notification */}
+          <div className="p-2 rounded-lg bg-[#40403E] hover:bg-[#666663] transition-colors">
+            <NotificationBell />
+          </div>
+          
+          {/* Bouton hamburger */}
+          <button
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            className="p-2 rounded-lg bg-[#40403E] hover:bg-[#666663] transition-colors"
+            aria-label={mobileMenuOpen ? 'Fermer le menu' : 'Ouvrir le menu'}
+          >
+            {mobileMenuOpen ? (
+              <X className="w-6 h-6 text-white" />
+            ) : (
+              <Menu className="w-6 h-6 text-white" />
+            )}
+          </button>
+        </div>
       </div>
 
       {/* Mobile Menu Overlay */}

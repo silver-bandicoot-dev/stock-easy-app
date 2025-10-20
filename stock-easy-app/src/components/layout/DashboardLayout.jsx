@@ -38,8 +38,8 @@ const DashboardLayout = ({ children, activeTab, setActiveTab, syncData, syncing,
         
         {/* Content Area avec NotificationBell intégré */}
         <div className="relative min-h-screen">
-          {/* NotificationBell flottant en haut à droite avec fond */}
-          <div className="absolute top-4 right-4 sm:top-6 sm:right-6 z-30">
+          {/* NotificationBell flottant en haut à droite avec fond - Masqué sur mobile */}
+          <div className="hidden md:block absolute top-4 right-4 sm:top-6 sm:right-6 z-30">
             <div className="bg-white rounded-lg shadow-md p-2">
               <NotificationBell />
             </div>
