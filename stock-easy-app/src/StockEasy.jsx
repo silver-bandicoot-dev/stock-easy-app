@@ -180,6 +180,21 @@ const StockEasy = () => {
   const navigate = useNavigate();
   const { currentUser, logout } = useAuth();
 
+  // Helper pour générer la signature de l'utilisateur dans les emails
+  const getUserSignature = () => {
+    if (currentUser && currentUser.firstName && currentUser.lastName) {
+      return `${currentUser.firstName} ${currentUser.lastName}`;
+    } else if (currentUser && currentUser.displayName) {
+      return currentUser.displayName;
+    }
+    return "L'équipe Stock Easy";
+  };
+
+  // Helper pour arrondir correctement les montants à 2 décimales
+  const roundToTwo = (num) => {
+    return Math.round((num + Number.EPSILON) * 100) / 100;
+  };
+
   // Handler pour la déconnexion
   const handleLogout = async () => {
     try {
@@ -241,6 +256,7 @@ const StockEasy = () => {
   
   // NOUVEAUX ÉTATS pour CORRECTION 5 et 6
   const [discrepancyTypes, setDiscrepancyTypes] = useState({});
+  const [damagedQuantities, setDamagedQuantities] = useState({}); // Quantités endommagées séparées
   const [unsavedParameterChanges, setUnsavedParameterChanges] = useState({});
   const [isSavingParameters, setIsSavingParameters] = useState(false);
 
@@ -852,13 +868,13 @@ const StockEasy = () => {
     const supplierInfo = suppliers[supplier];
     const productList = products.map(p => {
       const qty = orderQuantities[p.sku] || p.qtyToOrder;
-      return `- ${p.name} (SKU: ${p.sku}) - Quantité: ${qty} unités - Prix unitaire: ${p.buyPrice}€`;
+      return `- ${p.name} (SKU: ${p.sku}) - Quantité: ${qty} unités - Prix unitaire: ${roundToTwo(p.buyPrice).toFixed(2)}€`;
     }).join('\n');
     
-    const total = products.reduce((sum, p) => {
+    const total = roundToTwo(products.reduce((sum, p) => {
       const qty = orderQuantities[p.sku] || p.qtyToOrder;
       return sum + (qty * p.buyPrice);
-    }, 0);
+    }, 0));
     
     return {
       to: supplierInfo.email || 'email@fournisseur.com',
@@ -876,7 +892,7 @@ Merci de nous confirmer la disponibilité et la date de livraison estimée.
 Conditions habituelles: ${supplierInfo.leadTimeDays} jours - MOQ respecté
 
 Cordialement,
-L'équipe Stock Easy`
+${getUserSignature()}`
     };
   };
 
@@ -896,10 +912,10 @@ L'équipe Stock Easy`
   const sendOrder = async () => {
     try {
       const productsToOrder = toOrderBySupplier[selectedSupplier];
-      const total = productsToOrder.reduce((sum, p) => {
+      const total = roundToTwo(productsToOrder.reduce((sum, p) => {
         const qty = orderQuantities[p.sku] || p.qtyToOrder;
         return sum + (qty * p.buyPrice);
-      }, 0);
+      }, 0));
       
       const orderData = {
         id: generatePONumber(),
@@ -937,10 +953,10 @@ L'équipe Stock Easy`
   const createOrderWithoutEmail = async () => {
     try {
       const productsToOrder = toOrderBySupplier[selectedSupplier];
-      const total = productsToOrder.reduce((sum, p) => {
+      const total = roundToTwo(productsToOrder.reduce((sum, p) => {
         const qty = orderQuantities[p.sku] || p.qtyToOrder;
         return sum + (qty * p.buyPrice);
-      }, 0);
+      }, 0));
       
       const orderData = {
         id: generatePONumber(),
@@ -1017,9 +1033,37 @@ L'équipe Stock Easy`
     }
   };
 
-  const receiveOrder = (orderId) => {
-    const order = orders.find(o => o.id === orderId);
-    openReconciliationModal(order);
+  const receiveOrder = async (orderId) => {
+    try {
+      console.log('📦 Confirmation de réception de la commande:', orderId);
+      
+      const order = orders.find(o => o.id === orderId);
+      if (!order) {
+        toast.error('Commande introuvable');
+        return;
+      }
+
+      // Simplement changer le statut à 'received' sans ouvrir la modale
+      await api.updateOrderStatus(orderId, {
+        status: 'received',
+        receivedAt: new Date().toISOString().split('T')[0]
+      });
+
+      // Recharger les données pour mettre à jour l'affichage
+      await loadData();
+
+      toast.success(`Commande ${orderId} marquée comme reçue !`, {
+        description: 'Vous pouvez maintenant valider les quantités reçues.',
+        duration: 4000
+      });
+
+      // Changer automatiquement vers l'onglet "Commandes Reçues"
+      setTrackTabSection('commandes_recues');
+
+    } catch (error) {
+      console.error('❌ Erreur lors de la confirmation de réception:', error);
+      toast.error('Erreur lors de la confirmation: ' + error.message);
+    }
   };
   
   const openReconciliationModal = (order) => {
@@ -1028,6 +1072,7 @@ L'équipe Stock Easy`
     // Initialiser les quantités reçues avec les quantités commandées par défaut
     const initialItems = {};
     const initialTypes = {};
+    const initialDamaged = {};
     
     order.items.forEach(item => {
       initialItems[item.sku] = {
@@ -1035,14 +1080,16 @@ L'équipe Stock Easy`
         notes: item.discrepancyNotes || ''
       };
       initialTypes[item.sku] = item.discrepancyType || 'none';
+      initialDamaged[item.sku] = item.damagedQuantity || 0; // Quantités endommagées
     });
     
     setDiscrepancyItems(initialItems);
     setDiscrepancyTypes(initialTypes);
+    setDamagedQuantities(initialDamaged);
     setReconciliationModalOpen(true);
   };
   
-  const updateDiscrepancyItem = (sku, field, value) => {
+  const updateDiscrepancyItem = (sku, field, value, orderedQuantity) => {
     setDiscrepancyItems(prev => ({
       ...prev,
       [sku]: {
@@ -1059,16 +1106,36 @@ L'équipe Stock Easy`
       console.log('🔍 Début de la réconciliation:', reconciliationOrder.id);
       console.log('Quantités reçues:', discrepancyItems);
       console.log('Types de problèmes:', discrepancyTypes);
+      console.log('Quantités endommagées:', damagedQuantities);
       
       // Préparer les items avec quantités et types de problèmes
       const updatedItems = reconciliationOrder.items.map(item => {
         const receivedQty = parseInt(discrepancyItems[item.sku]?.received, 10);
-        const itemType = discrepancyTypes[item.sku] || 'none';
+        const damagedQty = parseInt(damagedQuantities[item.sku] || 0, 10);
         const notes = discrepancyItems[item.sku]?.notes || '';
         
         // Validation
         if (isNaN(receivedQty) || receivedQty < 0) {
           throw new Error(`Quantité invalide pour ${item.sku}`);
+        }
+        if (isNaN(damagedQty) || damagedQty < 0) {
+          throw new Error(`Quantité endommagée invalide pour ${item.sku}`);
+        }
+        
+        // Calculer le total reçu (sain + endommagé)
+        const totalReceived = receivedQty + damagedQty;
+        
+        // Déterminer le type de problème
+        let itemType = 'none';
+        const hasMissing = totalReceived < item.quantity;
+        const hasDamaged = damagedQty > 0;
+        
+        if (hasMissing && hasDamaged) {
+          itemType = 'missing_and_damaged'; // Les deux problèmes
+        } else if (hasMissing) {
+          itemType = 'missing';
+        } else if (hasDamaged) {
+          itemType = 'damaged';
         }
         
         return {
@@ -1076,6 +1143,7 @@ L'équipe Stock Easy`
           quantity: item.quantity,
           pricePerUnit: item.pricePerUnit,
           receivedQuantity: receivedQty,
+          damagedQuantity: damagedQty,
           discrepancyType: itemType,
           discrepancyNotes: notes
         };
@@ -1086,7 +1154,7 @@ L'équipe Stock Easy`
       // Vérifier s'il y a des problèmes
       const hasProblems = updatedItems.some(item => 
         item.receivedQuantity < item.quantity || 
-        item.discrepancyType !== 'none'
+        item.damagedQuantity > 0
       );
       
       console.log('A des problèmes:', hasProblems);
@@ -1103,13 +1171,12 @@ L'équipe Stock Easy`
       
       await api.updateOrderStatus(reconciliationOrder.id, updatePayload);
       
-      // Mettre à jour le stock uniquement pour les quantités reçues conformes
+      // Mettre à jour le stock uniquement pour les quantités reçues saines
       // NE PAS ajouter les produits endommagés au stock
       const stockUpdates = updatedItems
-        .filter(item => item.discrepancyType !== 'damaged') // Exclure les endommagés
         .map(item => ({
           sku: item.sku,
-          quantityToAdd: item.receivedQuantity // Quantité réellement reçue et conforme
+          quantityToAdd: item.receivedQuantity // Seulement les quantités saines
         }))
         .filter(update => update.quantityToAdd > 0); // Ne traiter que les quantités > 0
       
@@ -1120,11 +1187,6 @@ L'équipe Stock Easy`
         console.log('✅ Stock mis à jour avec succès');
       }
       
-      // Générer email de réclamation si nécessaire
-      if (hasProblems) {
-        generateClaimEmail(updatedItems);
-      }
-      
       // Recharger les données
       await loadData();
       
@@ -1132,14 +1194,20 @@ L'équipe Stock Easy`
       setReconciliationModalOpen(false);
       setReconciliationOrder(null);
       setDiscrepancyItems({});
+      setDamagedQuantities({});
       setDiscrepancyTypes({});
       
       toast.success(
         hasProblems ? 
-          'Réception enregistrée. Email de réclamation généré.' : 
+          'Réception enregistrée avec écarts. Commande déplacée vers "Réconciliation".' : 
           'Réception validée et stock mis à jour avec succès!',
         { duration: 5000 }
       );
+      
+      // Rediriger vers l'onglet Réconciliation si des problèmes sont détectés
+      if (hasProblems) {
+        setTrackTabSection('reconciliation');
+      }
       
     } catch (error) {
       console.error('❌ Erreur lors de la validation:', error);
@@ -1147,70 +1215,6 @@ L'équipe Stock Easy`
     }
   };
   
-  const generateClaimEmail = (items) => {
-    if (!reconciliationOrder) return;
-    
-    const missingItems = items.filter(i => 
-      i.discrepancyType === 'missing' || 
-      (i.receivedQuantity < i.quantity && i.discrepancyType === 'none')
-    );
-    const damagedItems = items.filter(i => i.discrepancyType === 'damaged');
-    
-    let email = `Objet: Réclamation - Commande ${reconciliationOrder.id}\n\n`;
-    email += `Bonjour,\n\n`;
-    email += `Nous avons réceptionné la commande ${reconciliationOrder.id} mais constatons les problèmes suivants :\n\n`;
-    
-    if (missingItems.length > 0) {
-      email += `🔴 QUANTITÉS MANQUANTES:\n`;
-      email += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
-      missingItems.forEach(item => {
-        const product = products.find(p => p.sku === item.sku);
-        const missing = item.quantity - item.receivedQuantity;
-        email += `\n▸ ${product?.name || item.sku}\n`;
-        email += `  SKU: ${item.sku}\n`;
-        email += `  Commandé: ${item.quantity} unités\n`;
-        email += `  Reçu: ${item.receivedQuantity} unités\n`;
-        email += `  Manquant: ${missing} unités\n`;
-        if (item.discrepancyNotes) {
-          email += `  Notes: ${item.discrepancyNotes}\n`;
-        }
-      });
-      email += `\n`;
-    }
-    
-    if (damagedItems.length > 0) {
-      email += `⚠️ PRODUITS ENDOMMAGÉS:\n`;
-      email += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
-      damagedItems.forEach(item => {
-        const product = products.find(p => p.sku === item.sku);
-        email += `\n▸ ${product?.name || item.sku}\n`;
-        email += `  SKU: ${item.sku}\n`;
-        email += `  Quantité endommagée: ${item.receivedQuantity} unités\n`;
-        if (item.discrepancyNotes) {
-          email += `  Description des dommages: ${item.discrepancyNotes}\n`;
-        }
-      });
-      email += `\n`;
-    }
-    
-    email += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
-    email += `Merci de procéder rapidement au remplacement ou à l'envoi des articles manquants.\n\n`;
-    email += `Cordialement,\n`;
-    email += `L'équipe Stock Easy`;
-    
-    // Afficher l'email dans une alerte ou ouvrir dans un client email
-    console.log('📧 Email de réclamation généré:\n', email);
-    alert(email);
-    
-    // Optionnel: copier dans le presse-papiers
-    try {
-      navigator.clipboard.writeText(email);
-      toast.info('Email de réclamation copié dans le presse-papiers');
-    } catch (err) {
-      console.warn('Impossible de copier dans le presse-papiers:', err);
-    }
-  };
-
   const confirmReconciliation = async (hasDiscrepancy) => {
     try {
       if (hasDiscrepancy) {
@@ -1276,7 +1280,7 @@ L'équipe Stock Easy`
         })
         .join('\n\n');
       
-      const claimEmail = `Objet: Réclamation - Commande ${reconciliationOrder.id}\n\nBonjour,\n\nNous avons constaté des écarts entre les quantités commandées et reçues :\n\n${discrepancyList}\n\nMerci de nous confirmer ces écarts et de procéder à l'envoi des quantités manquantes.\n\nCordialement`;
+      const claimEmail = `Objet: Réclamation - Commande ${reconciliationOrder.id}\n\nBonjour,\n\nNous avons constaté des écarts entre les quantités commandées et reçues :\n\n${discrepancyList}\n\nMerci de nous confirmer ces écarts et de procéder à l'envoi des quantités manquantes.\n\nCordialement,\n${getUserSignature()}`;
       
       console.log('EMAIL DE RÉCLAMATION GÉNÉRÉ:', claimEmail);
       toast.success('Email de réclamation généré !', {
@@ -1399,7 +1403,7 @@ L'équipe Stock Easy`
           claimEmail += `**Notes supplémentaires:**\n${reconciliationNotes}\n\n`;
         }
         
-        claimEmail += `Merci de procéder aux actions correctives nécessaires.\n\nCordialement`;
+        claimEmail += `Merci de procéder aux actions correctives nécessaires.\n\nCordialement,\n${getUserSignature()}`;
         
         console.log('EMAIL DE RÉCLAMATION GÉNÉRÉ:', claimEmail);
         toast.success('Email de réclamation généré !', {
@@ -1453,7 +1457,7 @@ L'équipe Stock Easy`
         })
         .join('\n\n');
       
-      const damageEmail = `Objet: Réclamation - Marchandises endommagées - Commande ${reconciliationOrder.id}\n\nBonjour,\n\nNous avons reçu la commande ${reconciliationOrder.id} mais certains produits sont arrivés endommagés :\n\n${damagedList}\n\nNotes: ${damageNotes || 'Aucune note supplémentaire'}\n\nMerci de procéder au remplacement de ces articles.\n\nCordialement`;
+      const damageEmail = `Objet: Réclamation - Marchandises endommagées - Commande ${reconciliationOrder.id}\n\nBonjour,\n\nNous avons reçu la commande ${reconciliationOrder.id} mais certains produits sont arrivés endommagés :\n\n${damagedList}\n\nNotes: ${damageNotes || 'Aucune note supplémentaire'}\n\nMerci de procéder au remplacement de ces articles.\n\nCordialement,\n${getUserSignature()}`;
       
       console.log('EMAIL RÉCLAMATION DOMMAGES:', damageEmail);
       toast.success('Email de réclamation pour dommages généré !', {
@@ -1492,41 +1496,67 @@ L'équipe Stock Easy`
 
   // CORRECTION 4B: Fonction pour générer l'email de réclamation
   const generateReclamationEmail = (order) => {
-    const dateReception = new Date(order.receivedAt).toLocaleDateString('fr-FR', {
-      day: '2-digit',
-      month: 'long',
-      year: 'numeric'
+    // Filtrer les items avec problèmes
+    const missingItems = order.items.filter(i => {
+      const totalReceived = (i.receivedQuantity || 0) + (i.damagedQuantity || 0);
+      return totalReceived < i.quantity;
     });
     
-    const itemsWithGap = order.items.filter(item => 
-      item.quantity > (item.receivedQuantity || 0)
-    );
+    const damagedItems = order.items.filter(i => (i.damagedQuantity || 0) > 0);
     
-    let tableauProduits = '';
-    itemsWithGap.forEach(item => {
-      const ecart = item.quantity - (item.receivedQuantity || 0);
-      const product = products.find(p => p.sku === item.sku);
-      const skuPadded = (product?.name || item.sku).padEnd(30);
-      const orderedPadded = String(item.quantity).padEnd(10);
-      const receivedPadded = String(item.receivedQuantity || 0).padEnd(8);
-      tableauProduits += `${skuPadded} | ${orderedPadded} | ${receivedPadded} | ${ecart}\n`;
-    });
+    let email = `Objet: Réclamation - Commande ${order.id}\n\n`;
+    email += `Bonjour,\n\n`;
+    email += `Nous avons réceptionné la commande ${order.id} mais constatons les problèmes suivants :\n\n`;
     
-    return `Objet : Réclamation commande ${order.id} - Quantités manquantes
-
-Bonjour,
-
-Nous avons réceptionné la commande ${order.id} en date du ${dateReception}, mais nous constatons les écarts suivants :
-
-Produit                        | Commandé   | Reçu     | Manquant
--------------------------------|------------|----------|----------
-${tableauProduits}
-Nous vous remercions de bien vouloir :
-- Soit nous réexpédier les quantités manquantes dans les plus brefs délais
-- Soit établir un avoir correspondant
-
-Cordialement,
-[Votre nom]`;
+    if (missingItems.length > 0) {
+      email += `🔴 QUANTITÉS MANQUANTES:\n`;
+      email += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+      missingItems.forEach(item => {
+        const product = products.find(p => p.sku === item.sku);
+        const totalReceived = (item.receivedQuantity || 0) + (item.damagedQuantity || 0);
+        const missing = item.quantity - totalReceived;
+        email += `\n▸ ${product?.name || item.sku}\n`;
+        email += `  SKU: ${item.sku}\n`;
+        email += `  Commandé: ${item.quantity} unités\n`;
+        email += `  Reçu sain: ${item.receivedQuantity || 0} unités\n`;
+        if (item.damagedQuantity > 0) {
+          email += `  Reçu endommagé: ${item.damagedQuantity} unités\n`;
+          email += `  Total reçu: ${totalReceived} unités\n`;
+        }
+        email += `  Manquant: ${missing} unités\n`;
+        if (item.discrepancyNotes) {
+          email += `  Notes: ${item.discrepancyNotes}\n`;
+        }
+      });
+      email += `\n`;
+    }
+    
+    if (damagedItems.length > 0) {
+      email += `⚠️ PRODUITS ENDOMMAGÉS:\n`;
+      email += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+      damagedItems.forEach(item => {
+        const product = products.find(p => p.sku === item.sku);
+        const totalReceived = (item.receivedQuantity || 0) + (item.damagedQuantity || 0);
+        const missing = item.quantity - totalReceived;
+        email += `\n▸ ${product?.name || item.sku}\n`;
+        email += `  SKU: ${item.sku}\n`;
+        email += `  Quantité endommagée: ${item.damagedQuantity} unités\n`;
+        if (missing > 0) {
+          email += `  Note: Également ${missing} unités manquantes (voir section ci-dessus)\n`;
+        }
+        if (item.discrepancyNotes) {
+          email += `  Description: ${item.discrepancyNotes}\n`;
+        }
+      });
+      email += `\n`;
+    }
+    
+    email += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
+    email += `Merci de procéder rapidement au remplacement ou à l'envoi des articles manquants/endommagés.\n\n`;
+    email += `Cordialement,\n`;
+    email += `${getUserSignature()}`;
+    
+    return email;
   };
 
   // CORRECTION 4B: Fonction pour ouvrir le modal de réclamation
@@ -1621,7 +1651,7 @@ Cordialement,
         formatConfirmedDate(order.shippedAt) || order.shippedAt || '-',
         formatConfirmedDate(order.receivedAt) || order.receivedAt || '-',
         statusLabels[order.status] || order.status,
-        order.total,
+        roundToTwo(order.total).toFixed(2),
         order.items.length,
         order.trackingNumber || '-'
       ];
@@ -1929,7 +1959,7 @@ Cordialement,
                               <tr key={p.sku} className="border-b border-[#E5E4DF] last:border-0">
                                 <td className="py-2 text-[#191919]">{p.name}</td>
                                 <td className="text-right text-[#191919]">{p.qtyToOrder}</td>
-                                <td className="text-right font-bold text-[#191919]">{(p.qtyToOrder * p.buyPrice).toFixed(0)}€</td>
+                                <td className="text-right font-bold text-[#191919]">{roundToTwo(p.qtyToOrder * p.buyPrice).toFixed(2)}€</td>
                               </tr>
                             ))}
                           </tbody>
@@ -2049,7 +2079,7 @@ Cordialement,
                             </motion.div>
                           </div>
                           <div className="text-sm text-[#666663]">
-                            Créée le {formatConfirmedDate(order.createdAt)} • Total: {order.total}€
+                            Créée le {formatConfirmedDate(order.createdAt)} • Total: {roundToTwo(order.total).toFixed(2)}€
                           </div>
                         </div>
                         <Button
@@ -2096,11 +2126,11 @@ Cordialement,
                                           {item.quantity} unités
                                         </div>
                                         <div className="text-xs text-[#666663]">
-                                          {item.pricePerUnit}€/unité
+                                          {roundToTwo(item.pricePerUnit).toFixed(2)}€/unité
                                         </div>
                                       </div>
                                       <div className="ml-4 text-right font-bold text-[#191919] min-w-[80px]">
-                                        {(item.quantity * item.pricePerUnit).toFixed(2)}€
+                                        {roundToTwo(item.quantity * item.pricePerUnit).toFixed(2)}€
                                       </div>
                                     </div>
                                   );
@@ -2108,7 +2138,7 @@ Cordialement,
                               </div>
                               <div className="mt-3 pt-3 border-t border-[#E5E4DF] flex justify-between">
                                 <span className="font-semibold text-[#666663]">Total:</span>
-                                <span className="font-bold text-[#191919] text-lg">{order.total.toFixed(2)}€</span>
+                                <span className="font-bold text-[#191919] text-lg">{roundToTwo(order.total).toFixed(2)}€</span>
                               </div>
                               
                               {/* Section Commentaires */}
@@ -2161,7 +2191,7 @@ Cordialement,
                             </motion.div>
                           </div>
                           <div className="text-sm text-[#666663]">
-                            Créée le {formatConfirmedDate(order.createdAt)} • Total: {order.total}€
+                            Créée le {formatConfirmedDate(order.createdAt)} • Total: {roundToTwo(order.total).toFixed(2)}€
                           </div>
                           {order.confirmedAt && (
                             <div className="text-sm text-green-600 mt-1">
@@ -2213,11 +2243,11 @@ Cordialement,
                                           {item.quantity} unités
                                         </div>
                                         <div className="text-xs text-[#666663]">
-                                          {item.pricePerUnit}€/unité
+                                          {roundToTwo(item.pricePerUnit).toFixed(2)}€/unité
                                         </div>
                                       </div>
                                       <div className="ml-4 text-right font-bold text-[#191919] min-w-[80px]">
-                                        {(item.quantity * item.pricePerUnit).toFixed(2)}€
+                                        {roundToTwo(item.quantity * item.pricePerUnit).toFixed(2)}€
                                       </div>
                                     </div>
                                   );
@@ -2225,7 +2255,7 @@ Cordialement,
                               </div>
                               <div className="mt-3 pt-3 border-t border-[#E5E4DF] flex justify-between">
                                 <span className="font-semibold text-[#666663]">Total:</span>
-                                <span className="font-bold text-[#191919] text-lg">{order.total.toFixed(2)}€</span>
+                                <span className="font-bold text-[#191919] text-lg">{roundToTwo(order.total).toFixed(2)}€</span>
                               </div>
                               
                               {/* Section Commentaires */}
@@ -2278,7 +2308,7 @@ Cordialement,
                             </motion.div>
                           </div>
                           <div className="text-sm text-[#666663]">
-                            Créée le {formatConfirmedDate(order.createdAt)} • Total: {order.total}€
+                            Créée le {formatConfirmedDate(order.createdAt)} • Total: {roundToTwo(order.total).toFixed(2)}€
                           </div>
                           {order.confirmedAt && (
                             <div className="text-sm text-green-600 mt-1">
@@ -2307,7 +2337,7 @@ Cordialement,
                           }}
                           className="shrink-0"
                         >
-                          Confirmer réception
+                          Marquer comme reçue
                         </Button>
                       </div>
                       
@@ -2341,11 +2371,11 @@ Cordialement,
                                           {item.quantity} unités
                                         </div>
                                         <div className="text-xs text-[#666663]">
-                                          {item.pricePerUnit}€/unité
+                                          {roundToTwo(item.pricePerUnit).toFixed(2)}€/unité
                                         </div>
                                       </div>
                                       <div className="ml-4 text-right font-bold text-[#191919] min-w-[80px]">
-                                        {(item.quantity * item.pricePerUnit).toFixed(2)}€
+                                        {roundToTwo(item.quantity * item.pricePerUnit).toFixed(2)}€
                                       </div>
                                     </div>
                                   );
@@ -2353,7 +2383,7 @@ Cordialement,
                               </div>
                               <div className="mt-3 pt-3 border-t border-[#E5E4DF] flex justify-between">
                                 <span className="font-semibold text-[#666663]">Total:</span>
-                                <span className="font-bold text-[#191919] text-lg">{order.total.toFixed(2)}€</span>
+                                <span className="font-bold text-[#191919] text-lg">{roundToTwo(order.total).toFixed(2)}€</span>
                               </div>
                               
                               {/* Section Commentaires */}
@@ -2405,7 +2435,7 @@ Cordialement,
                             </motion.div>
                           </div>
                           <div className="text-sm text-[#666663]">
-                            Créée le {formatConfirmedDate(order.createdAt)} • Total: {order.total}€
+                            Créée le {formatConfirmedDate(order.createdAt)} • Total: {roundToTwo(order.total).toFixed(2)}€
                           </div>
                           {order.receivedAt && (
                             <div className="text-sm text-green-600 mt-1">
@@ -2416,15 +2446,14 @@ Cordialement,
                         <Button
                           variant="success"
                           size="sm"
-                          icon={Check}
+                          icon={CheckCircle}
                           onClick={(e) => {
                             e.stopPropagation();
-                            // Fonction pour valider la commande reçue
-                            console.log('Valider commande reçue:', order.id);
+                            openReconciliationModal(order);
                           }}
                           className="shrink-0"
                         >
-                          Valider
+                          Valider réception
                         </Button>
                       </div>
                       
@@ -2458,11 +2487,11 @@ Cordialement,
                                           {item.quantity} unités
                                         </div>
                                         <div className="text-xs text-[#666663]">
-                                          {item.pricePerUnit}€/unité
+                                          {roundToTwo(item.pricePerUnit).toFixed(2)}€/unité
                                         </div>
                                       </div>
                                       <div className="ml-4 text-right font-bold text-[#191919] min-w-[80px]">
-                                        {(item.quantity * item.pricePerUnit).toFixed(2)}€
+                                        {roundToTwo(item.quantity * item.pricePerUnit).toFixed(2)}€
                                       </div>
                                     </div>
                                   );
@@ -2470,7 +2499,7 @@ Cordialement,
                               </div>
                               <div className="mt-3 pt-3 border-t border-[#E5E4DF] flex justify-between">
                                 <span className="font-semibold text-[#666663]">Total:</span>
-                                <span className="font-bold text-[#191919] text-lg">{order.total.toFixed(2)}€</span>
+                                <span className="font-bold text-[#191919] text-lg">{roundToTwo(order.total).toFixed(2)}€</span>
                               </div>
                               
                               {/* Section Commentaires */}
@@ -2595,13 +2624,14 @@ Cordialement,
                             <Button
                               variant="success"
                               size="sm"
-                              icon={Check}
+                              icon={CheckCircle}
                               onClick={(e) => {
                                 e.stopPropagation();
-                                validateWithoutReclamation(order);
+                                openReconciliationModal(order);
                               }}
+                              className="shrink-0"
                             >
-                              Valider sans réclamation
+                              Valider réception
                             </Button>
                           </div>
                         </div>
@@ -2622,46 +2652,55 @@ Cordialement,
                               <div className="space-y-2">
                                 {order.items.map((item, idx) => {
                                   const product = products.find(p => p.sku === item.sku);
-                                  const received = item.receivedQuantity !== undefined ? item.receivedQuantity : 0;
+                                  const receivedHealthy = item.receivedQuantity !== undefined ? item.receivedQuantity : 0;
                                   const damaged = item.damagedQuantity !== undefined ? item.damagedQuantity : 0;
-                                  const validated = item.validatedQuantity !== undefined ? item.validatedQuantity : received - damaged;
-                                  const discrepancy = item.quantityDiscrepancy !== undefined ? item.quantityDiscrepancy : item.quantity - received;
+                                  const totalReceived = receivedHealthy + damaged;
+                                  const missing = item.quantity - totalReceived;
+                                  const hasIssues = missing > 0 || damaged > 0;
                                   
                                   return (
-                                    <div key={idx} className="p-3 bg-white rounded border border-[#E5E4DF]">
+                                    <div key={idx} className={`p-3 rounded border ${hasIssues ? 'bg-yellow-50 border-yellow-200' : 'bg-white border-[#E5E4DF]'}`}>
                                       <div className="font-medium text-[#191919] mb-2">
                                         {product?.name || item.sku} <span className="text-xs text-[#666663]">(SKU: {item.sku})</span>
                                       </div>
-                                      <div className="grid grid-cols-2 gap-2 text-xs">
+                                      <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
                                         <div>
-                                          <span className="text-[#666663]">Commandé: </span>
+                                          <span className="text-[#666663]">📦 Commandé: </span>
                                           <span className="font-bold text-[#191919]">{item.quantity}</span>
                                         </div>
                                         <div>
-                                          <span className="text-[#666663]">Reçu: </span>
-                                          <span className={`font-bold ${received < item.quantity ? 'text-[#EF1C43]' : 'text-green-600'}`}>
-                                            {received}
-                                          </span>
+                                          <span className="text-[#666663]">✅ Reçu sain: </span>
+                                          <span className="font-bold text-green-600">{receivedHealthy}</span>
                                         </div>
                                         {damaged > 0 && (
-                                          <div>
-                                            <span className="text-[#666663]">Endommagé: </span>
-                                            <span className="font-bold text-orange-600">{damaged}</span>
+                                          <>
+                                            <div>
+                                              <span className="text-[#666663]">🔴 Endommagé: </span>
+                                              <span className="font-bold text-orange-600">{damaged}</span>
+                                            </div>
+                                            <div>
+                                              <span className="text-[#666663]">Total reçu: </span>
+                                              <span className="font-bold text-[#191919]">{totalReceived}</span>
+                                            </div>
+                                          </>
+                                        )}
+                                        {missing > 0 && (
+                                          <div className={damaged > 0 ? 'col-span-2' : ''}>
+                                            <span className="text-[#666663]">⚠️ Manquant: </span>
+                                            <span className="font-bold text-[#EF1C43]">{missing}</span>
                                           </div>
                                         )}
-                                        <div>
-                                          <span className="text-[#666663]">Validé: </span>
-                                          <span className="font-bold text-green-600">{validated}</span>
+                                        <div className={missing > 0 ? '' : 'col-span-2'}>
+                                          <span className="text-[#666663]">💾 Ajouté au stock: </span>
+                                          <span className="font-bold text-blue-600">{receivedHealthy}</span>
                                         </div>
-                                        {discrepancy !== 0 && (
-                                          <div className="col-span-2">
-                                            <span className="text-[#666663]">Écart: </span>
-                                            <span className={`font-bold ${discrepancy > 0 ? 'text-[#EF1C43]' : 'text-blue-600'}`}>
-                                              {discrepancy > 0 ? `-${discrepancy}` : `+${Math.abs(discrepancy)}`}
-                                            </span>
-                                          </div>
-                                        )}
                                       </div>
+                                      {item.discrepancyNotes && (
+                                        <div className="mt-2 pt-2 border-t border-[#E5E4DF]">
+                                          <span className="text-[#666663] text-xs">📝 Notes: </span>
+                                          <span className="text-[#191919] text-xs italic">{item.discrepancyNotes}</span>
+                                        </div>
+                                      )}
                                     </div>
                                   );
                                 })}
@@ -3041,7 +3080,7 @@ Cordialement,
                               </div>
                             </td>
                             <td className="px-6 py-4 text-right">
-                              <span className="font-bold text-[#191919]">{order.total}€</span>
+                              <span className="font-bold text-[#191919]">{roundToTwo(order.total).toFixed(2)}€</span>
                             </td>
                             <td className="px-6 py-4">
                               <span className={`px-3 py-1 rounded-full text-xs font-medium border inline-block ${status.color}`}>
@@ -3503,10 +3542,10 @@ Cordialement,
         {selectedSupplier && (() => {
           const productsToOrder = toOrderBySupplier[selectedSupplier];
           const email = generateEmailDraft(selectedSupplier, productsToOrder);
-          const totalAmount = productsToOrder.reduce((sum, p) => {
+          const totalAmount = roundToTwo(productsToOrder.reduce((sum, p) => {
             const qty = orderQuantities[p.sku] || p.qtyToOrder;
             return sum + (qty * p.buyPrice);
-          }, 0);
+          }, 0));
           
           return (
             <>
@@ -3532,7 +3571,7 @@ Cordialement,
                             className="w-full px-3 py-2 border-2 border-[#E5E4DF] rounded-lg text-center font-bold"
                           />
                           <div className="text-xs text-right text-[#666663] mt-1">
-                            {((orderQuantities[p.sku] || p.qtyToOrder) * p.buyPrice).toFixed(2)}€
+                            {roundToTwo((orderQuantities[p.sku] || p.qtyToOrder) * p.buyPrice).toFixed(2)}€
                           </div>
                         </div>
                       </div>
@@ -3585,6 +3624,7 @@ Cordialement,
                 setReconciliationOrder(null);
                 setDiscrepancyItems({});
                 setDiscrepancyTypes({});
+                setDamagedQuantities({});
               }}
             >
               Annuler
@@ -3617,10 +3657,16 @@ Cordialement,
             <div className="space-y-3">
               {reconciliationOrder.items.map((item, idx) => {
                 const product = products.find(p => p.sku === item.sku);
-                const currentType = discrepancyTypes[item.sku] || 'none';
                 const currentReceived = discrepancyItems[item.sku]?.received !== undefined 
                   ? discrepancyItems[item.sku].received 
                   : item.quantity;
+                const currentDamaged = damagedQuantities[item.sku] || 0;
+                
+                // Calculer le total reçu (sain + endommagé)
+                const totalReceived = parseInt(currentReceived || 0) + parseInt(currentDamaged || 0);
+                const hasMissing = totalReceived < item.quantity;
+                const hasDamaged = parseInt(currentDamaged) > 0;
+                const missingQuantity = item.quantity - totalReceived;
                 
                 return (
                   <div key={idx} className="border border-[#E5E4DF] rounded-lg p-4 bg-[#FAFAF7]">
@@ -3639,64 +3685,65 @@ Cordialement,
                     <div className="grid grid-cols-2 gap-3 mb-3">
                       <div>
                         <label className="text-xs font-medium text-[#666663] mb-1 block">
-                          Quantité reçue
+                          Quantité reçue saine
                         </label>
                         <input
                           type="number"
                           min="0"
                           max={item.quantity}
                           value={currentReceived}
-                          onChange={(e) => updateDiscrepancyItem(item.sku, 'received', e.target.value)}
+                          onChange={(e) => updateDiscrepancyItem(item.sku, 'received', e.target.value, item.quantity)}
                           className="w-full px-3 py-2 border-2 border-[#E5E4DF] rounded-lg text-[#191919] font-semibold focus:border-[#8B5CF6] focus:ring-1 focus:ring-[#8B5CF6] outline-none"
                         />
                       </div>
                       
                       <div>
                         <label className="text-xs font-medium text-[#666663] mb-1 block">
-                          État de la réception
+                          Quantité endommagée
                         </label>
-                        <select
-                          value={currentType}
-                          onChange={(e) => setDiscrepancyTypes(prev => ({
+                        <input
+                          type="number"
+                          min="0"
+                          value={currentDamaged}
+                          onChange={(e) => setDamagedQuantities(prev => ({
                             ...prev,
-                            [item.sku]: e.target.value
+                            [item.sku]: parseInt(e.target.value) || 0
                           }))}
-                          className={`w-full px-3 py-2 border-2 rounded-lg font-medium focus:border-[#8B5CF6] focus:ring-1 focus:ring-[#8B5CF6] outline-none
-                            ${currentType === 'none' ? 'border-green-300 bg-green-50 text-green-700' : 
-                              currentType === 'missing' ? 'border-yellow-300 bg-yellow-50 text-yellow-700' :
-                              'border-red-300 bg-red-50 text-red-700'}
-                          `}
-                        >
-                          <option value="none">✓ Conforme</option>
-                          <option value="missing">⚠️ Quantité manquante</option>
-                          <option value="damaged">🔴 Produit endommagé</option>
-                        </select>
+                          className="w-full px-3 py-2 border-2 border-[#E5E4DF] rounded-lg text-[#191919] font-semibold focus:border-[#8B5CF6] focus:ring-1 focus:ring-[#8B5CF6] outline-none"
+                        />
                       </div>
                     </div>
                     
-                    {currentType !== 'none' && (
-                      <div className="border-t border-[#E5E4DF] pt-3">
-                        <label className="text-xs font-medium text-[#666663] mb-1 block">
-                          {currentType === 'damaged' ? 'Description des dommages' : 'Notes sur l\'écart'}
-                        </label>
-                        <input
-                          type="text"
-                          placeholder="Détails du problème..."
-                          value={discrepancyItems[item.sku]?.notes || ''}
-                          onChange={(e) => updateDiscrepancyItem(item.sku, 'notes', e.target.value)}
-                          className="w-full px-3 py-2 border-2 border-[#E5E4DF] rounded-lg text-sm text-[#191919] focus:border-[#8B5CF6] focus:ring-1 focus:ring-[#8B5CF6] outline-none"
-                        />
+                    {/* Indicateurs visuels automatiques */}
+                    {(hasMissing || hasDamaged) && (
+                      <div className="space-y-2">
+                        {hasMissing && (
+                          <div className="flex items-center gap-2 p-2 rounded text-xs bg-yellow-100 text-yellow-800">
+                            <AlertCircle className="w-4 h-4" />
+                            <span>⚠️ Manquant: {missingQuantity} unités (total reçu: {totalReceived}/{item.quantity})</span>
+                          </div>
+                        )}
+                        {hasDamaged && (
+                          <div className="flex items-center gap-2 p-2 rounded text-xs bg-red-100 text-red-800">
+                            <AlertCircle className="w-4 h-4" />
+                            <span>🔴 Endommagé: {currentDamaged} unités (ne seront pas ajoutées au stock)</span>
+                          </div>
+                        )}
                       </div>
                     )}
                     
-                    {/* Indicateur visuel */}
-                    {currentType !== 'none' && (
-                      <div className={`mt-3 p-2 rounded text-xs ${
-                        currentType === 'missing' ? 'bg-yellow-100 text-yellow-800' :
-                        'bg-red-100 text-red-800'
-                      }`}>
-                        {currentType === 'missing' && `⚠️ Écart: ${item.quantity - parseInt(currentReceived || 0)} unités manquantes`}
-                        {currentType === 'damaged' && `🔴 ${currentReceived} unités endommagées ne seront pas ajoutées au stock`}
+                    {(hasMissing || hasDamaged) && (
+                      <div className="border-t border-[#E5E4DF] pt-3 mt-3">
+                        <label className="text-xs font-medium text-[#666663] mb-1 block">
+                          Notes sur le problème
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="Décrivez le problème (optionnel)..."
+                          value={discrepancyItems[item.sku]?.notes || ''}
+                          onChange={(e) => updateDiscrepancyItem(item.sku, 'notes', e.target.value, item.quantity)}
+                          className="w-full px-3 py-2 border-2 border-[#E5E4DF] rounded-lg text-sm text-[#191919] focus:border-[#8B5CF6] focus:ring-1 focus:ring-[#8B5CF6] outline-none"
+                        />
                       </div>
                     )}
                   </div>
@@ -3704,15 +3751,18 @@ Cordialement,
               })}
             </div>
             
-            <div className="bg-[#FAFAF7] border border-[#E5E4DF] rounded-lg p-4">
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
               <div className="flex items-start gap-3">
-                <AlertCircle className="w-5 h-5 text-[#666663] shrink-0 mt-0.5" />
-                <div className="text-sm text-[#666663]">
-                  <strong className="text-[#191919]">Important:</strong>
+                <Info className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
+                <div className="text-sm text-blue-700">
+                  <strong className="text-blue-900">Comment ça marche :</strong>
                   <ul className="mt-2 space-y-1 list-disc list-inside">
-                    <li>Les produits "Conformes" seront ajoutés au stock</li>
-                    <li>Les produits "Endommagés" ne seront PAS ajoutés au stock</li>
-                    <li>Un email de réclamation sera généré automatiquement si nécessaire</li>
+                    <li><strong>Quantité reçue saine</strong> : Entrez le nombre d'unités en bon état</li>
+                    <li><strong>Quantité endommagée</strong> : Entrez le nombre d'unités abîmées reçues</li>
+                    <li><strong>Exemple :</strong> Commandé 200 → Reçu 199 saines + 1 endommagée = 200 total ✅ (rien ne manque)</li>
+                    <li>Un manquant est détecté uniquement si : <strong>(saines + endommagées) &lt; commandé</strong></li>
+                    <li>Seules les <strong>quantités saines</strong> seront ajoutées au stock</li>
+                    <li>Un email de réclamation sera généré <strong>automatiquement</strong> en cas de problème</li>
                   </ul>
                 </div>
               </div>
@@ -4058,29 +4108,50 @@ Cordialement,
         onClose={() => setReclamationEmailModalOpen(false)}
         title={`Réclamation - ${currentReclamationOrder?.id || ''}`}
         footer={
-          <div className="flex justify-end gap-3">
+          <div className="flex justify-between items-center">
             <Button 
               variant="outline" 
               onClick={() => setReclamationEmailModalOpen(false)}
             >
               Fermer
             </Button>
-            <Button 
-              variant="primary" 
-              icon={Mail}
-              onClick={copyReclamationToClipboard}
-            >
-              📋 Copier dans le presse-papier
-            </Button>
+            <div className="flex gap-3">
+              <Button 
+                variant="secondary" 
+                icon={FileText}
+                onClick={copyReclamationToClipboard}
+              >
+                Copier dans le presse-papier
+              </Button>
+              <Button 
+                variant="primary" 
+                icon={Mail}
+                onClick={() => {
+                  const subject = `Réclamation - Commande ${currentReclamationOrder?.id || ''}`;
+                  const body = encodeURIComponent(reclamationEmailContent);
+                  window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${body}`;
+                }}
+              >
+                Envoyer email de réclamation
+              </Button>
+            </div>
           </div>
         }
       >
         {currentReclamationOrder && (
           <>
-            <div className="mb-4">
-              <p className="text-sm text-[#666663] mb-4">
-                Vous pouvez modifier le texte ci-dessous avant de le copier
-              </p>
+            <div className="mb-4 bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <div className="flex items-start gap-3">
+                <Info className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
+                <div className="text-sm text-blue-700">
+                  <p className="font-semibold text-blue-900 mb-2">Email de réclamation prêt</p>
+                  <p>Vous pouvez modifier le texte ci-dessous, puis :</p>
+                  <ul className="mt-2 space-y-1 list-disc list-inside">
+                    <li><strong>Copier</strong> pour coller dans votre client email</li>
+                    <li><strong>Envoyer</strong> pour ouvrir directement votre client email</li>
+                  </ul>
+                </div>
+              </div>
             </div>
             <div className="my-4">
               <textarea
