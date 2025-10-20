@@ -12,7 +12,20 @@ import { API_URL } from '../config/api';
  */
 export async function getAllData() {
   try {
-    const response = await fetch(`${API_URL}?action=getAllData`);
+    // Timeout de 30 secondes pour éviter les timeouts Vercel
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
+    
+    const response = await fetch(`${API_URL}?action=getAllData`, {
+      signal: controller.signal
+    });
+    
+    clearTimeout(timeoutId);
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
     const data = await response.json();
     if (data.error) throw new Error(data.error);
     return data;
