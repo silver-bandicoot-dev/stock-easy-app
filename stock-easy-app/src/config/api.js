@@ -5,7 +5,7 @@
  * pour faciliter le déploiement sur différents environnements.
  */
 
-export const API_URL = import.meta.env.VITE_API_URL || 'https://script.google.com/macros/s/AKfycbzeloLj-PTcTcx5kgxDyCh6iGXXB0cHzug_vsiMCpEDqxlZou7WjjmqqIiPB9PEXzOF/exec';
+export const API_URL = import.meta.env.VITE_API_URL || 'https://script.google.com/macros/s/AKfycbyIEmHz0dKRlDek_EA95dRBjzHh6HOT_7EykRpaXP-I7Krqvx6bNCmlX5qyUrIx247C/exec';
 
 // Configuration supplémentaire si nécessaire
 export const API_CONFIG = {

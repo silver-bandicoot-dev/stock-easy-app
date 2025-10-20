@@ -273,6 +273,91 @@ export async function removeSupplierFromProduct(sku) {
   }
 }
 
+/**
+ * ============================================
+ * WAREHOUSES
+ * ============================================
+ */
+
+/**
+ * Récupère tous les warehouses
+ */
+export async function getWarehouses() {
+  try {
+    const response = await fetch(`${API_URL}?action=getWarehouses`);
+    const data = await response.json();
+    if (data.error) throw new Error(data.error);
+    console.log('✅ Warehouses chargés:', data);
+    return data;
+  } catch (error) {
+    console.error('❌ Erreur getWarehouses:', error);
+    throw error;
+  }
+}
+
+/**
+ * Crée un nouveau warehouse
+ */
+export async function createWarehouse(warehouseData) {
+  try {
+    console.log('📦 Envoi createWarehouse:', warehouseData);
+    const response = await fetch(`${API_URL}?action=createWarehouse`, {
+      method: 'POST',
+      body: JSON.stringify(warehouseData)
+    });
+    const data = await response.json();
+    if (data.error) throw new Error(data.error);
+    console.log('✅ Warehouse créé:', data);
+    return data;
+  } catch (error) {
+    console.error('❌ Erreur createWarehouse:', error);
+    throw error;
+  }
+}
+
+/**
+ * Met à jour un warehouse existant
+ */
+export async function updateWarehouse(warehouseName, warehouseData) {
+  try {
+    console.log('📦 Envoi updateWarehouse:', warehouseName, warehouseData);
+    const response = await fetch(`${API_URL}?action=updateWarehouse`, {
+      method: 'POST',
+      body: JSON.stringify({ 
+        warehouseName: warehouseName,
+        ...warehouseData
+      })
+    });
+    const data = await response.json();
+    if (data.error) throw new Error(data.error);
+    console.log('✅ Warehouse mis à jour:', data);
+    return data;
+  } catch (error) {
+    console.error('❌ Erreur updateWarehouse:', error);
+    throw error;
+  }
+}
+
+/**
+ * Supprime un warehouse
+ */
+export async function deleteWarehouse(warehouseName) {
+  try {
+    console.log('🗑️ Envoi deleteWarehouse:', warehouseName);
+    const response = await fetch(`${API_URL}?action=deleteWarehouse`, {
+      method: 'POST',
+      body: JSON.stringify({ warehouseName: warehouseName })
+    });
+    const data = await response.json();
+    if (data.error) throw new Error(data.error);
+    console.log('✅ Warehouse supprimé:', data);
+    return data;
+  } catch (error) {
+    console.error('❌ Erreur deleteWarehouse:', error);
+    throw error;
+  }
+}
+
 // Objet API pour compatibilité avec le code existant
 export const api = {
   getAllData,
@@ -286,7 +371,11 @@ export const api = {
   assignSupplierToProduct,
   removeSupplierFromProduct,
   getParameter,
-  updateParameter
+  updateParameter,
+  getWarehouses,
+  createWarehouse,
+  updateWarehouse,
+  deleteWarehouse
 };
 
 export default api;

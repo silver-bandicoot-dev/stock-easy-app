@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { Package, Bell, Mail, X, Check, Truck, Clock, AlertCircle, CheckCircle, Eye, Settings, Info, Edit2, Activity, TrendingUp, TrendingDown, ArrowUpRight, ArrowDownRight, Upload, FileText, Calendar, RefreshCw, Plus, Moon, Sun, User, LogOut } from 'lucide-react';
+import { Package, Bell, Mail, X, Check, Truck, Clock, AlertCircle, CheckCircle, Eye, Settings, Info, Edit2, Activity, TrendingUp, TrendingDown, ArrowUpRight, ArrowDownRight, Upload, FileText, Calendar, RefreshCw, Plus, Moon, Sun, User, LogOut, Warehouse } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from './contexts/AuthContext';
 import NotificationBell from './components/notifications/NotificationBell';
@@ -17,6 +17,7 @@ import { SupplierModal } from './components/settings/SupplierModal';
 import { GestionFournisseurs } from './components/settings/GestionFournisseurs';
 import { MappingSKUFournisseur } from './components/settings/MappingSKUFournisseur';
 import { ParametresGeneraux } from './components/settings/ParametresGeneraux';
+import { GestionWarehouses } from './components/settings/GestionWarehouses';
 import CommentSection from './components/comments/CommentSection';
 import Sidebar from './components/layout/Sidebar';
 
@@ -210,6 +211,7 @@ const StockEasy = () => {
   const [syncing, setSyncing] = useState(false);
   const [products, setProducts] = useState([]);
   const [suppliers, setSuppliers] = useState({});
+  const [warehouses, setWarehouses] = useState({});
   const [orders, setOrders] = useState([]);
   const [parameters, setParameters] = useState({});
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -262,6 +264,7 @@ const StockEasy = () => {
 
   // CORRECTION 1: Gestion des quantités éditables dans la modal de commande
   const [orderQuantities, setOrderQuantities] = useState({});
+  const [selectedWarehouse, setSelectedWarehouse] = useState(null);
 
   // CORRECTION 3: Gestion de l'expansion des détails de commandes
   const [expandedOrders, setExpandedOrders] = useState({});
@@ -305,7 +308,16 @@ const StockEasy = () => {
         suppliersMap[s.name] = s;
       });
       
+      // Charger les warehouses
+      const warehousesMap = {};
+      if (data.warehouses && Array.isArray(data.warehouses)) {
+        data.warehouses.forEach(w => {
+          warehousesMap[w.name] = w;
+        });
+      }
+      
       setSuppliers(suppliersMap);
+      setWarehouses(warehousesMap);
       setProducts(data.products);
       setOrders(data.orders);
       
@@ -565,6 +577,49 @@ const StockEasy = () => {
     } catch (error) {
       console.error('❌ Erreur suppression fournisseur:', error);
       toast.error('Erreur lors de la suppression');
+    }
+  };
+
+  // ============================================
+  // GESTION DES WAREHOUSES
+  // ============================================
+  
+  const handleCreateWarehouse = async (warehouseData) => {
+    try {
+      console.log('📦 Création warehouse:', warehouseData);
+      await api.createWarehouse(warehouseData);
+      await loadData();
+      toast.success('Entrepôt créé avec succès !');
+    } catch (error) {
+      console.error('❌ Erreur création warehouse:', error);
+      toast.error('Erreur lors de la création: ' + error.message);
+      throw error;
+    }
+  };
+
+  const handleUpdateWarehouse = async (warehouseName, warehouseData) => {
+    try {
+      console.log('📦 Modification warehouse:', warehouseName, warehouseData);
+      await api.updateWarehouse(warehouseName, warehouseData);
+      await loadData();
+      toast.success('Entrepôt modifié avec succès !');
+    } catch (error) {
+      console.error('❌ Erreur modification warehouse:', error);
+      toast.error('Erreur lors de la modification: ' + error.message);
+      throw error;
+    }
+  };
+
+  const handleDeleteWarehouse = async (warehouse) => {
+    try {
+      console.log('🗑️ Suppression warehouse:', warehouse.name);
+      await api.deleteWarehouse(warehouse.name);
+      await loadData();
+      toast.success('Entrepôt supprimé avec succès !');
+    } catch (error) {
+      console.error('❌ Erreur suppression warehouse:', error);
+      toast.error('Erreur lors de la suppression: ' + error.message);
+      throw error;
     }
   };
 
@@ -853,6 +908,15 @@ const StockEasy = () => {
     });
     setOrderQuantities(quantities);
     setSelectedSupplier(supplier);
+    
+    // Réinitialiser le warehouse sélectionné
+    const warehousesList = Object.values(warehouses);
+    if (warehousesList.length > 0) {
+      setSelectedWarehouse(warehousesList[0].name); // Sélectionner le premier par défaut
+    } else {
+      setSelectedWarehouse(null);
+    }
+    
     setEmailModalOpen(true);
   };
 
@@ -920,6 +984,7 @@ ${getUserSignature()}`
       const orderData = {
         id: generatePONumber(),
         supplier: selectedSupplier,
+        warehouseId: selectedWarehouse, // Ajouter le warehouse
         status: 'pending_confirmation',
         total: total,
         createdAt: new Date().toISOString().split('T')[0],
@@ -961,6 +1026,7 @@ ${getUserSignature()}`
       const orderData = {
         id: generatePONumber(),
         supplier: selectedSupplier,
+        warehouseId: selectedWarehouse, // Ajouter le warehouse
         status: 'pending_confirmation',
         total: total,
         createdAt: new Date().toISOString().split('T')[0],
@@ -3467,6 +3533,16 @@ ${getUserSignature()}`
                 />
                 </>
               )}
+
+              {/* Sub-tab Warehouses */}
+              {parametersSubTab === 'warehouses' && (
+                <GestionWarehouses
+                  warehouses={warehouses}
+                  onCreateWarehouse={handleCreateWarehouse}
+                  onUpdateWarehouse={handleUpdateWarehouse}
+                  onDeleteWarehouse={handleDeleteWarehouse}
+                />
+              )}
             </motion.div>
           )}
         </AnimatePresence>
@@ -3530,10 +3606,19 @@ ${getUserSignature()}`
             }}>
               Annuler
             </Button>
-            <Button variant="secondary" onClick={createOrderWithoutEmail}>
+            <Button 
+              variant="secondary" 
+              onClick={createOrderWithoutEmail}
+              disabled={!selectedWarehouse}
+            >
               Créer commande sans email
             </Button>
-            <Button variant="primary" icon={Mail} onClick={sendOrder}>
+            <Button 
+              variant="primary" 
+              icon={Mail} 
+              onClick={sendOrder}
+              disabled={!selectedWarehouse}
+            >
               Envoyer email et créer commande
             </Button>
           </div>
@@ -3549,6 +3634,45 @@ ${getUserSignature()}`
           
           return (
             <>
+              {/* Sélection de l'entrepôt */}
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-[#191919] mb-2">
+                  Entrepôt de livraison *
+                </label>
+                {Object.keys(warehouses).length === 0 ? (
+                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 flex items-start gap-3">
+                    <AlertCircle className="w-5 h-5 text-yellow-600 shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-sm text-yellow-800 font-medium">Aucun entrepôt configuré</p>
+                      <p className="text-sm text-yellow-700 mt-1">
+                        Veuillez d'abord créer un entrepôt dans Paramètres → Entrepôts
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  <select
+                    value={selectedWarehouse || ''}
+                    onChange={(e) => setSelectedWarehouse(e.target.value)}
+                    className="w-full px-4 py-2.5 border border-[#E5E4DF] rounded-lg focus:outline-none focus:ring-2 focus:ring-black bg-white"
+                    required
+                  >
+                    {Object.values(warehouses).map((warehouse) => (
+                      <option key={warehouse.name} value={warehouse.name}>
+                        {warehouse.name} - {warehouse.city}, {warehouse.country}
+                      </option>
+                    ))}
+                  </select>
+                )}
+                {selectedWarehouse && warehouses[selectedWarehouse] && (
+                  <div className="mt-2 text-sm text-[#666663] bg-[#FAFAF7] p-3 rounded-lg">
+                    <p className="font-medium text-[#191919] mb-1">Adresse de livraison :</p>
+                    <p>{warehouses[selectedWarehouse].address}</p>
+                    <p>{warehouses[selectedWarehouse].postalCode} {warehouses[selectedWarehouse].city}</p>
+                    <p>{warehouses[selectedWarehouse].country}</p>
+                  </div>
+                )}
+              </div>
+
               {/* Section d'édition des quantités */}
               <div className="mb-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
                 <h4 className="font-semibold text-[#191919] mb-3">Ajuster les quantités</h4>

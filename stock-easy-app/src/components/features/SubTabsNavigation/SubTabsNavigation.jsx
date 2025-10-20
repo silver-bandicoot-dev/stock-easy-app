@@ -1,5 +1,5 @@
 import React from 'react';
-import { Settings, Package, Truck, Activity } from 'lucide-react';
+import { Settings, Package, Truck, Activity, Warehouse } from 'lucide-react';
 
 /**
  * Composant SubTabsNavigation - Navigation par onglets pour les paramètres
@@ -13,7 +13,8 @@ export function SubTabsNavigation({ activeSubTab, onSubTabChange }) {
     { id: 'general', label: 'Général', icon: Settings },
     { id: 'products', label: 'Produits', icon: Package },
     { id: 'suppliers', label: 'Fournisseurs', icon: Truck },
-    { id: 'mapping', label: 'Mapping', icon: Activity }
+    { id: 'mapping', label: 'Mapping', icon: Activity },
+    { id: 'warehouses', label: 'Entrepôts', icon: Warehouse }
   ];
   
   return (
