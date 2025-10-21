@@ -26,9 +26,35 @@ export function MLInsightsDashboard({ products }) {
     getForecastForProduct
   } = useDemandForecast(products);
 
+  // Protection si products n'est pas défini
+  if (!products || !Array.isArray(products) || products.length === 0) {
+    return (
+      <div className="bg-white rounded-xl shadow-sm border border-[#E5E4DF] p-6">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="p-2 bg-purple-100 rounded-lg">
+            <Brain className="w-6 h-6 text-purple-600" />
+          </div>
+          <div>
+            <h2 className="text-2xl font-bold text-[#191919]">
+              🤖 Prévisions IA
+            </h2>
+            <p className="text-sm text-[#666663]">
+              Prédictions intelligentes de la demande
+            </p>
+          </div>
+        </div>
+        <div className="text-center py-8 text-[#666663]">
+          <Brain className="w-12 h-12 mx-auto mb-3 opacity-50" />
+          <p>Chargement des produits...</p>
+          <p className="text-sm">Veuillez patienter</p>
+        </div>
+      </div>
+    );
+  }
+
   // Top 3 produits par ventes
   const topProducts = [...products]
-    .sort((a, b) => b.salesPerDay - a.salesPerDay)
+    .sort((a, b) => (b.salesPerDay || 0) - (a.salesPerDay || 0))
     .slice(0, 3);
 
   return (
