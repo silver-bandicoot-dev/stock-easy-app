@@ -3,7 +3,7 @@
  * @module components/ml/MLInsightsDashboard
  */
 
-import React from 'react';
+import React, { Component } from 'react';
 import { 
   TrendingUp, 
   TrendingDown, 
@@ -15,7 +15,59 @@ import {
 } from 'lucide-react';
 import { useDemandForecast } from '../../hooks/ml/useDemandForecast';
 
-export function MLInsightsDashboard({ products }) {
+// Error Boundary pour capturer les erreurs
+class MLErrorBoundary extends Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error, errorInfo) {
+    console.error('❌ Erreur dans MLInsightsDashboard:', error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="bg-white rounded-xl shadow-sm border border-[#E5E4DF] p-6">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="p-2 bg-red-100 rounded-lg">
+              <AlertCircle className="w-6 h-6 text-red-600" />
+            </div>
+            <div>
+              <h2 className="text-2xl font-bold text-[#191919]">
+                🤖 Prévisions IA
+              </h2>
+              <p className="text-sm text-red-600">
+                Une erreur s'est produite
+              </p>
+            </div>
+          </div>
+          <div className="text-center py-8">
+            <p className="text-[#666663] mb-2">Le module ML n'a pas pu se charger</p>
+            <p className="text-sm text-[#666663]">
+              Erreur: {this.state.error?.message || 'Inconnue'}
+            </p>
+            <button
+              onClick={() => window.location.reload()}
+              className="mt-4 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
+            >
+              Recharger la page
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    return this.props.children;
+  }
+}
+
+function MLInsightsDashboardInner({ products }) {
   const {
     forecasts,
     isTraining,
@@ -231,6 +283,15 @@ function ForecastCard({ product, forecast }) {
         </p>
       </div>
     </div>
+  );
+}
+
+// Export avec Error Boundary
+export function MLInsightsDashboard({ products }) {
+  return (
+    <MLErrorBoundary>
+      <MLInsightsDashboardInner products={products} />
+    </MLErrorBoundary>
   );
 }
 
