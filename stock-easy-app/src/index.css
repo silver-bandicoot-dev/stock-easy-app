@@ -1,9 +1,17 @@
+/* Import Google Fonts - Inter 
+ * Usage:
+ * - Titres : Inter SemiBold (600) ou Bold (700)
+ * - Corps : Inter Regular (400)
+ * - UI : Inter Medium (500)
+ */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 /* 
- * Font TT Supermolot Neue Trial Expanded ExtraLight pour la marque stockeasy
+ * Font TT Supermolot Neue Trial Expanded ExtraLight pour la marque stockeasy (logo uniquement)
  */
 @font-face {
   font-family: 'TT Supermolot Neue';
@@ -13,6 +21,7 @@
   font-display: swap;
 }
 
+/* Font du logo */
 .brand-font {
   font-family: 'TT Supermolot Neue', -apple-system, BlinkMacSystemFont, sans-serif;
   font-weight: 200;
