@@ -6,6 +6,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { DemandForecastModel } from '../../services/ml/demandForecastModel';
 import { collectSalesHistory } from '../../services/ml/dataCollector';
+import { getAllCachedForecasts, cacheAllForecasts, isCacheValid } from '../../utils/ml/forecastCache';
+import { shouldRetrain, recordTraining, scheduleAutoRetraining } from '../../utils/ml/autoRetraining';
 
 /**
  * Hook pour gérer les prévisions de demande avec ML
@@ -127,6 +129,10 @@ export function useDemandForecast(products) {
       
       setTrainingProgress(100);
       setIsReady(true);
+      
+      // Enregistrer l'entraînement pour le système d'auto-retraining
+      recordTraining();
+      
       console.log('✅ Entraînement terminé avec succès!');
       
     } catch (err) {
@@ -140,7 +146,7 @@ export function useDemandForecast(products) {
   /**
    * Génère les prévisions pour tous les produits
    */
-  const generateForecasts = async (model, productList) => {
+  const generateForecasts = async (model, productList, useCache = true) => {
     if (!model || !model.isReady()) {
       console.log('⚠️ Modèle pas prêt pour les prévisions');
       return;
@@ -152,6 +158,16 @@ export function useDemandForecast(products) {
     }
 
     try {
+      // Vérifier d'abord le cache
+      if (useCache && isCacheValid()) {
+        const cachedForecasts = getAllCachedForecasts();
+        if (Object.keys(cachedForecasts).length > 0) {
+          console.log('⚡ Utilisation du cache des prévisions');
+          setForecasts(cachedForecasts);
+          return;
+        }
+      }
+
       console.log('🔮 Génération des prévisions...');
       
       const newForecasts = {};
@@ -212,6 +228,10 @@ export function useDemandForecast(products) {
       }
       
       setForecasts(newForecasts);
+      
+      // Sauvegarder dans le cache
+      cacheAllForecasts(newForecasts);
+      
       console.log(`✅ Prévisions générées pour ${Object.keys(newForecasts).length} produits`);
       
     } catch (err) {

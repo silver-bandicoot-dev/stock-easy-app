@@ -9,3 +9,9 @@ export {
 } from './dataCollector';
 
 export { DemandForecastModel } from './demandForecastModel';
+
+export {
+  generateMLAlerts,
+  calculateCriticalityScore,
+  generateAutoRecommendations
+} from './alertService';

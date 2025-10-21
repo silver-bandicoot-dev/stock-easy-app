@@ -7,4 +7,5 @@ export { MLAdvancedDashboard } from './MLAdvancedDashboard';
 export { ForecastTrendChart } from './ForecastTrendChart';
 export { DemandHeatmap } from './DemandHeatmap';
 export { PredictionVsReality } from './PredictionVsReality';
+export { MLAlertPanel } from './MLAlertPanel';
 

@@ -19,6 +19,7 @@ import { collectSalesHistory } from '../../services/ml/dataCollector';
 import { ForecastTrendChart } from './ForecastTrendChart';
 import { DemandHeatmap } from './DemandHeatmap';
 import { PredictionVsReality } from './PredictionVsReality';
+import { MLAlertPanel } from './MLAlertPanel';
 
 export function MLAdvancedDashboard({ products }) {
   const {
@@ -205,6 +206,18 @@ export function MLAdvancedDashboard({ products }) {
           </div>
         )}
       </div>
+
+      {/* Alertes et Recommandations */}
+      {isReady && Object.keys(forecasts).length > 0 && (
+        <MLAlertPanel
+          products={products}
+          forecasts={forecasts}
+          onOrderClick={(sku, quantity) => {
+            console.log(`Commander ${quantity} unités de ${sku}`);
+            // TODO: Intégrer avec le système de commande
+          }}
+        />
+      )}
 
       {/* Visualisations */}
       {isReady && selectedProduct && forecast && (
