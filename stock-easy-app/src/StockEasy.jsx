@@ -3195,7 +3195,7 @@ ${getUserSignature()}`
 
             {/* Dashboard ML - Prévisions de demande */}
             {!analyticsData.loading && !analyticsData.error && (
-              <MLInsightsDashboard products={allProducts} />
+              <MLInsightsDashboard products={enrichedProducts} />
             )}
           </motion.div>
         )}
