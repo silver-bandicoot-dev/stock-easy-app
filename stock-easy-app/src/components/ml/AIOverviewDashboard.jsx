@@ -206,7 +206,7 @@ export function AIOverviewDashboard({ products, orders }) {
         <div className="bg-white rounded-xl shadow-sm border border-[#E5E4DF] p-12 text-center">
           <Brain className="w-16 h-16 mx-auto mb-4 text-purple-600 opacity-50" />
           <h3 className="text-2xl font-semibold text-[#191919] mb-2">
-            Bienvenue dans l'IA de Stock Easy
+            Bienvenue dans l'IA de stockeasy
           </h3>
           <p className="text-[#666663] mb-6">
             Accédez à l'onglet "Prévisions Détaillées" et cliquez sur "Réentraîner" pour démarrer le système ML

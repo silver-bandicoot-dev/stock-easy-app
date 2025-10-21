@@ -21,6 +21,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import NotificationBell from '../notifications/NotificationBell';
+import { Logo } from '../ui/Logo';
 
 const Sidebar = ({ 
   activeTab, 
@@ -106,11 +107,8 @@ const Sidebar = ({
   const DesktopSidebar = () => (
     <aside className="hidden md:flex md:flex-col md:fixed md:inset-y-0 md:left-0 md:w-64 md:bg-[#191919] md:z-40">
       {/* Logo en haut de la sidebar */}
-      <div className="flex items-center gap-3 px-6 py-5 border-b border-[#40403E]">
-        <div className="w-10 h-10 bg-black rounded-lg flex items-center justify-center shadow-lg">
-          <Package className="w-6 h-6 text-white" />
-        </div>
-        <h1 className="text-xl font-bold text-white">Stock Easy</h1>
+      <div className="px-6 py-5 border-b border-[#40403E] flex justify-center">
+        <Logo size="normal" showText={true} />
       </div>
 
       {/* Navigation */}
@@ -209,12 +207,7 @@ const Sidebar = ({
     <>
       {/* Mobile Header - Logo, notification et hamburger */}
       <div className="md:hidden fixed top-0 left-0 right-0 bg-[#191919] z-50 px-4 py-4 flex items-center justify-between shadow-lg">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-black rounded-lg flex items-center justify-center shadow-lg">
-            <Package className="w-6 h-6 text-white" />
-          </div>
-          <h1 className="text-xl font-bold text-white">Stock Easy</h1>
-        </div>
+        <Logo size="normal" showText={true} />
         
         <div className="flex items-center gap-2">
           {/* Icône de notification */}
@@ -257,11 +250,8 @@ const Sidebar = ({
               className="md:hidden fixed top-0 left-0 bottom-0 w-4/5 max-w-sm bg-[#191919] z-50 flex flex-col"
             >
               {/* Logo */}
-              <div className="flex items-center gap-3 px-6 py-6 border-b border-[#40403E]">
-                <div className="w-10 h-10 bg-black rounded-lg flex items-center justify-center shadow-lg">
-                  <Package className="w-6 h-6 text-white" />
-                </div>
-                <h1 className="text-xl font-bold text-white">Stock Easy</h1>
+              <div className="px-6 py-6 border-b border-[#40403E] flex justify-center">
+                <Logo size="normal" showText={true} />
               </div>
 
               {/* Navigation */}

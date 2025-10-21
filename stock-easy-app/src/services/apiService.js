@@ -1,5 +1,5 @@
 /**
- * Service API pour l'application Stock Easy
+ * Service API pour l'application stockeasy
  * 
  * Ce module contient toutes les fonctions pour interagir avec l'API Google Apps Script.
  * Toutes les fonctions retournent des Promises et gèrent les erreurs de manière cohérente.

@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { toast } from 'sonner';
 import { Mail, ArrowLeft, Send } from 'lucide-react';
+import { Logo } from '../ui/Logo';
 
 const ForgotPassword = () => {
   const { resetPassword } = useAuth();
@@ -38,9 +39,9 @@ const ForgotPassword = () => {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100 p-4">
       <div className="max-w-md w-full">
         {/* Logo / Title */}
-        <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-[#191919] mb-2">Stock Easy</h1>
-          <p className="text-gray-600">Réinitialisation du mot de passe</p>
+        <div className="flex flex-col items-center mb-8">
+          <Logo size="large" showText={true} theme="light" />
+          <p className="text-gray-600 mt-4">Réinitialisation du mot de passe</p>
         </div>
 
         {/* Reset Password Form */}
@@ -118,7 +119,7 @@ const ForgotPassword = () => {
 
         {/* Footer */}
         <p className="text-center text-sm text-gray-500 mt-8">
-          © 2024 Stock Easy. Tous droits réservés.
+          © 2024 stockeasy. Tous droits réservés.
         </p>
       </div>
     </div>

@@ -199,7 +199,7 @@ const StockEasy = () => {
     } else if (currentUser && currentUser.displayName) {
       return currentUser.displayName;
     }
-    return "L'équipe Stock Easy";
+    return "L'équipe stockeasy";
   };
 
   // Helper pour arrondir correctement les montants à 2 décimales
@@ -932,7 +932,7 @@ const StockEasy = () => {
     
     return {
       to: supplierInfo.email || 'email@fournisseur.com',
-      subject: `Commande Stock Easy - ${new Date().toLocaleDateString('fr-FR')}`,
+      subject: `Commande stockeasy - ${new Date().toLocaleDateString('fr-FR')}`,
       body: `Bonjour,
 
 Nous souhaitons passer la commande suivante :
