@@ -3653,8 +3653,15 @@ ${getUserSignature()}`
             
             {/* Navigation des sous-onglets */}
             <SubTabsNavigation 
-              activeSubTab={parametersSubTab}
-              onSubTabChange={setParametersSubTab}
+              tabs={[
+                { id: 'general', label: 'Général', icon: Settings },
+                { id: 'products', label: 'Produits', icon: Package },
+                { id: 'suppliers', label: 'Fournisseurs', icon: Truck },
+                { id: 'mapping', label: 'Mapping', icon: Activity },
+                { id: 'warehouses', label: 'Entrepôts', icon: Warehouse }
+              ]}
+              activeTab={parametersSubTab}
+              onChange={setParametersSubTab}
             />
             
             {/* Contenu dynamique selon le sous-onglet */}

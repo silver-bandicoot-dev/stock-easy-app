@@ -60,10 +60,20 @@ const Sidebar = ({
       navigate(item.path);
     } else if (item.hasSubMenu && item.id === 'analytics') {
       // Si on clique sur Analytics, basculer l'expansion
-      setAnalyticsExpanded(!analyticsExpanded);
-      setActiveTab(item.id);
+      if (activeTab === 'analytics') {
+        // Si déjà sur Analytics, juste toggle l'expansion
+        setAnalyticsExpanded(!analyticsExpanded);
+      } else {
+        // Si on vient d'un autre onglet, ouvrir et activer
+        setActiveTab(item.id);
+        setAnalyticsExpanded(true);
+      }
     } else {
       setActiveTab(item.id);
+      // Fermer le sous-menu Analytics si on quitte Analytics
+      if (item.id !== 'analytics') {
+        setAnalyticsExpanded(false);
+      }
     }
     setMobileMenuOpen(false);
   };
