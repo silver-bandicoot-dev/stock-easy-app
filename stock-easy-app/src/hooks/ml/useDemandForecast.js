@@ -18,6 +18,7 @@ export function useDemandForecast(products) {
   const [isReady, setIsReady] = useState(false);
   const [error, setError] = useState(null);
   const [trainingProgress, setTrainingProgress] = useState(0);
+  const [predictionHistory, setPredictionHistory] = useState({});
   
   const modelRef = useRef(null);
 
@@ -157,10 +158,13 @@ export function useDemandForecast(products) {
       const today = new Date();
       
       for (const product of productList) {
-        // Prédire les 7 prochains jours
+        // Prédire sur 90 jours (7, 30, 60, 90)
         const next7Days = [];
+        const next30Days = [];
+        const next60Days = [];
+        const next90Days = [];
         
-        for (let i = 0; i < 7; i++) {
+        for (let i = 0; i < 90; i++) {
           const futureDate = new Date(today);
           futureDate.setDate(today.getDate() + i);
           
@@ -173,21 +177,34 @@ export function useDemandForecast(products) {
             avgSales: product.salesPerDay || 0
           });
           
-          next7Days.push(prediction);
+          next90Days.push(prediction);
+          if (i < 60) next60Days.push(prediction);
+          if (i < 30) next30Days.push(prediction);
+          if (i < 7) next7Days.push(prediction);
         }
         
-        // Calculer les métriques
-        const averagePredicted = next7Days.reduce((a, b) => a + b, 0) / 7;
+        // Calculer les métriques pour différentes périodes
+        const avg7 = next7Days.reduce((a, b) => a + b, 0) / 7;
+        const avg30 = next30Days.reduce((a, b) => a + b, 0) / 30;
+        const avg60 = next60Days.reduce((a, b) => a + b, 0) / 60;
+        const avg90 = next90Days.reduce((a, b) => a + b, 0) / 90;
+        
         const trend = next7Days[6] > next7Days[0] ? 'up' : 'down';
         const confidence = calculateConfidence(next7Days, product.salesPerDay);
         
         newForecasts[product.sku] = {
           next7Days,
-          averagePredicted,
+          next30Days,
+          next60Days,
+          next90Days,
+          averagePredicted: avg7,
+          avg30Days: avg30,
+          avg60Days: avg60,
+          avg90Days: avg90,
           trend,
           confidence,
           recommendedOrder: calculateRecommendedOrder(
-            averagePredicted,
+            avg7,
             product.stock,
             product.leadTimeDays
           )
@@ -245,14 +262,79 @@ export function useDemandForecast(products) {
     return forecasts[sku] || null;
   };
 
+  /**
+   * Sauvegarde les prévisions actuelles pour comparaison future
+   */
+  const savePredictionsForTracking = () => {
+    const today = new Date().toISOString().split('T')[0];
+    const trackingData = {};
+    
+    Object.entries(forecasts).forEach(([sku, forecast]) => {
+      trackingData[sku] = {
+        date: today,
+        predictions: forecast.next7Days,
+        sku: sku
+      };
+    });
+    
+    // Sauvegarder dans localStorage
+    const existingHistory = JSON.parse(localStorage.getItem('ml-prediction-history') || '{}');
+    localStorage.setItem('ml-prediction-history', JSON.stringify({
+      ...existingHistory,
+      [today]: trackingData
+    }));
+    
+    console.log('💾 Prévisions sauvegardées pour tracking');
+  };
+
+  /**
+   * Compare les prévisions passées avec la réalité actuelle
+   * @param {string} sku - SKU du produit
+   * @param {Array} actualSales - Ventes réelles [{date, quantity}, ...]
+   * @returns {Array} Comparaisons [{date, predicted, actual}, ...]
+   */
+  const compareWithReality = (sku, actualSales) => {
+    const history = JSON.parse(localStorage.getItem('ml-prediction-history') || '{}');
+    const comparisons = [];
+    
+    Object.entries(history).forEach(([predictionDate, trackingData]) => {
+      if (trackingData[sku]) {
+        const predictions = trackingData[sku].predictions;
+        const baseDate = new Date(predictionDate);
+        
+        predictions.forEach((predicted, dayOffset) => {
+          const targetDate = new Date(baseDate);
+          targetDate.setDate(baseDate.getDate() + dayOffset);
+          const dateStr = targetDate.toISOString().split('T')[0];
+          
+          // Chercher la vente réelle pour cette date
+          const actualSale = actualSales?.find(s => s.date === dateStr);
+          
+          if (actualSale) {
+            comparisons.push({
+              date: dateStr,
+              predicted: predicted,
+              actual: actualSale.quantity
+            });
+          }
+        });
+      }
+    });
+    
+    return comparisons;
+  };
+
   return {
     forecasts,
     isTraining,
     isReady,
     error,
     trainingProgress,
+    predictionHistory,
     retrain,
-    getForecastForProduct
+    getForecastForProduct,
+    savePredictionsForTracking,
+    compareWithReality
   };
 }
 

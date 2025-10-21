@@ -19,7 +19,7 @@ import { DateRangePicker } from './components/features/DateRangePicker';
 import { InsightAlert } from './components/features/InsightAlert';
 import { ChartModal } from './components/features/ChartModal';
 import { ComparisonSelector } from './components/features/ComparisonSelector';
-import { MLInsightsDashboard } from './components/ml/MLInsightsDashboard';
+import { MLInsightsDashboard, MLAdvancedDashboard } from './components/ml';
 import { AssignSupplierModal } from './components/settings/AssignSupplierModal';
 import { SupplierModal } from './components/settings/SupplierModal';
 import { GestionFournisseurs } from './components/settings/GestionFournisseurs';
@@ -3214,7 +3214,7 @@ ${getUserSignature()}`
             
             {/* Section Prévisions IA */}
             {analyticsSubTab === 'ml-forecast' && (
-              <MLInsightsDashboard products={enrichedProducts} />
+              <MLAdvancedDashboard products={enrichedProducts} />
             )}
             
           </motion.div>

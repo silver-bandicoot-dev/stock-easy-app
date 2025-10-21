@@ -3,4 +3,8 @@
  */
 
 export { MLInsightsDashboard } from './MLInsightsDashboard';
+export { MLAdvancedDashboard } from './MLAdvancedDashboard';
+export { ForecastTrendChart } from './ForecastTrendChart';
+export { DemandHeatmap } from './DemandHeatmap';
+export { PredictionVsReality } from './PredictionVsReality';
 
