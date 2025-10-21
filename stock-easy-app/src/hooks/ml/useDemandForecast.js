@@ -22,9 +22,11 @@ export function useDemandForecast(products) {
   const modelRef = useRef(null);
 
   /**
-   * Initialise le modèle (charge ou entraîne)
+   * Initialise le modèle (charge ou entraîne) - une seule fois
    */
   useEffect(() => {
+    let mounted = true;
+    
     const initModel = async () => {
       try {
         console.log('🤖 Initialisation du modèle ML...');
@@ -34,38 +36,44 @@ export function useDemandForecast(products) {
         modelRef.current = model;
         
         // Essayer de charger un modèle existant
-        const loaded = await model.load();
-        
-        if (loaded) {
-          console.log('✅ Modèle chargé depuis le cache');
-          setIsReady(true);
+        try {
+          const loaded = await model.load();
           
-          // Générer les prévisions
-          await generateForecasts(model);
+          if (!mounted) return;
           
-        } else {
-          console.log('ℹ️ Pas de modèle en cache, entraînement nécessaire');
-          // L'entraînement sera déclenché manuellement ou automatiquement
-          await trainModel();
+          if (loaded && products && products.length > 0) {
+            console.log('✅ Modèle chargé depuis le cache');
+            setIsReady(true);
+            
+            // Générer les prévisions avec les produits
+            await generateForecasts(model, products);
+          } else {
+            console.log('ℹ️ Pas de modèle en cache');
+            console.log('💡 Cliquez sur "Réentraîner" pour générer des prévisions');
+          }
+        } catch (loadError) {
+          console.log('ℹ️ Pas de modèle sauvegardé trouvé');
         }
         
       } catch (err) {
-        console.error('❌ Erreur lors de l\'initialisation:', err);
-        setError(err.message);
+        if (mounted) {
+          console.error('❌ Erreur lors de l\'initialisation:', err);
+          setError(err.message);
+        }
       }
     };
 
-    if (products && products.length > 0) {
-      initModel();
-    }
+    initModel();
 
     // Cleanup
     return () => {
+      mounted = false;
       if (modelRef.current) {
         modelRef.current.dispose();
+        modelRef.current = null;
       }
     };
-  }, []); // Seulement au mount
+  }, []); // Une seule fois au montage
 
   /**
    * Entraîne le modèle
@@ -114,7 +122,7 @@ export function useDemandForecast(products) {
       setTrainingProgress(90);
       
       // Générer les prévisions
-      await generateForecasts(model);
+      await generateForecasts(model, products);
       
       setTrainingProgress(100);
       setIsReady(true);
@@ -131,9 +139,14 @@ export function useDemandForecast(products) {
   /**
    * Génère les prévisions pour tous les produits
    */
-  const generateForecasts = async (model) => {
+  const generateForecasts = async (model, productList) => {
     if (!model || !model.isReady()) {
       console.log('⚠️ Modèle pas prêt pour les prévisions');
+      return;
+    }
+
+    if (!productList || productList.length === 0) {
+      console.log('⚠️ Aucun produit disponible pour les prévisions');
       return;
     }
 
@@ -143,7 +156,7 @@ export function useDemandForecast(products) {
       const newForecasts = {};
       const today = new Date();
       
-      for (const product of products) {
+      for (const product of productList) {
         // Prédire les 7 prochains jours
         const next7Days = [];
         
