@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { Package, Bell, Mail, X, Check, Truck, Clock, AlertCircle, CheckCircle, Eye, Settings, Info, Edit2, Activity, TrendingUp, TrendingDown, ArrowUpRight, ArrowDownRight, Upload, FileText, Calendar, RefreshCw, Plus, Moon, Sun, User, LogOut, Warehouse } from 'lucide-react';
+import { Package, Bell, Mail, X, Check, Truck, Clock, AlertCircle, CheckCircle, Eye, Settings, Info, Edit2, Activity, TrendingUp, TrendingDown, ArrowUpRight, ArrowDownRight, Upload, FileText, Calendar, RefreshCw, Plus, User, LogOut, Warehouse } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from './contexts/AuthContext';
 import NotificationBell from './components/notifications/NotificationBell';
@@ -12,6 +12,9 @@ import { HealthBar } from './components/ui/HealthBar';
 import { Modal } from './components/ui/Modal';
 import { KPICard } from './components/features/KPICard';
 import { SubTabsNavigation } from './components/features/SubTabsNavigation';
+import { ProductSelectionTable } from './components/features/ProductSelectionTable';
+import { StockHealthDashboard } from './components/features/StockHealthDashboard';
+import { SupplierHealthSummary } from './components/features/SupplierHealthSummary';
 import { AssignSupplierModal } from './components/settings/AssignSupplierModal';
 import { SupplierModal } from './components/settings/SupplierModal';
 import { GestionFournisseurs } from './components/settings/GestionFournisseurs';
@@ -216,17 +219,7 @@ const StockEasy = () => {
   const [parameters, setParameters] = useState({});
   const [activeTab, setActiveTab] = useState('dashboard');
   const [trackTabSection, setTrackTabSection] = useState('en_cours_commande');
-  const [darkMode, setDarkMode] = useState(false);
   const [emailModalOpen, setEmailModalOpen] = useState(false);
-  
-  // Dark Mode
-  useEffect(() => {
-    if (darkMode) {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
-  }, [darkMode]);
   const [selectedSupplier, setSelectedSupplier] = useState(null);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [receivingModalOpen, setReceivingModalOpen] = useState(false);
@@ -265,6 +258,7 @@ const StockEasy = () => {
   // CORRECTION 1: Gestion des quantités éditables dans la modal de commande
   const [orderQuantities, setOrderQuantities] = useState({});
   const [selectedWarehouse, setSelectedWarehouse] = useState(null);
+  const [selectedProductsFromTable, setSelectedProductsFromTable] = useState(new Map());
 
   // CORRECTION 3: Gestion de l'expansion des détails de commandes
   const [expandedOrders, setExpandedOrders] = useState({});
@@ -1057,6 +1051,84 @@ ${getUserSignature()}`
     }
   };
 
+  const handleCreateOrderFromTable = async (selectedProducts) => {
+    // selectedProducts est une Map<sku, quantity>
+    
+    // Grouper les produits par fournisseur
+    const productsBySupplier = {};
+    
+    selectedProducts.forEach((quantity, sku) => {
+      const product = enrichedProducts.find(p => p.sku === sku);
+      if (!product || !product.supplier) return;
+      
+      if (!productsBySupplier[product.supplier]) {
+        productsBySupplier[product.supplier] = [];
+      }
+      
+      productsBySupplier[product.supplier].push({
+        ...product,
+        orderQuantity: quantity
+      });
+    });
+    
+    // Si un seul fournisseur, ouvrir directement la modal email
+    if (Object.keys(productsBySupplier).length === 1) {
+      const supplier = Object.keys(productsBySupplier)[0];
+      const products = productsBySupplier[supplier];
+      
+      // Pré-remplir orderQuantities
+      const quantities = {};
+      products.forEach(p => {
+        quantities[p.sku] = p.orderQuantity;
+      });
+      setOrderQuantities(quantities);
+      setSelectedSupplier(supplier);
+      
+      // Sélectionner le premier warehouse par défaut
+      const warehousesList = Object.values(warehouses);
+      if (warehousesList.length > 0) {
+        setSelectedWarehouse(warehousesList[0].name);
+      }
+      
+      setEmailModalOpen(true);
+    } else {
+      // Si plusieurs fournisseurs, créer plusieurs commandes ou afficher un choix
+      toast.info('Plusieurs fournisseurs détectés. Créer des commandes séparées...', {
+        duration: 4000
+      });
+      
+      const warehousesList = Object.values(warehouses);
+      
+      // Option : créer automatiquement une commande par fournisseur
+      for (const [supplier, products] of Object.entries(productsBySupplier)) {
+        // Créer la commande sans email pour chaque fournisseur
+        const total = roundToTwo(products.reduce((sum, p) => sum + (p.orderQuantity * p.buyPrice), 0));
+        
+        const orderData = {
+          id: generatePONumber(),
+          supplier: supplier,
+          warehouseId: warehousesList[0]?.name || null,
+          status: 'pending_confirmation',
+          total: total,
+          createdAt: new Date().toISOString().split('T')[0],
+          items: products.map(p => ({
+            sku: p.sku,
+            quantity: p.orderQuantity,
+            pricePerUnit: p.buyPrice
+          })),
+          notes: 'Commande créée depuis la table de sélection'
+        };
+        
+        await api.createOrder(orderData);
+      }
+      
+      await loadData();
+      toast.success(`${Object.keys(productsBySupplier).length} commande(s) créée(s) !`, {
+        duration: 4000
+      });
+    }
+  };
+
   const confirmOrder = async (orderId) => {
     try {
       const confirmedAt = new Date().toISOString();
@@ -1779,8 +1851,6 @@ ${getUserSignature()}`
         <Sidebar 
           activeTab={activeTab}
           setActiveTab={setActiveTab}
-          darkMode={darkMode}
-          setDarkMode={setDarkMode}
           handleLogout={handleLogout}
           syncData={syncData}
           syncing={syncing}
@@ -2036,6 +2106,25 @@ ${getUserSignature()}`
                 </div>
               )}
               </div>
+            </div>
+
+            {/* NOUVEAU : Table de sélection de produits */}
+            <div className="bg-white rounded-xl shadow-sm border border-[#E5E4DF] p-6">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-10 h-10 bg-purple-50 rounded-lg flex items-center justify-center border border-purple-200 shrink-0">
+                  <Package className="w-6 h-6 text-[#8B5CF6] shrink-0" />
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold text-[#191919]">Sélection manuelle de produits</h2>
+                  <p className="text-sm text-[#666663]">Choisissez les produits et quantités à commander</p>
+                </div>
+              </div>
+              
+              <ProductSelectionTable
+                products={enrichedProducts}
+                suppliers={suppliers}
+                onCreateOrder={handleCreateOrderFromTable}
+              />
             </div>
             </motion.div>
           )}
@@ -2912,6 +3001,16 @@ ${getUserSignature()}`
                 <p className="text-sm text-[#666663]">Visualisez la disponibilité actuelle de chaque SKU regroupée par fournisseur</p>
               </div>
               
+              {/* Dashboard global de santé */}
+              <div className="mb-6">
+                <StockHealthDashboard 
+                  totalUrgent={enrichedProducts.filter(p => p.healthStatus === 'urgent').length}
+                  totalWarning={enrichedProducts.filter(p => p.healthStatus === 'warning').length}
+                  totalHealthy={enrichedProducts.filter(p => p.healthStatus === 'healthy').length}
+                  totalProducts={enrichedProducts.length}
+                />
+              </div>
+              
               {Object.entries(
                 enrichedProducts.reduce((acc, product) => {
                   if (!acc[product.supplier]) {
@@ -2929,38 +3028,22 @@ ${getUserSignature()}`
                 return (
                   <div key={supplier} className="mb-8 last:mb-0">
                     <div className="bg-[#FAFAF7] border-2 border-[#E5E4DF] rounded-t-xl px-6 py-4">
-                      <div className="flex items-center justify-between">
-                        <div className="flex-1">
-                          <h3 className="text-lg font-bold text-[#191919]">{supplier}</h3>
-                          <p className="text-sm text-[#666663] mt-1">
-                            {products.length} produit(s) • Délai: {products[0].leadTimeDays} jours
-                          </p>
-                        </div>
-                        <div className="flex items-center gap-4">
-                          {urgentCount > 0 && (
-                            <div className="text-center px-3">
-                              <div className="text-2xl font-bold text-red-600">{urgentCount}</div>
-                              <div className="text-xs text-[#666663]">Urgent</div>
-                            </div>
-                          )}
-                          {warningCount > 0 && (
-                            <div className="text-center px-3">
-                              <div className="text-2xl font-bold text-orange-500">{warningCount}</div>
-                              <div className="text-xs text-[#666663]">Attention</div>
-                            </div>
-                          )}
-                          <div className="text-center px-3">
-                            <div className="text-2xl font-bold text-green-600">{healthyCount}</div>
-                            <div className="text-xs text-[#666663]">Sain</div>
-                          </div>
-                          {totalToOrder > 0 && (
-                            <div className="text-center ml-4 pl-4 border-l-2 border-[#E5E4DF]">
-                              <div className="text-2xl font-bold text-[#191919]">{totalToOrder}</div>
-                              <div className="text-xs text-[#666663]">À commander</div>
-                            </div>
-                          )}
-                        </div>
+                      <div className="flex-1">
+                        <h3 className="text-lg font-bold text-[#191919] mb-1">{supplier}</h3>
+                        <p className="text-sm text-[#666663]">
+                          {products.length} produit(s) • Délai: {products[0].leadTimeDays} jours
+                        </p>
                       </div>
+                    </div>
+                    
+                    {/* Résumé de santé du fournisseur */}
+                    <div className="bg-white border-x-2 border-[#E5E4DF] px-6 pt-4">
+                      <SupplierHealthSummary 
+                        urgentCount={urgentCount}
+                        warningCount={warningCount}
+                        healthyCount={healthyCount}
+                        totalProducts={products.length}
+                      />
                     </div>
                     
                     <div className="bg-white border-x-2 border-b-2 border-[#E5E4DF] rounded-b-xl">

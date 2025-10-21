@@ -5,7 +5,7 @@ import Sidebar from './Sidebar';
 import NotificationBell from '../notifications/NotificationBell';
 import { RefreshCw } from 'lucide-react';
 
-const DashboardLayout = ({ children, activeTab, setActiveTab, syncData, syncing, darkMode, setDarkMode }) => {
+const DashboardLayout = ({ children, activeTab, setActiveTab, syncData, syncing }) => {
   const { logout } = useAuth();
   const navigate = useNavigate();
 
@@ -24,8 +24,6 @@ const DashboardLayout = ({ children, activeTab, setActiveTab, syncData, syncing,
       <Sidebar 
         activeTab={activeTab}
         setActiveTab={setActiveTab}
-        darkMode={darkMode}
-        setDarkMode={setDarkMode}
         handleLogout={handleLogout}
         syncData={syncData}
         syncing={syncing}

@@ -8,7 +8,6 @@ import { RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 
 const ProfileWithSidebar = () => {
-  const [darkMode, setDarkMode] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const { logout } = useAuth();
   const navigate = useNavigate();
@@ -40,8 +39,6 @@ const ProfileWithSidebar = () => {
       <Sidebar 
         activeTab={null}
         setActiveTab={() => navigate('/')}
-        darkMode={darkMode}
-        setDarkMode={setDarkMode}
         handleLogout={handleLogout}
         syncData={syncData}
         syncing={syncing}

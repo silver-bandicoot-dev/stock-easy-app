@@ -9,8 +9,6 @@ import {
   Settings, 
   User,
   LogOut,
-  Moon,
-  Sun,
   Menu,
   X,
   RefreshCw
@@ -22,8 +20,6 @@ import NotificationBell from '../notifications/NotificationBell';
 const Sidebar = ({ 
   activeTab, 
   setActiveTab, 
-  darkMode, 
-  setDarkMode, 
   handleLogout, 
   syncData, 
   syncing 
@@ -94,14 +90,6 @@ const Sidebar = ({
         >
           <RefreshCw className={`w-5 h-5 shrink-0 ${syncing ? 'animate-spin' : ''}`} />
           <span>Synchroniser</span>
-        </button>
-
-        <button
-          onClick={() => setDarkMode(!darkMode)}
-          className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-[#FAFAF7] hover:bg-[#40403E] transition-all text-sm font-medium"
-        >
-          {darkMode ? <Sun className="w-5 h-5 shrink-0" /> : <Moon className="w-5 h-5 shrink-0" />}
-          <span>{darkMode ? 'Mode Clair' : 'Mode Sombre'}</span>
         </button>
 
         <button
@@ -210,14 +198,6 @@ const Sidebar = ({
                 >
                   <RefreshCw className={`w-5 h-5 shrink-0 ${syncing ? 'animate-spin' : ''}`} />
                   <span>Synchroniser</span>
-                </button>
-
-                <button
-                  onClick={() => setDarkMode(!darkMode)}
-                  className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-[#FAFAF7] hover:bg-[#40403E] transition-all text-sm font-medium"
-                >
-                  {darkMode ? <Sun className="w-5 h-5 shrink-0" /> : <Moon className="w-5 h-5 shrink-0" />}
-                  <span>{darkMode ? 'Mode Clair' : 'Mode Sombre'}</span>
                 </button>
 
                 <button
