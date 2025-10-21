@@ -63,7 +63,7 @@ export function AnomalyDashboard({ products, orders }) {
             </div>
             <div>
               <h2 className="text-2xl font-bold text-[#191919]">
-                🚨 Détection d'Anomalies en Temps Réel
+                Détection d'Anomalies en Temps Réel
               </h2>
               <p className="text-sm text-[#666663]">
                 Surveillance intelligente des comportements inhabituels

@@ -31,7 +31,7 @@ export function PredictionVsReality({ comparisonData, product }) {
       {/* Header */}
       <div className="mb-6">
         <h3 className="text-xl font-bold text-[#191919] mb-1">
-          🎯 Précision des Prévisions
+          Précision des Prévisions
         </h3>
         <p className="text-sm text-[#666663]">
           {product?.name || 'Tous les produits'} - Comparaison sur les 7 derniers jours

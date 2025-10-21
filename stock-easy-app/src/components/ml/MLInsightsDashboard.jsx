@@ -41,7 +41,7 @@ class MLErrorBoundary extends Component {
             </div>
             <div>
               <h2 className="text-2xl font-bold text-[#191919]">
-                🤖 Prévisions IA
+                Prévisions IA
               </h2>
               <p className="text-sm text-red-600">
                 Une erreur s'est produite
@@ -89,7 +89,7 @@ function MLInsightsDashboardInner({ products }) {
           </div>
           <div>
             <h2 className="text-2xl font-bold text-[#191919]">
-              🤖 Prévisions IA
+              Prévisions IA
             </h2>
             <p className="text-sm text-[#666663]">
               Prédictions intelligentes de la demande
@@ -120,7 +120,7 @@ function MLInsightsDashboardInner({ products }) {
           </div>
           <div>
             <h2 className="text-2xl font-bold text-[#191919]">
-              🤖 Prévisions IA
+              Prévisions IA
             </h2>
             <p className="text-sm text-[#666663]">
               Prédictions intelligentes de la demande

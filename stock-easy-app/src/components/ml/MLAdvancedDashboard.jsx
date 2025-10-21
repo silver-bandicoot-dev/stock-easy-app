@@ -95,7 +95,7 @@ export function MLAdvancedDashboard({ products }) {
             </div>
             <div>
               <h2 className="text-2xl font-bold text-[#191919]">
-                🤖 Prévisions IA Avancées
+                Prévisions IA Avancées
               </h2>
               <p className="text-sm text-[#666663]">
                 Analytics et visualisations des prévisions de demande

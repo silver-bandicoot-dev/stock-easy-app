@@ -61,7 +61,7 @@ export function ReorderOptimizationDashboard({ products }) {
             </div>
             <div>
               <h2 className="text-2xl font-bold text-[#191919]">
-                🎯 Optimisation des Points de Commande
+                Optimisation des Points de Commande
               </h2>
               <p className="text-sm text-[#666663]">
                 Analyse ML pour réduire les ruptures et surstocks
