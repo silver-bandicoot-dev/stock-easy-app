@@ -1770,29 +1770,42 @@ ${getUserSignature()}`
       return true;
     });
 
-    // Générer le CSV
-    const headers = ['N° Commande', 'Fournisseur', 'Date Création', 'Date Confirmation', 'Date Expédition', 'Date Réception', 'Statut', 'Montant (€)', 'Nb Produits', 'Suivi'];
-    const rows = filteredOrders.map(order => {
-      const statusLabels = {
-        pending_confirmation: 'En attente',
-        processing: 'En traitement',
-        in_transit: 'En transit',
-        completed: 'Complétée',
-        reconciliation: 'À réconcilier'
-      };
-      
-      return [
-        order.id,
-        order.supplier,
-        formatConfirmedDate(order.createdAt) || order.createdAt,
-        formatConfirmedDate(order.confirmedAt) || order.confirmedAt || '-',
-        formatConfirmedDate(order.shippedAt) || order.shippedAt || '-',
-        formatConfirmedDate(order.receivedAt) || order.receivedAt || '-',
-        statusLabels[order.status] || order.status,
-        roundToTwo(order.total).toFixed(2),
-        order.items.length,
-        order.trackingNumber || '-'
-      ];
+    // Générer le CSV avec détail des produits
+    const headers = ['N° Commande', 'Fournisseur', 'Date Création', 'Date Confirmation', 'Date Expédition', 'Date Réception', 'Statut', 'SKU', 'Nom Produit', 'Quantité', 'Prix Unitaire (€)', 'Total Ligne (€)', 'Total Commande (€)', 'Suivi'];
+    const rows = [];
+    
+    const statusLabels = {
+      pending_confirmation: 'En attente',
+      processing: 'En traitement',
+      in_transit: 'En transit',
+      completed: 'Complétée',
+      reconciliation: 'À réconcilier'
+    };
+    
+    filteredOrders.forEach(order => {
+      // Pour chaque commande, créer une ligne par produit
+      order.items.forEach((item, index) => {
+        const product = products.find(p => p.sku === item.sku);
+        const lineTotal = roundToTwo(item.quantity * item.pricePerUnit);
+        
+        rows.push([
+          order.id,
+          order.supplier,
+          formatConfirmedDate(order.createdAt) || order.createdAt,
+          formatConfirmedDate(order.confirmedAt) || order.confirmedAt || '-',
+          formatConfirmedDate(order.shippedAt) || order.shippedAt || '-',
+          formatConfirmedDate(order.receivedAt) || order.receivedAt || '-',
+          statusLabels[order.status] || order.status,
+          item.sku,
+          product?.name || item.sku,
+          item.quantity,
+          roundToTwo(item.pricePerUnit).toFixed(2),
+          lineTotal.toFixed(2),
+          // Afficher le total de la commande seulement sur la première ligne de chaque commande
+          index === 0 ? roundToTwo(order.total).toFixed(2) : '',
+          index === 0 ? (order.trackingNumber || '-') : ''
+        ]);
+      });
     });
 
     // Créer le contenu CSV
@@ -1808,13 +1821,14 @@ ${getUserSignature()}`
     const today = new Date().toISOString().split('T')[0];
     
     link.setAttribute('href', url);
-    link.setAttribute('download', `historique-commandes-${today}.csv`);
+    link.setAttribute('download', `historique-commandes-detaille-${today}.csv`);
     link.style.visibility = 'hidden';
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
     
-    toast.success(`Export CSV réussi : ${filteredOrders.length} commande(s) exportée(s)`);
+    const totalItems = rows.length;
+    toast.success(`Export CSV réussi : ${filteredOrders.length} commande(s), ${totalItems} ligne(s) de produits exportée(s)`);
   };
 
   if (loading) {
@@ -2147,31 +2161,35 @@ ${getUserSignature()}`
               </div>
               <p className="text-[#666663] ml-11">Suivez vos commandes et gérez les réceptions</p>
               
-              {/* Onglets de navigation */}
-              <div className="flex gap-2 mt-6 overflow-x-auto pb-2">
+              {/* Onglets de navigation - Optimisés mobile */}
+              <div className="flex gap-2 mt-6 overflow-x-auto pb-2 -mx-2 px-2 sm:mx-0 sm:px-0">
                 <button
                   onClick={() => setTrackTabSection('en_cours_commande')}
-                  className={`px-4 py-2 rounded-lg font-medium text-sm whitespace-nowrap transition-all ${
+                  className={`px-3 sm:px-4 py-2 rounded-lg font-medium text-xs sm:text-sm whitespace-nowrap transition-all ${
                     trackTabSection === 'en_cours_commande'
                       ? 'bg-black text-white'
                       : 'bg-[#FAFAF7] text-[#666663] hover:bg-[#F0F0EB]'
                   }`}
                 >
-                  En Cours de Commande ({orders.filter(o => o.status === 'pending_confirmation').length})
+                  <span className="hidden sm:inline">En Cours de Commande</span>
+                  <span className="sm:hidden">En Cours</span>
+                  <span className="ml-1">({orders.filter(o => o.status === 'pending_confirmation').length})</span>
                 </button>
                 <button
                   onClick={() => setTrackTabSection('preparation')}
-                  className={`px-4 py-2 rounded-lg font-medium text-sm whitespace-nowrap transition-all ${
+                  className={`px-3 sm:px-4 py-2 rounded-lg font-medium text-xs sm:text-sm whitespace-nowrap transition-all ${
                     trackTabSection === 'preparation'
                       ? 'bg-black text-white'
                       : 'bg-[#FAFAF7] text-[#666663] hover:bg-[#F0F0EB]'
                   }`}
                 >
-                  En cours de préparation ({orders.filter(o => o.status === 'preparing').length})
+                  <span className="hidden sm:inline">En cours de préparation</span>
+                  <span className="sm:hidden">Préparation</span>
+                  <span className="ml-1">({orders.filter(o => o.status === 'preparing').length})</span>
                 </button>
                 <button
                   onClick={() => setTrackTabSection('en_transit')}
-                  className={`px-4 py-2 rounded-lg font-medium text-sm whitespace-nowrap transition-all ${
+                  className={`px-3 sm:px-4 py-2 rounded-lg font-medium text-xs sm:text-sm whitespace-nowrap transition-all ${
                     trackTabSection === 'en_transit'
                       ? 'bg-black text-white'
                       : 'bg-[#FAFAF7] text-[#666663] hover:bg-[#F0F0EB]'
@@ -2181,17 +2199,19 @@ ${getUserSignature()}`
                 </button>
                 <button
                   onClick={() => setTrackTabSection('commandes_recues')}
-                  className={`px-4 py-2 rounded-lg font-medium text-sm whitespace-nowrap transition-all ${
+                  className={`px-3 sm:px-4 py-2 rounded-lg font-medium text-xs sm:text-sm whitespace-nowrap transition-all ${
                     trackTabSection === 'commandes_recues'
                       ? 'bg-black text-white'
                       : 'bg-[#FAFAF7] text-[#666663] hover:bg-[#F0F0EB]'
                   }`}
                 >
-                  Commandes Reçues ({orders.filter(o => o.status === 'received').length})
+                  <span className="hidden sm:inline">Commandes Reçues</span>
+                  <span className="sm:hidden">Reçues</span>
+                  <span className="ml-1">({orders.filter(o => o.status === 'received').length})</span>
                 </button>
                 <button
                   onClick={() => setTrackTabSection('reconciliation')}
-                  className={`px-4 py-2 rounded-lg font-medium text-sm whitespace-nowrap transition-all ${
+                  className={`px-3 sm:px-4 py-2 rounded-lg font-medium text-xs sm:text-sm whitespace-nowrap transition-all ${
                     trackTabSection === 'reconciliation'
                       ? 'bg-black text-white'
                       : 'bg-[#FAFAF7] text-[#666663] hover:bg-[#F0F0EB]'
@@ -2204,10 +2224,10 @@ ${getUserSignature()}`
 
             {/* Contenu de chaque section */}
             {trackTabSection === 'en_cours_commande' && (
-            <div className="bg-white rounded-xl shadow-sm border border-[#E5E4DF] p-6">
+            <div className="bg-white rounded-xl shadow-sm border border-[#E5E4DF] p-4 sm:p-6">
               <div className="flex items-center gap-2 mb-4">
-                <Clock className="w-5 h-5 text-yellow-600 shrink-0" />
-                <h2 className="text-lg font-bold text-[#191919]">En Cours de Commande</h2>
+                <Clock className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-600 shrink-0" />
+                <h2 className="text-base sm:text-lg font-bold text-[#191919]">En Cours de Commande</h2>
               </div>
               <div className="space-y-3">
                 {orders.filter(o => o.status === 'pending_confirmation').length === 0 ? (
@@ -2215,40 +2235,61 @@ ${getUserSignature()}`
                 ) : (
                   orders.filter(o => o.status === 'pending_confirmation').map(order => (
                     <div key={order.id} className="bg-[#FAFAF7] rounded-lg border border-[#E5E4DF] overflow-hidden">
-                      {/* Header de la commande - Cliquable */}
+                      {/* Header de la commande - Cliquable - Optimisé mobile */}
                       <div 
-                        className="p-4 flex items-center justify-between gap-4 cursor-pointer hover:bg-[#F5F5F0] transition-colors"
+                        className="p-3 sm:p-4 cursor-pointer hover:bg-[#F5F5F0] transition-colors"
                         onClick={() => toggleOrderDetails(order.id)}
                       >
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-3 mb-2">
-                            <span className="font-bold text-[#191919]">{order.id}</span>
-                            <span className="text-[#666663]">→</span>
-                            <span className="text-[#666663] truncate">{order.supplier}</span>
-                            {/* Icône chevron */}
-                            <motion.div
-                              animate={{ rotate: expandedOrders[order.id] ? 180 : 0 }}
-                              transition={{ duration: 0.2 }}
-                            >
-                              <ArrowDownRight className="w-4 h-4 text-[#666663]" />
-                            </motion.div>
+                        <div className="space-y-3">
+                          {/* Ligne 1: N° PO + Chevron */}
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-2 min-w-0 flex-1">
+                              <span className="font-bold text-[#191919] text-sm sm:text-base">{order.id}</span>
+                              <motion.div
+                                animate={{ rotate: expandedOrders[order.id] ? 180 : 0 }}
+                                transition={{ duration: 0.2 }}
+                                className="shrink-0"
+                              >
+                                <ArrowDownRight className="w-4 h-4 text-[#666663]" />
+                              </motion.div>
+                            </div>
                           </div>
-                          <div className="text-sm text-[#666663]">
-                            Créée le {formatConfirmedDate(order.createdAt)} • Total: {roundToTwo(order.total).toFixed(2)}€
+                          
+                          {/* Ligne 2: Fournisseur */}
+                          <div className="flex items-center gap-2">
+                            <span className="text-[#666663] text-xs sm:text-sm">Fournisseur:</span>
+                            <span className="text-[#191919] font-medium text-xs sm:text-sm truncate">{order.supplier}</span>
+                          </div>
+                          
+                          {/* Ligne 3: Infos */}
+                          <div className="text-xs sm:text-sm space-y-1">
+                            <div>
+                              <span className="text-[#666663]">Date: </span>
+                              <span className="text-[#191919]">{formatConfirmedDate(order.createdAt)}</span>
+                            </div>
+                            <div>
+                              <span className="text-[#666663]">Total: </span>
+                              <span className="text-[#191919] font-bold">{roundToTwo(order.total).toFixed(2)}€</span>
+                            </div>
+                          </div>
+                          
+                          {/* Bouton d'action */}
+                          <div className="pt-2" onClick={(e) => e.stopPropagation()}>
+                            <Button
+                              variant="success"
+                              size="sm"
+                              icon={Check}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                confirmOrder(order.id);
+                              }}
+                              className="w-full sm:w-auto"
+                            >
+                              <span className="hidden sm:inline">Confirmer réception email</span>
+                              <span className="sm:hidden">Confirmer réception</span>
+                            </Button>
                           </div>
                         </div>
-                        <Button
-                          variant="success"
-                          size="sm"
-                          icon={Check}
-                          onClick={(e) => {
-                            e.stopPropagation(); // Empêcher le toggle
-                            confirmOrder(order.id);
-                          }}
-                          className="shrink-0"
-                        >
-                          Confirmer réception email
-                        </Button>
                       </div>
                       
                       {/* Détails des produits - Expansible */}
@@ -2316,10 +2357,10 @@ ${getUserSignature()}`
 
             {/* En cours de préparation */}
             {trackTabSection === 'preparation' && (
-            <div className="bg-white rounded-xl shadow-sm border border-[#E5E4DF] p-6">
+            <div className="bg-white rounded-xl shadow-sm border border-[#E5E4DF] p-4 sm:p-6">
               <div className="flex items-center gap-2 mb-4">
-                <Package className="w-5 h-5 text-[#64A4F2] shrink-0" />
-                <h2 className="text-lg font-bold text-[#191919]">En cours de préparation</h2>
+                <Package className="w-4 h-4 sm:w-5 sm:h-5 text-[#64A4F2] shrink-0" />
+                <h2 className="text-base sm:text-lg font-bold text-[#191919]">En cours de préparation</h2>
               </div>
               <div className="space-y-3">
                 {orders.filter(o => o.status === 'preparing').length === 0 ? (
@@ -2327,45 +2368,66 @@ ${getUserSignature()}`
                 ) : (
                   orders.filter(o => o.status === 'preparing').map(order => (
                     <div key={order.id} className="bg-[#FAFAF7] rounded-lg border border-[#E5E4DF] overflow-hidden">
-                      {/* Header de la commande - Cliquable */}
+                      {/* Header de la commande - Cliquable - Optimisé mobile */}
                       <div 
-                        className="p-4 flex items-center justify-between gap-4 cursor-pointer hover:bg-[#F5F5F0] transition-colors"
+                        className="p-3 sm:p-4 cursor-pointer hover:bg-[#F5F5F0] transition-colors"
                         onClick={() => toggleOrderDetails(order.id)}
                       >
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-3 mb-2">
-                            <span className="font-bold text-[#191919]">{order.id}</span>
-                            <span className="text-[#666663]">→</span>
-                            <span className="text-[#666663] truncate">{order.supplier}</span>
-                            {/* Icône chevron */}
-                            <motion.div
-                              animate={{ rotate: expandedOrders[order.id] ? 180 : 0 }}
-                              transition={{ duration: 0.2 }}
-                            >
-                              <ArrowDownRight className="w-4 h-4 text-[#666663]" />
-                            </motion.div>
-                          </div>
-                          <div className="text-sm text-[#666663]">
-                            Créée le {formatConfirmedDate(order.createdAt)} • Total: {roundToTwo(order.total).toFixed(2)}€
-                          </div>
-                          {order.confirmedAt && (
-                            <div className="text-sm text-green-600 mt-1">
-                              ✓ Confirmée le {formatConfirmedDate(order.confirmedAt)}
+                        <div className="space-y-3">
+                          {/* Ligne 1: N° PO + Chevron */}
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-2 min-w-0 flex-1">
+                              <span className="font-bold text-[#191919] text-sm sm:text-base">{order.id}</span>
+                              <motion.div
+                                animate={{ rotate: expandedOrders[order.id] ? 180 : 0 }}
+                                transition={{ duration: 0.2 }}
+                                className="shrink-0"
+                              >
+                                <ArrowDownRight className="w-4 h-4 text-[#666663]" />
+                              </motion.div>
                             </div>
-                          )}
+                          </div>
+                          
+                          {/* Ligne 2: Fournisseur */}
+                          <div className="flex items-center gap-2">
+                            <span className="text-[#666663] text-xs sm:text-sm">Fournisseur:</span>
+                            <span className="text-[#191919] font-medium text-xs sm:text-sm truncate">{order.supplier}</span>
+                          </div>
+                          
+                          {/* Ligne 3: Infos */}
+                          <div className="text-xs sm:text-sm space-y-1">
+                            <div>
+                              <span className="text-[#666663]">Date création: </span>
+                              <span className="text-[#191919]">{formatConfirmedDate(order.createdAt)}</span>
+                            </div>
+                            {order.confirmedAt && (
+                              <div className="text-green-600">
+                                ✓ Confirmée le {formatConfirmedDate(order.confirmedAt)}
+                              </div>
+                            )}
+                            <div>
+                              <span className="text-[#666663]">Total: </span>
+                              <span className="text-[#191919] font-bold">{roundToTwo(order.total).toFixed(2)}€</span>
+                            </div>
+                          </div>
+                          
+                          {/* Bouton d'action */}
+                          <div className="pt-2" onClick={(e) => e.stopPropagation()}>
+                            <Button
+                              variant="primary"
+                              size="sm"
+                              icon={Truck}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                shipOrder(order.id);
+                              }}
+                              className="w-full sm:w-auto"
+                            >
+                              <span className="hidden sm:inline">Marquer comme expédiée</span>
+                              <span className="sm:hidden">Expédiée</span>
+                            </Button>
+                          </div>
                         </div>
-                        <Button
-                          variant="primary"
-                          size="sm"
-                          icon={Truck}
-                          onClick={(e) => {
-                            e.stopPropagation(); // Empêcher le toggle
-                            shipOrder(order.id);
-                          }}
-                          className="shrink-0"
-                        >
-                          Marquer comme expédier
-                        </Button>
                       </div>
                       
                       {/* Détails des produits - Expansible */}
@@ -2433,10 +2495,10 @@ ${getUserSignature()}`
 
             {/* En Transit */}
             {trackTabSection === 'en_transit' && (
-            <div className="bg-white rounded-xl shadow-sm border border-[#E5E4DF] p-6">
+            <div className="bg-white rounded-xl shadow-sm border border-[#E5E4DF] p-4 sm:p-6">
               <div className="flex items-center gap-2 mb-4">
-                <Truck className="w-5 h-5 text-purple-600 shrink-0" />
-                <h2 className="text-lg font-bold text-[#191919]">En Transit</h2>
+                <Truck className="w-4 h-4 sm:w-5 sm:h-5 text-purple-600 shrink-0" />
+                <h2 className="text-base sm:text-lg font-bold text-[#191919]">En Transit</h2>
               </div>
               <div className="space-y-3">
                 {orders.filter(o => o.status === 'in_transit').length === 0 ? (
@@ -2444,56 +2506,77 @@ ${getUserSignature()}`
                 ) : (
                   orders.filter(o => o.status === 'in_transit').map(order => (
                     <div key={order.id} className="bg-[#FAFAF7] rounded-lg border border-[#E5E4DF] overflow-hidden">
-                      {/* Header de la commande - Cliquable */}
+                      {/* Header de la commande - Cliquable - Optimisé mobile */}
                       <div 
-                        className="p-4 flex items-center justify-between gap-4 cursor-pointer hover:bg-[#F5F5F0] transition-colors"
+                        className="p-3 sm:p-4 cursor-pointer hover:bg-[#F5F5F0] transition-colors"
                         onClick={() => toggleOrderDetails(order.id)}
                       >
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-3 mb-2">
-                            <span className="font-bold text-[#191919]">{order.id}</span>
-                            <span className="text-[#666663]">→</span>
-                            <span className="text-[#666663] truncate">{order.supplier}</span>
-                            {/* Icône chevron */}
-                            <motion.div
-                              animate={{ rotate: expandedOrders[order.id] ? 180 : 0 }}
-                              transition={{ duration: 0.2 }}
+                        <div className="space-y-3">
+                          {/* Ligne 1: N° PO + Chevron */}
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-2 min-w-0 flex-1">
+                              <span className="font-bold text-[#191919] text-sm sm:text-base">{order.id}</span>
+                              <motion.div
+                                animate={{ rotate: expandedOrders[order.id] ? 180 : 0 }}
+                                transition={{ duration: 0.2 }}
+                                className="shrink-0"
+                              >
+                                <ArrowDownRight className="w-4 h-4 text-[#666663]" />
+                              </motion.div>
+                            </div>
+                          </div>
+                          
+                          {/* Ligne 2: Fournisseur */}
+                          <div className="flex items-center gap-2">
+                            <span className="text-[#666663] text-xs sm:text-sm">Fournisseur:</span>
+                            <span className="text-[#191919] font-medium text-xs sm:text-sm truncate">{order.supplier}</span>
+                          </div>
+                          
+                          {/* Ligne 3: Infos */}
+                          <div className="text-xs sm:text-sm space-y-1">
+                            <div>
+                              <span className="text-[#666663]">Créée le: </span>
+                              <span className="text-[#191919]">{formatConfirmedDate(order.createdAt)}</span>
+                            </div>
+                            {order.confirmedAt && (
+                              <div className="text-green-600">
+                                ✓ Confirmée le {formatConfirmedDate(order.confirmedAt)}
+                              </div>
+                            )}
+                            {order.shippedAt && (
+                              <div className="text-purple-600">
+                                🚚 Expédiée le {formatConfirmedDate(order.shippedAt)}
+                              </div>
+                            )}
+                            {order.trackingNumber && (
+                              <div>
+                                <span className="text-[#666663]">Suivi: </span>
+                                <span className="text-purple-600 font-mono break-all">{order.trackingNumber}</span>
+                              </div>
+                            )}
+                            <div>
+                              <span className="text-[#666663]">Total: </span>
+                              <span className="text-[#191919] font-bold">{roundToTwo(order.total).toFixed(2)}€</span>
+                            </div>
+                          </div>
+                          
+                          {/* Bouton d'action */}
+                          <div className="pt-2" onClick={(e) => e.stopPropagation()}>
+                            <Button
+                              variant="success"
+                              size="sm"
+                              icon={CheckCircle}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                receiveOrder(order.id);
+                              }}
+                              className="w-full sm:w-auto"
                             >
-                              <ArrowDownRight className="w-4 h-4 text-[#666663]" />
-                            </motion.div>
+                              <span className="hidden sm:inline">Marquer comme reçue</span>
+                              <span className="sm:hidden">Reçue</span>
+                            </Button>
                           </div>
-                          <div className="text-sm text-[#666663]">
-                            Créée le {formatConfirmedDate(order.createdAt)} • Total: {roundToTwo(order.total).toFixed(2)}€
-                          </div>
-                          {order.confirmedAt && (
-                            <div className="text-sm text-green-600 mt-1">
-                              ✓ Confirmée le {formatConfirmedDate(order.confirmedAt)}
-                            </div>
-                          )}
-                          {order.shippedAt && (
-                            <div className="text-sm text-purple-600 mt-1">
-                              🚚 Expédiée le {formatConfirmedDate(order.shippedAt)}
-                            </div>
-                          )}
-                          {order.trackingNumber && (
-                            <div className="text-sm mt-1">
-                              <span className="text-[#666663]">Suivi: </span>
-                              <span className="text-purple-600 font-mono text-xs">{order.trackingNumber}</span>
-                            </div>
-                          )}
                         </div>
-                        <Button
-                          variant="success"
-                          size="sm"
-                          icon={CheckCircle}
-                          onClick={(e) => {
-                            e.stopPropagation(); // Empêcher le toggle
-                            receiveOrder(order.id);
-                          }}
-                          className="shrink-0"
-                        >
-                          Marquer comme reçue
-                        </Button>
                       </div>
                       
                       {/* Détails des produits - Expansible */}
@@ -2561,10 +2644,10 @@ ${getUserSignature()}`
 
             {/* Commandes Reçues */}
             {trackTabSection === 'commandes_recues' && (
-            <div className="bg-white rounded-xl shadow-sm border border-[#E5E4DF] p-6">
+            <div className="bg-white rounded-xl shadow-sm border border-[#E5E4DF] p-4 sm:p-6">
               <div className="flex items-center gap-2 mb-4">
-                <CheckCircle className="w-5 h-5 text-green-600 shrink-0" />
-                <h2 className="text-lg font-bold text-[#191919]">Commandes Reçues</h2>
+                <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5 text-green-600 shrink-0" />
+                <h2 className="text-base sm:text-lg font-bold text-[#191919]">Commandes Reçues</h2>
               </div>
               <div className="space-y-3">
                 {orders.filter(o => o.status === 'received').length === 0 ? (
@@ -2572,44 +2655,66 @@ ${getUserSignature()}`
                 ) : (
                   orders.filter(o => o.status === 'received').map(order => (
                     <div key={order.id} className="bg-[#FAFAF7] rounded-lg border border-[#E5E4DF] overflow-hidden">
-                      {/* Header de la commande */}
+                      {/* Header de la commande - Optimisé mobile */}
                       <div 
-                        className="p-4 flex items-center justify-between gap-4 cursor-pointer hover:bg-[#F5F5F0] transition-colors"
+                        className="p-3 sm:p-4 cursor-pointer hover:bg-[#F5F5F0] transition-colors"
                         onClick={() => toggleOrderDetails(order.id)}
                       >
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-3 mb-2">
-                            <span className="font-bold text-[#191919]">{order.id}</span>
-                            <span className="text-[#666663]">→</span>
-                            <span className="text-[#666663] truncate">{order.supplier}</span>
-                            <motion.div
-                              animate={{ rotate: expandedOrders[order.id] ? 180 : 0 }}
-                              transition={{ duration: 0.2 }}
-                            >
-                              <ArrowDownRight className="w-4 h-4 text-[#666663]" />
-                            </motion.div>
-                          </div>
-                          <div className="text-sm text-[#666663]">
-                            Créée le {formatConfirmedDate(order.createdAt)} • Total: {roundToTwo(order.total).toFixed(2)}€
-                          </div>
-                          {order.receivedAt && (
-                            <div className="text-sm text-green-600 mt-1">
-                              ✓ Reçue le {formatConfirmedDate(order.receivedAt)}
+                        <div className="space-y-3">
+                          {/* Ligne 1: N° PO + Chevron */}
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-2 min-w-0 flex-1">
+                              <span className="font-bold text-[#191919] text-sm sm:text-base">{order.id}</span>
+                              <motion.div
+                                animate={{ rotate: expandedOrders[order.id] ? 180 : 0 }}
+                                transition={{ duration: 0.2 }}
+                                className="shrink-0"
+                              >
+                                <ArrowDownRight className="w-4 h-4 text-[#666663]" />
+                              </motion.div>
                             </div>
-                          )}
+                          </div>
+                          
+                          {/* Ligne 2: Fournisseur */}
+                          <div className="flex items-center gap-2">
+                            <span className="text-[#666663] text-xs sm:text-sm">Fournisseur:</span>
+                            <span className="text-[#191919] font-medium text-xs sm:text-sm truncate">{order.supplier}</span>
+                          </div>
+                          
+                          {/* Ligne 3: Infos */}
+                          <div className="text-xs sm:text-sm space-y-1">
+                            <div>
+                              <span className="text-[#666663]">Créée le: </span>
+                              <span className="text-[#191919]">{formatConfirmedDate(order.createdAt)}</span>
+                            </div>
+                            {order.receivedAt && (
+                              <div className="text-green-600">
+                                ✓ Reçue le {formatConfirmedDate(order.receivedAt)}
+                              </div>
+                            )}
+                            <div>
+                              <span className="text-[#666663]">Total: </span>
+                              <span className="text-[#191919] font-bold">{roundToTwo(order.total).toFixed(2)}€</span>
+                            </div>
+                          </div>
+                          
+                          {/* Bouton d'action */}
+                          <div className="pt-2" onClick={(e) => e.stopPropagation()}>
+                            <Button
+                              variant="success"
+                              size="sm"
+                              icon={CheckCircle}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                openReconciliationModal(order);
+                              }}
+                              className="w-full sm:w-auto"
+                            >
+                              <span className="hidden sm:inline">Valider réception</span>
+                              <span className="sm:hidden">Valider</span>
+                            </Button>
+                          </div>
                         </div>
-                        <Button
-                          variant="success"
-                          size="sm"
-                          icon={CheckCircle}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            openReconciliationModal(order);
-                          }}
-                          className="shrink-0"
-                        >
-                          Valider réception
-                        </Button>
                       </div>
                       
                       {/* Détails des produits */}
@@ -2677,10 +2782,10 @@ ${getUserSignature()}`
 
             {/* Réconciliation */}
             {trackTabSection === 'reconciliation' && (
-            <div className="bg-white rounded-xl shadow-sm border border-[#E5E4DF] p-6">
+            <div className="bg-white rounded-xl shadow-sm border border-[#E5E4DF] p-4 sm:p-6">
               <div className="flex items-center gap-2 mb-4">
-                <AlertCircle className="w-5 h-5 text-[#EF1C43] shrink-0" />
-                <h2 className="text-lg font-bold text-[#191919]">Réconciliation</h2>
+                <AlertCircle className="w-4 h-4 sm:w-5 sm:h-5 text-[#EF1C43] shrink-0" />
+                <h2 className="text-base sm:text-lg font-bold text-[#191919]">Réconciliation</h2>
               </div>
               <div className="space-y-3">
                 {/* DEBUG INFO */}
@@ -2733,38 +2838,55 @@ ${getUserSignature()}`
                     
                     return (
                     <div key={order.id} className={`${bgColor} rounded-lg border-l-4 ${borderColor} overflow-hidden`}>
-                      {/* Header de la commande - Cliquable */}
+                      {/* Header de la commande - Cliquable - Optimisé mobile */}
                       <div 
-                        className="p-4 cursor-pointer hover:bg-opacity-80 transition-colors"
+                        className="p-3 sm:p-4 cursor-pointer hover:bg-opacity-80 transition-colors"
                         onClick={() => toggleOrderDetails(order.id)}
                       >
-                        <div className="flex items-center justify-between gap-4">
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-3 mb-2 flex-wrap">
-                              <span className="font-bold text-[#191919]">{order.id}</span>
-                              <span className="text-[#666663]">→</span>
-                              <span className="text-[#666663] truncate">{order.supplier}</span>
-                              <span className={`px-2 py-1 ${badgeBgColor} ${badgeTextColor} rounded text-xs font-medium shrink-0`}>
-                                {badgeText}
-                              </span>
-                              {/* Icône chevron */}
+                        <div className="space-y-3">
+                          {/* Ligne 1: N° PO + Badge + Chevron */}
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-2 min-w-0 flex-1 flex-wrap">
+                              <span className="font-bold text-[#191919] text-sm sm:text-base">{order.id}</span>
                               <motion.div
                                 animate={{ rotate: expandedOrders[order.id] ? 180 : 0 }}
                                 transition={{ duration: 0.2 }}
+                                className="shrink-0"
                               >
                                 <ArrowDownRight className="w-4 h-4 text-[#666663]" />
                               </motion.div>
                             </div>
-                            <div className="text-sm text-[#666663]">
-                              Créée le {formatConfirmedDate(order.createdAt)} • Total: {order.total}€
+                            <span className={`px-2 py-1 ${badgeBgColor} ${badgeTextColor} rounded text-xs font-medium shrink-0`}>
+                              <span className="hidden sm:inline">{badgeText}</span>
+                              <span className="sm:hidden">{isDamage ? '⚠️ Endommagée' : '📦 Écart'}</span>
+                            </span>
+                          </div>
+                          
+                          {/* Ligne 2: Fournisseur */}
+                          <div className="flex items-center gap-2">
+                            <span className="text-[#666663] text-xs sm:text-sm">Fournisseur:</span>
+                            <span className="text-[#191919] font-medium text-xs sm:text-sm truncate">{order.supplier}</span>
+                          </div>
+                          
+                          {/* Ligne 3: Infos */}
+                          <div className="text-xs sm:text-sm space-y-1">
+                            <div>
+                              <span className="text-[#666663]">Créée le: </span>
+                              <span className="text-[#191919]">{formatConfirmedDate(order.createdAt)}</span>
                             </div>
                             {order.receivedAt && (
-                              <div className="text-sm text-[#666663] mt-1">
+                              <div className="text-[#666663]">
                                 📦 Reçue le {formatConfirmedDate(order.receivedAt)}
                               </div>
                             )}
+                            <div>
+                              <span className="text-[#666663]">Total: </span>
+                              <span className="text-[#191919] font-bold">{order.total}€</span>
+                            </div>
                           </div>
-                          <div className="flex gap-2 shrink-0">
+                          
+                          {/* Boutons d'action */}
+                          <div className="pt-2 flex flex-col sm:flex-row gap-2" onClick={(e) => e.stopPropagation()}>
                             <Button
                               variant="primary"
                               size="sm"
@@ -2773,8 +2895,10 @@ ${getUserSignature()}`
                                 e.stopPropagation();
                                 openReclamationModal(order);
                               }}
+                              className="w-full sm:w-auto"
                             >
-                              Envoyer réclamation
+                              <span className="hidden sm:inline">Envoyer réclamation</span>
+                              <span className="sm:hidden">Réclamation</span>
                             </Button>
                             <Button
                               variant="success"
@@ -2784,9 +2908,10 @@ ${getUserSignature()}`
                                 e.stopPropagation();
                                 openReconciliationModal(order);
                               }}
-                              className="shrink-0"
+                              className="w-full sm:w-auto"
                             >
-                              Valider réception
+                              <span className="hidden sm:inline">Valider réception</span>
+                              <span className="sm:hidden">Valider</span>
                             </Button>
                           </div>
                         </div>
@@ -3106,35 +3231,21 @@ ${getUserSignature()}`
               exit={{ opacity: 0, x: -20 }}
               transition={{ duration: 0.25 }}
               className="space-y-6">
-            <div className="bg-white rounded-xl shadow-sm border border-[#E5E4DF] p-6">
-              <div className="flex items-center justify-between mb-6 gap-4 flex-wrap">
+            <div className="bg-white rounded-xl shadow-sm border border-[#E5E4DF] p-4 sm:p-6">
+              {/* Header et filtres optimisés mobile */}
+              <div className="space-y-4 mb-6">
                 <div>
-                  <h2 className="text-2xl font-bold text-[#191919] mb-2">Historique des Commandes</h2>
-                  <p className="text-sm text-[#666663]">Consultez toutes vos commandes passées et leur statut</p>
+                  <h2 className="text-xl sm:text-2xl font-bold text-[#191919] mb-1 sm:mb-2">Historique des Commandes</h2>
+                  <p className="text-xs sm:text-sm text-[#666663]">Consultez toutes vos commandes passées et leur statut</p>
                 </div>
-                <div className="flex items-center gap-3 flex-wrap">
-                  <div className="flex items-center gap-2">
-                    <label className="text-sm text-[#666663] font-medium">Du:</label>
-                    <input
-                      type="date"
-                      value={historyDateStart}
-                      onChange={(e) => setHistoryDateStart(e.target.value)}
-                      className="px-3 py-2 bg-[#FAFAF7] border border-[#E5E4DF] rounded-lg text-[#191919] font-medium focus:outline-none focus:ring-2 focus:ring-black"
-                    />
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <label className="text-sm text-[#666663] font-medium">Au:</label>
-                    <input
-                      type="date"
-                      value={historyDateEnd}
-                      onChange={(e) => setHistoryDateEnd(e.target.value)}
-                      className="px-3 py-2 bg-[#FAFAF7] border border-[#E5E4DF] rounded-lg text-[#191919] font-medium focus:outline-none focus:ring-2 focus:ring-black"
-                    />
-                  </div>
+                
+                {/* Filtres en colonne sur mobile, ligne sur desktop */}
+                <div className="space-y-3 sm:space-y-0 sm:flex sm:items-center sm:gap-3 sm:flex-wrap">
+                  {/* Sélecteur de statut en premier sur mobile (plus important) */}
                   <select 
                     value={historyFilter}
                     onChange={(e) => setHistoryFilter(e.target.value)}
-                    className="px-4 py-2 bg-[#FAFAF7] border border-[#E5E4DF] rounded-lg text-[#191919] font-medium focus:outline-none focus:ring-2 focus:ring-black"
+                    className="w-full sm:w-auto px-3 sm:px-4 py-2 bg-[#FAFAF7] border border-[#E5E4DF] rounded-lg text-[#191919] text-sm font-medium focus:outline-none focus:ring-2 focus:ring-black"
                   >
                     <option value="all">Tous les statuts</option>
                     <option value="completed">Complétées</option>
@@ -3142,118 +3253,268 @@ ${getUserSignature()}`
                     <option value="processing">En traitement</option>
                     <option value="reconciliation">À réconcilier</option>
                   </select>
+                  
+                  {/* Dates en grid sur mobile */}
+                  <div className="grid grid-cols-2 gap-2 sm:flex sm:gap-3">
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
+                      <label className="text-xs sm:text-sm text-[#666663] font-medium">Du:</label>
+                      <input
+                        type="date"
+                        value={historyDateStart}
+                        onChange={(e) => setHistoryDateStart(e.target.value)}
+                        className="px-2 sm:px-3 py-2 bg-[#FAFAF7] border border-[#E5E4DF] rounded-lg text-[#191919] text-xs sm:text-sm font-medium focus:outline-none focus:ring-2 focus:ring-black"
+                      />
+                    </div>
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
+                      <label className="text-xs sm:text-sm text-[#666663] font-medium">Au:</label>
+                      <input
+                        type="date"
+                        value={historyDateEnd}
+                        onChange={(e) => setHistoryDateEnd(e.target.value)}
+                        className="px-2 sm:px-3 py-2 bg-[#FAFAF7] border border-[#E5E4DF] rounded-lg text-[#191919] text-xs sm:text-sm font-medium focus:outline-none focus:ring-2 focus:ring-black"
+                      />
+                    </div>
+                  </div>
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-                <div className="bg-[#FAFAF7] rounded-lg p-4 border border-[#E5E4DF]">
-                  <div className="text-2xl font-bold text-[#191919]">{orders.length}</div>
-                  <div className="text-sm text-[#666663]">Total commandes</div>
+              {/* KPIs en grid responsive */}
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
+                <div className="bg-[#FAFAF7] rounded-lg p-3 sm:p-4 border border-[#E5E4DF]">
+                  <div className="text-xl sm:text-2xl font-bold text-[#191919]">{orders.length}</div>
+                  <div className="text-xs sm:text-sm text-[#666663] mt-1">Total commandes</div>
                 </div>
-                <div className="bg-green-50 rounded-lg p-4 border border-green-200">
-                  <div className="text-2xl font-bold text-green-600">
+                <div className="bg-green-50 rounded-lg p-3 sm:p-4 border border-green-200">
+                  <div className="text-xl sm:text-2xl font-bold text-green-600">
                     {orders.filter(o => o.status === 'completed').length}
                   </div>
-                  <div className="text-sm text-[#666663]">Complétées</div>
+                  <div className="text-xs sm:text-sm text-[#666663] mt-1">Complétées</div>
                 </div>
-                <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
-                  <div className="text-2xl font-bold text-[#64A4F2]">
+                <div className="bg-blue-50 rounded-lg p-3 sm:p-4 border border-blue-200">
+                  <div className="text-xl sm:text-2xl font-bold text-[#64A4F2]">
                     {orders.filter(o => o.status === 'in_transit' || o.status === 'preparing' || o.status === 'pending_confirmation').length}
                   </div>
-                  <div className="text-sm text-[#666663]">En cours</div>
+                  <div className="text-xs sm:text-sm text-[#666663] mt-1">En cours</div>
                 </div>
-                <div className="bg-[#FAFAF7] rounded-lg p-4 border border-[#E5E4DF]">
-                  <div className="text-2xl font-bold text-[#191919]">
+                <div className="bg-[#FAFAF7] rounded-lg p-3 sm:p-4 border border-[#E5E4DF]">
+                  <div className="text-xl sm:text-2xl font-bold text-[#191919]">
                     {orders.reduce((sum, o) => sum + o.total, 0).toFixed(0)}€
                   </div>
-                  <div className="text-sm text-[#666663]">Montant total</div>
+                  <div className="text-xs sm:text-sm text-[#666663] mt-1">Montant total</div>
                 </div>
               </div>
             </div>
 
-            <div className="bg-white rounded-xl shadow-sm border border-[#E5E4DF] overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead className="bg-[#FAFAF7] border-b border-[#E5E4DF]">
-                    <tr>
-                      <th className="px-6 py-4 text-left text-xs font-semibold text-[#666663] uppercase">N° Commande</th>
-                      <th className="px-6 py-4 text-left text-xs font-semibold text-[#666663] uppercase">Fournisseur</th>
-                      <th className="px-6 py-4 text-left text-xs font-semibold text-[#666663] uppercase">Date création</th>
-                      <th className="px-6 py-4 text-left text-xs font-semibold text-[#666663] uppercase">Produits</th>
-                      <th className="px-6 py-4 text-right text-xs font-semibold text-[#666663] uppercase">Montant</th>
-                      <th className="px-6 py-4 text-left text-xs font-semibold text-[#666663] uppercase">Statut</th>
-                      <th className="px-6 py-4 text-left text-xs font-semibold text-[#666663] uppercase">Suivi</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-[#E5E4DF]">
-                    {orders
-                      .filter(o => {
-                        // Filtrage par statut
-                        if (historyFilter !== 'all' && o.status !== historyFilter) return false;
-                        
-                        // Filtrage par dates
-                        if (historyDateStart || historyDateEnd) {
-                          const orderDate = new Date(o.createdAt);
-                          if (historyDateStart && orderDate < new Date(historyDateStart)) return false;
-                          if (historyDateEnd && orderDate > new Date(historyDateEnd)) return false;
-                        }
-                        
-                        return true;
-                      })
-                      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
-                      .map(order => {
-                        const statusConfig = {
-                          pending_confirmation: { label: 'En attente', color: 'bg-yellow-50 text-yellow-600 border-yellow-200' },
-                          processing: { label: 'En traitement', color: 'bg-blue-50 text-[#64A4F2] border-blue-200' },
-                          in_transit: { label: 'En transit', color: 'bg-purple-50 text-purple-600 border-purple-200' },
-                          completed: { label: 'Complétée', color: 'bg-green-50 text-green-600 border-green-200' },
-                          reconciliation: { label: 'À réconcilier', color: 'bg-red-50 text-[#EF1C43] border-red-200' }
-                        };
-                        
-                        const status = statusConfig[order.status];
-                        
-                        return (
-                          <tr key={order.id} className="hover:bg-[#FAFAF7] transition-colors">
-                            <td className="px-6 py-4">
-                              <span className="font-bold text-[#191919]">{order.id}</span>
-                            </td>
-                            <td className="px-6 py-4">
-                              <span className="text-[#191919]">{order.supplier}</span>
-                            </td>
-                            <td className="px-6 py-4">
-                              <span className="text-[#666663] text-sm">{formatConfirmedDate(order.createdAt)}</span>
-                            </td>
-                            <td className="px-6 py-4">
-                              <div className="text-sm">
-                                <span className="text-[#666663]">{order.items.length} produit(s)</span>
+            <div className="space-y-3">
+              {orders
+                .filter(o => {
+                  // Filtrage par statut
+                  if (historyFilter !== 'all' && o.status !== historyFilter) return false;
+                  
+                  // Filtrage par dates
+                  if (historyDateStart || historyDateEnd) {
+                    const orderDate = new Date(o.createdAt);
+                    if (historyDateStart && orderDate < new Date(historyDateStart)) return false;
+                    if (historyDateEnd && orderDate > new Date(historyDateEnd)) return false;
+                  }
+                  
+                  return true;
+                })
+                .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+                .length === 0 ? (
+                  <div className="bg-white rounded-xl shadow-sm border border-[#E5E4DF] p-8">
+                    <p className="text-[#666663] text-center text-sm">Aucune commande trouvée pour ces critères</p>
+                  </div>
+                ) : (
+                  orders
+                    .filter(o => {
+                      // Filtrage par statut
+                      if (historyFilter !== 'all' && o.status !== historyFilter) return false;
+                      
+                      // Filtrage par dates
+                      if (historyDateStart || historyDateEnd) {
+                        const orderDate = new Date(o.createdAt);
+                        if (historyDateStart && orderDate < new Date(historyDateStart)) return false;
+                        if (historyDateEnd && orderDate > new Date(historyDateEnd)) return false;
+                      }
+                      
+                      return true;
+                    })
+                    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+                    .map(order => {
+                      const statusConfig = {
+                        pending_confirmation: { label: 'En attente', color: 'bg-yellow-50 text-yellow-600 border-yellow-200' },
+                        processing: { label: 'En traitement', color: 'bg-blue-50 text-[#64A4F2] border-blue-200' },
+                        in_transit: { label: 'En transit', color: 'bg-purple-50 text-purple-600 border-purple-200' },
+                        completed: { label: 'Complétée', color: 'bg-green-50 text-green-600 border-green-200' },
+                        reconciliation: { label: 'À réconcilier', color: 'bg-red-50 text-[#EF1C43] border-red-200' }
+                      };
+                      
+                      const status = statusConfig[order.status];
+                      
+                      return (
+                        <div key={order.id} className="bg-white rounded-xl shadow-sm border border-[#E5E4DF] overflow-hidden">
+                          {/* Header de la commande - Cliquable */}
+                          <div 
+                            className="p-3 sm:p-4 cursor-pointer hover:bg-[#FAFAF7] transition-colors"
+                            onClick={() => toggleOrderDetails(order.id)}
+                          >
+                            {/* Layout mobile-first optimisé */}
+                            <div className="space-y-3">
+                              {/* Ligne 1: N° PO + Badge Statut + Chevron */}
+                              <div className="flex items-center justify-between gap-2">
+                                <div className="flex items-center gap-2 min-w-0 flex-1">
+                                  <span className="font-bold text-[#191919] text-sm sm:text-base">{order.id}</span>
+                                  <motion.div
+                                    animate={{ rotate: expandedOrders[order.id] ? 180 : 0 }}
+                                    transition={{ duration: 0.2 }}
+                                    className="shrink-0"
+                                  >
+                                    <ArrowDownRight className="w-4 h-4 text-[#666663]" />
+                                  </motion.div>
+                                </div>
+                                <span className={`px-2 sm:px-3 py-1 rounded-full text-xs font-medium border inline-block shrink-0 ${status.color}`}>
+                                  {status.label}
+                                </span>
                               </div>
-                            </td>
-                            <td className="px-6 py-4 text-right">
-                              <span className="font-bold text-[#191919]">{roundToTwo(order.total).toFixed(2)}€</span>
-                            </td>
-                            <td className="px-6 py-4">
-                              <span className={`px-3 py-1 rounded-full text-xs font-medium border inline-block ${status.color}`}>
-                                {status.label}
-                              </span>
-                            </td>
-                            <td className="px-6 py-4">
-                              {order.trackingNumber ? (
-                                <span className="text-xs font-mono text-[#666663]">{order.trackingNumber}</span>
-                              ) : (
-                                <span className="text-xs text-[#BFBFBA]">-</span>
-                              )}
-                            </td>
-                          </tr>
-                        );
-                      })}
-                  </tbody>
-                </table>
-              </div>
+                              
+                              {/* Ligne 2: Fournisseur */}
+                              <div className="flex items-center gap-2">
+                                <span className="text-[#666663] text-xs sm:text-sm">Fournisseur:</span>
+                                <span className="text-[#191919] font-medium text-xs sm:text-sm truncate">{order.supplier}</span>
+                              </div>
+                              
+                              {/* Ligne 3: Infos principales en grid */}
+                              <div className="grid grid-cols-2 gap-2 text-xs sm:text-sm">
+                                <div>
+                                  <span className="text-[#666663]">Date: </span>
+                                  <span className="text-[#191919]">{formatConfirmedDate(order.createdAt)}</span>
+                                </div>
+                                <div>
+                                  <span className="text-[#666663]">Produits: </span>
+                                  <span className="text-[#191919] font-medium">{order.items.length}</span>
+                                </div>
+                                <div className="col-span-2">
+                                  <span className="text-[#666663]">Total: </span>
+                                  <span className="text-[#191919] font-bold text-sm sm:text-base">{roundToTwo(order.total).toFixed(2)}€</span>
+                                </div>
+                                {order.trackingNumber && (
+                                  <div className="col-span-2">
+                                    <span className="text-[#666663]">Suivi: </span>
+                                    <span className="text-[#191919] font-mono text-xs break-all">{order.trackingNumber}</span>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                          
+                          {/* Détails des produits - Expansible */}
+                          <AnimatePresence>
+                            {expandedOrders[order.id] && (
+                              <motion.div
+                                initial={{ height: 0, opacity: 0 }}
+                                animate={{ height: 'auto', opacity: 1 }}
+                                exit={{ height: 0, opacity: 0 }}
+                                transition={{ duration: 0.3 }}
+                                className="border-t border-[#E5E4DF] bg-white"
+                              >
+                                <div className="p-3 sm:p-4">
+                                  <h4 className="font-semibold text-xs sm:text-sm text-[#666663] mb-3">Produits commandés:</h4>
+                                  <div className="space-y-2">
+                                    {order.items.map((item, idx) => {
+                                      const product = products.find(p => p.sku === item.sku);
+                                      return (
+                                        <div key={idx} className="bg-[#FAFAF7] rounded border border-[#E5E4DF] p-2 sm:p-3">
+                                          {/* Layout mobile optimisé */}
+                                          <div className="space-y-2">
+                                            {/* Nom du produit */}
+                                            <div>
+                                              <div className="font-medium text-[#191919] text-xs sm:text-sm">
+                                                {product?.name || item.sku}
+                                              </div>
+                                              <div className="text-xs text-[#666663] mt-0.5">
+                                                SKU: {item.sku}
+                                              </div>
+                                            </div>
+                                            
+                                            {/* Infos quantité et prix en grid */}
+                                            <div className="grid grid-cols-2 gap-2 text-xs pt-2 border-t border-[#E5E4DF]">
+                                              <div>
+                                                <div className="text-[#666663]">Quantité</div>
+                                                <div className="font-bold text-[#191919]">{item.quantity} unités</div>
+                                              </div>
+                                              <div className="text-right">
+                                                <div className="text-[#666663]">Prix unitaire</div>
+                                                <div className="font-medium text-[#191919]">{roundToTwo(item.pricePerUnit).toFixed(2)}€</div>
+                                              </div>
+                                              <div className="col-span-2 pt-1 border-t border-[#E5E4DF]">
+                                                <div className="flex justify-between items-center">
+                                                  <span className="text-[#666663] font-medium">Total ligne</span>
+                                                  <span className="font-bold text-[#191919] text-sm">{roundToTwo(item.quantity * item.pricePerUnit).toFixed(2)}€</span>
+                                                </div>
+                                              </div>
+                                            </div>
+                                          </div>
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                  
+                                  {/* Total de la commande */}
+                                  <div className="mt-3 pt-3 border-t-2 border-[#E5E4DF] flex justify-between items-center">
+                                    <span className="font-semibold text-[#666663] text-sm">Total commande:</span>
+                                    <span className="font-bold text-[#191919] text-lg">{roundToTwo(order.total).toFixed(2)}€</span>
+                                  </div>
+                                  
+                                  {/* Informations supplémentaires */}
+                                  <div className="mt-4 pt-4 border-t border-[#E5E4DF] space-y-2 text-xs sm:text-sm">
+                                    {order.confirmedAt && (
+                                      <div className="flex flex-col sm:flex-row sm:gap-2">
+                                        <span className="text-[#666663] font-medium">Date confirmation:</span>
+                                        <span className="text-[#191919]">{formatConfirmedDate(order.confirmedAt)}</span>
+                                      </div>
+                                    )}
+                                    {order.shippedAt && (
+                                      <div className="flex flex-col sm:flex-row sm:gap-2">
+                                        <span className="text-[#666663] font-medium">Date expédition:</span>
+                                        <span className="text-[#191919]">{formatConfirmedDate(order.shippedAt)}</span>
+                                      </div>
+                                    )}
+                                    {order.receivedAt && (
+                                      <div className="flex flex-col sm:flex-row sm:gap-2">
+                                        <span className="text-[#666663] font-medium">Date réception:</span>
+                                        <span className="text-[#191919]">{formatConfirmedDate(order.receivedAt)}</span>
+                                      </div>
+                                    )}
+                                    {order.trackingNumber && (
+                                      <div className="flex flex-col sm:flex-row sm:gap-2">
+                                        <span className="text-[#666663] font-medium">Suivi:</span>
+                                        <span className="text-[#191919] font-mono text-xs break-all">{order.trackingNumber}</span>
+                                      </div>
+                                    )}
+                                  </div>
+                                  
+                                  {/* Section Commentaires */}
+                                  <div className="mt-6 pt-6 border-t border-[#E5E4DF]">
+                                    <CommentSection 
+                                      purchaseOrderId={order.id}
+                                      purchaseOrderNumber={order.id}
+                                    />
+                                  </div>
+                                </div>
+                              </motion.div>
+                            )}
+                          </AnimatePresence>
+                        </div>
+                      );
+                    })
+                )}
             </div>
 
-            <div className="flex justify-end">
-              <Button variant="primary" icon={Upload} onClick={exportHistoryToCSV}>
-                Exporter en CSV
+            <div className="flex justify-center sm:justify-end">
+              <Button variant="primary" icon={Upload} onClick={exportHistoryToCSV} className="w-full sm:w-auto">
+                <span className="hidden sm:inline">Exporter en CSV</span>
+                <span className="sm:hidden">Exporter CSV</span>
               </Button>
             </div>
             </motion.div>
