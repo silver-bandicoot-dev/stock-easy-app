@@ -15,7 +15,8 @@ import {
   Brain,
   BarChart3,
   ChevronDown,
-  ChevronRight
+  ChevronRight,
+  AlertTriangle
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
