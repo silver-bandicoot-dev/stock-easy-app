@@ -3,4 +3,5 @@
  */
 
 export { useDemandForecast } from './useDemandForecast';
+export { useMLNotifications } from './useMLNotifications';
 
