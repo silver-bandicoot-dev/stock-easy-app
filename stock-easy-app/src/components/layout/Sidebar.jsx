@@ -36,8 +36,6 @@ const Sidebar = ({
 
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: Package, type: 'tab' },
-    { id: 'actions', label: 'Order', icon: DollarSign, type: 'tab' },
-    { id: 'track', label: 'Track & Manage', icon: Truck, type: 'tab' },
     { 
       id: 'analytics', 
       label: 'Analytics', 
@@ -49,10 +47,12 @@ const Sidebar = ({
         { id: 'ml-forecast', label: 'Prévisions IA', icon: Brain }
       ]
     },
+    { id: 'actions', label: 'Order', icon: DollarSign, type: 'tab' },
+    { id: 'track', label: 'Track & Manage', icon: Truck, type: 'tab' },
     { id: 'stock-level', label: 'Stock Level', icon: Activity, type: 'tab' },
     { id: 'history', label: 'Historique', icon: FileText, type: 'tab' },
-    { id: 'profile', label: 'Mon Profil', icon: User, type: 'route', path: '/profile' },
     { id: 'settings', label: 'Paramètres', icon: Settings, type: 'tab' },
+    { id: 'profile', label: 'Mon Profil', icon: User, type: 'route', path: '/profile' },
   ];
 
   const handleMenuItemClick = (item) => {
