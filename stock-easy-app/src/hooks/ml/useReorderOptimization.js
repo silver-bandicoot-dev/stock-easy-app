@@ -137,43 +137,64 @@ export function useReorderOptimization(products) {
   }, [optimizations]);
 
   /**
-   * Applique toutes les optimisations
+   * Applique toutes les optimisations en batch
    */
   const applyAll = useCallback(async () => {
-    const skus = Array.from(optimizations.keys());
+    const optimizationList = Array.from(optimizations.values());
     
-    if (skus.length === 0) {
+    if (optimizationList.length === 0) {
       toast.info('Aucune optimisation à appliquer');
       return;
     }
 
+    const totalSavings = Array.from(optimizations.values())
+      .reduce((sum, opt) => sum + opt.costAnalysis.savings.perYear, 0);
+
     const confirm = window.confirm(
-      `Appliquer ${skus.length} optimisations?\n\n` +
-      `Cela mettra à jour les points de commande pour tous les produits sélectionnés.`
+      `Appliquer ${optimizationList.length} optimisations?\n\n` +
+      `Cela mettra à jour les points de commande pour tous les produits sélectionnés.\n\n` +
+      `Économies totales estimées : ${Math.round(totalSavings)}€/an`
     );
 
     if (!confirm) return;
 
-    let applied = 0;
-    let errors = 0;
-
-    for (const sku of skus) {
-      try {
-        await applyOptimization(sku);
-        applied++;
-      } catch (err) {
-        errors++;
+    try {
+      toast.loading('Application des optimisations...', { id: 'apply-all' });
+      
+      // Utiliser le batch endpoint
+      const results = await api.applyOptimizationsBatch(optimizationList);
+      
+      // Retirer les optimisations réussies
+      const newOptimizations = new Map(optimizations);
+      results.success.forEach(sku => newOptimizations.delete(sku));
+      setOptimizations(newOptimizations);
+      
+      // Notifications
+      if (results.success.length > 0) {
+        toast.success(
+          `${results.success.length} optimisations appliquées`,
+          { id: 'apply-all' }
+        );
       }
+      
+      if (results.errors.length > 0) {
+        toast.error(
+          `${results.errors.length} erreurs rencontrées`,
+          {
+            id: 'apply-all-errors',
+            description: results.errors.map(e => `${e.sku}: ${e.error}`).join('\n')
+          }
+        );
+      }
+      
+    } catch (err) {
+      console.error('❌ Erreur lors de l\'application batch:', err);
+      toast.error('Erreur lors de l\'application', {
+        id: 'apply-all',
+        description: err.message
+      });
     }
-
-    if (applied > 0) {
-      toast.success(`${applied} optimisations appliquées`);
-    }
-    
-    if (errors > 0) {
-      toast.error(`${errors} erreurs rencontrées`);
-    }
-  }, [optimizations, applyOptimization]);
+  }, [optimizations]);
 
   /**
    * Rejette une optimisation

@@ -371,6 +371,46 @@ export async function deleteWarehouse(warehouseName) {
   }
 }
 
+/**
+ * Applique les paramètres optimisés à plusieurs produits en batch
+ * @param {Array} optimizations - Liste des optimisations à appliquer
+ * @returns {Promise<Object>}
+ */
+export async function applyOptimizationsBatch(optimizations) {
+  try {
+    console.log(`📦 Application de ${optimizations.length} optimisations en batch...`);
+    
+    // Appliquer chaque optimisation
+    const results = {
+      success: [],
+      errors: []
+    };
+    
+    for (const opt of optimizations) {
+      try {
+        await updateProduct(opt.sku, {
+          reorderPoint: opt.reorderPoint,
+          securityStock: opt.securityStock
+        });
+        results.success.push(opt.sku);
+      } catch (err) {
+        results.errors.push({ sku: opt.sku, error: err.message });
+      }
+    }
+    
+    console.log(`✅ ${results.success.length} optimisations appliquées`);
+    if (results.errors.length > 0) {
+      console.warn(`⚠️ ${results.errors.length} erreurs:`, results.errors);
+    }
+    
+    return results;
+    
+  } catch (error) {
+    console.error('❌ Erreur lors de l\'application batch:', error);
+    throw error;
+  }
+}
+
 // Objet API pour compatibilité avec le code existant
 export const api = {
   getAllData,
@@ -388,7 +428,8 @@ export const api = {
   getWarehouses,
   createWarehouse,
   updateWarehouse,
-  deleteWarehouse
+  deleteWarehouse,
+  applyOptimizationsBatch
 };
 
 export default api;
