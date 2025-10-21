@@ -117,7 +117,10 @@ const Sidebar = ({
         {menuItems.map((item) => {
           const Icon = item.icon;
           const isActive = item.type === 'tab' && activeTab === item.id;
-          const showSubMenu = item.hasSubMenu && item.id === 'analytics' && (isActive || analyticsExpanded);
+          const showSubMenu = item.hasSubMenu && (
+            (item.id === 'analytics' && (isActive || analyticsExpanded)) ||
+            (item.id === 'ai-forecasts' && (isActive || aiExpanded))
+          );
           
           return (
             <div key={item.id}>

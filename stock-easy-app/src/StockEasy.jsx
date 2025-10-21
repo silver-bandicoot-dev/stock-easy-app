@@ -19,7 +19,7 @@ import { DateRangePicker } from './components/features/DateRangePicker';
 import { InsightAlert } from './components/features/InsightAlert';
 import { ChartModal } from './components/features/ChartModal';
 import { ComparisonSelector } from './components/features/ComparisonSelector';
-import { MLInsightsDashboard, MLAdvancedDashboard } from './components/ml';
+import { AIMainDashboard } from './components/ml';
 import { AssignSupplierModal } from './components/settings/AssignSupplierModal';
 import { SupplierModal } from './components/settings/SupplierModal';
 import { GestionFournisseurs } from './components/settings/GestionFournisseurs';
@@ -260,7 +260,8 @@ const StockEasy = () => {
 
   // NOUVEAUX ÉTATS pour les sous-onglets de Paramètres
   const [parametersSubTab, setParametersSubTab] = useState('general'); // 'general', 'products', 'suppliers', 'mapping'
-  const [analyticsSubTab, setAnalyticsSubTab] = useState('kpis'); // 'kpis', 'ml-forecast'
+  const [analyticsSubTab, setAnalyticsSubTab] = useState('kpis'); // 'kpis'
+  const [aiSubTab, setAiSubTab] = useState('overview'); // 'overview', 'forecasts', 'optimization', 'anomalies'
   
   // NOUVEAUX ÉTATS pour CORRECTION 5 et 6
   const [discrepancyTypes, setDiscrepancyTypes] = useState({});
@@ -1865,6 +1866,8 @@ ${getUserSignature()}`
           syncing={syncing}
           analyticsSubTab={analyticsSubTab}
           setAnalyticsSubTab={setAnalyticsSubTab}
+          aiSubTab={aiSubTab}
+          setAiSubTab={setAiSubTab}
         />
 
         {/* Main Content - Pleine hauteur avec padding pour sidebar desktop */}
@@ -3015,19 +3018,8 @@ ${getUserSignature()}`
               transition={{ duration: 0.25 }}
               className="space-y-6">
             
-            {/* Sous-onglets Analytics */}
-            <SubTabsNavigation
-              tabs={[
-                { id: 'kpis', label: 'Indicateurs', icon: Activity },
-                { id: 'ml-forecast', label: 'Prévisions IA', icon: Brain }
-              ]}
-              activeTab={analyticsSubTab}
-              onChange={setAnalyticsSubTab}
-            />
-            
-            {/* Section KPIs */}
-            {analyticsSubTab === 'kpis' && (
-              <>
+            {/* Section KPIs (plus besoin de sous-onglets) */}
+            <>
                 <div className="bg-white rounded-xl shadow-sm border border-[#E5E4DF] p-6">
                   <h2 className="text-2xl font-bold text-[#191919] mb-2">Indicateurs Clés de l'Inventaire</h2>
                   <p className="text-sm text-[#666663] mb-6">
@@ -3210,13 +3202,6 @@ ${getUserSignature()}`
                 </div>
             )}
               </>
-            )}
-            
-            {/* Section Prévisions IA */}
-            {analyticsSubTab === 'ml-forecast' && (
-              <MLAdvancedDashboard products={enrichedProducts} />
-            )}
-            
           </motion.div>
         )}
 
@@ -3227,6 +3212,24 @@ ${getUserSignature()}`
           kpiData={selectedKPI ? analyticsData[selectedKPI] : null}
           title={selectedKPI ? kpiTitles[selectedKPI] : ''}
         />
+
+          {/* IA & PRÉVISIONS TAB */}
+          {activeTab === 'ai-forecasts' && (
+            <motion.div
+              key="ai-forecasts"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              transition={{ duration: 0.25 }}
+              className="space-y-6">
+              <AIMainDashboard
+                products={enrichedProducts}
+                orders={orders}
+                aiSubTab={aiSubTab}
+                setAiSubTab={setAiSubTab}
+              />
+            </motion.div>
+          )}
 
           {/* STOCK LEVEL TAB */}
           {activeTab === 'stock-level' && (
