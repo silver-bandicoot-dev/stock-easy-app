@@ -7,6 +7,7 @@ import React from 'react';
 import {
   Brain,
   TrendingUp,
+  TrendingDown,
   AlertTriangle,
   Target,
   CheckCircle,
