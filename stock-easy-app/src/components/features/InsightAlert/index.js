@@ -1,0 +1,2 @@
+export { InsightAlert } from './InsightAlert';
+

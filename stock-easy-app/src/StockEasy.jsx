@@ -15,6 +15,10 @@ import { SubTabsNavigation } from './components/features/SubTabsNavigation';
 import { ProductSelectionTable } from './components/features/ProductSelectionTable';
 import { StockHealthDashboard } from './components/features/StockHealthDashboard';
 import { SupplierHealthSummary } from './components/features/SupplierHealthSummary';
+import { DateRangePicker } from './components/features/DateRangePicker';
+import { InsightAlert } from './components/features/InsightAlert';
+import { ChartModal } from './components/features/ChartModal';
+import { ComparisonSelector } from './components/features/ComparisonSelector';
 import { AssignSupplierModal } from './components/settings/AssignSupplierModal';
 import { SupplierModal } from './components/settings/SupplierModal';
 import { GestionFournisseurs } from './components/settings/GestionFournisseurs';
@@ -23,6 +27,9 @@ import { ParametresGeneraux } from './components/settings/ParametresGeneraux';
 import { GestionWarehouses } from './components/settings/GestionWarehouses';
 import CommentSection from './components/comments/CommentSection';
 import Sidebar from './components/layout/Sidebar';
+import { useAnalytics } from './hooks/useAnalytics';
+import { checkAndSaveKPISnapshot } from './utils/kpiScheduler';
+import { generateInsights } from './utils/insightGenerator';
 
 // ============================================
 // FONCTIONS API - Importées depuis apiService
@@ -230,6 +237,10 @@ const StockEasy = () => {
   const [reconciliationModalOpen, setReconciliationModalOpen] = useState(false);
   const [reconciliationOrder, setReconciliationOrder] = useState(null);
   const [dateRange, setDateRange] = useState('30d');
+  const [customRange, setCustomRange] = useState(null);
+  const [comparisonType, setComparisonType] = useState('previous');
+  const [chartModalOpen, setChartModalOpen] = useState(false);
+  const [selectedKPI, setSelectedKPI] = useState(null);
   const [historyFilter, setHistoryFilter] = useState('all');
   const [historyDateStart, setHistoryDateStart] = useState('');
   const [historyDateEnd, setHistoryDateEnd] = useState('');
@@ -737,66 +748,48 @@ const StockEasy = () => {
     return notifs;
   }, [productsByStatus, orders]);
 
-  // CALCUL DES VRAIS KPIs ANALYTICS
-  const analyticsData = useMemo(() => {
-    // KPI 1: Taux de disponibilité des SKU
-    const activeSKUs = enrichedProducts.length;
-    const availableSKUs = enrichedProducts.filter(p => p.stock > 0).length;
-    const availabilityRate = activeSKUs > 0 ? Math.round((availableSKUs / activeSKUs) * 100) : 0;
-    
-    // KPI 2: Ventes perdues - Rupture de stock
-    const salesLost = enrichedProducts
-      .filter(p => p.stock === 0)
-      .reduce((total, p) => {
-        // Estimation: supposons 7 jours de rupture en moyenne
-        const daysOutOfStock = 7;
-        const lostRevenue = daysOutOfStock * p.salesPerDay * (p.buyPrice * 1.5); // marge estimée 50%
-        return total + lostRevenue;
-      }, 0);
-    
-    // KPI 3: Valeur surstocks profonds - UTILISATION DES PARAMÈTRES
-    // Lire le seuil depuis les paramètres ou utiliser 90 jours par défaut
-    const seuilSurstock = parseInt(parameters.SeuilSurstockProfond) || 90;
-    
-    // Surstock profond = > 2x le seuil
-    const seuilSurstockProfond = seuilSurstock * 2;
-    
-    const deepOverstockValue = enrichedProducts
-      .filter(p => p.daysOfStock > seuilSurstockProfond)
-      .reduce((total, p) => {
-        return total + (p.stock * p.buyPrice);
-      }, 0);
-    
-    return {
-      skuAvailability: { 
-        value: `${availabilityRate}%`, 
-        actualValue: availabilityRate,
-        change: 19, 
-        changePercent: 39,
-        trend: 'up',
-        description: tooltips.skuAvailability,
-        chartData: [30, 35, 40, 45, 52, 60, 65, 70, 75, availabilityRate]
-      },
-      salesLost: { 
-        value: `€${Math.round(salesLost).toLocaleString('fr-FR')}`, 
-        actualValue: salesLost,
-        change: -39, 
-        changePercent: 39,
-        trend: 'down',
-        description: tooltips.salesLost,
-        chartData: [80, 75, 85, 90, 70, 60, 75, 65, 55, Math.min(100, salesLost / 100)]
-      },
-      deepOverstock: { 
-        value: `€${Math.round(deepOverstockValue).toLocaleString('fr-FR')}`, 
-        actualValue: deepOverstockValue,
-        change: 92, 
-        changePercent: 92,
-        trend: 'up',
-        description: tooltips.deepOverstock,
-        chartData: [20, 25, 30, 35, 40, 50, 60, 70, 80, Math.min(100, deepOverstockValue / 100)]
-      }
-    };
-  }, [enrichedProducts, parameters]);
+  // CALCUL DES VRAIS KPIs ANALYTICS avec historique Firestore
+  const analyticsData = useAnalytics(enrichedProducts, orders, dateRange, customRange, comparisonType);
+  
+  // Génération des insights actionnables basés sur les KPIs
+  const insights = useMemo(() => {
+    if (analyticsData.loading || analyticsData.error || !analyticsData.skuAvailability) {
+      console.log('⚠️ Pas de données analytics pour générer les insights');
+      return [];
+    }
+    return generateInsights(analyticsData, enrichedProducts, orders, setActiveTab);
+  }, [analyticsData, enrichedProducts, orders, setActiveTab]);
+  
+  // Fonction pour ouvrir le modal de graphique détaillé
+  const openChartModal = (kpiKey) => {
+    console.log('📊 Ouverture du modal pour KPI:', kpiKey);
+    setSelectedKPI(kpiKey);
+    setChartModalOpen(true);
+  };
+  
+  // Mapping des clés KPI vers leurs titres
+  const kpiTitles = {
+    skuAvailability: 'Taux de Disponibilité des SKU',
+    inventoryValuation: 'Valeur de l\'Inventaire',
+    salesLost: 'Ventes Perdues - Rupture de Stock',
+    overstockCost: 'Valeur Surstocks Profonds'
+  };
+  
+  // Sauvegarde automatique du snapshot KPI quotidien
+  useEffect(() => {
+    if (currentUser?.uid && enrichedProducts.length > 0 && orders.length > 0) {
+      console.log('🔄 Vérification et sauvegarde du snapshot KPI quotidien...');
+      checkAndSaveKPISnapshot(currentUser.uid, enrichedProducts, orders)
+        .then(result => {
+          if (result.success) {
+            console.log('✅ Snapshot KPI:', result.message);
+          }
+        })
+        .catch(error => {
+          console.error('❌ Erreur sauvegarde snapshot KPI:', error);
+        });
+    }
+  }, [currentUser?.uid, enrichedProducts, orders]);
 
   const updateProductParam = async (sku, field, value) => {
     try {
@@ -3023,93 +3016,191 @@ ${getUserSignature()}`
                 Suivez en temps réel les principaux KPIs ayant un impact direct sur vos résultats financiers
               </p>
               
-              <div className="flex items-center gap-4 flex-wrap mb-6">
-                <div className="inline-flex items-center gap-2 px-4 py-2 bg-[#FAFAF7] rounded-lg border border-[#E5E4DF]">
-                  <Calendar className="w-4 h-4 text-[#666663] shrink-0" />
-                  <select 
-                    value={dateRange}
-                    onChange={(e) => setDateRange(e.target.value)}
-                    className="bg-transparent border-none text-[#191919] focus:outline-none font-medium"
-                  >
-                    <option value="today">Aujourd'hui</option>
-                    <option value="7d">7 derniers jours</option>
-                    <option value="30d">30 derniers jours</option>
-                    <option value="90d">90 derniers jours</option>
-                  </select>
-                </div>
+              <div className="flex flex-col gap-4 mb-6">
+                <DateRangePicker
+                  value={dateRange}
+                  onChange={setDateRange}
+                  customRange={customRange}
+                  onCustomRangeChange={setCustomRange}
+                />
+                
+                <ComparisonSelector
+                  value={comparisonType}
+                  onChange={setComparisonType}
+                  disabled={dateRange === 'custom'}
+                />
               </div>
             </div>
 
-            {/* KPI Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <KPICard
-                title="Taux de Disponibilité des SKU"
-                value={analyticsData.skuAvailability.value}
-                change={analyticsData.skuAvailability.change}
-                changePercent={analyticsData.skuAvailability.changePercent}
-                trend={analyticsData.skuAvailability.trend}
-                description={analyticsData.skuAvailability.description}
-                chartData={analyticsData.skuAvailability.chartData}
-              />
-              
-              <KPICard
-                title="Ventes Perdues - Rupture de Stock"
-                value={analyticsData.salesLost.value}
-                change={analyticsData.salesLost.change}
-                changePercent={analyticsData.salesLost.changePercent}
-                trend={analyticsData.salesLost.trend}
-                description={analyticsData.salesLost.description}
-                chartData={analyticsData.salesLost.chartData}
-              />
-              
-              <KPICard
-                title="Valeur Surstocks Profonds"
-                value={analyticsData.deepOverstock.value}
-                change={analyticsData.deepOverstock.change}
-                changePercent={analyticsData.deepOverstock.changePercent}
-                trend={analyticsData.deepOverstock.trend}
-                description={analyticsData.deepOverstock.description}
-                chartData={analyticsData.deepOverstock.chartData}
-              />
-            </div>
+            {/* État de chargement */}
+            {analyticsData.loading ? (
+              <div className="flex items-center justify-center h-40 bg-white rounded-xl shadow-sm border border-[#E5E4DF]">
+                <RefreshCw className="w-6 h-6 animate-spin text-[#666663]" />
+                <span className="ml-2 text-[#666663]">Chargement des analytics...</span>
+              </div>
+            ) : analyticsData.error ? (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                <p className="text-red-700">Erreur: {analyticsData.error}</p>
+              </div>
+            ) : (
+              <>
+                {/* KPI Cards - Toutes avec la même hauteur */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                {/* KPI 1: Disponibilité */}
+                <KPICard
+                  title="Taux de Disponibilité des SKU"
+                  value={analyticsData.skuAvailability.value}
+                  change={analyticsData.skuAvailability.change}
+                  changePercent={analyticsData.skuAvailability.changePercent}
+                  trend={analyticsData.skuAvailability.trend}
+                  description={analyticsData.skuAvailability.description}
+                  chartData={analyticsData.skuAvailability.chartData}
+                  comparisonPeriod={analyticsData.skuAvailability.comparisonPeriod}
+                  onClick={() => openChartModal('skuAvailability')}
+                />
+                
+                {/* KPI 2: Inventory Valuation */}
+                <KPICard
+                  title="Valeur de l'Inventaire"
+                  value={analyticsData.inventoryValuation.value}
+                  change={analyticsData.inventoryValuation.change}
+                  changePercent={analyticsData.inventoryValuation.changePercent}
+                  trend={analyticsData.inventoryValuation.trend}
+                  description={analyticsData.inventoryValuation.description}
+                  chartData={analyticsData.inventoryValuation.chartData}
+                  comparisonPeriod={analyticsData.inventoryValuation.comparisonPeriod}
+                  onClick={() => openChartModal('inventoryValuation')}
+                />
+                
+                {/* KPI 3: Ventes Perdues */}
+                <KPICard
+                  title="Ventes Perdues - Rupture de Stock"
+                  value={analyticsData.salesLost.value}
+                  change={analyticsData.salesLost.change}
+                  changePercent={analyticsData.salesLost.changePercent}
+                  trend={analyticsData.salesLost.trend}
+                  description={analyticsData.salesLost.description}
+                  chartData={analyticsData.salesLost.chartData}
+                  comparisonPeriod={analyticsData.salesLost.comparisonPeriod}
+                  onClick={() => openChartModal('salesLost')}
+                />
+                
+                {/* KPI 4: Surstocks */}
+                <KPICard
+                  title="Valeur Surstocks Profonds"
+                  value={analyticsData.overstockCost.value}
+                  change={analyticsData.overstockCost.change}
+                  changePercent={analyticsData.overstockCost.changePercent}
+                  trend={analyticsData.overstockCost.trend}
+                  description={analyticsData.overstockCost.description}
+                  chartData={analyticsData.overstockCost.chartData}
+                  comparisonPeriod={analyticsData.overstockCost.comparisonPeriod}
+                  onClick={() => openChartModal('overstockCost')}
+                />
+              </div>
 
-            {/* Recommandations */}
-            <div className="bg-white rounded-xl shadow-sm border border-[#E5E4DF] p-6">
-              <h3 className="text-lg font-bold text-[#191919] mb-4">Recommandations Intelligentes</h3>
-              <div className="space-y-3">
-                <div className="flex items-start gap-3 p-4 bg-green-50 rounded-lg border border-green-200">
-                  <CheckCircle className="w-5 h-5 text-green-600 mt-0.5 shrink-0" />
-                  <div>
-                    <div className="font-medium text-green-600">Amélioration du taux de disponibilité</div>
-                    <div className="text-sm text-[#666663] mt-1">
-                      Commander les 3 produits urgents permettra d'augmenter votre taux de disponibilité de 82% à 91%
-                    </div>
-                  </div>
+              {/* Insights séparés - Affichage sous les KPI Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mt-6">
+                {/* Insights pour KPI 1 */}
+                <div className="space-y-3">
+                  {insights
+                    .filter(insight => insight.kpi === 'skuAvailability')
+                    .map(insight => (
+                      <InsightAlert
+                        key={insight.id}
+                        type={insight.type}
+                        message={insight.message}
+                        actionLabel={insight.actionLabel}
+                        onActionClick={insight.action}
+                      />
+                    ))
+                  }
                 </div>
                 
-                <div className="flex items-start gap-3 p-4 bg-yellow-50 rounded-lg border border-yellow-200">
-                  <AlertCircle className="w-5 h-5 text-yellow-600 mt-0.5 shrink-0" />
-                  <div>
-                    <div className="font-medium text-yellow-600">Réduction des ventes perdues</div>
-                    <div className="text-sm text-[#666663] mt-1">
-                      Prioriser le réapprovisionnement pourrait éviter €8,420 de pertes
-                    </div>
-                  </div>
+                {/* Insights pour KPI 2 */}
+                <div className="space-y-3">
+                  {insights
+                    .filter(insight => insight.kpi === 'inventoryValuation')
+                    .map(insight => (
+                      <InsightAlert
+                        key={insight.id}
+                        type={insight.type}
+                        message={insight.message}
+                        actionLabel={insight.actionLabel}
+                        onActionClick={insight.action}
+                      />
+                    ))
+                  }
                 </div>
                 
-                <div className="flex items-start gap-3 p-4 bg-blue-50 rounded-lg border border-blue-200">
-                  <TrendingUp className="w-5 h-5 text-[#64A4F2] mt-0.5 shrink-0" />
-                  <div>
-                    <div className="font-medium text-[#64A4F2]">Optimisation des surstocks</div>
-                    <div className="text-sm text-[#666663] mt-1">
-                      Envisager une promotion sur certains produits pour libérer €3,200 de trésorerie
-                    </div>
-                  </div>
+                {/* Insights pour KPI 3 */}
+                <div className="space-y-3">
+                  {insights
+                    .filter(insight => insight.kpi === 'salesLost')
+                    .map(insight => (
+                      <InsightAlert
+                        key={insight.id}
+                        type={insight.type}
+                        message={insight.message}
+                        actionLabel={insight.actionLabel}
+                        onActionClick={insight.action}
+                      />
+                    ))
+                  }
+                </div>
+                
+                {/* Insights pour KPI 4 */}
+                <div className="space-y-3">
+                  {insights
+                    .filter(insight => insight.kpi === 'overstockCost')
+                    .map(insight => (
+                      <InsightAlert
+                        key={insight.id}
+                        type={insight.type}
+                        message={insight.message}
+                        actionLabel={insight.actionLabel}
+                        onActionClick={insight.action}
+                      />
+                    ))
+                  }
                 </div>
               </div>
-            </div>
-            </motion.div>
-          )}
+              </>
+            )}
+
+            {/* Insights globaux - Affichage regroupé des insights non liés à un KPI spécifique */}
+            {!analyticsData.loading && !analyticsData.error && insights.filter(i => i.kpi === 'global').length > 0 && (
+              <div className="bg-white rounded-xl shadow-sm border border-[#E5E4DF] p-6">
+                <h3 className="text-lg font-bold text-[#191919] mb-4 flex items-center gap-2">
+                  <AlertCircle className="w-5 h-5 text-[#191919]" />
+                  Alertes Importantes
+                </h3>
+                <div className="space-y-3">
+                  {insights
+                    .filter(insight => insight.kpi === 'global')
+                    .map(insight => (
+                      <InsightAlert
+                        key={insight.id}
+                        type={insight.type}
+                        message={insight.message}
+                        actionLabel={insight.actionLabel}
+                        onActionClick={insight.action}
+                        />
+                      ))
+                    }
+                  </div>
+                </div>
+            )}
+          </motion.div>
+        )}
+
+        {/* Modal de graphique détaillé */}
+        <ChartModal
+          isOpen={chartModalOpen}
+          onClose={() => setChartModalOpen(false)}
+          kpiData={selectedKPI ? analyticsData[selectedKPI] : null}
+          title={selectedKPI ? kpiTitles[selectedKPI] : ''}
+        />
 
           {/* STOCK LEVEL TAB */}
           {activeTab === 'stock-level' && (

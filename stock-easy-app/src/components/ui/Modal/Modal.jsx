@@ -10,10 +10,21 @@ import { motion } from 'framer-motion';
  * @param {string} props.title - Titre du modal
  * @param {React.ReactNode} props.children - Contenu du modal
  * @param {React.ReactNode} props.footer - Footer optionnel du modal
+ * @param {string} props.size - Taille du modal ('small' | 'medium' | 'large' | 'xlarge')
  * @returns {JSX.Element|null}
  */
-export function Modal({ isOpen, onClose, title, children, footer }) {
+export function Modal({ isOpen, onClose, title, children, footer, size = 'medium' }) {
   if (!isOpen) return null;
+  
+  // Déterminer la largeur max selon la taille
+  const sizeClasses = {
+    small: 'max-w-md',
+    medium: 'max-w-2xl',
+    large: 'max-w-4xl',
+    xlarge: 'max-w-6xl'
+  };
+  
+  const maxWidthClass = sizeClasses[size] || sizeClasses.medium;
   
   return (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
@@ -31,7 +42,7 @@ export function Modal({ isOpen, onClose, title, children, footer }) {
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.95, y: 20 }}
         transition={{ duration: 0.2, ease: "easeOut" }}
-        className="relative bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] flex flex-col">
+        className={`relative bg-white rounded-xl shadow-2xl ${maxWidthClass} w-full max-h-[90vh] flex flex-col`}>
         <div className="bg-[#191919] px-6 py-4 flex items-center justify-between rounded-t-xl shrink-0">
           <h3 className="text-xl font-bold text-white">{title}</h3>
           <button 
