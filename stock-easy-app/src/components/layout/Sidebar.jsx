@@ -11,7 +11,11 @@ import {
   LogOut,
   Menu,
   X,
-  RefreshCw
+  RefreshCw,
+  Brain,
+  BarChart3,
+  ChevronDown,
+  ChevronRight
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
@@ -22,16 +26,29 @@ const Sidebar = ({
   setActiveTab, 
   handleLogout, 
   syncData, 
-  syncing 
+  syncing,
+  analyticsSubTab,
+  setAnalyticsSubTab
 }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [analyticsExpanded, setAnalyticsExpanded] = useState(false);
   const navigate = useNavigate();
 
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: Package, type: 'tab' },
     { id: 'actions', label: 'Order', icon: DollarSign, type: 'tab' },
     { id: 'track', label: 'Track & Manage', icon: Truck, type: 'tab' },
-    { id: 'analytics', label: 'Analytics', icon: TrendingUp, type: 'tab' },
+    { 
+      id: 'analytics', 
+      label: 'Analytics', 
+      icon: TrendingUp, 
+      type: 'tab',
+      hasSubMenu: true,
+      subItems: [
+        { id: 'kpis', label: 'Indicateurs', icon: BarChart3 },
+        { id: 'ml-forecast', label: 'Prévisions IA', icon: Brain }
+      ]
+    },
     { id: 'stock-level', label: 'Stock Level', icon: Activity, type: 'tab' },
     { id: 'history', label: 'Historique', icon: FileText, type: 'tab' },
     { id: 'profile', label: 'Mon Profil', icon: User, type: 'route', path: '/profile' },
@@ -41,8 +58,20 @@ const Sidebar = ({
   const handleMenuItemClick = (item) => {
     if (item.type === 'route') {
       navigate(item.path);
+    } else if (item.hasSubMenu && item.id === 'analytics') {
+      // Si on clique sur Analytics, basculer l'expansion
+      setAnalyticsExpanded(!analyticsExpanded);
+      setActiveTab(item.id);
     } else {
       setActiveTab(item.id);
+    }
+    setMobileMenuOpen(false);
+  };
+  
+  const handleSubMenuClick = (parentId, subItem) => {
+    if (parentId === 'analytics') {
+      setAnalyticsSubTab(subItem.id);
+      setActiveTab('analytics');
     }
     setMobileMenuOpen(false);
   };
@@ -63,20 +92,58 @@ const Sidebar = ({
         {menuItems.map((item) => {
           const Icon = item.icon;
           const isActive = item.type === 'tab' && activeTab === item.id;
+          const showSubMenu = item.hasSubMenu && item.id === 'analytics' && (isActive || analyticsExpanded);
           
           return (
-            <button
-              key={item.id}
-              onClick={() => handleMenuItemClick(item)}
-              className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg font-medium text-sm transition-all ${
-                isActive
-                  ? 'bg-black text-white shadow-lg'
-                  : 'text-[#FAFAF7] hover:bg-[#40403E]'
-              }`}
-            >
-              <Icon className="w-5 h-5 shrink-0" />
-              <span>{item.label}</span>
-            </button>
+            <div key={item.id}>
+              {/* Menu principal */}
+              <button
+                onClick={() => handleMenuItemClick(item)}
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg font-medium text-sm transition-all ${
+                  isActive
+                    ? 'bg-black text-white shadow-lg'
+                    : 'text-[#FAFAF7] hover:bg-[#40403E]'
+                }`}
+              >
+                <Icon className="w-5 h-5 shrink-0" />
+                <span className="flex-1 text-left">{item.label}</span>
+                {item.hasSubMenu && (
+                  showSubMenu ? 
+                    <ChevronDown className="w-4 h-4" /> : 
+                    <ChevronRight className="w-4 h-4" />
+                )}
+              </button>
+              
+              {/* Sous-menu */}
+              {showSubMenu && item.subItems && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  className="ml-4 mt-1 space-y-1"
+                >
+                  {item.subItems.map((subItem) => {
+                    const SubIcon = subItem.icon;
+                    const isSubActive = analyticsSubTab === subItem.id && activeTab === 'analytics';
+                    
+                    return (
+                      <button
+                        key={subItem.id}
+                        onClick={() => handleSubMenuClick(item.id, subItem)}
+                        className={`w-full flex items-center gap-3 px-4 py-2 rounded-lg text-sm transition-all ${
+                          isSubActive
+                            ? 'bg-[#40403E] text-white'
+                            : 'text-[#FAFAF7] hover:bg-[#40403E]/50'
+                        }`}
+                      >
+                        <SubIcon className="w-4 h-4 shrink-0" />
+                        <span>{subItem.label}</span>
+                      </button>
+                    );
+                  })}
+                </motion.div>
+              )}
+            </div>
           );
         })}
       </nav>

@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { Package, Bell, Mail, X, Check, Truck, Clock, AlertCircle, CheckCircle, Eye, Settings, Info, Edit2, Activity, TrendingUp, TrendingDown, ArrowUpRight, ArrowDownRight, Upload, FileText, Calendar, RefreshCw, Plus, User, LogOut, Warehouse } from 'lucide-react';
+import { Package, Bell, Mail, X, Check, Truck, Clock, AlertCircle, CheckCircle, Eye, Settings, Info, Edit2, Activity, TrendingUp, TrendingDown, ArrowUpRight, ArrowDownRight, Upload, FileText, Calendar, RefreshCw, Plus, User, LogOut, Warehouse, Brain } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from './contexts/AuthContext';
 import NotificationBell from './components/notifications/NotificationBell';
@@ -260,6 +260,7 @@ const StockEasy = () => {
 
   // NOUVEAUX ÉTATS pour les sous-onglets de Paramètres
   const [parametersSubTab, setParametersSubTab] = useState('general'); // 'general', 'products', 'suppliers', 'mapping'
+  const [analyticsSubTab, setAnalyticsSubTab] = useState('kpis'); // 'kpis', 'ml-forecast'
   
   // NOUVEAUX ÉTATS pour CORRECTION 5 et 6
   const [discrepancyTypes, setDiscrepancyTypes] = useState({});
@@ -1862,6 +1863,8 @@ ${getUserSignature()}`
           handleLogout={handleLogout}
           syncData={syncData}
           syncing={syncing}
+          analyticsSubTab={analyticsSubTab}
+          setAnalyticsSubTab={setAnalyticsSubTab}
         />
 
         {/* Main Content - Pleine hauteur avec padding pour sidebar desktop */}
@@ -3011,11 +3014,25 @@ ${getUserSignature()}`
               exit={{ opacity: 0, x: -20 }}
               transition={{ duration: 0.25 }}
               className="space-y-6">
-            <div className="bg-white rounded-xl shadow-sm border border-[#E5E4DF] p-6">
-              <h2 className="text-2xl font-bold text-[#191919] mb-2">Indicateurs Clés de l'Inventaire</h2>
-              <p className="text-sm text-[#666663] mb-6">
-                Suivez en temps réel les principaux KPIs ayant un impact direct sur vos résultats financiers
-              </p>
+            
+            {/* Sous-onglets Analytics */}
+            <SubTabsNavigation
+              tabs={[
+                { id: 'kpis', label: 'Indicateurs', icon: Activity },
+                { id: 'ml-forecast', label: 'Prévisions IA', icon: Brain }
+              ]}
+              activeTab={analyticsSubTab}
+              onChange={setAnalyticsSubTab}
+            />
+            
+            {/* Section KPIs */}
+            {analyticsSubTab === 'kpis' && (
+              <>
+                <div className="bg-white rounded-xl shadow-sm border border-[#E5E4DF] p-6">
+                  <h2 className="text-2xl font-bold text-[#191919] mb-2">Indicateurs Clés de l'Inventaire</h2>
+                  <p className="text-sm text-[#666663] mb-6">
+                    Suivez en temps réel les principaux KPIs ayant un impact direct sur vos résultats financiers
+                  </p>
               
               <div className="flex flex-col gap-4 mb-6">
                 <DateRangePicker
@@ -3192,11 +3209,14 @@ ${getUserSignature()}`
                   </div>
                 </div>
             )}
-
-            {/* Dashboard ML - Prévisions de demande */}
-            {!analyticsData.loading && !analyticsData.error && (
+              </>
+            )}
+            
+            {/* Section Prévisions IA */}
+            {analyticsSubTab === 'ml-forecast' && (
               <MLInsightsDashboard products={enrichedProducts} />
             )}
+            
           </motion.div>
         )}
 
