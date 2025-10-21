@@ -7,3 +7,5 @@ export {
   filterBySKU,
   getSalesStatistics
 } from './dataCollector';
+
+export { DemandForecastModel } from './demandForecastModel';
