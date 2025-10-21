@@ -4,4 +4,5 @@
 
 export { useDemandForecast } from './useDemandForecast';
 export { useMLNotifications } from './useMLNotifications';
+export { useReorderOptimization } from './useReorderOptimization';
 

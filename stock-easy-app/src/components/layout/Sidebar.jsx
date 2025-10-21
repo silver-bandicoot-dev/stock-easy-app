@@ -28,23 +28,30 @@ const Sidebar = ({
   syncData, 
   syncing,
   analyticsSubTab,
-  setAnalyticsSubTab
+  setAnalyticsSubTab,
+  aiSubTab,
+  setAiSubTab
 }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [analyticsExpanded, setAnalyticsExpanded] = useState(false);
+  const [aiExpanded, setAiExpanded] = useState(false);
   const navigate = useNavigate();
 
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: Package, type: 'tab' },
+    { id: 'analytics', label: 'Analytics', icon: TrendingUp, type: 'tab' },
     { 
-      id: 'analytics', 
-      label: 'Analytics', 
-      icon: TrendingUp, 
+      id: 'ai-forecasts', 
+      label: 'IA & Prévisions', 
+      icon: Brain, 
       type: 'tab',
+      badge: 'Beta',
       hasSubMenu: true,
       subItems: [
-        { id: 'kpis', label: 'Indicateurs', icon: BarChart3 },
-        { id: 'ml-forecast', label: 'Prévisions IA', icon: Brain }
+        { id: 'overview', label: 'Vue d\'Ensemble', icon: BarChart3 },
+        { id: 'forecasts', label: 'Prévisions Détaillées', icon: TrendingUp },
+        { id: 'optimization', label: 'Optimisation Stocks', icon: Activity },
+        { id: 'anomalies', label: 'Détection Anomalies', icon: AlertTriangle }
       ]
     },
     { id: 'actions', label: 'Order', icon: DollarSign, type: 'tab' },
@@ -61,19 +68,24 @@ const Sidebar = ({
     } else if (item.hasSubMenu && item.id === 'analytics') {
       // Si on clique sur Analytics, basculer l'expansion
       if (activeTab === 'analytics') {
-        // Si déjà sur Analytics, juste toggle l'expansion
         setAnalyticsExpanded(!analyticsExpanded);
       } else {
-        // Si on vient d'un autre onglet, ouvrir et activer
         setActiveTab(item.id);
         setAnalyticsExpanded(true);
       }
+    } else if (item.hasSubMenu && item.id === 'ai-forecasts') {
+      // Si on clique sur IA & Prévisions, basculer l'expansion
+      if (activeTab === 'ai-forecasts') {
+        setAiExpanded(!aiExpanded);
+      } else {
+        setActiveTab(item.id);
+        setAiExpanded(true);
+      }
     } else {
       setActiveTab(item.id);
-      // Fermer le sous-menu Analytics si on quitte Analytics
-      if (item.id !== 'analytics') {
-        setAnalyticsExpanded(false);
-      }
+      // Fermer les sous-menus si on quitte
+      if (item.id !== 'analytics') setAnalyticsExpanded(false);
+      if (item.id !== 'ai-forecasts') setAiExpanded(false);
     }
     setMobileMenuOpen(false);
   };
@@ -82,6 +94,9 @@ const Sidebar = ({
     if (parentId === 'analytics') {
       setAnalyticsSubTab(subItem.id);
       setActiveTab('analytics');
+    } else if (parentId === 'ai-forecasts') {
+      setAiSubTab(subItem.id);
+      setActiveTab('ai-forecasts');
     }
     setMobileMenuOpen(false);
   };
@@ -117,6 +132,11 @@ const Sidebar = ({
               >
                 <Icon className="w-5 h-5 shrink-0" />
                 <span className="flex-1 text-left">{item.label}</span>
+                {item.badge && (
+                  <span className="px-2 py-0.5 text-xs font-bold bg-purple-600 text-white rounded">
+                    {item.badge}
+                  </span>
+                )}
                 {item.hasSubMenu && (
                   showSubMenu ? 
                     <ChevronDown className="w-4 h-4" /> : 
