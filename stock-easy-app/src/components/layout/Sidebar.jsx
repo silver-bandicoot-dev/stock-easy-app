@@ -119,8 +119,8 @@ const Sidebar = ({
           const Icon = item.icon;
           const isActive = item.type === 'tab' && activeTab === item.id;
           const showSubMenu = item.hasSubMenu && (
-            (item.id === 'analytics' && (isActive || analyticsExpanded)) ||
-            (item.id === 'ai-forecasts' && (isActive || aiExpanded))
+            (item.id === 'analytics' && analyticsExpanded) ||
+            (item.id === 'ai-forecasts' && aiExpanded)
           );
           
           return (
