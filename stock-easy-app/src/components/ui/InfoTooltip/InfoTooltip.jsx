@@ -45,6 +45,15 @@ export const tooltips = {
   stockHealth: "Indicateur visuel de la santé du stock. Vert = bon niveau, Orange = surveillance nécessaire, Rouge = urgent à commander.",
   skuAvailability: "Pourcentage de produits disponibles en stock par rapport au total des SKU actifs.",
   salesLost: "Montant estimé des ventes manquées en raison d'une indisponibilité produit.",
-  deepOverstock: "Valeur financière des produits dont le stock dépasse largement la demande prévue."
+  deepOverstock: "Valeur financière des produits dont le stock dépasse largement la demande prévue.",
+  
+  // Métriques ML
+  mlPrecision: "Pourcentage de prévisions dont l'erreur est inférieure à 20%. Score de 80%+ = Excellent, 60-80% = Bon, <60% = À améliorer. Indique la fiabilité globale du modèle.",
+  mlMAE: "Mean Absolute Error (Erreur Moyenne Absolue) : En moyenne, de combien d'unités le modèle se trompe par jour. Exemple : MAE = 2.5 signifie que le modèle se trompe en moyenne de 2-3 unités par jour. Plus c'est faible, mieux c'est. Bon score : <2.0",
+  mlRMSE: "Root Mean Square Error (Erreur Quadratique) : Similaire au MAE mais pénalise davantage les grosses erreurs. Si RMSE >> MAE, cela signifie qu'il y a des pics d'erreur importants. Aide à détecter les anomalies. Bon score : <3.0",
+  mlR2: "Coefficient de Détermination (R²) : Score de 0 à 1 mesurant si le modèle fait mieux que de dire 'la moyenne'. R² = 0.9 signifie que le modèle explique 90% de la variabilité des ventes. R² > 0.8 = Excellent, 0.5-0.8 = Bon, <0.5 = Faible. Un R² négatif signifie que le modèle est pire que la moyenne.",
+  mlConfidence: "Score de confiance du modèle basé sur la variance des prévisions. Plus les prévisions sont cohérentes entre elles, plus le score est élevé. 80%+ = Haute confiance, 60-80% = Moyenne, <60% = Faible confiance.",
+  mlTrend: "Tendance détectée par le modèle en comparant les prévisions du premier et dernier jour. Hausse = demande croissante (augmenter stock), Baisse = demande décroissante (risque surstock).",
+  mlRecommendedOrder: "Quantité recommandée calculée selon : Demande pendant délai fournisseur + Stock de sécurité (20%) - Stock actuel. Tient compte des prévisions ML pour optimiser vos commandes."
 };
 

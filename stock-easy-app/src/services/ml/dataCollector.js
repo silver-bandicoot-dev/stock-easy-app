@@ -4,7 +4,6 @@
  */
 
 import { getAllData } from '../apiService';
-import { isHoliday as checkIsHoliday } from './holidayService';
 
 /**
  * Collecte l'historique des ventes depuis l'API

@@ -8,6 +8,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsive
 import { CheckCircle, AlertCircle, TrendingUp } from 'lucide-react';
 import { format, subDays } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import { InfoTooltip, tooltips } from '../ui/InfoTooltip';
 
 export function PredictionVsReality({ comparisonData, product }) {
   // Préparer les données pour le graphique
@@ -44,6 +45,7 @@ export function PredictionVsReality({ comparisonData, product }) {
           value={`${metrics.accuracy}%`}
           icon={CheckCircle}
           color={metrics.accuracy >= 80 ? 'green' : metrics.accuracy >= 60 ? 'yellow' : 'red'}
+          tooltip={tooltips.mlPrecision}
         />
         <MetricCard
           label="MAE"
@@ -51,6 +53,7 @@ export function PredictionVsReality({ comparisonData, product }) {
           subtitle="Erreur moyenne"
           icon={AlertCircle}
           color="purple"
+          tooltip={tooltips.mlMAE}
         />
         <MetricCard
           label="RMSE"
@@ -58,6 +61,7 @@ export function PredictionVsReality({ comparisonData, product }) {
           subtitle="Écart quadratique"
           icon={TrendingUp}
           color="blue"
+          tooltip={tooltips.mlRMSE}
         />
         <MetricCard
           label="R²"
@@ -65,6 +69,7 @@ export function PredictionVsReality({ comparisonData, product }) {
           subtitle="Corrélation"
           icon={CheckCircle}
           color={metrics.r2 >= 0.8 ? 'green' : metrics.r2 >= 0.5 ? 'yellow' : 'red'}
+          tooltip={tooltips.mlR2}
         />
       </div>
 
@@ -132,7 +137,7 @@ export function PredictionVsReality({ comparisonData, product }) {
 /**
  * Carte métrique pour afficher un indicateur
  */
-function MetricCard({ label, value, subtitle, icon: Icon, color }) {
+function MetricCard({ label, value, subtitle, icon: Icon, color, tooltip }) {
   const colorClasses = {
     green: 'bg-green-50 text-green-700 border-green-200',
     yellow: 'bg-yellow-50 text-yellow-700 border-yellow-200',
@@ -146,6 +151,7 @@ function MetricCard({ label, value, subtitle, icon: Icon, color }) {
       <div className="flex items-center gap-2 mb-2">
         {Icon && <Icon className="w-4 h-4" />}
         <p className="text-xs font-medium uppercase">{label}</p>
+        {tooltip && <InfoTooltip content={tooltip} />}
       </div>
       <p className="text-2xl font-bold">{value}</p>
       {subtitle && <p className="text-xs mt-1 opacity-75">{subtitle}</p>}

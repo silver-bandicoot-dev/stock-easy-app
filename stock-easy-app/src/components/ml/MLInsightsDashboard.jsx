@@ -14,6 +14,7 @@ import {
   Loader
 } from 'lucide-react';
 import { useDemandForecast } from '../../hooks/ml/useDemandForecast';
+import { InfoTooltip, tooltips } from '../ui/InfoTooltip';
 
 // Error Boundary pour capturer les erreurs
 class MLErrorBoundary extends Component {
@@ -253,12 +254,16 @@ function ForecastCard({ product, forecast }) {
         <span className="text-sm font-medium">
           {isUpTrend ? 'En hausse' : 'En baisse'}
         </span>
+        <InfoTooltip content={tooltips.mlTrend} />
       </div>
 
       {/* Confiance */}
       <div className="mb-3">
         <div className="flex items-center justify-between text-sm mb-1">
-          <span className="text-[#666663]">Confiance</span>
+          <div className="flex items-center gap-1">
+            <span className="text-[#666663]">Confiance</span>
+            <InfoTooltip content={tooltips.mlConfidence} />
+          </div>
           <span className={`font-medium ${confidenceColor}`}>
             {forecast.confidence.toFixed(0)}%
           </span>
@@ -273,7 +278,10 @@ function ForecastCard({ product, forecast }) {
 
       {/* Recommandation */}
       <div className="pt-3 border-t border-[#E5E4DF]">
-        <p className="text-xs text-[#666663] mb-1">Recommandation</p>
+        <div className="flex items-center gap-1 mb-1">
+          <p className="text-xs text-[#666663]">Recommandation</p>
+          <InfoTooltip content={tooltips.mlRecommendedOrder} />
+        </div>
         <p className="text-sm font-semibold text-[#191919]">
           {forecast.recommendedOrder > 0 ? (
             <>Commander <span className="text-purple-600">{forecast.recommendedOrder}</span> unités</>
