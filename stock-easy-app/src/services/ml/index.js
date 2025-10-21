@@ -15,3 +15,11 @@ export {
   calculateCriticalityScore,
   generateAutoRecommendations
 } from './alertService';
+
+export {
+  isHoliday,
+  getHolidaysForYear,
+  countHolidaysInPeriod,
+  getNextHoliday,
+  getHolidaysInPeriod
+} from './holidayService';

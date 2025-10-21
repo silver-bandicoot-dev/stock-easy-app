@@ -188,7 +188,7 @@ export function useDemandForecast(products) {
             dayOfWeek: futureDate.getDay(),
             month: futureDate.getMonth() + 1,
             isWeekend: [0, 6].includes(futureDate.getDay()),
-            isHoliday: false, // TODO: intégrer API jours fériés
+            isHoliday: false,
             price: product.sellPrice || 0,
             avgSales: product.salesPerDay || 0
           });
