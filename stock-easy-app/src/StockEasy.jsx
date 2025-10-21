@@ -3215,20 +3215,14 @@ ${getUserSignature()}`
 
           {/* IA & PRÉVISIONS TAB */}
           {activeTab === 'ai-forecasts' && (
-            <motion.div
-              key="ai-forecasts"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              transition={{ duration: 0.25 }}
-              className="space-y-6">
+            <div className="space-y-6">
               <AIMainDashboard
                 products={enrichedProducts}
                 orders={orders}
                 aiSubTab={aiSubTab}
                 setAiSubTab={setAiSubTab}
               />
-            </motion.div>
+            </div>
           )}
 
           {/* STOCK LEVEL TAB */}

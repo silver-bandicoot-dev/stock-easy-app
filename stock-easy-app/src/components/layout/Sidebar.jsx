@@ -150,21 +150,21 @@ const Sidebar = ({
               
               {/* Sous-menu */}
               {showSubMenu && item.subItems && (
-                <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: 'auto' }}
-                  exit={{ opacity: 0, height: 0 }}
-                  className="ml-4 mt-1 space-y-1"
-                >
+                <div className="ml-4 mt-1 space-y-1">
                   {item.subItems.map((subItem) => {
                     const SubIcon = subItem.icon;
-                    const isSubActive = analyticsSubTab === subItem.id && activeTab === 'analytics';
+                    // Vérifier le bon sous-tab selon le parent
+                    const isSubActive = item.id === 'analytics' 
+                      ? (analyticsSubTab === subItem.id && activeTab === 'analytics')
+                      : item.id === 'ai-forecasts'
+                      ? (aiSubTab === subItem.id && activeTab === 'ai-forecasts')
+                      : false;
                     
                     return (
                       <button
                         key={subItem.id}
                         onClick={() => handleSubMenuClick(item.id, subItem)}
-                        className={`w-full flex items-center gap-3 px-4 py-2 rounded-lg text-sm transition-all ${
+                        className={`w-full flex items-center gap-3 px-4 py-2 rounded-lg text-sm transition-colors ${
                           isSubActive
                             ? 'bg-[#40403E] text-white'
                             : 'text-[#FAFAF7] hover:bg-[#40403E]/50'
@@ -175,7 +175,7 @@ const Sidebar = ({
                       </button>
                     );
                   })}
-                </motion.div>
+                </div>
               )}
             </div>
           );
