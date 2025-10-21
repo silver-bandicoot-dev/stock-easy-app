@@ -19,6 +19,7 @@ import { DateRangePicker } from './components/features/DateRangePicker';
 import { InsightAlert } from './components/features/InsightAlert';
 import { ChartModal } from './components/features/ChartModal';
 import { ComparisonSelector } from './components/features/ComparisonSelector';
+import { MLInsightsDashboard } from './components/ml/MLInsightsDashboard';
 import { AssignSupplierModal } from './components/settings/AssignSupplierModal';
 import { SupplierModal } from './components/settings/SupplierModal';
 import { GestionFournisseurs } from './components/settings/GestionFournisseurs';
@@ -3190,6 +3191,11 @@ ${getUserSignature()}`
                     }
                   </div>
                 </div>
+            )}
+
+            {/* Dashboard ML - Prévisions de demande */}
+            {!analyticsData.loading && !analyticsData.error && (
+              <MLInsightsDashboard products={allProducts} />
             )}
           </motion.div>
         )}
