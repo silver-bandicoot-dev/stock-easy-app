@@ -1,5 +1,5 @@
-import React, { useState, useMemo, useEffect } from 'react';
-import { Package, Bell, Mail, X, Check, Truck, Clock, AlertCircle, CheckCircle, Eye, Settings, Info, Edit2, Activity, TrendingUp, TrendingDown, ArrowUpRight, ArrowDownRight, Upload, FileText, Calendar, RefreshCw, Plus, User, LogOut, Warehouse, Brain } from 'lucide-react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
+import { Package, Bell, Mail, X, Check, Truck, Clock, AlertCircle, CheckCircle, Eye, Settings, Info, Edit2, Activity, TrendingUp, TrendingDown, ArrowUpRight, ArrowDownRight, Upload, FileText, Calendar, RefreshCw, Plus, User, LogOut, Warehouse, Brain, AtSign } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from './contexts/AuthContext';
 import NotificationBell from './components/notifications/NotificationBell';
@@ -27,6 +27,7 @@ import { MappingSKUFournisseur } from './components/settings/MappingSKUFournisse
 import { ParametresGeneraux } from './components/settings/ParametresGeneraux';
 import { GestionWarehouses } from './components/settings/GestionWarehouses';
 import CommentSection from './components/comments/CommentSection';
+
 import Sidebar from './components/layout/Sidebar';
 import { useAnalytics } from './hooks/useAnalytics';
 import { checkAndSaveKPISnapshot } from './utils/kpiScheduler';
@@ -1881,6 +1882,7 @@ ${getUserSignature()}`
         <div className="md:ml-64 min-h-screen">
           {/* Spacer pour le header mobile uniquement */}
           <div className="md:hidden h-[72px]" />
+          
           
           {/* Content Area avec NotificationBell intégré */}
           <div className="relative min-h-screen">

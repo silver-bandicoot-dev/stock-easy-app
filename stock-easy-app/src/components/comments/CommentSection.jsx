@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { db } from '../../config/firebase';
 import { 
@@ -14,84 +14,100 @@ import {
   doc,
   updateDoc
 } from 'firebase/firestore';
-import { MentionsInput, Mention } from 'react-mentions';
-import { Send, User as UserIcon, Trash2, Edit2, Check, X } from 'lucide-react';
+import { Send, User as UserIcon, Trash2, Edit2, Check, X, AtSign } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function CommentSection({ purchaseOrderId, purchaseOrderNumber }) {
   const { currentUser } = useAuth();
   const [comments, setComments] = useState([]);
   const [newComment, setNewComment] = useState('');
-  const [mentions, setMentions] = useState([]);
   const [teamMembers, setTeamMembers] = useState([]);
   const [userData, setUserData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [editingCommentId, setEditingCommentId] = useState(null);
   const [editContent, setEditContent] = useState('');
+  const [showMentions, setShowMentions] = useState(false);
+  const [mentionSearch, setMentionSearch] = useState('');
+  const [cursorPosition, setCursorPosition] = useState(0);
+  const textareaRef = useRef(null);
+  const mentionsListRef = useRef(null);
 
-  // Charger les données de l'utilisateur actuel
+  // Charger les données de l'utilisateur et les membres de l'équipe
   useEffect(() => {
     if (!currentUser) return;
     
+    // Pour l'instant, utilisons des données de test pour que les mentions fonctionnent
+    const mockTeamMembers = [
+      {
+        id: '1',
+        firstName: 'Jory',
+        lastName: 'Cherief',
+        email: 'jory@example.com',
+        profilePhoto: null
+      },
+      {
+        id: '2',
+        firstName: 'Marie',
+        lastName: 'Dupont',
+        email: 'marie@example.com',
+        profilePhoto: null
+      },
+      {
+        id: '3',
+        firstName: 'Pierre',
+        lastName: 'Martin',
+        email: 'pierre@example.com',
+        profilePhoto: null
+      }
+    ];
+    
+    setTeamMembers(mockTeamMembers);
+    
+    // Essayer de charger les vraies données en arrière-plan
     let isMounted = true;
     
-    const loadUserData = async () => {
+    const loadData = async () => {
       try {
+        // Charger les données utilisateur
         const userDoc = await getDocs(
           query(collection(db, 'users'), where('email', '==', currentUser.email))
         );
+        
         if (!userDoc.empty && isMounted) {
           const user = { id: userDoc.docs[0].id, ...userDoc.docs[0].data() };
           setUserData(user);
+          
+          // Charger les membres de l'équipe
+          if (user.companyId) {
+            const usersQuery = query(
+              collection(db, 'users'),
+              where('companyId', '==', user.companyId)
+            );
+            const snapshot = await getDocs(usersQuery);
+            if (isMounted) {
+              const members = snapshot.docs.map(doc => ({
+                id: doc.id,
+                display: `${doc.data().firstName || ''} ${doc.data().lastName || ''}`.trim() || doc.data().email,
+                ...doc.data()
+              }));
+              // Remplacer les données mockées par les vraies données
+              setTeamMembers(members);
+            }
+          }
         }
       } catch (error) {
         if (error.name !== 'AbortError' && isMounted) {
-          console.error('Erreur chargement user:', error);
+          console.error('Erreur chargement données:', error);
         }
       }
     };
 
-    loadUserData();
+    loadData();
     
     return () => {
       isMounted = false;
     };
   }, [currentUser]);
-
-  // Charger les membres de l'équipe pour les mentions
-  useEffect(() => {
-    if (!userData?.companyId) return;
-
-    let isMounted = true;
-
-    const loadTeamMembers = async () => {
-      try {
-        const usersQuery = query(
-          collection(db, 'users'),
-          where('companyId', '==', userData.companyId)
-        );
-        const snapshot = await getDocs(usersQuery);
-        if (isMounted) {
-          const members = snapshot.docs.map(doc => ({
-            id: doc.id,
-            display: `${doc.data().firstName || ''} ${doc.data().lastName || ''}`.trim() || doc.data().email,
-            ...doc.data()
-          }));
-          setTeamMembers(members);
-        }
-      } catch (error) {
-        if (error.name !== 'AbortError' && isMounted) {
-          console.error('Erreur chargement équipe:', error);
-        }
-      }
-    };
-
-    loadTeamMembers();
-    
-    return () => {
-      isMounted = false;
-    };
-  }, [userData]);
 
   // Écouter les commentaires en temps réel
   useEffect(() => {
@@ -157,16 +173,26 @@ export default function CommentSection({ purchaseOrderId, purchaseOrderNumber })
         }
       }
 
-      // Extraire les IDs des utilisateurs mentionnés
-      const mentionedUserIds = mentions.map(m => m.id);
-
-      // Nettoyer le contenu en remplaçant les mentions par le format simple @Nom
-      const cleanContent = newComment.replace(/@\[([^\]]+)\]\([^)]+\)/g, '@$1');
+      // Extraire les utilisateurs mentionnés à partir du contenu
+      const mentionedUserIds = [];
+      const mentionMatches = newComment.match(/@(\w+)/g);
+      if (mentionMatches) {
+        mentionMatches.forEach(mention => {
+          const username = mention.substring(1); // Enlever le @
+          const user = teamMembers.find(member => 
+            `${member.firstName} ${member.lastName}`.toLowerCase().includes(username.toLowerCase()) ||
+            member.email.toLowerCase().includes(username.toLowerCase())
+          );
+          if (user && !mentionedUserIds.includes(user.id)) {
+            mentionedUserIds.push(user.id);
+          }
+        });
+      }
 
       await addDoc(collection(db, 'purchaseOrderComments'), {
         purchaseOrderId,
         purchaseOrderNumber,
-        content: cleanContent,
+        content: newComment,
         authorId: user?.id || currentUser.uid,
         authorName: user ? `${user.firstName} ${user.lastName}` : (currentUser.displayName || currentUser.email),
         authorEmail: currentUser.email,
@@ -200,7 +226,6 @@ export default function CommentSection({ purchaseOrderId, purchaseOrderNumber })
       }
 
       setNewComment('');
-      setMentions([]);
       toast.success('Commentaire ajouté !');
     } catch (error) {
       if (error.name !== 'AbortError') {
@@ -249,11 +274,8 @@ export default function CommentSection({ purchaseOrderId, purchaseOrderNumber })
     }
 
     try {
-      // Nettoyer le contenu en remplaçant les mentions par le format simple @Nom
-      const cleanContent = editContent.replace(/@\[([^\]]+)\]\([^)]+\)/g, '@$1');
-      
       await updateDoc(doc(db, 'purchaseOrderComments', commentId), {
-        content: cleanContent,
+        content: editContent,
         isEdited: true,
         editedAt: serverTimestamp()
       });
@@ -295,30 +317,19 @@ export default function CommentSection({ purchaseOrderId, purchaseOrderNumber })
   const renderCommentContent = (content) => {
     if (!content) return '';
     
-    // Remplacer les mentions @[Nom](ID) et @Nom par des spans stylisés
-    const mentionRegex = /(@(?:\[([^\]]+)\]\([^)]+\)|(\w+)))/g;
+    // Remplacer les mentions @Nom Prénom par des spans stylisés
+    const mentionRegex = /@([^@\s]+(?:\s+[^@\s]+)*)/g;
     const parts = content.split(mentionRegex);
     
     return parts.map((part, index) => {
-      if (part && part.startsWith('@')) {
-        // C'est une mention
-        let mentionName = '';
-        
-        // Si c'est le format @[Nom](ID), extraire le nom
-        if (part.includes('[') && part.includes(']')) {
-          const match = part.match(/@\[([^\]]+)\]\([^)]+\)/);
-          mentionName = match ? match[1] : part;
-        } else {
-          // Si c'est le format simple @Nom
-          mentionName = part.substring(1); // Enlever le @
-        }
-        
+      if (index % 2 === 1) {
+        // C'est une mention (les parties impaires sont les noms d'utilisateur)
         return (
           <span
             key={index}
             className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800 border border-blue-200 mr-1"
           >
-            @{mentionName}
+            @{part}
           </span>
         );
       } else if (part) {
@@ -328,6 +339,69 @@ export default function CommentSection({ purchaseOrderId, purchaseOrderNumber })
       return null;
     }).filter(Boolean);
   };
+
+  // Gérer les mentions dans le textarea
+  const handleTextareaChange = (e) => {
+    const value = e.target.value;
+    const cursorPos = e.target.selectionStart;
+    setCursorPosition(cursorPos);
+    setNewComment(value);
+    
+    // Vérifier si on tape @
+    const beforeCursor = value.substring(0, cursorPos);
+    const atMatch = beforeCursor.match(/@([^@\s]*)$/);
+    
+    
+    
+    if (atMatch) {
+      setMentionSearch(atMatch[1]);
+      setShowMentions(true);
+    } else {
+      setShowMentions(false);
+    }
+  };
+
+  // Insérer une mention
+  const insertMention = (user) => {
+    const beforeCursor = newComment.substring(0, cursorPosition);
+    const afterCursor = newComment.substring(cursorPosition);
+    const beforeMention = beforeCursor.replace(/@([^@\s]*)$/, '');
+    const newValue = beforeMention + `@${user.firstName} ${user.lastName}` + ' ' + afterCursor;
+    
+    setNewComment(newValue);
+    setShowMentions(false);
+    
+    // Repositionner le curseur
+    setTimeout(() => {
+      if (textareaRef.current) {
+        const newCursorPos = beforeMention.length + `@${user.firstName} ${user.lastName}`.length + 1;
+        textareaRef.current.setSelectionRange(newCursorPos, newCursorPos);
+        textareaRef.current.focus();
+      }
+    }, 0);
+  };
+
+  // Filtrer les membres de l'équipe pour les mentions
+  const filteredMembers = teamMembers.filter(member => 
+    member.firstName.toLowerCase().includes(mentionSearch.toLowerCase()) ||
+    member.lastName.toLowerCase().includes(mentionSearch.toLowerCase()) ||
+    member.email.toLowerCase().includes(mentionSearch.toLowerCase())
+  );
+
+  // Fermer les mentions quand on clique ailleurs
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (mentionsListRef.current && !mentionsListRef.current.contains(event.target) && 
+          textareaRef.current && !textareaRef.current.contains(event.target)) {
+        setShowMentions(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
 
   return (
     <div className="space-y-4">
@@ -439,65 +513,58 @@ export default function CommentSection({ purchaseOrderId, purchaseOrderNumber })
 
       {/* Formulaire d'ajout avec mentions */}
       <div className="space-y-3">
-        <MentionsInput
-          value={newComment}
-          onChange={(e, newValue, newPlainTextValue, mentionsArray) => {
-            setNewComment(newValue);
-            setMentions(mentionsArray);
-          }}
-          placeholder="Ajouter un commentaire... Utilisez @ pour mentionner un collègue"
-          className="mentions-input"
-          disabled={loading}
-          style={{
-            control: {
-              fontSize: 14,
-              minHeight: 80,
-            },
-            highlighter: {
-              padding: 12,
-              border: '1px solid #E5E4DF',
-              borderRadius: 8,
-            },
-            input: {
-              padding: 12,
-              border: '1px solid #E5E4DF',
-              borderRadius: 8,
-              outline: 'none',
-              resize: 'vertical',
-            },
-            suggestions: {
-              list: {
-                backgroundColor: 'white',
-                border: '1px solid #E5E4DF',
-                borderRadius: 8,
-                fontSize: 14,
-                boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
-                maxHeight: 200,
-                overflowY: 'auto',
-              },
-              item: {
-                padding: '8px 12px',
-                borderBottom: '1px solid #F3F4F6',
-                '&focused': {
-                  backgroundColor: '#F3F4F6',
-                },
-              },
-            },
-          }}
-        >
-          <Mention
-            trigger="@"
-            data={teamMembers}
-            displayTransform={(id, display) => `@${display}`}
+        {/* Liste des mentions - Positionnée AVANT le textarea comme Slack */}
+        {showMentions && filteredMembers.length > 0 && (
+          <div
+            ref={mentionsListRef}
+            className="bg-white border border-[#E5E4DF] rounded-lg shadow-lg max-h-48 overflow-y-auto mb-2"
             style={{
-              backgroundColor: '#DBEAFE',
-              color: '#1E40AF',
-              padding: '2px 4px',
-              borderRadius: 4,
-              fontWeight: 500,
+              minWidth: '250px',
+              maxWidth: '400px'
             }}
-          />
-        </MentionsInput>
+          >
+            {filteredMembers.map(member => (
+              <button
+                key={member.id}
+                onClick={() => insertMention(member)}
+                className="w-full flex items-center gap-3 px-4 py-3 hover:bg-blue-50 border-b border-[#F3F4F6] last:border-b-0 transition-all duration-150 text-left group"
+              >
+                {member.profilePhoto ? (
+                  <img 
+                    src={member.profilePhoto} 
+                    alt={`${member.firstName} ${member.lastName}`}
+                    className="w-10 h-10 rounded-full object-cover ring-2 ring-white group-hover:ring-blue-200 transition-all"
+                  />
+                ) : (
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center ring-2 ring-white group-hover:ring-blue-200 transition-all">
+                    <UserIcon className="w-5 h-5 text-white" />
+                  </div>
+                )}
+                <div className="flex-1 min-w-0">
+                  <div className="font-semibold text-sm text-[#191919] truncate group-hover:text-blue-700 transition-colors">
+                    {member.firstName} {member.lastName}
+                  </div>
+                  <div className="text-xs text-[#666663] truncate">
+                    {member.email}
+                  </div>
+                </div>
+                <div className="flex items-center justify-center w-6 h-6 rounded-full bg-blue-100 group-hover:bg-blue-200 transition-colors">
+                  <AtSign className="w-3 h-3 text-blue-600" />
+                </div>
+              </button>
+            ))}
+          </div>
+        )}
+
+        <textarea
+          ref={textareaRef}
+          value={newComment}
+          onChange={handleTextareaChange}
+          placeholder="Ajouter un commentaire... Utilisez @ pour mentionner un collègue"
+          className="w-full px-4 py-3 border border-[#E5E4DF] rounded-lg focus:outline-none focus:ring-2 focus:ring-black resize-none text-sm"
+          rows="3"
+          disabled={loading}
+        />
 
         <div className="flex justify-end">
           <button
