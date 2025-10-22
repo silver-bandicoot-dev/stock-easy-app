@@ -245,6 +245,11 @@ const StockEasy = () => {
   const [selectedKPI, setSelectedKPI] = useState(null);
   const [historyFilter, setHistoryFilter] = useState('all');
   const [historyDateStart, setHistoryDateStart] = useState('');
+  
+  // Stock Level filters
+  const [stockLevelFilter, setStockLevelFilter] = useState('all');
+  const [stockLevelSupplierFilter, setStockLevelSupplierFilter] = useState('all');
+  const [stockLevelSearch, setStockLevelSearch] = useState('');
   const [historyDateEnd, setHistoryDateEnd] = useState('');
   const [discrepancyModalOpen, setDiscrepancyModalOpen] = useState(false);
   const [discrepancyItems, setDiscrepancyItems] = useState({});
@@ -3283,105 +3288,172 @@ ${getUserSignature()}`
               exit={{ opacity: 0, x: -20 }}
               transition={{ duration: 0.25 }}
               className="space-y-6">
-            <div className="bg-white rounded-xl shadow-sm border border-[#E5E4DF] p-6">
-              <div className="mb-6">
-                <h2 className="text-2xl font-bold text-[#191919] mb-2">Santé de l'Inventaire</h2>
-                <p className="text-sm text-[#666663]">Visualisez la disponibilité actuelle de chaque SKU regroupée par fournisseur</p>
-              </div>
               
-              {/* Dashboard global de santé */}
-              <div className="mb-6">
-                <StockHealthDashboard 
-                  totalUrgent={enrichedProducts.filter(p => p.healthStatus === 'urgent').length}
-                  totalWarning={enrichedProducts.filter(p => p.healthStatus === 'warning').length}
-                  totalHealthy={enrichedProducts.filter(p => p.healthStatus === 'healthy').length}
-                  totalProducts={enrichedProducts.length}
-                />
-              </div>
-              
-              {Object.entries(
-                enrichedProducts.reduce((acc, product) => {
-                  if (!acc[product.supplier]) {
-                    acc[product.supplier] = [];
-                  }
-                  acc[product.supplier].push(product);
-                  return acc;
-                }, {})
-              ).map(([supplier, products]) => {
-                const urgentCount = products.filter(p => p.healthStatus === 'urgent').length;
-                const warningCount = products.filter(p => p.healthStatus === 'warning').length;
-                const healthyCount = products.filter(p => p.healthStatus === 'healthy').length;
-                const totalToOrder = products.reduce((sum, p) => sum + p.qtyToOrder, 0);
+              {/* Header et Dashboard */}
+              <div className="bg-white rounded-xl shadow-sm border border-[#E5E4DF] p-6">
+                <div className="mb-6">
+                  <h2 className="text-2xl font-bold text-[#191919] mb-2">Santé de l'Inventaire</h2>
+                  <p className="text-sm text-[#666663]">Visualisez la disponibilité actuelle de chaque SKU avec filtres et tri</p>
+                </div>
                 
-                return (
-                  <div key={supplier} className="mb-8 last:mb-0">
-                    <div className="bg-[#FAFAF7] border-2 border-[#E5E4DF] rounded-t-xl px-6 py-4">
-                      <div className="flex-1">
-                        <h3 className="text-lg font-bold text-[#191919] mb-1">{supplier}</h3>
-                        <p className="text-sm text-[#666663]">
-                          {products.length} produit(s) • Délai: {products[0].leadTimeDays} jours
-                        </p>
-                      </div>
+                {/* Dashboard global de santé */}
+                <div className="mb-6">
+                  <StockHealthDashboard 
+                    totalUrgent={enrichedProducts.filter(p => p.healthStatus === 'urgent').length}
+                    totalWarning={enrichedProducts.filter(p => p.healthStatus === 'warning').length}
+                    totalHealthy={enrichedProducts.filter(p => p.healthStatus === 'healthy').length}
+                    totalProducts={enrichedProducts.length}
+                  />
+                </div>
+              </div>
+
+              {/* Table des produits */}
+              <div className="bg-white rounded-xl shadow-sm border border-[#E5E4DF] overflow-hidden">
+                {/* Header de la table avec filtres */}
+                <div className="bg-[#FAFAF7] border-b border-[#E5E4DF] p-4">
+                  <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                      <h3 className="text-lg font-bold text-[#191919]">Produits en Stock</h3>
+                      <span className="text-sm text-[#666663]">
+                        {enrichedProducts.length} produit(s) au total
+                      </span>
                     </div>
                     
-                    {/* Résumé de santé du fournisseur */}
-                    <div className="bg-white border-x-2 border-[#E5E4DF] px-6 pt-4">
-                      <SupplierHealthSummary 
-                        urgentCount={urgentCount}
-                        warningCount={warningCount}
-                        healthyCount={healthyCount}
-                        totalProducts={products.length}
+                    {/* Filtres */}
+                    <div className="flex flex-col sm:flex-row gap-3">
+                      <select 
+                        value={stockLevelFilter}
+                        onChange={(e) => setStockLevelFilter(e.target.value)}
+                        className="px-3 py-2 bg-white border border-[#E5E4DF] rounded-lg text-[#191919] text-sm focus:outline-none focus:ring-2 focus:ring-black"
+                      >
+                        <option value="all">Tous les statuts</option>
+                        <option value="urgent">Urgent (rouge)</option>
+                        <option value="warning">Attention (orange)</option>
+                        <option value="healthy">Bon (vert)</option>
+                      </select>
+                      
+                      <select 
+                        value={stockLevelSupplierFilter}
+                        onChange={(e) => setStockLevelSupplierFilter(e.target.value)}
+                        className="px-3 py-2 bg-white border border-[#E5E4DF] rounded-lg text-[#191919] text-sm focus:outline-none focus:ring-2 focus:ring-black"
+                      >
+                        <option value="all">Tous les fournisseurs</option>
+                        {[...new Set(enrichedProducts.map(p => p.supplier))].map(supplier => (
+                          <option key={supplier} value={supplier}>{supplier}</option>
+                        ))}
+                      </select>
+                      
+                      <input
+                        type="text"
+                        placeholder="Rechercher un produit..."
+                        value={stockLevelSearch}
+                        onChange={(e) => setStockLevelSearch(e.target.value)}
+                        className="px-3 py-2 bg-white border border-[#E5E4DF] rounded-lg text-[#191919] text-sm focus:outline-none focus:ring-2 focus:ring-black placeholder-[#666663]"
                       />
                     </div>
-                    
-                    <div className="bg-white border-x-2 border-b-2 border-[#E5E4DF] rounded-b-xl">
-                      <div className="divide-y divide-[#E5E4DF]">
-                        {products.map(product => (
-                          <div key={product.sku} className="p-4 hover:bg-[#FAFAF7] transition-colors">
-                            <div className="flex items-center justify-between mb-3">
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-3 mb-1 flex-wrap">
-                                  <h3 className="font-bold text-[#191919]">{product.name}</h3>
-                                  <span className="text-sm text-[#666663]">{product.sku}</span>
-                                  {product.qtyToOrder > 0 && (
-                                    <span className="px-2 py-1 bg-black/20 text-black rounded text-xs font-medium inline-flex items-center gap-1 shrink-0">
-                                      <Bell className="w-3 h-3 shrink-0" />
-                                      Commander {product.qtyToOrder} unités
-                                    </span>
-                                  )}
-                                </div>
-                                <div className="flex items-center gap-4 text-sm text-[#666663] flex-wrap">
-                                  <span>Stock: <strong className="text-[#191919]">{product.stock}</strong> unités</span>
-                                  <span>•</span>
-                                  <span>Ventes/jour: <strong className="text-[#191919]">{product.salesPerDay.toFixed(1)}</strong></span>
-                                  <span>•</span>
-                                  <span>Autonomie: <strong className={
-                                    product.daysOfStock < 15 ? 'text-[#EF1C43]' :
-                                    product.daysOfStock < 30 ? 'text-yellow-600' :
-                                    'text-green-600'
-                                  }>{product.daysOfStock} jours</strong></span>
-                                </div>
-                              </div>
-                              <div className="text-right shrink-0 ml-4">
-                                <div className="text-2xl font-bold text-[#191919]">{Math.round(product.healthPercentage)}%</div>
-                                <div className="text-xs text-[#666663]">Santé</div>
-                              </div>
-                            </div>
-                            
-                            <HealthBar percentage={product.healthPercentage} status={product.healthStatus} />
-                            
-                            <div className="mt-3 flex items-center justify-between text-xs text-[#666663]">
-                              <span>Point de commande: <strong className="text-[#191919]">{product.reorderPoint}</strong></span>
-                              <span>MOQ: {product.moq} unités</span>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
                   </div>
-                );
-              })}
-            </div>
+                </div>
+
+                {/* Table */}
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead className="bg-[#FAFAF7] border-b border-[#E5E4DF]">
+                      <tr>
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-[#666663] uppercase tracking-wider">
+                          Produit
+                        </th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-[#666663] uppercase tracking-wider">
+                          Fournisseur
+                        </th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-[#666663] uppercase tracking-wider">
+                          Stock
+                        </th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-[#666663] uppercase tracking-wider">
+                          Autonomie
+                        </th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-[#666663] uppercase tracking-wider">
+                          Santé
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-[#E5E4DF]">
+                      {enrichedProducts
+                        .filter(product => {
+                          const matchesStatus = stockLevelFilter === 'all' || product.healthStatus === stockLevelFilter;
+                          const matchesSupplier = stockLevelSupplierFilter === 'all' || product.supplier === stockLevelSupplierFilter;
+                          const matchesSearch = stockLevelSearch === '' || 
+                            product.name.toLowerCase().includes(stockLevelSearch.toLowerCase()) ||
+                            product.sku.toLowerCase().includes(stockLevelSearch.toLowerCase());
+                          return matchesStatus && matchesSupplier && matchesSearch;
+                        })
+                        .map(product => (
+                          <tr key={product.sku} className="hover:bg-[#FAFAF7] transition-colors">
+                            {/* Produit */}
+                            <td className="px-4 py-4">
+                              <div className="flex flex-col">
+                                <div className="font-bold text-[#191919] text-sm">{product.name}</div>
+                                <div className="text-xs text-[#666663]">{product.sku}</div>
+                                <div className="text-xs text-[#666663] mt-1">
+                                  Ventes/jour: <span className="font-medium">{product.salesPerDay.toFixed(1)}</span>
+                                </div>
+                              </div>
+                            </td>
+                            
+                            {/* Fournisseur */}
+                            <td className="px-4 py-4">
+                              <div className="flex flex-col">
+                                <div className="font-medium text-[#191919] text-sm">{product.supplier}</div>
+                                <div className="text-xs text-[#666663]">
+                                  Délai: {product.leadTimeDays} jours
+                                </div>
+                              </div>
+                            </td>
+                            
+                            {/* Stock */}
+                            <td className="px-4 py-4">
+                              <div className="flex flex-col">
+                                <div className="font-bold text-[#191919] text-sm">{product.stock} unités</div>
+                                <div className="text-xs text-[#666663]">
+                                  Point: {product.reorderPoint} • MOQ: {product.moq}
+                                </div>
+                              </div>
+                            </td>
+                            
+                            {/* Autonomie */}
+                            <td className="px-4 py-4">
+                              <div className="flex flex-col">
+                                <div className={`font-bold text-sm ${
+                                  product.daysOfStock < 15 ? 'text-[#EF1C43]' :
+                                  product.daysOfStock < 30 ? 'text-yellow-600' :
+                                  'text-green-600'
+                                }`}>
+                                  {product.daysOfStock} jours
+                                </div>
+                                {product.qtyToOrder > 0 && (
+                                  <div className="text-xs text-[#EF1C43] font-medium">
+                                    Commander {product.qtyToOrder}
+                                  </div>
+                                )}
+                              </div>
+                            </td>
+                            
+                            {/* Santé */}
+                            <td className="px-4 py-4">
+                              <div className="flex flex-col items-start">
+                                <div className="text-sm font-bold text-[#191919]">
+                                  {Math.round(product.healthPercentage)}%
+                                </div>
+                                <div className="w-16 mt-1">
+                                  <HealthBar percentage={product.healthPercentage} status={product.healthStatus} />
+                                </div>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
             </motion.div>
           )}
 
