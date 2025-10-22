@@ -1,14 +1,23 @@
+import { 
+  roundToInteger, 
+  roundToTwoDecimals, 
+  roundToOneDecimal,
+  divideWithPrecision,
+  multiplyWithPrecision,
+  addWithPrecision
+} from './decimalUtils.js';
+
 /**
  * Calcul des métriques de santé d'un produit
  */
 export const calculateMetrics = (product, seuil = 90) => {
   const daysOfStock = product.salesPerDay > 0 
-    ? Math.floor(product.stock / product.salesPerDay) 
+    ? Math.floor(divideWithPrecision(product.stock, product.salesPerDay, 0))
     : 999;
   
   const securityStock = product.customSecurityStock !== undefined && product.customSecurityStock !== null 
-    ? Math.round(product.customSecurityStock) 
-    : Math.round(product.leadTimeDays * 0.2);
+    ? roundToInteger(product.customSecurityStock) 
+    : roundToInteger(multiplyWithPrecision(product.leadTimeDays, 0.2, 0));
   
   let healthStatus = 'healthy';
   let healthPercentage = 100;
@@ -17,38 +26,40 @@ export const calculateMetrics = (product, seuil = 90) => {
   // Priorité 1: Si qtyToOrder > 0, le produit est URGENT (doit être commandé)
   if (product.qtyToOrder > 0) {
     healthStatus = 'urgent';
-    healthPercentage = Math.max(5, Math.min(25, (daysOfStock / securityStock) * 25));
+    healthPercentage = Math.max(5, Math.min(25, multiplyWithPrecision(divideWithPrecision(daysOfStock, securityStock, 2), 25, 0)));
   } else if (daysOfStock < securityStock) {
     // 🔴 URGENT: autonomie inférieure au stock de sécurité
     healthStatus = 'urgent';
-    healthPercentage = Math.max(5, Math.min(25, (daysOfStock / securityStock) * 25));
-  } else if (daysOfStock < securityStock * 1.2) {
+    healthPercentage = Math.max(5, Math.min(25, multiplyWithPrecision(divideWithPrecision(daysOfStock, securityStock, 2), 25, 0)));
+  } else if (daysOfStock < multiplyWithPrecision(securityStock, 1.2, 0)) {
     // 🟡 WARNING: autonomie entre stock sécu et stock sécu × 1.2
     healthStatus = 'warning';
-    const ratio = (daysOfStock - securityStock) / (securityStock * 0.2);
-    healthPercentage = 25 + (ratio * 25);
+    const ratio = divideWithPrecision(daysOfStock - securityStock, multiplyWithPrecision(securityStock, 0.2, 2), 2);
+    healthPercentage = roundToInteger(25 + multiplyWithPrecision(ratio, 25, 2));
   } else {
     // 🟢 HEALTHY: autonomie > stock sécu × 1.2
-    healthStatus = 'healthy';
-    healthPercentage = Math.min(100, 50 + ((daysOfStock - securityStock * 1.2) / (securityStock * 2)) * 50);
+    const securityStock120 = multiplyWithPrecision(securityStock, 1.2, 0);
+    const securityStock200 = multiplyWithPrecision(securityStock, 2, 0);
+    const ratio = divideWithPrecision(daysOfStock - securityStock120, securityStock200, 2);
+    healthPercentage = Math.min(100, roundToInteger(50 + multiplyWithPrecision(ratio, 50, 2)));
   }
   
-  const isDeepOverstock = daysOfStock > (seuil * 2);
+  const isDeepOverstock = daysOfStock > multiplyWithPrecision(seuil, 2, 0);
   
   return {
     ...product,
     daysOfStock,
-    securityStock: Math.round(securityStock),
+    securityStock: roundToInteger(securityStock),
     healthStatus,
-    healthPercentage: Math.round(healthPercentage),
+    healthPercentage: roundToInteger(healthPercentage),
     isDeepOverstock,
-    // Arrondir les valeurs numériques qui viennent de Google Sheets
-    reorderPoint: Math.round(product.reorderPoint || 0),
-    stock: Math.round(product.stock || 0),
-    moq: Math.round(product.moq || 0),
-    salesPerDay: Math.round((product.salesPerDay || 0) * 10) / 10, // 1 décimale
-    buyPrice: Math.round((product.buyPrice || 0) * 100) / 100, // 2 décimales
-    sellPrice: Math.round((product.sellPrice || 0) * 100) / 100 // 2 décimales
+    // Utiliser les fonctions de précision pour arrondir les valeurs numériques
+    reorderPoint: roundToInteger(product.reorderPoint || 0),
+    stock: roundToInteger(product.stock || 0),
+    moq: roundToInteger(product.moq || 0),
+    salesPerDay: roundToOneDecimal(product.salesPerDay || 0),
+    buyPrice: roundToTwoDecimals(product.buyPrice || 0),
+    sellPrice: roundToTwoDecimals(product.sellPrice || 0)
   };
 };
 
@@ -59,10 +70,14 @@ export const calculateReorderPoint = (product) => {
   const avgDailySales = product.salesPerDay || 0;
   const leadTime = product.leadTimeDays || 30;
   const securityStock = product.customSecurityStock !== undefined && product.customSecurityStock !== null 
-    ? Math.round(product.customSecurityStock) 
-    : Math.round(leadTime * 0.2);
+    ? roundToInteger(product.customSecurityStock) 
+    : roundToInteger(multiplyWithPrecision(leadTime, 0.2, 0));
   
-  // Calculer le point de commande et arrondir correctement
-  const reorderPoint = (avgDailySales * leadTime) + (avgDailySales * securityStock);
-  return Math.round(reorderPoint);
+  // Calculer le point de commande avec précision décimale
+  const reorderPoint = addWithPrecision(
+    multiplyWithPrecision(avgDailySales, leadTime, 0),
+    multiplyWithPrecision(avgDailySales, securityStock, 0)
+  );
+  
+  return roundToInteger(reorderPoint);
 };

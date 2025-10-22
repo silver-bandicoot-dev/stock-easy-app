@@ -33,6 +33,7 @@ import { useAnalytics } from './hooks/useAnalytics';
 import { checkAndSaveKPISnapshot } from './utils/kpiScheduler';
 import { generateInsights } from './utils/insightGenerator';
 import { calculateMetrics } from './utils/calculations';
+import { formatUnits, formatPrice, roundToTwoDecimals, roundToInteger } from './utils/decimalUtils';
 
 // ============================================
 // FONCTIONS API - Importées depuis apiService
@@ -139,10 +140,7 @@ const StockEasy = () => {
     return "L'équipe stockeasy";
   };
 
-  // Helper pour arrondir correctement les montants à 2 décimales
-  const roundToTwo = (num) => {
-    return Math.round((num + Number.EPSILON) * 100) / 100;
-  };
+  // Note: roundToTwoDecimals est maintenant remplacé par roundToTwoDecimalsDecimals importé depuis utils/decimalUtils
 
   // Handler pour la déconnexion
   const handleLogout = async () => {
@@ -864,10 +862,10 @@ const StockEasy = () => {
     const supplierInfo = suppliers[supplier];
     const productList = products.map(p => {
       const qty = orderQuantities[p.sku] || p.qtyToOrder;
-      return `- ${p.name} (SKU: ${p.sku}) - Quantité: ${qty} unités - Prix unitaire: ${roundToTwo(p.buyPrice).toFixed(2)}€`;
+      return `- ${p.name} (SKU: ${p.sku}) - Quantité: ${qty} unités - Prix unitaire: ${roundToTwoDecimals(p.buyPrice).toFixed(2)}€`;
     }).join('\n');
     
-    const total = roundToTwo(products.reduce((sum, p) => {
+    const total = roundToTwoDecimals(products.reduce((sum, p) => {
       const qty = orderQuantities[p.sku] || p.qtyToOrder;
       return sum + (qty * p.buyPrice);
     }, 0));
@@ -913,7 +911,7 @@ ${getUserSignature()}`
   const sendOrder = async () => {
     try {
       const productsToOrder = toOrderBySupplier[selectedSupplier];
-      const total = roundToTwo(productsToOrder.reduce((sum, p) => {
+      const total = roundToTwoDecimals(productsToOrder.reduce((sum, p) => {
         const qty = orderQuantities[p.sku] || p.qtyToOrder;
         return sum + (qty * p.buyPrice);
       }, 0));
@@ -956,7 +954,7 @@ ${getUserSignature()}`
   const createOrderWithoutEmail = async () => {
     try {
       const productsToOrder = toOrderBySupplier[selectedSupplier];
-      const total = roundToTwo(productsToOrder.reduce((sum, p) => {
+      const total = roundToTwoDecimals(productsToOrder.reduce((sum, p) => {
         const qty = orderQuantities[p.sku] || p.qtyToOrder;
         return sum + (qty * p.buyPrice);
       }, 0));
@@ -1047,7 +1045,7 @@ ${getUserSignature()}`
       // Option : créer automatiquement une commande par fournisseur
       for (const [supplier, products] of Object.entries(productsBySupplier)) {
         // Créer la commande sans email pour chaque fournisseur
-        const total = roundToTwo(products.reduce((sum, p) => sum + (p.orderQuantity * p.buyPrice), 0));
+        const total = roundToTwoDecimals(products.reduce((sum, p) => sum + (p.orderQuantity * p.buyPrice), 0));
         
         const orderData = {
           id: generatePONumber(),
@@ -1731,7 +1729,7 @@ ${getUserSignature()}`
       // Pour chaque commande, créer une ligne par produit
       order.items.forEach((item, index) => {
         const product = products.find(p => p.sku === item.sku);
-        const lineTotal = roundToTwo(item.quantity * item.pricePerUnit);
+        const lineTotal = roundToTwoDecimals(item.quantity * item.pricePerUnit);
         
         rows.push([
           order.id,
@@ -1744,10 +1742,10 @@ ${getUserSignature()}`
           item.sku,
           product?.name || item.sku,
           item.quantity,
-          roundToTwo(item.pricePerUnit).toFixed(2),
+          roundToTwoDecimals(item.pricePerUnit).toFixed(2),
           lineTotal.toFixed(2),
           // Afficher le total de la commande seulement sur la première ligne de chaque commande
-          index === 0 ? roundToTwo(order.total).toFixed(2) : '',
+          index === 0 ? roundToTwoDecimals(order.total).toFixed(2) : '',
           index === 0 ? (order.trackingNumber || '-') : ''
         ]);
       });
@@ -1880,8 +1878,8 @@ ${getUserSignature()}`
                         <p className="text-xs text-[#666663] truncate">{p.supplier}</p>
                       </div>
                       <div className="text-right shrink-0 ml-4">
-                        <p className="font-bold text-[#EF1C43] text-sm">{p.qtyToOrder} unités</p>
-                        <p className="text-xs text-[#666663]">Stock: {p.stock}</p>
+                        <p className="font-bold text-[#EF1C43] text-sm">{formatUnits(p.qtyToOrder)} unités</p>
+                        <p className="text-xs text-[#666663]">Stock: {formatUnits(p.stock)}</p>
                       </div>
                     </motion.div>
                   ))
@@ -1914,7 +1912,7 @@ ${getUserSignature()}`
                         <p className="text-xs text-[#666663] truncate">{p.supplier}</p>
                       </div>
                       <div className="text-right shrink-0 ml-4">
-                        <p className="font-bold text-yellow-600 text-sm">Stock: {p.stock}</p>
+                        <p className="font-bold text-yellow-600 text-sm">Stock: {formatUnits(p.stock)}</p>
                         <p className="text-xs text-[#666663]">Point: {p.reorderPoint}</p>
                       </div>
                     </div>
@@ -2058,8 +2056,8 @@ ${getUserSignature()}`
                             {prods.map(p => (
                               <tr key={p.sku} className="border-b border-[#E5E4DF] last:border-0">
                                 <td className="py-2 text-[#191919]">{p.name}</td>
-                                <td className="text-right text-[#191919]">{p.qtyToOrder}</td>
-                                <td className="text-right font-bold text-[#191919]">{roundToTwo(p.qtyToOrder * p.buyPrice).toFixed(2)}€</td>
+                                <td className="text-right text-[#191919]">{formatUnits(p.qtyToOrder)}</td>
+                                <td className="text-right font-bold text-[#191919]">{roundToTwoDecimals(p.qtyToOrder * p.buyPrice).toFixed(2)}€</td>
                               </tr>
                             ))}
                           </tbody>
@@ -2227,7 +2225,7 @@ ${getUserSignature()}`
                             </div>
                             <div>
                               <span className="text-[#666663]">Total: </span>
-                              <span className="text-[#191919] font-bold">{roundToTwo(order.total).toFixed(2)}€</span>
+                              <span className="text-[#191919] font-bold">{roundToTwoDecimals(order.total).toFixed(2)}€</span>
                             </div>
                           </div>
                           
@@ -2277,14 +2275,14 @@ ${getUserSignature()}`
                                       </div>
                                       <div className="text-right">
                                         <div className="font-bold text-[#191919]">
-                                          {item.quantity} unités
+                                          {formatUnits(item.quantity)} unités
                                         </div>
                                         <div className="text-xs text-[#666663]">
-                                          {roundToTwo(item.pricePerUnit).toFixed(2)}€/unité
+                                          {roundToTwoDecimals(item.pricePerUnit).toFixed(2)}€/unité
                                         </div>
                                       </div>
                                       <div className="ml-4 text-right font-bold text-[#191919] min-w-[80px]">
-                                        {roundToTwo(item.quantity * item.pricePerUnit).toFixed(2)}€
+                                        {roundToTwoDecimals(item.quantity * item.pricePerUnit).toFixed(2)}€
                                       </div>
                                     </div>
                                   );
@@ -2292,7 +2290,7 @@ ${getUserSignature()}`
                               </div>
                               <div className="mt-3 pt-3 border-t border-[#E5E4DF] flex justify-between">
                                 <span className="font-semibold text-[#666663]">Total:</span>
-                                <span className="font-bold text-[#191919] text-lg">{roundToTwo(order.total).toFixed(2)}€</span>
+                                <span className="font-bold text-[#191919] text-lg">{roundToTwoDecimals(order.total).toFixed(2)}€</span>
                               </div>
                               
                               {/* Section Commentaires */}
@@ -2373,7 +2371,7 @@ ${getUserSignature()}`
                             )}
                             <div>
                               <span className="text-[#666663]">Total: </span>
-                              <span className="text-[#191919] font-bold">{roundToTwo(order.total).toFixed(2)}€</span>
+                              <span className="text-[#191919] font-bold">{roundToTwoDecimals(order.total).toFixed(2)}€</span>
                             </div>
                           </div>
                           
@@ -2423,14 +2421,14 @@ ${getUserSignature()}`
                                       </div>
                                       <div className="text-right">
                                         <div className="font-bold text-[#191919]">
-                                          {item.quantity} unités
+                                          {formatUnits(item.quantity)} unités
                                         </div>
                                         <div className="text-xs text-[#666663]">
-                                          {roundToTwo(item.pricePerUnit).toFixed(2)}€/unité
+                                          {roundToTwoDecimals(item.pricePerUnit).toFixed(2)}€/unité
                                         </div>
                                       </div>
                                       <div className="ml-4 text-right font-bold text-[#191919] min-w-[80px]">
-                                        {roundToTwo(item.quantity * item.pricePerUnit).toFixed(2)}€
+                                        {roundToTwoDecimals(item.quantity * item.pricePerUnit).toFixed(2)}€
                                       </div>
                                     </div>
                                   );
@@ -2438,7 +2436,7 @@ ${getUserSignature()}`
                               </div>
                               <div className="mt-3 pt-3 border-t border-[#E5E4DF] flex justify-between">
                                 <span className="font-semibold text-[#666663]">Total:</span>
-                                <span className="font-bold text-[#191919] text-lg">{roundToTwo(order.total).toFixed(2)}€</span>
+                                <span className="font-bold text-[#191919] text-lg">{roundToTwoDecimals(order.total).toFixed(2)}€</span>
                               </div>
                               
                               {/* Section Commentaires */}
@@ -2530,7 +2528,7 @@ ${getUserSignature()}`
                             )}
                             <div>
                               <span className="text-[#666663]">Total: </span>
-                              <span className="text-[#191919] font-bold">{roundToTwo(order.total).toFixed(2)}€</span>
+                              <span className="text-[#191919] font-bold">{roundToTwoDecimals(order.total).toFixed(2)}€</span>
                             </div>
                           </div>
                           
@@ -2580,14 +2578,14 @@ ${getUserSignature()}`
                                       </div>
                                       <div className="text-right">
                                         <div className="font-bold text-[#191919]">
-                                          {item.quantity} unités
+                                          {formatUnits(item.quantity)} unités
                                         </div>
                                         <div className="text-xs text-[#666663]">
-                                          {roundToTwo(item.pricePerUnit).toFixed(2)}€/unité
+                                          {roundToTwoDecimals(item.pricePerUnit).toFixed(2)}€/unité
                                         </div>
                                       </div>
                                       <div className="ml-4 text-right font-bold text-[#191919] min-w-[80px]">
-                                        {roundToTwo(item.quantity * item.pricePerUnit).toFixed(2)}€
+                                        {roundToTwoDecimals(item.quantity * item.pricePerUnit).toFixed(2)}€
                                       </div>
                                     </div>
                                   );
@@ -2595,7 +2593,7 @@ ${getUserSignature()}`
                               </div>
                               <div className="mt-3 pt-3 border-t border-[#E5E4DF] flex justify-between">
                                 <span className="font-semibold text-[#666663]">Total:</span>
-                                <span className="font-bold text-[#191919] text-lg">{roundToTwo(order.total).toFixed(2)}€</span>
+                                <span className="font-bold text-[#191919] text-lg">{roundToTwoDecimals(order.total).toFixed(2)}€</span>
                               </div>
                               
                               {/* Section Commentaires */}
@@ -2676,7 +2674,7 @@ ${getUserSignature()}`
                             )}
                             <div>
                               <span className="text-[#666663]">Total: </span>
-                              <span className="text-[#191919] font-bold">{roundToTwo(order.total).toFixed(2)}€</span>
+                              <span className="text-[#191919] font-bold">{roundToTwoDecimals(order.total).toFixed(2)}€</span>
                             </div>
                           </div>
                           
@@ -2726,14 +2724,14 @@ ${getUserSignature()}`
                                       </div>
                                       <div className="text-right">
                                         <div className="font-bold text-[#191919]">
-                                          {item.quantity} unités
+                                          {formatUnits(item.quantity)} unités
                                         </div>
                                         <div className="text-xs text-[#666663]">
-                                          {roundToTwo(item.pricePerUnit).toFixed(2)}€/unité
+                                          {roundToTwoDecimals(item.pricePerUnit).toFixed(2)}€/unité
                                         </div>
                                       </div>
                                       <div className="ml-4 text-right font-bold text-[#191919] min-w-[80px]">
-                                        {roundToTwo(item.quantity * item.pricePerUnit).toFixed(2)}€
+                                        {roundToTwoDecimals(item.quantity * item.pricePerUnit).toFixed(2)}€
                                       </div>
                                     </div>
                                   );
@@ -2741,7 +2739,7 @@ ${getUserSignature()}`
                               </div>
                               <div className="mt-3 pt-3 border-t border-[#E5E4DF] flex justify-between">
                                 <span className="font-semibold text-[#666663]">Total:</span>
-                                <span className="font-bold text-[#191919] text-lg">{roundToTwo(order.total).toFixed(2)}€</span>
+                                <span className="font-bold text-[#191919] text-lg">{roundToTwoDecimals(order.total).toFixed(2)}€</span>
                               </div>
                               
                               {/* Section Commentaires */}
@@ -2936,7 +2934,7 @@ ${getUserSignature()}`
                                       <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
                                         <div>
                                           <span className="text-[#666663]">📦 Commandé: </span>
-                                          <span className="font-bold text-[#191919]">{item.quantity}</span>
+                                          <span className="font-bold text-[#191919]">{formatUnits(item.quantity)}</span>
                                         </div>
                                         <div>
                                           <span className="text-[#666663]">✅ Reçu sain: </span>
@@ -3348,7 +3346,7 @@ ${getUserSignature()}`
                             {/* Stock */}
                             <td className="px-4 py-4">
                               <div className="flex flex-col">
-                                <div className="font-bold text-[#191919] text-sm">{product.stock} unités</div>
+                                <div className="font-bold text-[#191919] text-sm">{formatUnits(product.stock)} unités</div>
                                 <div className="text-xs text-[#666663]">
                                   Point: {product.reorderPoint} • MOQ: {product.moq}
                                 </div>
@@ -3367,7 +3365,7 @@ ${getUserSignature()}`
                                 </div>
                                 {product.qtyToOrder > 0 && (
                                   <div className="text-xs text-red-600 font-medium">
-                                    Commander {product.qtyToOrder}
+                                    Commander {formatUnits(product.qtyToOrder)}
                                   </div>
                                 )}
                               </div>
@@ -3575,7 +3573,7 @@ ${getUserSignature()}`
                                 </div>
                                 <div className="col-span-2">
                                   <span className="text-[#666663]">Total: </span>
-                                  <span className="text-[#191919] font-bold text-sm sm:text-base">{roundToTwo(order.total).toFixed(2)}€</span>
+                                  <span className="text-[#191919] font-bold text-sm sm:text-base">{roundToTwoDecimals(order.total).toFixed(2)}€</span>
                                 </div>
                                 {order.trackingNumber && (
                                   <div className="col-span-2">
@@ -3620,16 +3618,16 @@ ${getUserSignature()}`
                                             <div className="grid grid-cols-2 gap-2 text-xs pt-2 border-t border-[#E5E4DF]">
                                               <div>
                                                 <div className="text-[#666663]">Quantité</div>
-                                                <div className="font-bold text-[#191919]">{item.quantity} unités</div>
+                                                <div className="font-bold text-[#191919]">{formatUnits(item.quantity)} unités</div>
                                               </div>
                                               <div className="text-right">
                                                 <div className="text-[#666663]">Prix unitaire</div>
-                                                <div className="font-medium text-[#191919]">{roundToTwo(item.pricePerUnit).toFixed(2)}€</div>
+                                                <div className="font-medium text-[#191919]">{roundToTwoDecimals(item.pricePerUnit).toFixed(2)}€</div>
                                               </div>
                                               <div className="col-span-2 pt-1 border-t border-[#E5E4DF]">
                                                 <div className="flex justify-between items-center">
                                                   <span className="text-[#666663] font-medium">Total ligne</span>
-                                                  <span className="font-bold text-[#191919] text-sm">{roundToTwo(item.quantity * item.pricePerUnit).toFixed(2)}€</span>
+                                                  <span className="font-bold text-[#191919] text-sm">{roundToTwoDecimals(item.quantity * item.pricePerUnit).toFixed(2)}€</span>
                                                 </div>
                                               </div>
                                             </div>
@@ -3642,7 +3640,7 @@ ${getUserSignature()}`
                                   {/* Total de la commande */}
                                   <div className="mt-3 pt-3 border-t-2 border-[#E5E4DF] flex justify-between items-center">
                                     <span className="font-semibold text-[#666663] text-sm">Total commande:</span>
-                                    <span className="font-bold text-[#191919] text-lg">{roundToTwo(order.total).toFixed(2)}€</span>
+                                    <span className="font-bold text-[#191919] text-lg">{roundToTwoDecimals(order.total).toFixed(2)}€</span>
                                   </div>
                                   
                                   {/* Informations supplémentaires */}
@@ -4157,7 +4155,7 @@ ${getUserSignature()}`
         {selectedSupplier && (() => {
           const productsToOrder = toOrderBySupplier[selectedSupplier];
           const email = generateEmailDraft(selectedSupplier, productsToOrder);
-          const totalAmount = roundToTwo(productsToOrder.reduce((sum, p) => {
+          const totalAmount = roundToTwoDecimals(productsToOrder.reduce((sum, p) => {
             const qty = orderQuantities[p.sku] || p.qtyToOrder;
             return sum + (qty * p.buyPrice);
           }, 0));
@@ -4213,7 +4211,7 @@ ${getUserSignature()}`
                         <div className="col-span-2">
                           <div className="font-medium text-[#191919] text-sm">{p.name}</div>
                           <div className="text-xs text-[#666663]">
-                            SKU: {p.sku} • Recommandé: {p.qtyToOrder} unités
+                            SKU: {p.sku} • Recommandé: {formatUnits(p.qtyToOrder)} unités
                           </div>
                         </div>
                         <div>
@@ -4225,7 +4223,7 @@ ${getUserSignature()}`
                             className="w-full px-3 py-2 border-2 border-[#E5E4DF] rounded-lg text-center font-bold"
                           />
                           <div className="text-xs text-right text-[#666663] mt-1">
-                            {roundToTwo((orderQuantities[p.sku] || p.qtyToOrder) * p.buyPrice).toFixed(2)}€
+                            {roundToTwoDecimals((orderQuantities[p.sku] || p.qtyToOrder) * p.buyPrice).toFixed(2)}€
                           </div>
                         </div>
                       </div>
@@ -4330,9 +4328,9 @@ ${getUserSignature()}`
                           <span className="font-medium text-[#191919]">{product?.name || item.sku}</span>
                           <span className="text-xs text-[#666663] ml-2">({item.sku})</span>
                         </div>
-                        <span className="text-sm text-[#666663] font-semibold">
-                          Commandé: {item.quantity}
-                        </span>
+                          <span className="text-sm text-[#666663] font-semibold">
+                            Commandé: {formatUnits(item.quantity)}
+                          </span>
                       </div>
                     </div>
                     
@@ -4374,13 +4372,13 @@ ${getUserSignature()}`
                         {hasMissing && (
                           <div className="flex items-center gap-2 p-2 rounded text-xs bg-yellow-100 text-yellow-800">
                             <AlertCircle className="w-4 h-4" />
-                            <span>⚠️ Manquant: {missingQuantity} unités (total reçu: {totalReceived}/{item.quantity})</span>
+                            <span>⚠️ Manquant: {formatUnits(missingQuantity)} unités (total reçu: {formatUnits(totalReceived)}/{formatUnits(item.quantity)})</span>
                           </div>
                         )}
                         {hasDamaged && (
                           <div className="flex items-center gap-2 p-2 rounded text-xs bg-red-100 text-red-800">
                             <AlertCircle className="w-4 h-4" />
-                            <span>🔴 Endommagé: {currentDamaged} unités (ne seront pas ajoutées au stock)</span>
+                            <span>🔴 Endommagé: {formatUnits(currentDamaged)} unités (ne seront pas ajoutées au stock)</span>
                           </div>
                         )}
                       </div>
@@ -4727,13 +4725,13 @@ ${getUserSignature()}`
                         <span className={`font-bold ${
                           discrepancy === 0 ? 'text-green-600' : discrepancy > 0 ? 'text-[#EF1C43]' : 'text-blue-600'
                         }`}>
-                          {discrepancy > 0 ? `-${discrepancy}` : discrepancy < 0 ? `+${Math.abs(discrepancy)}` : '0'} unités
+                          {discrepancy > 0 ? `-${formatUnits(discrepancy)}` : discrepancy < 0 ? `+${formatUnits(Math.abs(discrepancy))}` : '0'} unités
                         </span>
                       </div>
                       <div className="p-2 rounded bg-orange-50">
                         <span className="text-[#666663]">Perte (endommagé): </span>
                         <span className="font-bold text-orange-600">
-                          {data.damaged} unités
+                          {formatUnits(data.damaged)} unités
                         </span>
                       </div>
                     </div>
