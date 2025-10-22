@@ -21,23 +21,24 @@ import {
   ChevronDown,
   ChevronUp
 } from 'lucide-react';
-import { useReorderOptimization } from '../../hooks/ml/useReorderOptimization';
+import api from '../../services/apiService';
+import { toast } from 'sonner';
 
-export function ReorderOptimizationDashboard({ products }) {
-  const {
-    optimizations,
-    summary,
-    isAnalyzing,
-    isReady,
-    error,
-    progress,
-    analyze,
-    applyOptimization,
-    applyAll,
-    rejectOptimization,
-    getTotalSavings,
-    getTopProblems
-  } = useReorderOptimization(products);
+export function ReorderOptimizationDashboard({ 
+  products,
+  optimizations,
+  summary,
+  isAnalyzing,
+  error,
+  progress,
+  onAnalyze,
+  onApplyOptimization,
+  onApplyAll,
+  onRejectOptimization,
+  getTotalSavings,
+  getTopProblems
+}) {
+  const isReady = optimizations.size > 0 || summary !== null;
 
   const [selectedSKU, setSelectedSKU] = useState(null);
 
@@ -71,7 +72,7 @@ export function ReorderOptimizationDashboard({ products }) {
 
           {/* Bouton Analyser */}
           <button
-            onClick={analyze}
+            onClick={onAnalyze}
             disabled={isAnalyzing}
             className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
@@ -121,12 +122,12 @@ export function ReorderOptimizationDashboard({ products }) {
         <div className="bg-white rounded-xl shadow-sm border border-[#E5E4DF] p-6">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-semibold text-[#191919]">
-              📋 Optimisations Suggérées ({optimizationList.length})
+              Optimisations Suggérées ({optimizationList.length})
             </h3>
             
             {optimizationList.length > 0 && (
               <button
-                onClick={applyAll}
+                onClick={onApplyAll}
                 className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
               >
                 <CheckCircle className="w-4 h-4" />
@@ -140,8 +141,8 @@ export function ReorderOptimizationDashboard({ products }) {
               <OptimizationCard
                 key={opt.sku}
                 optimization={opt}
-                onApply={() => applyOptimization(opt.sku)}
-                onReject={() => rejectOptimization(opt.sku)}
+                onApply={() => onApplyOptimization(opt.sku)}
+                onReject={() => onRejectOptimization(opt.sku)}
                 isSelected={selectedSKU === opt.sku}
                 onSelect={() => setSelectedSKU(opt.sku === selectedSKU ? null : opt.sku)}
               />
@@ -174,7 +175,7 @@ export function ReorderOptimizationDashboard({ products }) {
             Cliquez sur "Analyser" pour identifier les opportunités d'optimisation
           </p>
           <button
-            onClick={analyze}
+            onClick={onAnalyze}
             className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
           >
             <Sparkles className="w-5 h-5" />
@@ -193,7 +194,7 @@ function PerformanceSummary({ summary, totalSavings }) {
   return (
     <div className="bg-white rounded-xl shadow-sm border border-[#E5E4DF] p-6">
       <h3 className="text-lg font-semibold text-[#191919] mb-4">
-        📊 Résumé de Performance
+        Résumé de Performance
       </h3>
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -264,7 +265,7 @@ function TopProblemsSection({ problems }) {
   return (
     <div className="bg-white rounded-xl shadow-sm border border-[#E5E4DF] p-6">
       <h3 className="text-lg font-semibold text-[#191919] mb-4">
-        ⚠️ Top 5 Produits à Optimiser en Priorité
+        Top 5 Produits à Optimiser en Priorité
       </h3>
 
       <div className="space-y-3">
@@ -383,7 +384,7 @@ function OptimizationCard({ optimization, onApply, onReject, isSelected, onSelec
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Analyse des coûts */}
             <div>
-              <h4 className="font-semibold text-[#191919] mb-3">💰 Analyse des Coûts</h4>
+              <h4 className="font-semibold text-[#191919] mb-3">Analyse des Coûts</h4>
               <div className="space-y-2">
                 <div className="flex justify-between text-sm">
                   <span className="text-[#666663]">Coût ruptures (actuel):</span>
@@ -420,7 +421,7 @@ function OptimizationCard({ optimization, onApply, onReject, isSelected, onSelec
 
             {/* Raisons des ajustements */}
             <div>
-              <h4 className="font-semibold text-[#191919] mb-3">📋 Raisons des Ajustements</h4>
+              <h4 className="font-semibold text-[#191919] mb-3">Raisons des Ajustements</h4>
               <div className="space-y-2">
                 {optimization.reasoning.map((reason, idx) => (
                   <div key={idx} className="flex items-start gap-2 text-sm">

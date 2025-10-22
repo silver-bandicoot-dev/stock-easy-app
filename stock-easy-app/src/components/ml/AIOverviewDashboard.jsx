@@ -16,11 +16,36 @@ import {
   Sparkles,
   ArrowRight
 } from 'lucide-react';
-import { useDemandForecast } from '../../hooks/ml/useDemandForecast';
-import { useReorderOptimization } from '../../hooks/ml/useReorderOptimization';
-import { useAnomalyDetection } from '../../hooks/ml/useAnomalyDetection';
+// Hooks ML temporaires (à remplacer par les vrais hooks)
+const useDemandForecast = (products) => ({
+  forecasts: {},
+  isReady: false,
+  isTraining: false,
+  getForecastForProduct: () => null
+});
 
-export function AIOverviewDashboard({ products, orders }) {
+const useReorderOptimization = (products) => ({
+  optimizations: new Map(),
+  isReady: false,
+  getTotalSavings: () => 0,
+  getOptimizationForProduct: () => null
+});
+
+const useAnomalyDetection = (products, orders) => ({
+  stats: { total: 0, critical: 0, high: 0 },
+  isReady: false,
+  getAnomaliesForProduct: () => []
+});
+
+export function AIOverviewDashboard({ 
+  products, 
+  orders, 
+  aiSubTab, 
+  setAiSubTab,
+  onLaunchAllAnalyses,
+  lastUpdateDate,
+  isAnalyzing
+}) {
   // Hooks pour toutes les fonctionnalités ML
   const forecast = useDemandForecast(products);
   const optimization = useReorderOptimization(products);
@@ -37,12 +62,35 @@ export function AIOverviewDashboard({ products, orders }) {
     <div className="space-y-6">
       {/* Header avec KPIs globaux */}
       <div className="bg-gradient-to-r from-purple-600 to-blue-600 rounded-xl shadow-lg text-white p-8">
-        <div className="flex items-center gap-3 mb-6">
-          <Brain className="w-10 h-10" />
-          <div>
-            <h2 className="text-3xl font-bold">Vue d'Ensemble IA</h2>
-            <p className="text-purple-100">Tableau de bord récapitulatif des systèmes intelligents</p>
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-3">
+            <Brain className="w-10 h-10" />
+            <div>
+              <h2 className="text-3xl font-bold">Vue d'Ensemble IA</h2>
+              <p className="text-purple-100">Tableau de bord récapitulatif des systèmes intelligents</p>
+              {lastUpdateDate && (
+                <p className="text-purple-200 text-sm mt-1">
+                  Dernière mise à jour : {new Date(lastUpdateDate).toLocaleString('fr-FR', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                  })}
+                </p>
+              )}
+            </div>
           </div>
+          
+          {/* Bouton centralisé pour lancer toutes les analyses */}
+          <button
+            onClick={onLaunchAllAnalyses}
+            disabled={isAnalyzing}
+            className="flex items-center gap-2 px-6 py-3 bg-white/20 hover:bg-white/30 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg transition-colors font-medium"
+          >
+            <Sparkles className={`w-5 h-5 ${isAnalyzing ? 'animate-spin' : ''}`} />
+            {isAnalyzing ? 'Analyses en cours...' : 'Lancer toutes les analyses'}
+          </button>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -94,6 +142,7 @@ export function AIOverviewDashboard({ products, orders }) {
                 action="Voir les anomalies"
                 color="red"
                 link="anomalies"
+                onClick={() => setAiSubTab('anomalies')}
               />
             )}
 
@@ -105,6 +154,7 @@ export function AIOverviewDashboard({ products, orders }) {
                 action="Optimiser maintenant"
                 color="blue"
                 link="optimization"
+                onClick={() => setAiSubTab('optimization')}
               />
             )}
           </div>
@@ -125,6 +175,7 @@ export function AIOverviewDashboard({ products, orders }) {
           ]}
           link="forecasts"
           color="purple"
+          onClick={() => setAiSubTab('forecasts')}
         />
 
         {/* Module Optimisation */}
@@ -139,6 +190,7 @@ export function AIOverviewDashboard({ products, orders }) {
           ]}
           link="optimization"
           color="blue"
+          onClick={() => setAiSubTab('optimization')}
         />
 
         {/* Module Anomalies */}
@@ -153,6 +205,7 @@ export function AIOverviewDashboard({ products, orders }) {
           ]}
           link="anomalies"
           color="red"
+          onClick={() => setAiSubTab('anomalies')}
         />
 
         {/* Module Performance */}
@@ -167,6 +220,7 @@ export function AIOverviewDashboard({ products, orders }) {
           ]}
           link="forecasts"
           color="green"
+          onClick={() => setAiSubTab('forecasts')}
         />
       </div>
 
@@ -174,7 +228,7 @@ export function AIOverviewDashboard({ products, orders }) {
       {forecast.isReady && products.length > 0 && (
         <div className="bg-white rounded-xl shadow-sm border border-[#E5E4DF] p-6">
           <h3 className="text-xl font-semibold text-[#191919] mb-4">
-            👀 Top 5 Produits à Surveiller
+            Top 5 Produits à Surveiller
           </h3>
 
           <div className="space-y-3">
@@ -236,7 +290,7 @@ function KPICard({ icon: Icon, label, value, sublabel, color }) {
 /**
  * Carte de module
  */
-function ModuleCard({ icon: Icon, title, description, stats, link, color }) {
+function ModuleCard({ icon: Icon, title, description, stats, link, color, onClick }) {
   const colorClasses = {
     purple: 'border-purple-200 bg-purple-50',
     blue: 'border-blue-200 bg-blue-50',
@@ -269,7 +323,10 @@ function ModuleCard({ icon: Icon, title, description, stats, link, color }) {
         ))}
       </div>
 
-      <button className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-white text-[#191919] border border-[#E5E4DF] rounded-lg hover:bg-[#FAFAF7] transition-colors font-medium">
+      <button 
+        className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-white text-[#191919] border border-[#E5E4DF] rounded-lg hover:bg-[#FAFAF7] transition-colors font-medium"
+        onClick={onClick}
+      >
         Accéder au module
         <ArrowRight className="w-4 h-4" />
       </button>
@@ -353,7 +410,7 @@ function ProductSummaryCard({ rank, product, forecast, optimization, anomalies }
 /**
  * Carte d'action prioritaire
  */
-function ActionCard({ icon: Icon, title, description, action, color, link }) {
+function ActionCard({ icon: Icon, title, description, action, color, link, onClick }) {
   const colorClasses = {
     red: 'bg-red-50 border-red-200 text-red-700',
     blue: 'bg-blue-50 border-blue-200 text-blue-700',
@@ -367,7 +424,10 @@ function ActionCard({ icon: Icon, title, description, action, color, link }) {
         <div className="flex-1">
           <p className="font-semibold mb-1">{title}</p>
           <p className="text-sm opacity-90 mb-3">{description}</p>
-          <button className="text-sm font-medium hover:underline flex items-center gap-1">
+          <button 
+            className="text-sm font-medium hover:underline flex items-center gap-1"
+            onClick={onClick}
+          >
             {action}
             <ArrowRight className="w-4 h-4" />
           </button>

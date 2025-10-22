@@ -122,12 +122,16 @@ export async function updateProduct(skuOrData, updates) {
       ? { sku: skuOrData, ...updates }
       : skuOrData;
       
+    console.log(`📝 Mise à jour du produit:`, data);
+    
     const response = await fetch(`${API_URL}?action=updateProduct`, {
       method: 'POST',
       body: JSON.stringify(data)
     });
     const result = await response.json();
     if (result.error) throw new Error(result.error);
+    
+    console.log(`✅ Produit mis à jour avec succès:`, result);
     return result;
   } catch (error) {
     console.error('❌ Erreur lors de la mise à jour du produit:', error);
@@ -388,12 +392,14 @@ export async function applyOptimizationsBatch(optimizations) {
     
     for (const opt of optimizations) {
       try {
+        console.log(`🔄 Mise à jour du produit ${opt.sku} avec reorderPoint: ${opt.reorderPoint}`);
         await updateProduct(opt.sku, {
-          reorderPoint: opt.reorderPoint,
-          securityStock: opt.securityStock
+          reorderPoint: opt.reorderPoint
         });
+        console.log(`✅ Produit ${opt.sku} mis à jour avec succès`);
         results.success.push(opt.sku);
       } catch (err) {
+        console.error(`❌ Erreur pour le produit ${opt.sku}:`, err);
         results.errors.push({ sku: opt.sku, error: err.message });
       }
     }

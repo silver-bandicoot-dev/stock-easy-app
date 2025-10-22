@@ -58,6 +58,7 @@
  * @property {boolean} hasDiscrepancy - Présence d'écarts
  * @property {boolean} damageReport - Rapport de dommages (NOUVEAU)
  * @property {string} notes - Notes
+ * @property {string} warehouseName - Nom de l'entrepôt de livraison (NOUVEAU)
  * @property {OrderItem[]} items - Liste des articles
  */
 

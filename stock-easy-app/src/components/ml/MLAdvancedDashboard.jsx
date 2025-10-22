@@ -247,7 +247,7 @@ export function MLAdvancedDashboard({ products }) {
           {/* Résumé des prévisions multi-périodes */}
           <div className="bg-white rounded-xl shadow-sm border border-[#E5E4DF] p-6">
             <h3 className="text-xl font-bold text-[#191919] mb-4">
-              📅 Prévisions Multi-Périodes
+              Prévisions Multi-Périodes
             </h3>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <ForecastSummaryCard

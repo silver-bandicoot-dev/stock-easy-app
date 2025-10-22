@@ -930,6 +930,11 @@ const StockEasy = () => {
       return sum + (qty * p.buyPrice);
     }, 0));
     
+    // Informations d'entrepôt
+    const warehouseInfo = selectedWarehouse && warehouses[selectedWarehouse] 
+      ? `\n\nEntrepôt de livraison : ${selectedWarehouse}\nAdresse :\n${warehouses[selectedWarehouse].address}\n${warehouses[selectedWarehouse].postalCode} ${warehouses[selectedWarehouse].city}\n${warehouses[selectedWarehouse].country}`
+      : '';
+    
     return {
       to: supplierInfo.email || 'email@fournisseur.com',
       subject: `Commande stockeasy - ${new Date().toLocaleDateString('fr-FR')}`,
@@ -939,7 +944,7 @@ Nous souhaitons passer la commande suivante :
 
 ${productList}
 
-TOTAL: ${total.toFixed(2)}€
+TOTAL: ${total.toFixed(2)}€${warehouseInfo}
 
 Merci de nous confirmer la disponibilité et la date de livraison estimée.
 
@@ -975,6 +980,7 @@ ${getUserSignature()}`
         id: generatePONumber(),
         supplier: selectedSupplier,
         warehouseId: selectedWarehouse, // Ajouter le warehouse
+        warehouseName: selectedWarehouse, // Nom de l'entrepôt pour affichage
         status: 'pending_confirmation',
         total: total,
         createdAt: new Date().toISOString().split('T')[0],
@@ -1017,6 +1023,7 @@ ${getUserSignature()}`
         id: generatePONumber(),
         supplier: selectedSupplier,
         warehouseId: selectedWarehouse, // Ajouter le warehouse
+        warehouseName: selectedWarehouse, // Nom de l'entrepôt pour affichage
         status: 'pending_confirmation',
         total: total,
         createdAt: new Date().toISOString().split('T')[0],
@@ -2261,7 +2268,15 @@ ${getUserSignature()}`
                             <span className="text-[#191919] font-medium text-xs sm:text-sm truncate">{order.supplier}</span>
                           </div>
                           
-                          {/* Ligne 3: Infos */}
+                          {/* Ligne 3: Entrepôt */}
+                          {(order.warehouseName || order.warehouseId) && (
+                            <div className="flex items-center gap-2">
+                              <span className="text-[#666663] text-xs sm:text-sm">Entrepôt de livraison:</span>
+                              <span className="text-[#191919] font-medium text-xs sm:text-sm truncate">{order.warehouseName || order.warehouseId}</span>
+                            </div>
+                          )}
+                          
+                          {/* Ligne 4: Infos */}
                           <div className="text-xs sm:text-sm space-y-1">
                             <div>
                               <span className="text-[#666663]">Date: </span>
@@ -2394,7 +2409,15 @@ ${getUserSignature()}`
                             <span className="text-[#191919] font-medium text-xs sm:text-sm truncate">{order.supplier}</span>
                           </div>
                           
-                          {/* Ligne 3: Infos */}
+                          {/* Ligne 3: Entrepôt */}
+                          {(order.warehouseName || order.warehouseId) && (
+                            <div className="flex items-center gap-2">
+                              <span className="text-[#666663] text-xs sm:text-sm">Entrepôt de livraison:</span>
+                              <span className="text-[#191919] font-medium text-xs sm:text-sm truncate">{order.warehouseName || order.warehouseId}</span>
+                            </div>
+                          )}
+                          
+                          {/* Ligne 4: Infos */}
                           <div className="text-xs sm:text-sm space-y-1">
                             <div>
                               <span className="text-[#666663]">Date création: </span>
@@ -2532,7 +2555,15 @@ ${getUserSignature()}`
                             <span className="text-[#191919] font-medium text-xs sm:text-sm truncate">{order.supplier}</span>
                           </div>
                           
-                          {/* Ligne 3: Infos */}
+                          {/* Ligne 3: Entrepôt */}
+                          {(order.warehouseName || order.warehouseId) && (
+                            <div className="flex items-center gap-2">
+                              <span className="text-[#666663] text-xs sm:text-sm">Entrepôt de livraison:</span>
+                              <span className="text-[#191919] font-medium text-xs sm:text-sm truncate">{order.warehouseName || order.warehouseId}</span>
+                            </div>
+                          )}
+                          
+                          {/* Ligne 4: Infos */}
                           <div className="text-xs sm:text-sm space-y-1">
                             <div>
                               <span className="text-[#666663]">Créée le: </span>
@@ -2681,7 +2712,15 @@ ${getUserSignature()}`
                             <span className="text-[#191919] font-medium text-xs sm:text-sm truncate">{order.supplier}</span>
                           </div>
                           
-                          {/* Ligne 3: Infos */}
+                          {/* Ligne 3: Entrepôt */}
+                          {(order.warehouseName || order.warehouseId) && (
+                            <div className="flex items-center gap-2">
+                              <span className="text-[#666663] text-xs sm:text-sm">Entrepôt de livraison:</span>
+                              <span className="text-[#191919] font-medium text-xs sm:text-sm truncate">{order.warehouseName || order.warehouseId}</span>
+                            </div>
+                          )}
+                          
+                          {/* Ligne 4: Infos */}
                           <div className="text-xs sm:text-sm space-y-1">
                             <div>
                               <span className="text-[#666663]">Créée le: </span>
@@ -2868,7 +2907,15 @@ ${getUserSignature()}`
                             <span className="text-[#191919] font-medium text-xs sm:text-sm truncate">{order.supplier}</span>
                           </div>
                           
-                          {/* Ligne 3: Infos */}
+                          {/* Ligne 3: Entrepôt */}
+                          {(order.warehouseName || order.warehouseId) && (
+                            <div className="flex items-center gap-2">
+                              <span className="text-[#666663] text-xs sm:text-sm">Entrepôt de livraison:</span>
+                              <span className="text-[#191919] font-medium text-xs sm:text-sm truncate">{order.warehouseName || order.warehouseId}</span>
+                            </div>
+                          )}
+                          
+                          {/* Ligne 4: Infos */}
                           <div className="text-xs sm:text-sm space-y-1">
                             <div>
                               <span className="text-[#666663]">Créée le: </span>
@@ -3498,7 +3545,15 @@ ${getUserSignature()}`
                                 <span className="text-[#191919] font-medium text-xs sm:text-sm truncate">{order.supplier}</span>
                               </div>
                               
-                              {/* Ligne 3: Infos principales en grid */}
+                              {/* Ligne 3: Entrepôt */}
+                              {(order.warehouseName || order.warehouseId) && (
+                                <div className="flex items-center gap-2">
+                                  <span className="text-[#666663] text-xs sm:text-sm">Entrepôt de livraison:</span>
+                                  <span className="text-[#191919] font-medium text-xs sm:text-sm truncate">{order.warehouseName || order.warehouseId}</span>
+                                </div>
+                              )}
+                              
+                              {/* Ligne 4: Infos principales en grid */}
                               <div className="grid grid-cols-2 gap-2 text-xs sm:text-sm">
                                 <div>
                                   <span className="text-[#666663]">Date: </span>
