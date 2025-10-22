@@ -32,6 +32,7 @@ import Sidebar from './components/layout/Sidebar';
 import { useAnalytics } from './hooks/useAnalytics';
 import { checkAndSaveKPISnapshot } from './utils/kpiScheduler';
 import { generateInsights } from './utils/insightGenerator';
+import { calculateMetrics } from './utils/calculations';
 
 // ============================================
 // FONCTIONS API - Importées depuis apiService
@@ -119,71 +120,6 @@ const formatConfirmedDate = (isoDate) => {
 // FONCTIONS UTILITAIRES
 // ============================================
 
-/**
- * Calcul des métriques de santé d'un produit
- * 
- * Le pourcentage de santé (0-100%) est calculé selon l'autonomie (jours de stock) :
- * 
- * 🔴 ZONE URGENT (0-25%) : Autonomie < Stock de sécurité
- *    - Formule: (autonomie / stock_sécu) × 25
- *    - Minimum: 5%, Maximum: 25%
- *    - Exemple: autonomie 10j, stock sécu 20j → 12.5%
- * 
- * 🟡 ZONE WARNING (25-50%) : Stock sécu < Autonomie < Stock sécu × 1.2
- *    - Formule: 25 + ((autonomie - stock_sécu) / (stock_sécu × 0.2)) × 25
- *    - Progression linéaire de 25% à 50%
- *    - Exemple: autonomie 22j, stock sécu 20j → 37.5%
- * 
- * 🟢 ZONE HEALTHY (50-100%) : Autonomie > Stock sécu × 1.2
- *    - Formule: 50 + ((autonomie - stock_sécu × 1.2) / (stock_sécu × 2)) × 50
- *    - Progression linéaire de 50% à 100%
- *    - Maximum: 100% atteint quand autonomie = stock_sécu × 3.2
- *    - Exemple: autonomie 50j, stock sécu 20j → 87.5%
- * 
- * @param {Object} product - Produit avec stock, salesPerDay, delay
- * @param {number} seuil - Seuil de surstock profond (défaut: 90 jours)
- * @returns {Object} Produit enrichi avec métriques calculées
- */
-const calculateMetrics = (product, seuil = 90) => {
-  // Calcul de l'autonomie en jours
-  const daysOfStock = product.salesPerDay > 0 ? Math.floor(product.stock / product.salesPerDay) : 999;
-  
-  // Stock de sécurité: valeur custom ou 20% du délai fournisseur
-  const securityStock = product.customSecurityStock !== undefined && product.customSecurityStock !== null 
-    ? product.customSecurityStock 
-    : Math.round(product.leadTimeDays * 0.2);
-  
-  let healthStatus = 'healthy';
-  let healthPercentage = 100;
-  
-  // LOGIQUE DE CALCUL DU % SANTÉ
-  if (daysOfStock < securityStock) {
-    // 🔴 URGENT: autonomie inférieure au stock de sécurité
-    healthStatus = 'urgent';
-    healthPercentage = Math.max(5, Math.min(25, (daysOfStock / securityStock) * 25));
-  } else if (daysOfStock < securityStock * 1.2) {
-    // 🟡 WARNING: autonomie entre stock sécu et stock sécu × 1.2
-    healthStatus = 'warning';
-    const ratio = (daysOfStock - securityStock) / (securityStock * 0.2);
-    healthPercentage = 25 + (ratio * 25);
-  } else {
-    // 🟢 HEALTHY: autonomie > stock sécu × 1.2
-    healthStatus = 'healthy';
-    healthPercentage = Math.min(100, 50 + ((daysOfStock - securityStock * 1.2) / (securityStock * 2)) * 50);
-  }
-  
-  // Détection surstock profond (seuil × 2)
-  const isDeepOverstock = daysOfStock > (seuil * 2);
-  
-  return {
-    ...product,
-    daysOfStock,
-    securityStock,
-    healthStatus,
-    healthPercentage: Math.round(healthPercentage),
-    isDeepOverstock
-  };
-};
 
 // ============================================
 // COMPOSANT PRINCIPAL
@@ -3423,14 +3359,14 @@ ${getUserSignature()}`
                             <td className="px-4 py-4">
                               <div className="flex flex-col">
                                 <div className={`font-bold text-sm ${
-                                  product.daysOfStock < 15 ? 'text-[#EF1C43]' :
-                                  product.daysOfStock < 30 ? 'text-yellow-600' :
+                                  product.healthStatus === 'urgent' ? 'text-red-600' :
+                                  product.healthStatus === 'warning' ? 'text-orange-500' :
                                   'text-green-600'
                                 }`}>
                                   {product.daysOfStock} jours
                                 </div>
                                 {product.qtyToOrder > 0 && (
-                                  <div className="text-xs text-[#EF1C43] font-medium">
+                                  <div className="text-xs text-red-600 font-medium">
                                     Commander {product.qtyToOrder}
                                   </div>
                                 )}
