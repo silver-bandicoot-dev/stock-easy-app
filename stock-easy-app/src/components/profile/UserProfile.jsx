@@ -311,44 +311,59 @@ const UserProfile = () => {
             {/* Carte Photo et Informations principales */}
             <div className="bg-white rounded-lg shadow-lg border border-[#E5E4DF] overflow-hidden">
               <div className="bg-black p-6">
-                <div className="flex items-center gap-6">
-                  {/* Photo de profil */}
-                  <div className="relative">
-                    <div className="w-20 h-20 rounded-lg overflow-hidden bg-white shadow-lg border-2 border-white">
-                      {photoPreview ? (
-                        <img 
-                          src={photoPreview} 
-                          alt="Profile" 
-                          className="w-full h-full object-cover"
+                <div className="flex items-start justify-between gap-6">
+                  {/* Section gauche - Photo et infos utilisateur */}
+                  <div className="flex items-center gap-6">
+                    {/* Photo de profil */}
+                    <div className="relative">
+                      <div className="w-20 h-20 rounded-lg overflow-hidden bg-white shadow-lg border-2 border-white">
+                        {photoPreview ? (
+                          <img 
+                            src={photoPreview} 
+                            alt="Profile" 
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <div className="w-full h-full bg-gradient-to-br from-gray-200 to-gray-300 flex items-center justify-center">
+                            <User className="w-12 h-12 text-gray-500" />
+                          </div>
+                        )}
+                      </div>
+                      <label className="absolute -bottom-1 -right-1 bg-white rounded-full p-1.5 shadow-lg cursor-pointer hover:bg-gray-50 transition-colors">
+                        <Camera className="w-3 h-3 text-gray-600" />
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={handlePhotoChange}
+                          className="hidden"
                         />
-                      ) : (
-                        <div className="w-full h-full bg-gradient-to-br from-gray-200 to-gray-300 flex items-center justify-center">
-                          <User className="w-12 h-12 text-gray-500" />
-                        </div>
-                      )}
+                      </label>
                     </div>
-                    <label className="absolute -bottom-1 -right-1 bg-white rounded-full p-1.5 shadow-lg cursor-pointer hover:bg-gray-50 transition-colors">
-                      <Camera className="w-3 h-3 text-gray-600" />
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={handlePhotoChange}
-                        className="hidden"
-                      />
-                    </label>
+
+                    {/* Informations utilisateur */}
+                    <div>
+                      <h2 className="text-2xl font-bold text-white mb-1">
+                        {firstName} {lastName}
+                      </h2>
+                      <p className="text-gray-300 mb-3">{currentUser?.email}</p>
+                      <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm font-semibold ${getRoleBadgeColor(userData?.role)}`}>
+                        {getRoleIcon(userData?.role)}
+                        {userData?.role || 'user'}
+                      </span>
+                    </div>
                   </div>
 
-                  {/* Informations utilisateur */}
-                  <div className="flex-1">
-                    <h2 className="text-2xl font-bold text-white mb-1">
-                      {firstName} {lastName}
-                    </h2>
-                    <p className="text-gray-300 mb-3">{currentUser?.email}</p>
-                    <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm font-semibold ${getRoleBadgeColor(userData?.role)}`}>
-                      {getRoleIcon(userData?.role)}
-                      {userData?.role || 'user'}
-                    </span>
-                  </div>
+                  {/* Section droite - Informations de l'entreprise */}
+                  {companyData && (
+                    <div className="text-right">
+                      <div className="flex items-center justify-end gap-2">
+                        <Briefcase className="w-4 h-4 text-gray-300" />
+                        <span className="text-sm font-medium text-gray-300">
+                          {companyData.name}
+                        </span>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -438,31 +453,6 @@ const UserProfile = () => {
               </div>
             </div>
 
-            {/* Carte Entreprise */}
-            {companyData && (
-              <div className="bg-white rounded-lg shadow-lg border border-[#E5E4DF] p-6">
-                <h3 className="text-lg font-bold text-[#191919] flex items-center gap-2 mb-4">
-                  <Briefcase className="w-4 h-4 text-black" />
-                  Mon Entreprise
-                </h3>
-                <div className="space-y-3">
-                  <div>
-                    <label className="block text-sm font-semibold text-[#666663] mb-1">
-                      Nom de l'entreprise
-                    </label>
-                    <p className="text-[#191919] font-medium">{companyData.name}</p>
-                  </div>
-                  {companyData.description && (
-                    <div>
-                      <label className="block text-sm font-semibold text-[#666663] mb-1">
-                        Description
-                      </label>
-                      <p className="text-[#191919]">{companyData.description}</p>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
           </div>
 
           {/* Colonne latérale - Équipe */}
