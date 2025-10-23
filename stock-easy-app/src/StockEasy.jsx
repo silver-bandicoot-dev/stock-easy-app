@@ -1892,6 +1892,7 @@ ${getUserSignature()}`
                   {activeTab === MAIN_TABS.TRACK && (
                     <TrackTab
                       orders={orders}
+                      products={products}
                       trackTabSection={trackTabSection}
                       setTrackTabSection={setTrackTabSection}
                       expandedOrders={expandedOrders}

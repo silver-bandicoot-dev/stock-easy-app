@@ -9,6 +9,7 @@ export const TrackSection = ({
   icon: Icon,
   orders,
   suppliers,
+  products,
   expandedOrders,
   toggleOrderDetails,
   confirmOrder,
@@ -51,6 +52,7 @@ export const TrackSection = ({
               key={order.id}
               order={order}
               suppliers={suppliers}
+              products={products}
               expandedOrders={expandedOrders}
               toggleOrderDetails={toggleOrderDetails}
               confirmOrder={confirmOrder}

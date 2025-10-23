@@ -9,6 +9,7 @@ export const TrackTab = ({
   setTrackTabSection,
   orders,
   suppliers,
+  products,
   expandedOrders,
   toggleOrderDetails,
   confirmOrder,
@@ -149,6 +150,7 @@ export const TrackTab = ({
               icon={section.icon}
               orders={orders}
               suppliers={suppliers}
+              products={products}
               expandedOrders={expandedOrders}
               toggleOrderDetails={toggleOrderDetails}
               confirmOrder={confirmOrder}

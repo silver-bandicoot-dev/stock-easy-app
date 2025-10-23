@@ -1,8 +1,8 @@
 import React from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { History, Download, Filter, Calendar, Eye, ChevronDown, ChevronRight, ArrowDownRight } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { History, Download, Filter, Calendar, Eye, ChevronDown, ChevronRight } from 'lucide-react';
 import { Button } from '../shared/Button';
-import CommentSection from '../comments/CommentSection';
+import { OrderCard } from '../shared/OrderCard';
 import { toast } from 'sonner';
 import { formatConfirmedDate } from '../../utils/dateUtils';
 import { roundToTwoDecimals, formatUnits } from '../../utils/decimalUtils';
@@ -214,182 +214,18 @@ export const HistoryTab = ({
         ) : (
           filteredOrders
             .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
-            .map(order => {
-              const statusConfig = {
-                pending_confirmation: { label: 'En attente', color: 'bg-yellow-50 text-yellow-600 border-yellow-200' },
-                preparing: { label: 'En traitement', color: 'bg-blue-50 text-[#64A4F2] border-blue-200' },
-                in_transit: { label: 'En transit', color: 'bg-purple-50 text-purple-600 border-purple-200' },
-                received: { label: 'Reçues', color: 'bg-green-50 text-green-600 border-green-200' },
-                completed: { label: 'Complétée', color: 'bg-green-50 text-green-600 border-green-200' },
-                reconciliation: { label: 'À réconcilier', color: 'bg-red-50 text-[#EF1C43] border-red-200' }
-              };
-              
-              const status = statusConfig[order.status] || { label: order.status || 'Inconnu', color: 'bg-gray-50 text-gray-600 border-gray-200' };
-              
-              return (
-                <div key={order.id} className="bg-white rounded-xl shadow-sm border border-[#E5E4DF] overflow-hidden">
-                  {/* Header de la commande - Cliquable */}
-                  <div 
-                    className="p-3 sm:p-4 cursor-pointer hover:bg-[#FAFAF7] transition-colors"
-                    onClick={() => toggleOrderDetails(order.id)}
-                  >
-                    {/* Layout mobile-first optimisé */}
-                    <div className="space-y-3">
-                      {/* Ligne 1: N° PO + Badge Statut + Chevron */}
-                      <div className="flex items-center justify-between gap-2">
-                        <div className="flex items-center gap-2 min-w-0 flex-1">
-                          <span className="font-bold text-[#191919] text-sm sm:text-base">{order.id}</span>
-                          <motion.div
-                            animate={{ rotate: expandedOrders[order.id] ? 180 : 0 }}
-                            transition={{ duration: 0.2 }}
-                            className="shrink-0"
-                          >
-                            <ArrowDownRight className="w-4 h-4 text-[#666663]" />
-                          </motion.div>
-                        </div>
-                        <span className={`px-2 sm:px-3 py-1 rounded-full text-xs font-medium border inline-block shrink-0 ${status.color}`}>
-                          {status.label}
-                        </span>
-                      </div>
-                      
-                      {/* Ligne 2: Fournisseur */}
-                      <div className="flex items-center gap-2">
-                        <span className="text-[#666663] text-xs sm:text-sm">Fournisseur:</span>
-                        <span className="text-[#191919] font-medium text-xs sm:text-sm truncate">{order.supplier}</span>
-                      </div>
-                      
-                      {/* Ligne 3: Entrepôt */}
-                      {(order.warehouseName || order.warehouseId) && (
-                        <div className="flex items-center gap-2">
-                          <span className="text-[#666663] text-xs sm:text-sm">Entrepôt de livraison:</span>
-                          <span className="text-[#191919] font-medium text-xs sm:text-sm truncate">{order.warehouseName || order.warehouseId}</span>
-                        </div>
-                      )}
-                      
-                      {/* Ligne 4: Infos principales en grid */}
-                      <div className="grid grid-cols-2 gap-2 text-xs sm:text-sm">
-                        <div>
-                          <span className="text-[#666663]">Date: </span>
-                          <span className="text-[#191919]">{formatConfirmedDate(order.createdAt)}</span>
-                        </div>
-                        <div>
-                          <span className="text-[#666663]">Produits: </span>
-                          <span className="text-[#191919] font-medium">{order.items.length}</span>
-                        </div>
-                        <div className="col-span-2">
-                          <span className="text-[#666663]">Total: </span>
-                          <span className="text-[#191919] font-bold text-sm sm:text-base">{roundToTwoDecimals(order.total).toFixed(2)}€</span>
-                        </div>
-                        {order.trackingNumber && (
-                          <div className="col-span-2">
-                            <span className="text-[#666663]">Suivi: </span>
-                            <span className="text-[#191919] font-mono text-xs break-all">{order.trackingNumber}</span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                  
-                  {/* Détails des produits - Expansible */}
-                  <AnimatePresence>
-                    {expandedOrders[order.id] && (
-                      <motion.div
-                        initial={{ height: 0, opacity: 0 }}
-                        animate={{ height: 'auto', opacity: 1 }}
-                        exit={{ height: 0, opacity: 0 }}
-                        transition={{ duration: 0.3 }}
-                        className="border-t border-[#E5E4DF] bg-white"
-                      >
-                        <div className="p-3 sm:p-4">
-                          <h4 className="font-semibold text-xs sm:text-sm text-[#666663] mb-3">Produits commandés:</h4>
-                          <div className="space-y-2">
-                            {order.items.map((item, idx) => {
-                              const product = products.find(p => p.sku === item.sku);
-                              return (
-                                <div key={idx} className="bg-[#FAFAF7] rounded border border-[#E5E4DF] p-2 sm:p-3">
-                                  {/* Layout mobile optimisé */}
-                                  <div className="space-y-2">
-                                    {/* Nom du produit */}
-                                    <div>
-                                      <div className="font-medium text-[#191919] text-xs sm:text-sm">
-                                        {product?.name || item.sku}
-                                      </div>
-                                      <div className="text-xs text-[#666663] mt-0.5">
-                                        SKU: {item.sku}
-                                      </div>
-                                    </div>
-                                    
-                                    {/* Infos quantité et prix en grid */}
-                                    <div className="grid grid-cols-2 gap-2 text-xs pt-2 border-t border-[#E5E4DF]">
-                                      <div>
-                                        <div className="text-[#666663]">Quantité</div>
-                                        <div className="font-bold text-[#191919]">{formatUnits(item.quantity)} unités</div>
-                                      </div>
-                                      <div className="text-right">
-                                        <div className="text-[#666663]">Prix unitaire</div>
-                                        <div className="font-medium text-[#191919]">{roundToTwoDecimals(item.pricePerUnit).toFixed(2)}€</div>
-                                      </div>
-                                      <div className="col-span-2 pt-1 border-t border-[#E5E4DF]">
-                                        <div className="flex justify-between items-center">
-                                          <span className="text-[#666663] font-medium">Total ligne</span>
-                                          <span className="font-bold text-[#191919] text-sm">{roundToTwoDecimals(item.quantity * item.pricePerUnit).toFixed(2)}€</span>
-                                        </div>
-                                      </div>
-                                    </div>
-                                  </div>
-                                </div>
-                              );
-                            })}
-                          </div>
-                          
-                          {/* Total de la commande */}
-                          <div className="mt-3 pt-3 border-t-2 border-[#E5E4DF] flex justify-between items-center">
-                            <span className="font-semibold text-[#666663] text-sm">Total commande:</span>
-                            <span className="font-bold text-[#191919] text-lg">{roundToTwoDecimals(order.total).toFixed(2)}€</span>
-                          </div>
-                          
-                          {/* Informations supplémentaires */}
-                          <div className="mt-4 pt-4 border-t border-[#E5E4DF] space-y-2 text-xs sm:text-sm">
-                            {order.confirmedAt && (
-                              <div className="flex flex-col sm:flex-row sm:gap-2">
-                                <span className="text-[#666663] font-medium">Date confirmation:</span>
-                                <span className="text-[#191919]">{formatConfirmedDate(order.confirmedAt)}</span>
-                              </div>
-                            )}
-                            {order.shippedAt && (
-                              <div className="flex flex-col sm:flex-row sm:gap-2">
-                                <span className="text-[#666663] font-medium">Date expédition:</span>
-                                <span className="text-[#191919]">{formatConfirmedDate(order.shippedAt)}</span>
-                              </div>
-                            )}
-                            {order.receivedAt && (
-                              <div className="flex flex-col sm:flex-row sm:gap-2">
-                                <span className="text-[#666663] font-medium">Date réception:</span>
-                                <span className="text-[#191919]">{formatConfirmedDate(order.receivedAt)}</span>
-                              </div>
-                            )}
-                            {order.trackingNumber && (
-                              <div className="flex flex-col sm:flex-row sm:gap-2">
-                                <span className="text-[#666663] font-medium">Suivi:</span>
-                                <span className="text-[#191919] font-mono text-xs break-all">{order.trackingNumber}</span>
-                              </div>
-                            )}
-                          </div>
-                          
-                          {/* Section Commentaires */}
-                          <div className="mt-6 pt-6 border-t border-[#E5E4DF]">
-                            <CommentSection 
-                              purchaseOrderId={order.id}
-                              purchaseOrderNumber={order.id}
-                            />
-                          </div>
-                        </div>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                </div>
-              );
-            })
+            .map(order => (
+              <OrderCard
+                key={order.id}
+                order={order}
+                products={products}
+                expandedOrders={expandedOrders}
+                toggleOrderDetails={toggleOrderDetails}
+                showStatus={true}
+                showActions={false}
+                compactMode={false}
+              />
+            ))
         )}
       </div>
 
