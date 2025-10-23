@@ -130,8 +130,11 @@ export const useSupplierManagement = (suppliers, loadData) => {
 
   return {
     supplierModalOpen,
+    setSupplierModalOpen,
     editingSupplier,
+    setEditingSupplier,
     supplierFormData,
+    setSupplierFormData,
     handleOpenSupplierModal,
     handleCloseSupplierModal,
     handleSupplierFormChange,

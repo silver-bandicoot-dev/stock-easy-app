@@ -162,8 +162,11 @@ const StockEasy = () => {
   // Hook pour la gestion des fournisseurs
   const {
     supplierModalOpen,
+    setSupplierModalOpen,
     editingSupplier,
+    setEditingSupplier,
     supplierFormData,
+    setSupplierFormData,
     handleOpenSupplierModal,
     handleCloseSupplierModal,
     handleSupplierFormChange,
