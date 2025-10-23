@@ -78,6 +78,7 @@ import { Button } from './components/shared/Button';
 import { DashboardTab } from './components/dashboard/DashboardTab';
 import { ActionsTab } from './components/actions/ActionsTab';
 import { TrackTab } from './components/track/TrackTab';
+import { StockTab } from './components/stock/StockTab';
 
 // ============================================
 // IMPORTS DES HOOKS PERSONNALISÉS
@@ -2541,6 +2542,19 @@ ${getUserSignature()}`
             )}
 
             </motion.div>
+          )}
+
+          {/* STOCK TAB */}
+          {activeTab === MAIN_TABS.STOCK && (
+            <StockTab
+              products={products}
+              suppliers={suppliers}
+              stockLevelFilter={stockLevelFilter}
+              setStockLevelFilter={setStockLevelFilter}
+              searchTerm={searchTerm}
+              setSearchTerm={setSearchTerm}
+              onViewDetails={handleViewProductDetails}
+            />
           )}
 
           {/* ANALYTICS TAB */}
