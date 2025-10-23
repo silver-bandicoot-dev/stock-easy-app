@@ -214,13 +214,6 @@ const StockEasy = () => {
 
   // NOUVEAUX ÉTATS pour les sous-onglets de Paramètres
   const [parametersSubTab, setParametersSubTab] = useState(SETTINGS_TABS.GENERAL);
-  
-  // État pour les paramètres généraux
-  const [parameters, setParameters] = useState({
-    seuilSurstockProfond: 90,
-    deviseDefaut: 'EUR',
-    multiplicateurDefaut: 1.2
-  });
   const [analyticsSubTab, setAnalyticsSubTab] = useState(ANALYTICS_TABS.KPIS);
   const [aiSubTab, setAiSubTab] = useState(AI_TABS.OVERVIEW);
   
