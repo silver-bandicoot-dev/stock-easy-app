@@ -76,6 +76,7 @@ import { Button } from './components/shared/Button';
 // IMPORTS DES COMPOSANTS DASHBOARD
 // ============================================
 import { DashboardTab } from './components/dashboard/DashboardTab';
+import { ActionsTab } from './components/actions/ActionsTab';
 
 // ============================================
 // IMPORTS DES HOOKS PERSONNALISÉS
@@ -621,14 +622,6 @@ const StockEasy = () => {
     }
     
     setEmailModalOpen(true);
-  };
-
-  const updateOrderQuantity = (sku, newQuantity) => {
-    const qty = parseInt(newQuantity, 10);
-    setOrderQuantities(prev => ({
-      ...prev,
-      [sku]: isNaN(qty) || qty < 0 ? 0 : qty
-    }));
   };
 
   const generateEmailDraft = (supplier, products) => {
@@ -1623,94 +1616,25 @@ ${getUserSignature()}`
           )}
 
           {/* ONGLET ACTIONS */}
-          {activeTab === 'actions' && (
-            <motion.div
-              key="actions"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              transition={{ duration: 0.25 }}
-              className="space-y-6">
-            <div className="bg-white rounded-xl shadow-sm border border-[#E5E4DF] p-6">
-              <div className="flex items-center gap-3 mb-6">
-                <div className="w-10 h-10 bg-red-50 rounded-lg flex items-center justify-center border border-red-200 shrink-0">
-                  <AlertCircle className="w-6 h-6 text-[#EF1C43] shrink-0" />
-                </div>
-                <div>
-                  <h2 className="text-xl font-bold text-[#191919]">Produits à commander</h2>
-                  <p className="text-sm text-[#666663]">{productsByStatus.to_order.length} produit(s)</p>
-                </div>
-              </div>
-              <div>
-              {Object.keys(toOrderBySupplier).length === 0 ? (
-                <div className="text-center py-12">
-                  <CheckCircle className="w-16 h-16 text-green-400 mx-auto mb-4 shrink-0" />
-                  <p className="text-[#666663] text-lg">Aucune commande nécessaire</p>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {Object.entries(toOrderBySupplier).map(([supplier, prods]) => (
-                    <div key={supplier} className="border border-[#E5E4DF] rounded-lg overflow-hidden">
-                      <div className="bg-[#FAFAF7] px-4 py-3 flex items-center justify-between gap-4">
-                        <div className="min-w-0">
-                          <h3 className="font-bold text-[#191919]">{supplier}</h3>
-                          <p className="text-sm text-[#666663]">{prods.length} produit(s)</p>
-                        </div>
-                        <Button
-                          variant="primary"
-                          icon={Mail}
-                          onClick={() => openEmailModal(supplier)}
-                          className="shrink-0"
-                        >
-                          Commander
-                        </Button>
-                      </div>
-                      <div className="p-4">
-                        <table className="w-full text-sm">
-                          <thead className="text-xs text-[#666663] border-b border-[#E5E4DF]">
-                            <tr>
-                              <th className="text-left py-2">Produit</th>
-                              <th className="text-right py-2">Qté</th>
-                              <th className="text-right py-2">Montant</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {prods.map(p => (
-                              <tr key={p.sku} className="border-b border-[#E5E4DF] last:border-0">
-                                <td className="py-2 text-[#191919]">{p.name}</td>
-                                <td className="text-right text-[#191919]">{formatUnits(p.qtyToOrder)}</td>
-                                <td className="text-right font-bold text-[#191919]">{roundToTwoDecimals(p.qtyToOrder * p.buyPrice).toFixed(2)}€</td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-              </div>
-            </div>
-
-            {/* NOUVEAU : Table de sélection de produits */}
-            <div className="bg-white rounded-xl shadow-sm border border-[#E5E4DF] p-6">
-              <div className="flex items-center gap-3 mb-6">
-                <div className="w-10 h-10 bg-purple-50 rounded-lg flex items-center justify-center border border-purple-200 shrink-0">
-                  <Package className="w-6 h-6 text-[#8B5CF6] shrink-0" />
-                </div>
-                <div>
-                  <h2 className="text-xl font-bold text-[#191919]">Sélection manuelle de produits</h2>
-                  <p className="text-sm text-[#666663]">Choisissez les produits et quantités à commander</p>
-                </div>
-              </div>
-              
-              <ProductSelectionTable
-                products={enrichedProducts}
-                suppliers={suppliers}
-                onCreateOrder={handleCreateOrderFromTable}
-              />
-            </div>
-            </motion.div>
+          {activeTab === MAIN_TABS.ACTIONS && (
+            <ActionsTab
+              productsByStatus={productsByStatus}
+              toOrderBySupplier={toOrderBySupplier}
+              suppliers={suppliers}
+              warehouses={warehouses}
+              selectedWarehouse={selectedWarehouse}
+              setSelectedWarehouse={setSelectedWarehouse}
+              orderQuantities={orderQuantities}
+              updateOrderQuantity={updateOrderQuantity}
+              generatePONumber={generatePONumber}
+              orders={orders}
+              handleCreateOrder={handleCreateOrder}
+              handleOpenEmailModal={handleOpenEmailModal}
+              orderCreationModalOpen={orderCreationModalOpen}
+              setOrderCreationModalOpen={setOrderCreationModalOpen}
+              selectedProductsFromTable={selectedProductsFromTable}
+              setSelectedProductsFromTable={setSelectedProductsFromTable}
+            />
           )}
 
           {/* TRACK & MANAGE TAB */}
