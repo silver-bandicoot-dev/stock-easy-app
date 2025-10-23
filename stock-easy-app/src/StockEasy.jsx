@@ -73,6 +73,11 @@ import {
 import { Button } from './components/shared/Button';
 
 // ============================================
+// IMPORTS DES COMPOSANTS DASHBOARD
+// ============================================
+import { DashboardTab } from './components/dashboard/DashboardTab';
+
+// ============================================
 // IMPORTS DES HOOKS PERSONNALISÉS
 // ============================================
 import { useStockData } from './hooks/useStockData';
@@ -293,139 +298,6 @@ const StockEasy = () => {
         toast.error(`Erreur lors de la sauvegarde du multiplicateur: ${error.message}`);
       }
       throw error;
-    }
-  };
-
-  // ============================================
-  // HANDLERS GESTION FOURNISSEURS
-  // ============================================
-
-  const handleOpenSupplierModal = (supplier = null) => {
-    if (supplier) {
-      // Mode édition
-      setEditingSupplier(supplier);
-      setSupplierFormData({
-        name: supplier.name,
-        email: supplier.email,
-        leadTimeDays: supplier.leadTimeDays,
-        moq: supplier.moq || 50,
-        notes: supplier.notes || ''
-      });
-    } else {
-      // Mode création
-      setEditingSupplier(null);
-      setSupplierFormData({
-        name: '',
-        email: '',
-        leadTimeDays: 30,
-        moq: 50,
-        notes: ''
-      });
-    }
-    setSupplierModalOpen(true);
-  };
-
-  const handleCloseSupplierModal = () => {
-    setSupplierModalOpen(false);
-    setEditingSupplier(null);
-    setSupplierFormData({
-      name: '',
-      email: '',
-      leadTimeDays: 30,
-      moq: 50,
-      notes: ''
-    });
-  };
-
-  const handleSupplierFormChange = (field, value) => {
-    setSupplierFormData(prev => ({
-      ...prev,
-      [field]: value
-    }));
-  };
-
-  const validateSupplierForm = () => {
-    const errors = [];
-    
-    if (!supplierFormData.name.trim()) {
-      errors.push('Le nom du fournisseur est obligatoire');
-    }
-    
-    if (!supplierFormData.email.trim()) {
-      errors.push('L\'email est obligatoire');
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(supplierFormData.email)) {
-      errors.push('L\'email n\'est pas valide');
-    }
-    
-    if (supplierFormData.leadTimeDays <= 0) {
-      errors.push('Le délai doit être supérieur à 0');
-    }
-    
-    if (supplierFormData.moq <= 0) {
-      errors.push('Le MOQ doit être supérieur à 0');
-    }
-    
-    // Vérifier que le nom n'existe pas déjà (sauf en mode édition)
-    if (!editingSupplier) {
-      const existingSupplier = Object.values(suppliers).find(
-        s => s.name.toLowerCase() === supplierFormData.name.toLowerCase()
-      );
-      if (existingSupplier) {
-        errors.push('Un fournisseur avec ce nom existe déjà');
-      }
-    }
-    
-    return errors;
-  };
-
-  const handleSaveSupplier = async () => {
-    const errors = validateSupplierForm();
-    
-    if (errors.length > 0) {
-      toast.error('Erreurs : ' + errors.join(', '));
-      return;
-    }
-    
-    try {
-      if (editingSupplier) {
-        // Mode édition
-        await api.updateSupplier(editingSupplier.name, supplierFormData);
-        console.log('✅ Fournisseur mis à jour');
-      } else {
-        // Mode création
-        await api.createSupplier(supplierFormData);
-        console.log('✅ Fournisseur créé');
-      }
-      
-      await loadData();
-      handleCloseSupplierModal();
-    } catch (error) {
-      console.error('❌ Erreur sauvegarde fournisseur:', error);
-      toast.error('Erreur lors de la sauvegarde');
-    }
-  };
-
-  const handleDeleteSupplier = async (supplier) => {
-    // Vérifier si des produits utilisent ce fournisseur
-    const productsUsingSupplier = products.filter(p => p.supplier === supplier.name);
-    
-    if (productsUsingSupplier.length > 0) {
-      const confirmDelete = window.confirm(
-        `⚠️ ATTENTION : ${productsUsingSupplier.length} produit(s) utilisent ce fournisseur.\n\n` +
-        `Si vous supprimez ce fournisseur, ces produits n'auront plus de fournisseur assigné.\n\n` +
-        `Voulez-vous vraiment continuer ?`
-      );
-      
-      if (!confirmDelete) return;
-    }
-    
-    try {
-      await api.deleteSupplier(supplier.name);
-      console.log('✅ Fournisseur supprimé');
-      await loadData();
-    } catch (error) {
-      console.error('❌ Erreur suppression fournisseur:', error);
-      toast.error('Erreur lors de la suppression');
     }
   };
 
@@ -1741,165 +1613,13 @@ ${getUserSignature()}`
         
         {/* DASHBOARD TAB */}
         <AnimatePresence mode="wait">
-          {activeTab === 'dashboard' && (
-            <motion.div
-              key="dashboard"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              transition={{ duration: 0.25 }}
-              className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            
-            {/* Produits à commander */}
-            <div className="bg-white rounded-xl shadow-sm border border-[#E5E4DF] p-6">
-              <div className="flex items-center gap-2 mb-4">
-                <div className="w-10 h-10 bg-red-50 rounded-lg flex items-center justify-center border border-red-200 shrink-0">
-                  <AlertCircle className="w-6 h-6 text-[#EF1C43] shrink-0" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center">
-                    <h2 className="text-lg font-bold text-[#191919]">Produits à commander</h2>
-                    <InfoTooltip content={tooltips.toOrder} />
-                  </div>
-                  <p className="text-sm text-[#666663]">{productsByStatus.to_order.length} produit(s)</p>
-                </div>
-              </div>
-              <div className="space-y-2 max-h-96 overflow-y-auto">
-                {productsByStatus.to_order.length === 0 ? (
-                  <p className="text-[#666663] text-center py-8 text-sm">Rien à commander</p>
-                ) : (
-                  productsByStatus.to_order.map((p, index) => (
-                    <motion.div
-                      key={p.sku}
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: index * 0.03, duration: 0.3 }}
-                      className="flex justify-between items-center p-3 bg-[#FAFAF7] rounded-lg hover:bg-[#F0F0EB] transition-colors border border-[#E5E4DF]">
-                      <div className="min-w-0">
-                        <p className="font-medium text-[#191919] text-sm truncate">{p.name}</p>
-                        <p className="text-xs text-[#666663] truncate">{p.supplier}</p>
-                      </div>
-                      <div className="text-right shrink-0 ml-4">
-                        <p className="font-bold text-[#EF1C43] text-sm">{formatUnits(p.qtyToOrder)} unités</p>
-                        <p className="text-xs text-[#666663]">Stock: {formatUnits(p.stock)}</p>
-                      </div>
-                    </motion.div>
-                  ))
-                )}
-              </div>
-            </div>
-
-            {/* Produits à surveiller */}
-            <div className="bg-white rounded-xl shadow-sm border border-[#E5E4DF] p-6">
-              <div className="flex items-center gap-2 mb-4">
-                <div className="w-10 h-10 bg-yellow-50 rounded-lg flex items-center justify-center border border-yellow-200 shrink-0">
-                  <Eye className="w-6 h-6 text-yellow-600 shrink-0" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center">
-                    <h2 className="text-lg font-bold text-[#191919]">Produits à surveiller</h2>
-                    <InfoTooltip content={tooltips.watch} />
-                  </div>
-                  <p className="text-sm text-[#666663]">{productsByStatus.watch.length} produit(s)</p>
-                </div>
-              </div>
-              <div className="space-y-2 max-h-96 overflow-y-auto">
-                {productsByStatus.watch.length === 0 ? (
-                  <p className="text-[#666663] text-center py-8 text-sm">Rien à surveiller</p>
-                ) : (
-                  productsByStatus.watch.map(p => (
-                    <div key={p.sku} className="flex justify-between items-center p-3 bg-[#FAFAF7] rounded-lg hover:bg-[#F0F0EB] transition-colors border border-[#E5E4DF]">
-                      <div className="min-w-0">
-                        <p className="font-medium text-[#191919] text-sm truncate">{p.name}</p>
-                        <p className="text-xs text-[#666663] truncate">{p.supplier}</p>
-                      </div>
-                      <div className="text-right shrink-0 ml-4">
-                        <p className="font-bold text-yellow-600 text-sm">Stock: {formatUnits(p.stock)}</p>
-                        <p className="text-xs text-[#666663]">Point: {p.reorderPoint}</p>
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
-
-            {/* En cours de livraison */}
-            <div className="bg-white rounded-xl shadow-sm border border-[#E5E4DF] p-6 cursor-pointer hover:shadow-md transition-shadow" onClick={() => { setActiveTab('track'); setTrackTabSection('en_transit'); }}>
-              <div className="flex items-center gap-2 mb-4">
-                <div className="w-10 h-10 bg-blue-50 rounded-lg flex items-center justify-center border border-blue-200 shrink-0">
-                  <Truck className="w-6 h-6 text-[#64A4F2] shrink-0" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center">
-                    <h2 className="text-lg font-bold text-[#191919]">En cours de livraison</h2>
-                    <InfoTooltip content={tooltips.inTransit} />
-                  </div>
-                  <p className="text-sm text-[#666663]">{orders.filter(o => o.status === 'in_transit').length} commande(s)</p>
-                </div>
-              </div>
-              <div className="space-y-2 max-h-96 overflow-y-auto">
-                {orders.filter(o => o.status === 'in_transit').length === 0 ? (
-                  <p className="text-[#666663] text-center py-8 text-sm">Aucune commande en transit</p>
-                ) : (
-                  orders.filter(o => o.status === 'in_transit').map(order => {
-                    const daysSinceShip = order.shippedAt ? Math.floor((new Date() - new Date(order.shippedAt)) / (1000 * 60 * 60 * 24)) : 0;
-                    const supplierDelay = suppliers[order.supplier]?.leadTimeDays || 30;
-                    const daysRemaining = Math.max(0, supplierDelay - daysSinceShip);
-                    
-                    return (
-                      <div key={order.id} className="p-3 bg-[#FAFAF7] rounded-lg hover:bg-[#F0F0EB] transition-colors border border-[#E5E4DF]">
-                        <div className="flex justify-between items-start mb-2">
-                          <div className="min-w-0">
-                            <p className="font-medium text-[#191919] text-sm truncate">{order.id}</p>
-                            <p className="text-xs text-[#666663] truncate">{order.supplier}</p>
-                          </div>
-                          <div className="text-right shrink-0 ml-4">
-                            <p className="font-bold text-[#64A4F2] text-sm">{order.items.length} produit(s)</p>
-                            <p className="text-xs text-[#666663]">~{daysRemaining}j</p>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })
-                )}
-              </div>
-            </div>
-
-            {/* Commandes reçues */}
-            <div className="bg-white rounded-xl shadow-sm border border-[#E5E4DF] p-6 cursor-pointer hover:shadow-md transition-shadow" onClick={() => { setActiveTab('track'); setTrackTabSection('commandes_recues'); }}>
-              <div className="flex items-center gap-2 mb-4">
-                <div className="w-10 h-10 bg-green-50 rounded-lg flex items-center justify-center border border-green-200 shrink-0">
-                  <CheckCircle className="w-6 h-6 text-green-600 shrink-0" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center">
-                    <h2 className="text-lg font-bold text-[#191919]">Commandes reçues</h2>
-                    <InfoTooltip content={tooltips.received} />
-                  </div>
-                  <p className="text-sm text-[#666663]">{orders.filter(o => o.status === 'received').length} à valider</p>
-                </div>
-              </div>
-              <div className="space-y-2 max-h-96 overflow-y-auto">
-                {orders.filter(o => o.status === 'received').length === 0 ? (
-                  <p className="text-[#666663] text-center py-8 text-sm">Aucune réception en attente</p>
-                ) : (
-                  orders.filter(o => o.status === 'received').map(order => (
-                    <div key={order.id} className="flex justify-between items-center p-3 bg-[#FAFAF7] rounded-lg hover:bg-[#F0F0EB] transition-colors border border-[#E5E4DF]">
-                      <div className="min-w-0">
-                        <p className="font-medium text-[#191919] text-sm truncate">{order.id}</p>
-                        <p className="text-xs text-[#666663] truncate">{order.supplier}</p>
-                      </div>
-                      <div className="text-right shrink-0 ml-4">
-                        <p className="font-bold text-green-600 text-sm">{order.items.length} produit(s)</p>
-                        <p className="text-xs text-green-600">À valider</p>
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
-
-            </motion.div>
+          {activeTab === MAIN_TABS.DASHBOARD && (
+            <DashboardTab 
+              productsByStatus={productsByStatus}
+              orders={orders}
+              setActiveTab={setActiveTab}
+              setTrackTabSection={setTrackTabSection}
+            />
           )}
 
           {/* ONGLET ACTIONS */}
