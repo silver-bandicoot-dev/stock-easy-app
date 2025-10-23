@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { BarChart3 } from 'lucide-react';
 import { AnalyticsDashboard } from './AnalyticsDashboard';
@@ -13,6 +13,9 @@ export const AnalyticsTab = ({
   comparisonPeriod,
   setComparisonPeriod
 }) => {
+  // Gestion locale de customRange
+  const [customRange, setCustomRange] = useState({ start: '', end: '' });
+
   // Calculer les données analytics à partir des props
   const analyticsData = useMemo(() => {
     if (!products || !orders) {
@@ -80,8 +83,8 @@ export const AnalyticsTab = ({
         analyticsData={analyticsData}
         dateRange={dateRange}
         setDateRange={setDateRange}
-        customRange={null}
-        setCustomRange={() => {}}
+        customRange={customRange}
+        setCustomRange={setCustomRange}
         comparisonType="previous"
         setComparisonType={() => {}}
       />
