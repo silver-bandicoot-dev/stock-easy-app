@@ -226,6 +226,12 @@ const StockEasy = () => {
   // CORRECTION 3: Gestion de l'expansion des détails de commandes
   const [expandedOrders, setExpandedOrders] = useState({});
 
+  // Fonction pour voir les détails d'un produit
+  const onViewDetails = (product) => {
+    console.log('Voir détails du produit:', product);
+    // TODO: Implémenter la logique pour afficher les détails du produit
+  };
+
   // NOUVEAUX ÉTATS pour Paramètres Généraux
   const [seuilSurstockProfond, setSeuilSurstockProfond] = useState(90);
   const [deviseDefaut, setDeviseDefaut] = useState('EUR');
@@ -1608,6 +1614,7 @@ ${getUserSignature()}`
                       setStockLevelFilter={setStockLevelFilter}
                       searchTerm={searchTerm}
                       setSearchTerm={setSearchTerm}
+                      onViewDetails={onViewDetails}
                     />
                   )}
 
