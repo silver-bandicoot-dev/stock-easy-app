@@ -1554,8 +1554,8 @@ ${getUserSignature()}`
               updateOrderQuantity={updateOrderQuantity}
               generatePONumber={generatePONumber}
               orders={orders}
-              handleCreateOrder={handleCreateOrder}
-              handleOpenEmailModal={handleOpenEmailModal}
+              handleCreateOrder={handleCreateOrderFromTable}
+              handleOpenEmailModal={openEmailModal}
               orderCreationModalOpen={orderCreationModalOpen}
               setOrderCreationModalOpen={setOrderCreationModalOpen}
               selectedProductsFromTable={selectedProductsFromTable}
