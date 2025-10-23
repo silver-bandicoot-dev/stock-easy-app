@@ -218,6 +218,7 @@ const StockEasy = () => {
   // NOUVEAUX ÉTATS pour CORRECTION 5 et 6
   const [discrepancyTypes, setDiscrepancyTypes] = useState({});
   const [damagedQuantities, setDamagedQuantities] = useState({});
+  const [receivedQuantities, setReceivedQuantities] = useState({});
   const [unsavedParameterChanges, setUnsavedParameterChanges] = useState({});
   const [isSavingParameters, setIsSavingParameters] = useState(false);
 
