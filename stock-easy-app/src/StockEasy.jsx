@@ -141,6 +141,7 @@ const StockEasy = () => {
     warehouses,
     orders,
     parameters,
+    setParameters,
     loadData,
     syncData
   } = useStockData();
