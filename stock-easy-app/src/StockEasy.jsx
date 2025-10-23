@@ -1527,106 +1527,104 @@ ${getUserSignature()}`
 
             {/* Contenu principal avec padding */}
             <div className="p-4 sm:p-6 lg:p-8 pt-16 sm:pt-20">
+              <div className="max-w-7xl mx-auto">
+                {/* DASHBOARD TAB */}
+                <AnimatePresence mode="wait">
+                  {activeTab === MAIN_TABS.DASHBOARD && (
+                    <DashboardTab 
+                      productsByStatus={productsByStatus}
+                      orders={orders}
+                      setActiveTab={setActiveTab}
+                      setTrackTabSection={setTrackTabSection}
+                    />
+                  )}
 
-      <div className="max-w-7xl mx-auto">
-        
-        {/* DASHBOARD TAB */}
-        <AnimatePresence mode="wait">
-          {activeTab === MAIN_TABS.DASHBOARD && (
-            <DashboardTab 
-              productsByStatus={productsByStatus}
-              orders={orders}
-              setActiveTab={setActiveTab}
-              setTrackTabSection={setTrackTabSection}
-            />
-          )}
+                  {/* ONGLET ACTIONS */}
+                  {activeTab === MAIN_TABS.ACTIONS && (
+                    <ActionsTab
+                      productsByStatus={productsByStatus}
+                      toOrderBySupplier={toOrderBySupplier}
+                      suppliers={suppliers}
+                      warehouses={warehouses}
+                      selectedWarehouse={selectedWarehouse}
+                      setSelectedWarehouse={setSelectedWarehouse}
+                      orderQuantities={orderQuantities}
+                      updateOrderQuantity={updateOrderQuantity}
+                      generatePONumber={generatePONumber}
+                      orders={orders}
+                      handleCreateOrder={handleCreateOrderFromTable}
+                      handleOpenEmailModal={openEmailModal}
+                      orderCreationModalOpen={orderCreationModalOpen}
+                      setOrderCreationModalOpen={setOrderCreationModalOpen}
+                      selectedProductsFromTable={selectedProductsFromTable}
+                      setSelectedProductsFromTable={setSelectedProductsFromTable}
+                    />
+                  )}
 
-          {/* ONGLET ACTIONS */}
-          {activeTab === MAIN_TABS.ACTIONS && (
-            <ActionsTab
-              productsByStatus={productsByStatus}
-              toOrderBySupplier={toOrderBySupplier}
-                suppliers={suppliers}
-              warehouses={warehouses}
-              selectedWarehouse={selectedWarehouse}
-              setSelectedWarehouse={setSelectedWarehouse}
-              orderQuantities={orderQuantities}
-              updateOrderQuantity={updateOrderQuantity}
-              generatePONumber={generatePONumber}
-              orders={orders}
-              handleCreateOrder={handleCreateOrderFromTable}
-              handleOpenEmailModal={openEmailModal}
-              orderCreationModalOpen={orderCreationModalOpen}
-              setOrderCreationModalOpen={setOrderCreationModalOpen}
-              selectedProductsFromTable={selectedProductsFromTable}
-              setSelectedProductsFromTable={setSelectedProductsFromTable}
-            />
-          )}
+                  {/* TRACK & MANAGE TAB */}
+                  {activeTab === MAIN_TABS.TRACK && (
+                    <TrackTab
+                      orders={orders}
+                      trackTabSection={trackTabSection}
+                      setTrackTabSection={setTrackTabSection}
+                      expandedOrders={expandedOrders}
+                      toggleOrderDetails={toggleOrderDetails}
+                      confirmOrder={confirmOrder}
+                      shipOrder={shipOrder}
+                      receiveOrder={receiveOrder}
+                      reconciliationOrder={reconciliationOrder}
+                      setReconciliationOrder={setReconciliationOrder}
+                      reconciliationModalOpen={reconciliationModalOpen}
+                      setReconciliationModalOpen={setReconciliationModalOpen}
+                      openReconciliationModal={openReconciliationModal}
+                      receivedQuantities={receivedQuantities}
+                      setReceivedQuantities={setReceivedQuantities}
+                      discrepancyTypes={discrepancyTypes}
+                      setDiscrepancyTypes={setDiscrepancyTypes}
+                      damagedQuantities={damagedQuantities}
+                      setDamagedQuantities={setDamagedQuantities}
+                      discrepancyModalOpen={discrepancyModalOpen}
+                      setDiscrepancyModalOpen={setDiscrepancyModalOpen}
+                      damageModalOpen={damageModalOpen}
+                      setDamageModalOpen={setDamageModalOpen}
+                      unifiedReconciliationModalOpen={unifiedReconciliationModalOpen}
+                      setUnifiedReconciliationModalOpen={setUnifiedReconciliationModalOpen}
+                      currentReclamationOrder={currentReclamationOrder}
+                      setCurrentReclamationOrder={setCurrentReclamationOrder}
+                      reclamationEmailModalOpen={reclamationEmailModalOpen}
+                      setReclamationEmailModalOpen={setReclamationEmailModalOpen}
+                      loadData={loadData}
+                    />
+                  )}
 
-          {/* TRACK & MANAGE TAB */}
-          {activeTab === MAIN_TABS.TRACK && (
-            <TrackTab
-                orders={orders}
-              trackTabSection={trackTabSection}
-              setTrackTabSection={setTrackTabSection}
-              expandedOrders={expandedOrders}
-              toggleOrderDetails={toggleOrderDetails}
-              confirmOrder={confirmOrder}
-              shipOrder={shipOrder}
-              receiveOrder={receiveOrder}
-              reconciliationOrder={reconciliationOrder}
-              setReconciliationOrder={setReconciliationOrder}
-              reconciliationModalOpen={reconciliationModalOpen}
-              setReconciliationModalOpen={setReconciliationModalOpen}
-              openReconciliationModal={openReconciliationModal}
-              receivedQuantities={receivedQuantities}
-              setReceivedQuantities={setReceivedQuantities}
-              discrepancyTypes={discrepancyTypes}
-              setDiscrepancyTypes={setDiscrepancyTypes}
-              damagedQuantities={damagedQuantities}
-              setDamagedQuantities={setDamagedQuantities}
-              discrepancyModalOpen={discrepancyModalOpen}
-              setDiscrepancyModalOpen={setDiscrepancyModalOpen}
-              damageModalOpen={damageModalOpen}
-              setDamageModalOpen={setDamageModalOpen}
-              unifiedReconciliationModalOpen={unifiedReconciliationModalOpen}
-              setUnifiedReconciliationModalOpen={setUnifiedReconciliationModalOpen}
-              currentReclamationOrder={currentReclamationOrder}
-              setCurrentReclamationOrder={setCurrentReclamationOrder}
-              reclamationEmailModalOpen={reclamationEmailModalOpen}
-              setReclamationEmailModalOpen={setReclamationEmailModalOpen}
-              loadData={loadData}
-            />
-          )}
+                  {/* STOCK TAB */}
+                  {activeTab === MAIN_TABS.STOCK && (
+                    <StockTab
+                      products={products}
+                      suppliers={suppliers}
+                      stockLevelFilter={stockLevelFilter}
+                      setStockLevelFilter={setStockLevelFilter}
+                      searchTerm={searchTerm}
+                      setSearchTerm={setSearchTerm}
+                    />
+                  )}
 
-          {/* STOCK TAB */}
-          {activeTab === MAIN_TABS.STOCK && (
-            <StockTab
-                  products={products}
-              suppliers={suppliers}
-              stockLevelFilter={stockLevelFilter}
-              setStockLevelFilter={setStockLevelFilter}
-              searchTerm={searchTerm}
-              setSearchTerm={setSearchTerm}
-            />
-          )}
+                  {/* ANALYTICS TAB */}
+                  {activeTab === MAIN_TABS.ANALYTICS && (
+                    <AnalyticsTab
+                      products={products}
+                      orders={orders}
+                      suppliers={suppliers}
+                      warehouses={warehouses}
+                      dateRange={dateRange}
+                      setDateRange={setDateRange}
+                      comparisonPeriod={comparisonPeriod}
+                      setComparisonPeriod={setComparisonPeriod}
+                    />
+                  )}
 
-          {/* ANALYTICS TAB */}
-          {activeTab === MAIN_TABS.ANALYTICS && (
-            <AnalyticsTab
-                  products={products}
-              orders={orders}
-                  suppliers={suppliers}
-                  warehouses={warehouses}
-              dateRange={dateRange}
-              setDateRange={setDateRange}
-              comparisonPeriod={comparisonPeriod}
-              setComparisonPeriod={setComparisonPeriod}
-            />
-          )}
-
-      </AnimatePresence>
-
+                </AnimatePresence>
+              </div> {/* Fin max-w-7xl mx-auto */}
             </div> {/* Fin contenu principal avec padding */}
           </div> {/* Fin Content Area relative */}
         </div> {/* Fin Main Content md:ml-64 */}
