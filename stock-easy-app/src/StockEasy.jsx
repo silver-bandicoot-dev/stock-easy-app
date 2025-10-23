@@ -36,6 +36,38 @@ import { calculateMetrics } from './utils/calculations';
 import { formatUnits, formatPrice, roundToTwoDecimals, roundToInteger } from './utils/decimalUtils';
 
 // ============================================
+// IMPORTS DES CONSTANTES ET UTILITAIRES
+// ============================================
+import {
+  ORDER_STATUS_LABELS,
+  ORDER_STATUS_LABELS_EMOJI,
+  ORDER_STATUS_COLORS,
+  DISCREPANCY_TYPES,
+  MAIN_TABS,
+  TRACK_TABS,
+  STOCK_TABS,
+  SETTINGS_TABS,
+  ANALYTICS_TABS,
+  AI_TABS,
+  STOCK_FILTERS,
+  CURRENCIES,
+  DEFAULT_PARAMETERS,
+  VALIDATION_MESSAGES,
+  SUCCESS_MESSAGES,
+  ERROR_MESSAGES,
+  SYNC_INTERVALS,
+  DISPLAY_LIMITS
+} from './constants/stockEasyConstants';
+
+import {
+  formatConfirmedDate,
+  daysBetween,
+  calculateDaysRemaining,
+  isToday,
+  formatDateForAPI
+} from './utils/dateUtils';
+
+// ============================================
 // FONCTIONS API - Importées depuis apiService
 // ============================================
 // L'objet 'api' est maintenant importé depuis './services/apiService'
@@ -86,37 +118,6 @@ const Button = ({
 // FONCTIONS UTILITAIRES
 // ============================================
 
-/**
- * Formate la date de confirmation pour l'affichage
- * @param {string} isoDate - Date ISO (ex: "2025-10-14T22:00:00.000Z") ou date simple (ex: "2025-10-14")
- * @returns {string} - Ex: "14 octobre 2025" ou "-" si pas de date
- */
-const formatConfirmedDate = (isoDate) => {
-  if (!isoDate) {
-    console.warn('formatConfirmedDate: date vide ou null');
-    return null;
-  }
-  
-  try {
-    const date = new Date(isoDate);
-    
-    // Vérifier que la date est valide
-    if (isNaN(date.getTime())) {
-      console.error('formatConfirmedDate: date invalide:', isoDate);
-      return 'Date invalide';
-    }
-    
-    return date.toLocaleDateString('fr-FR', {
-      day: '2-digit',
-      month: 'long',
-      year: 'numeric'
-    });
-  } catch (error) {
-    console.error('Erreur formatage date:', error, 'Date reçue:', isoDate);
-    return 'Erreur de date';
-  }
-};
-
 // ============================================
 // FONCTIONS UTILITAIRES
 // ============================================
@@ -160,8 +161,8 @@ const StockEasy = () => {
   const [warehouses, setWarehouses] = useState({});
   const [orders, setOrders] = useState([]);
   const [parameters, setParameters] = useState({});
-  const [activeTab, setActiveTab] = useState('dashboard');
-  const [trackTabSection, setTrackTabSection] = useState('en_cours_commande');
+  const [activeTab, setActiveTab] = useState(MAIN_TABS.DASHBOARD);
+  const [trackTabSection, setTrackTabSection] = useState(TRACK_TABS.EN_COURS_COMMANDE);
   const [emailModalOpen, setEmailModalOpen] = useState(false);
   const [selectedSupplier, setSelectedSupplier] = useState(null);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
@@ -181,7 +182,7 @@ const StockEasy = () => {
   const [historyDateStart, setHistoryDateStart] = useState('');
   
   // Stock Level filters
-  const [stockLevelFilter, setStockLevelFilter] = useState('all');
+  const [stockLevelFilter, setStockLevelFilter] = useState(STOCK_FILTERS.ALL);
   const [stockLevelSupplierFilter, setStockLevelSupplierFilter] = useState('all');
   const [stockLevelSearch, setStockLevelSearch] = useState('');
   const [historyDateEnd, setHistoryDateEnd] = useState('');
@@ -199,9 +200,9 @@ const StockEasy = () => {
   const [currentReclamationOrder, setCurrentReclamationOrder] = useState(null);
 
   // NOUVEAUX ÉTATS pour les sous-onglets de Paramètres
-  const [parametersSubTab, setParametersSubTab] = useState('general'); // 'general', 'products', 'suppliers', 'mapping'
-  const [analyticsSubTab, setAnalyticsSubTab] = useState('kpis'); // 'kpis'
-  const [aiSubTab, setAiSubTab] = useState('overview'); // 'overview', 'forecasts', 'optimization', 'anomalies'
+  const [parametersSubTab, setParametersSubTab] = useState(SETTINGS_TABS.GENERAL); // 'general', 'products', 'suppliers', 'mapping'
+  const [analyticsSubTab, setAnalyticsSubTab] = useState(ANALYTICS_TABS.KPIS); // 'kpis'
+  const [aiSubTab, setAiSubTab] = useState(AI_TABS.OVERVIEW); // 'overview', 'forecasts', 'optimization', 'anomalies'
   
   // NOUVEAUX ÉTATS pour CORRECTION 5 et 6
   const [discrepancyTypes, setDiscrepancyTypes] = useState({});
