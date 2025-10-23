@@ -186,6 +186,7 @@ const StockEasy = () => {
   const [dateRange, setDateRange] = useState('30d');
   const [customRange, setCustomRange] = useState(null);
   const [comparisonType, setComparisonType] = useState('previous');
+  const [comparisonPeriod, setComparisonPeriod] = useState('30d');
   const [chartModalOpen, setChartModalOpen] = useState(false);
   const [selectedKPI, setSelectedKPI] = useState(null);
   const [historyFilter, setHistoryFilter] = useState('all');
