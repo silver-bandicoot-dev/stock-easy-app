@@ -1,17 +1,20 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { History, Download, Filter, Calendar } from 'lucide-react';
+import { History, Download, Filter, Calendar, Eye, ChevronDown, ChevronRight } from 'lucide-react';
 import { Button } from '../shared/Button';
+import { toast } from 'sonner';
 
 export const HistoryTab = ({
   orders,
+  products,
   historyFilter,
   setHistoryFilter,
   historyDateStart,
   setHistoryDateStart,
   historyDateEnd,
   setHistoryDateEnd,
-  onExportHistory
+  expandedOrders,
+  toggleOrderDetails
 }) => {
   // Filtrer les commandes selon les critères
   const filteredOrders = orders.filter(order => {
@@ -30,22 +33,90 @@ export const HistoryTab = ({
 
   const getStatusColor = (status) => {
     switch (status) {
-      case 'confirmed': return 'text-green-600 bg-green-50 border-green-200';
-      case 'shipped': return 'text-blue-600 bg-blue-50 border-blue-200';
-      case 'received': return 'text-purple-600 bg-purple-50 border-purple-200';
-      case 'cancelled': return 'text-red-600 bg-red-50 border-red-200';
+      case 'pending_confirmation': return 'text-yellow-600 bg-yellow-50 border-yellow-200';
+      case 'preparing': return 'text-blue-600 bg-blue-50 border-blue-200';
+      case 'in_transit': return 'text-purple-600 bg-purple-50 border-purple-200';
+      case 'received': return 'text-green-600 bg-green-50 border-green-200';
+      case 'completed': return 'text-green-600 bg-green-50 border-green-200';
+      case 'reconciliation': return 'text-orange-600 bg-orange-50 border-orange-200';
       default: return 'text-gray-600 bg-gray-50 border-gray-200';
     }
   };
 
   const getStatusLabel = (status) => {
     switch (status) {
-      case 'confirmed': return 'Confirmée';
-      case 'shipped': return 'Expédiée';
+      case 'pending_confirmation': return 'En attente';
+      case 'preparing': return 'En traitement';
+      case 'in_transit': return 'En transit';
       case 'received': return 'Reçue';
-      case 'cancelled': return 'Annulée';
+      case 'completed': return 'Complétée';
+      case 'reconciliation': return 'À réconcilier';
       default: return status;
     }
+  };
+
+  const formatDate = (dateString) => {
+    if (!dateString) return '-';
+    return new Date(dateString).toLocaleDateString('fr-FR');
+  };
+
+  const roundToTwoDecimals = (num) => {
+    return Math.round((num + Number.EPSILON) * 100) / 100;
+  };
+
+  // Fonction pour exporter l'historique en CSV (version complète)
+  const exportHistoryToCSV = () => {
+    // Générer le CSV avec détail des produits
+    const headers = ['N° Commande', 'Fournisseur', 'Date Création', 'Date Confirmation', 'Date Expédition', 'Date Réception', 'Statut', 'SKU', 'Nom Produit', 'Quantité', 'Prix Unitaire (€)', 'Total Ligne (€)', 'Total Commande (€)', 'Suivi'];
+    const rows = [];
+    
+    filteredOrders.forEach(order => {
+      // Pour chaque commande, créer une ligne par produit
+      order.items?.forEach((item, index) => {
+        const product = products.find(p => p.sku === item.sku);
+        const lineTotal = roundToTwoDecimals(item.quantity * item.pricePerUnit);
+        
+        rows.push([
+          order.id,
+          order.supplier,
+          formatDate(order.createdAt),
+          formatDate(order.confirmedAt) || '-',
+          formatDate(order.shippedAt) || '-',
+          formatDate(order.receivedAt) || '-',
+          getStatusLabel(order.status),
+          item.sku,
+          product?.name || item.sku,
+          item.quantity,
+          roundToTwoDecimals(item.pricePerUnit).toFixed(2),
+          lineTotal.toFixed(2),
+          // Afficher le total de la commande seulement sur la première ligne de chaque commande
+          index === 0 ? roundToTwoDecimals(order.total).toFixed(2) : '',
+          index === 0 ? (order.trackingNumber || '-') : ''
+        ]);
+      });
+    });
+
+    // Créer le contenu CSV
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(row => row.map(cell => `"${cell}"`).join(','))
+    ].join('\n');
+
+    // Créer le fichier et le télécharger
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    const today = new Date().toISOString().split('T')[0];
+    
+    link.setAttribute('href', url);
+    link.setAttribute('download', `historique-commandes-detaille-${today}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    const totalItems = rows.length;
+    toast.success(`Export CSV réussi : ${filteredOrders.length} commande(s), ${totalItems} ligne(s) de produits exportée(s)`);
   };
 
   return (
@@ -66,14 +137,14 @@ export const HistoryTab = ({
             </div>
             <div>
               <h2 className="text-xl font-semibold text-gray-900">Historique des Commandes</h2>
-              <p className="text-sm text-gray-600">Consultez l'historique complet de vos commandes</p>
+              <p className="text-sm text-gray-600">Consultez toutes vos commandes passées et leur statut</p>
             </div>
           </div>
           <Button
             variant="outline"
             size="sm"
             icon={Download}
-            onClick={onExportHistory}
+            onClick={exportHistoryToCSV}
           >
             Exporter CSV
           </Button>
@@ -104,10 +175,12 @@ export const HistoryTab = ({
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             >
               <option value="all">Tous les statuts</option>
-              <option value="confirmed">Confirmées</option>
-              <option value="shipped">Expédiées</option>
+              <option value="pending_confirmation">En attente</option>
+              <option value="preparing">En traitement</option>
+              <option value="in_transit">En transit</option>
               <option value="received">Reçues</option>
-              <option value="cancelled">Annulées</option>
+              <option value="completed">Complétées</option>
+              <option value="reconciliation">À réconcilier</option>
             </select>
           </div>
 
@@ -177,24 +250,65 @@ export const HistoryTab = ({
                       {getStatusLabel(order.status)}
                     </div>
                     <div className="text-sm text-gray-600">
-                      {new Date(order.createdAt).toLocaleDateString('fr-FR')}
+                      {formatDate(order.createdAt)}
                     </div>
+                    {order.supplier && (
+                      <div className="text-sm text-gray-600">
+                        {order.supplier}
+                      </div>
+                    )}
                   </div>
-                  <div className="text-sm font-medium text-gray-900">
-                    {order.total ? `${order.total.toFixed(2)}€` : 'N/A'}
+                  <div className="flex items-center gap-2">
+                    <div className="text-sm font-medium text-gray-900">
+                      {order.total ? `${order.total.toFixed(2)}€` : 'N/A'}
+                    </div>
+                    <button
+                      onClick={() => toggleOrderDetails(order.id)}
+                      className="p-1 hover:bg-gray-100 rounded"
+                    >
+                      {expandedOrders[order.id] ? (
+                        <ChevronDown className="w-4 h-4 text-gray-500" />
+                      ) : (
+                        <ChevronRight className="w-4 h-4 text-gray-500" />
+                      )}
+                    </button>
                   </div>
                 </div>
                 
-                {order.supplier && (
-                  <div className="mt-2 text-sm text-gray-600">
-                    Fournisseur: {order.supplier.name}
-                  </div>
-                )}
-                
-                {order.products && order.products.length > 0 && (
-                  <div className="mt-2 text-sm text-gray-600">
-                    {order.products.length} produit(s)
-                  </div>
+                {/* Détails de la commande */}
+                {expandedOrders[order.id] && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="mt-4 pt-4 border-t border-gray-100"
+                  >
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <h4 className="text-sm font-medium text-gray-900 mb-2">Informations</h4>
+                        <div className="space-y-1 text-sm text-gray-600">
+                          <div>Créée le: {formatDate(order.createdAt)}</div>
+                          {order.confirmedAt && <div>Confirmée le: {formatDate(order.confirmedAt)}</div>}
+                          {order.shippedAt && <div>Expédiée le: {formatDate(order.shippedAt)}</div>}
+                          {order.receivedAt && <div>Reçue le: {formatDate(order.receivedAt)}</div>}
+                          {order.trackingNumber && <div>Suivi: {order.trackingNumber}</div>}
+                        </div>
+                      </div>
+                      <div>
+                        <h4 className="text-sm font-medium text-gray-900 mb-2">Produits</h4>
+                        <div className="space-y-1">
+                          {order.items?.map((item, index) => {
+                            const product = products.find(p => p.sku === item.sku);
+                            return (
+                              <div key={index} className="text-sm text-gray-600">
+                                {product?.name || item.sku} - {item.quantity} unités
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </div>
+                  </motion.div>
                 )}
               </motion.div>
             ))}

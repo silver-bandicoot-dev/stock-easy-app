@@ -69,7 +69,7 @@ export const MAIN_TABS = {
   DASHBOARD: 'dashboard',
   ACTIONS: 'actions',
   TRACK: 'track',
-  STOCK: 'stock',
+  STOCK: 'stock-level',
   ANALYTICS: 'analytics',
   HISTORY: 'history',
   SETTINGS: 'settings',
