@@ -1,105 +1,1164 @@
-# STOCK EASY APP - REFACTORING RULES
+🎯 GUIDE DE REFACTORING PERSONNALISÉ - STOCKEASY.JSX
+Analyse et Refactoring Méthodique de votre Application
 
-Vous êtes un expert en refactoring React. Votre mission est d'aider à transformer Stock Easy App d'un fichier monolithique (5,057 lignes) en une architecture modulaire.
+📊 ANALYSE PRÉLIMINAIRE - VOTRE FICHIER ACTUEL
+Statistiques du Fichier
 
-## OBJECTIFS PRIORITAIRES
+Taille : 256 KB (256,641 bytes)
+Lignes de code : ~3876 lignes
+Dernière modification : 23 octobre 2025 à 15h17
+Complexité : 🔴 CRITIQUE - Fichier monolithique énorme
 
-1. **Extraire les composants** de StockEasy.jsx vers des fichiers séparés
-2. **Créer des tests** pour chaque nouveau composant/hook
-3. **Maintenir la fonctionnalité** (zéro régression)
-4. **Suivre le plan** dans PLAN_ACTION_EXECUTABLE.md
+🔴 PROBLÈMES MAJEURS IDENTIFIÉS
+1. Taille du Fichier Monolithique
 
-## RÈGLES DE CODE
+❌ Un seul fichier de 3876 lignes
+❌ Responsabilité unique violée
+❌ Maintenance extrêmement difficile
+❌ Bugs en cascade lors de modifications
 
-### Structure de Fichiers
-- Maximum 300 lignes par fichier
-- Un composant = un fichier
-- Toujours créer __tests__/ à côté du code
+2. État (States) Excessifs
 
-### Conventions
-- Composants : PascalCase (ProductCard.jsx)
-- Hooks : camelCase avec préfixe use (useProducts.js)
-- Indentation : 2 espaces
-- Quotes : Simples
-- Semicolons : Oui
+❌ 40+ états React dans un seul composant
+Exemples trouvés :
 
-### Tests Obligatoires
-Pour CHAQUE nouveau composant/hook créé :
-```javascript
-// ComponentName.test.jsx
-import { describe, it, expect } from 'vitest';
-import { render, screen } from '@testing-library/react';
-import { ComponentName } from '../ComponentName';
+javascript     const [loading, setLoading] = useState(true);
+     const [syncing, setSyncing] = useState(false);
+     const [products, setProducts] = useState([]);
+     const [suppliers, setSuppliers] = useState({});
+     const [warehouses, setWarehouses] = useState({});
+     const [orders, setOrders] = useState([]);
+     const [parameters, setParameters] = useState({});
+     const [activeTab, setActiveTab] = useState('dashboard');
+     const [trackTabSection, setTrackTabSection] = useState('en_cours_commande');
+     const [emailModalOpen, setEmailModalOpen] = useState(false);
+     const [selectedSupplier, setSelectedSupplier] = useState(null);
+     const [notificationsOpen, setNotificationsOpen] = useState(false);
+     const [receivingModalOpen, setReceivingModalOpen] = useState(false);
+     // ... et 30+ autres états !
+3. Logique Métier Mélangée avec l'UI
 
-describe('ComponentName', () => {
-  it('should render correctly', () => {
-    render(<ComponentName />);
-    expect(screen.getByText('...')).toBeInTheDocument();
-  });
-});
-```
+❌ Fonctions API dans le composant
+❌ Calculs de business logic dans le render
+❌ Validation de données dispersée
 
-### Workflow pour Extraction
-1. Identifier le composant dans StockEasy.jsx
-2. Créer le nouveau fichier dans la bonne structure
-3. Copier le code du composant
-4. Ajuster les imports
-5. Créer le test
-6. Vérifier que tout fonctionne (npm run dev)
-7. Commit Git avec message clair
+4. Imports Massifs
 
-## ARCHITECTURE CIBLE
-```
+❌ 30+ imports différents
+❌ Dépendances multiples non organisées
+❌ Imports de composants mélangés avec utils
+
+5. Fonctions de Gestion Multiples
+
+❌ 50+ fonctions handler dans le composant
+Exemples :
+
+handleUpdateSeuilSurstock
+handleUpdateDevise
+handleUpdateMultiplicateur
+handleOpenSupplierModal
+handleSaveSupplier
+handleDeleteSupplier
+handleCreateWarehouse
+handleUpdateWarehouse
+handleDeleteWarehouse
+handleOpenAssignSupplierModal
+handleAssignSupplier
+confirmOrder
+shipOrder
+receiveOrder
+openReconciliationModal
+... et beaucoup d'autres !
+
+
+
+6. JSX Énorme et Imbriqué
+
+❌ 2000+ lignes de JSX
+❌ Profondeur d'imbrication > 10 niveaux
+❌ Conditions ternaires complexes
+❌ Répétition de structures UI
+
+
+🎯 OBJECTIFS DU REFACTORING
+Objectif Principal
+Transformer StockEasy.jsx (3876 lignes) en une architecture modulaire de ~100-150 lignes
+Objectifs Secondaires
+
+✅ Extraire 15-20 composants distincts
+✅ Créer 8-10 hooks personnalisés
+✅ Centraliser la logique métier
+✅ Améliorer la maintenabilité de 90%
+✅ Réduire le temps de debug de 80%
+✅ ZÉRO régression fonctionnelle
+
+
+🗺️ ARCHITECTURE CIBLE
+Structure Finale Visée
 src/
-├── App.jsx (200 lignes max)
-├── views/
-│   ├── ProductsView/
-│   ├── OrdersView/
-│   └── DashboardView/
+├── StockEasy.jsx (100-150 lignes - Orchestrateur)
+│
 ├── components/
-│   ├── ui/ (Button, Card, Modal...)
-│   ├── features/ (StockHealthBadge...)
-│   └── layout/ (Header, Sidebar...)
+│   ├── dashboard/
+│   │   ├── DashboardCard.jsx
+│   │   ├── ProductsToOrder.jsx
+│   │   ├── ProductsToWatch.jsx
+│   │   ├── InTransit.jsx
+│   │   └── ReceivedOrders.jsx
+│   │
+│   ├── actions/
+│   │   ├── OrderBySupplier.jsx
+│   │   ├── ProductSelectionTable.jsx (déjà existe)
+│   │   └── OrderCreationModal.jsx
+│   │
+│   ├── track/
+│   │   ├── TrackTabs.jsx
+│   │   ├── PendingOrders.jsx
+│   │   ├── PreparingOrders.jsx
+│   │   ├── InTransitOrders.jsx
+│   │   ├── ReceivedOrders.jsx
+│   │   ├── ReconciliationOrders.jsx
+│   │   └── OrderCard.jsx
+│   │
+│   ├── stock/
+│   │   ├── StockTable.jsx
+│   │   ├── StockFilters.jsx
+│   │   └── StockExport.jsx
+│   │
+│   ├── analytics/
+│   │   ├── AnalyticsDashboard.jsx
+│   │   ├── KPICard.jsx (déjà existe)
+│   │   └── InsightsList.jsx
+│   │
+│   ├── settings/
+│   │   ├── SettingsTabs.jsx
+│   │   ├── ParametresGeneraux.jsx (déjà existe)
+│   │   ├── GestionFournisseurs.jsx (déjà existe)
+│   │   ├── MappingSKUFournisseur.jsx (déjà existe)
+│   │   └── GestionWarehouses.jsx (déjà existe)
+│   │
+│   ├── modals/
+│   │   ├── EmailModal.jsx
+│   │   ├── ReconciliationModal.jsx
+│   │   ├── SupplierModal.jsx (déjà existe)
+│   │   └── AssignSupplierModal.jsx (déjà existe)
+│   │
+│   └── shared/
+│       ├── Button.jsx (extraire de StockEasy)
+│       ├── Modal.jsx (déjà existe)
+│       └── LoadingScreen.jsx
+│
 ├── hooks/
-│   ├── useProducts.js
+│   ├── useStockData.js
 │   ├── useOrders.js
-│   └── useFetch.js
-└── services/ (déjà OK)
-```
+│   ├── useSuppliers.js
+│   ├── useWarehouses.js
+│   ├── useParameters.js
+│   ├── useOrderManagement.js
+│   ├── useReconciliation.js
+│   └── useStockFilters.js
+│
+├── services/
+│   └── apiService.js (déjà existe)
+│
+├── utils/
+│   ├── calculations.js (déjà existe)
+│   ├── decimalUtils.js (déjà existe)
+│   ├── orderUtils.js (à créer)
+│   ├── dateUtils.js (à créer)
+│   └── validationUtils.js (à créer)
+│
+└── constants/
+    ├── stockEasyConstants.js
+    └── statusLabels.js
 
-## DOCUMENTS DE RÉFÉRENCE
+📝 PLAN DE REFACTORING EN 10 PHASES
+⚠️ RÈGLES ABSOLUES AVANT DE COMMENCER
+markdown1. 🛑 JAMAIS plus de 1 fichier modifié à la fois
+2. 🛑 TOUJOURS tester après chaque modification
+3. 🛑 TOUJOURS commiter après validation
+4. 🛑 Si quelque chose casse → ROLLBACK immédiat
+5. 🛑 Garder l'application fonctionnelle 100% du temps
 
-Toujours consulter :
-- PLAN_ACTION_EXECUTABLE.md (étapes détaillées)
-- STOCK_EASY_APP_AUDIT_COMPLET.md (context technique)
-- ARCHITECTURE_DIAGRAM.txt (structure cible)
+🔵 PHASE 1 : PRÉPARATION ET SÉCURITÉ (30 min)
+Étape 1.1 : Créer la Branche de Refactoring
+bashcd /Users/orioncorp/stock-easy-app/stock-easy-app
 
-## AIDE-MÉMOIRE COMMANDES
-```bash
-# Tester que tout fonctionne
+# Vérifier l'état du repo
+git status
+
+# Créer et passer sur la nouvelle branche
+git checkout -b refactoring/stockeasy-modular
+
+# Pousser la branche
+git push -u origin refactoring/stockeasy-modular
+Étape 1.2 : Sauvegarder l'État Actuel
+bash# Créer le dossier de backup
+mkdir -p docs/refactoring/backups
+
+# Copier le fichier original
+cp src/StockEasy.jsx docs/refactoring/backups/StockEasy.jsx.original
+
+# Créer un snapshot Git
+git add -A
+git commit -m "📸 SNAPSHOT: État initial avant refactoring (3876 lignes)"
+git push
+Étape 1.3 : Créer la Structure de Documentation
+bashmkdir -p docs/refactoring/{analysis,plans,logs,tests}
+
+# Créer le fichier de log
+echo "# Log de Refactoring - StockEasy.jsx" > docs/refactoring/logs/REFACTORING_LOG.md
+echo "Début: $(date)" >> docs/refactoring/logs/REFACTORING_LOG.md
+echo "" >> docs/refactoring/logs/REFACTORING_LOG.md
+
+🔵 PHASE 2 : EXTRACTION DES CONSTANTES (45 min)
+Étape 2.1 : Créer le Fichier de Constantes
+CURSOR, crée ce fichier :
+Fichier : src/constants/stockEasyConstants.js
+javascript// ============================================
+// CONSTANTES STOCK EASY - Extraites de StockEasy.jsx
+// ============================================
+
+// Labels de statut des commandes
+export const ORDER_STATUS_LABELS = {
+  pending_confirmation: 'En attente',
+  preparing: 'En traitement',
+  in_transit: 'En transit',
+  received: 'Reçue',
+  completed: 'Complétée',
+  reconciliation: 'À réconcilier'
+};
+
+// Labels de statut avec émojis
+export const ORDER_STATUS_LABELS_EMOJI = {
+  pending_confirmation: '⏳ En attente',
+  preparing: '📦 En traitement',
+  in_transit: '🚚 En transit',
+  received: '✅ Reçue',
+  completed: '✅ Complétée',
+  reconciliation: '⚠️ À réconcilier'
+};
+
+// Couleurs par statut
+export const ORDER_STATUS_COLORS = {
+  pending_confirmation: {
+    bg: 'bg-yellow-50',
+    text: 'text-yellow-600',
+    border: 'border-yellow-200'
+  },
+  preparing: {
+    bg: 'bg-blue-50',
+    text: 'text-blue-600',
+    border: 'border-blue-200'
+  },
+  in_transit: {
+    bg: 'bg-purple-50',
+    text: 'text-purple-600',
+    border: 'border-purple-200'
+  },
+  received: {
+    bg: 'bg-green-50',
+    text: 'text-green-600',
+    border: 'border-green-200'
+  },
+  completed: {
+    bg: 'bg-gray-50',
+    text: 'text-gray-600',
+    border: 'border-gray-200'
+  },
+  reconciliation: {
+    bg: 'bg-red-50',
+    text: 'text-red-600',
+    border: 'border-red-200'
+  }
+};
+
+// Types d'écarts de réconciliation
+export const DISCREPANCY_TYPES = {
+  none: 'Aucun problème',
+  missing: 'Quantités manquantes',
+  damaged: 'Produits endommagés',
+  missing_and_damaged: 'Manquant et endommagé'
+};
+
+// Onglets principaux
+export const MAIN_TABS = {
+  DASHBOARD: 'dashboard',
+  ACTIONS: 'actions',
+  TRACK: 'track',
+  STOCK: 'stock',
+  ANALYTICS: 'analytics',
+  SETTINGS: 'settings',
+  AI: 'ai'
+};
+
+// Sous-onglets Track
+export const TRACK_TABS = {
+  EN_COURS_COMMANDE: 'en_cours_commande',
+  PREPARATION: 'preparation',
+  EN_TRANSIT: 'en_transit',
+  COMMANDES_RECUES: 'commandes_recues',
+  RECONCILIATION: 'reconciliation',
+  COMPLETED: 'completed'
+};
+
+// Sous-onglets Stock
+export const STOCK_TABS = {
+  NIVEAU_STOCK: 'niveau_stock',
+  HISTORIQUE: 'historique'
+};
+
+// Sous-onglets Paramètres
+export const SETTINGS_TABS = {
+  GENERAL: 'general',
+  PRODUCTS: 'products',
+  SUPPLIERS: 'suppliers',
+  MAPPING: 'mapping',
+  WAREHOUSES: 'warehouses'
+};
+
+// Sous-onglets Analytics
+export const ANALYTICS_TABS = {
+  KPIS: 'kpis'
+};
+
+// Sous-onglets AI
+export const AI_TABS = {
+  OVERVIEW: 'overview',
+  FORECASTS: 'forecasts',
+  OPTIMIZATION: 'optimization',
+  ANOMALIES: 'anomalies'
+};
+
+// Filtres de stock
+export const STOCK_FILTERS = {
+  ALL: 'all',
+  LOW_STOCK: 'low_stock',
+  REORDER: 'reorder',
+  OVERSTOCK: 'overstock',
+  CRITICAL: 'critical'
+};
+
+// Devises disponibles
+export const CURRENCIES = [
+  { code: 'EUR', symbol: '€', label: 'Euro' },
+  { code: 'USD', symbol: '$', label: 'Dollar US' },
+  { code: 'GBP', symbol: '£', label: 'Livre Sterling' }
+];
+
+// Valeurs par défaut des paramètres
+export const DEFAULT_PARAMETERS = {
+  seuilSurstockProfond: 90,
+  deviseDefaut: 'EUR',
+  multiplicateurDefaut: 1.2
+};
+
+// Messages de validation
+export const VALIDATION_MESSAGES = {
+  REQUIRED_FIELD: 'Ce champ est obligatoire',
+  INVALID_EMAIL: 'Email invalide',
+  INVALID_NUMBER: 'Nombre invalide',
+  MIN_VALUE: (min) => `La valeur doit être supérieure à ${min}`,
+  MAX_VALUE: (max) => `La valeur doit être inférieure à ${max}`,
+  DUPLICATE_NAME: 'Ce nom existe déjà'
+};
+
+// Messages de succès
+export const SUCCESS_MESSAGES = {
+  ORDER_CREATED: 'Commande créée avec succès !',
+  ORDER_CONFIRMED: 'Commande confirmée !',
+  ORDER_SHIPPED: 'Commande expédiée !',
+  ORDER_RECEIVED: 'Commande reçue !',
+  ORDER_COMPLETED: 'Commande complétée !',
+  STOCK_UPDATED: 'Stock mis à jour !',
+  SUPPLIER_CREATED: 'Fournisseur créé !',
+  SUPPLIER_UPDATED: 'Fournisseur modifié !',
+  SUPPLIER_DELETED: 'Fournisseur supprimé !',
+  WAREHOUSE_CREATED: 'Entrepôt créé !',
+  WAREHOUSE_UPDATED: 'Entrepôt modifié !',
+  WAREHOUSE_DELETED: 'Entrepôt supprimé !',
+  PARAMETER_SAVED: 'Paramètre sauvegardé !'
+};
+
+// Messages d'erreur
+export const ERROR_MESSAGES = {
+  LOADING_FAILED: 'Erreur lors du chargement des données',
+  SAVE_FAILED: 'Erreur lors de la sauvegarde',
+  DELETE_FAILED: 'Erreur lors de la suppression',
+  NETWORK_ERROR: 'Problème de connexion. Vérifiez votre connexion Internet.',
+  NOT_FOUND: 'Élément introuvable',
+  UNKNOWN_ERROR: 'Erreur inconnue'
+};
+
+// Configuration des intervalles de synchronisation
+export const SYNC_INTERVALS = {
+  AUTO_SYNC: 5 * 60 * 1000, // 5 minutes en millisecondes
+  MANUAL_DEBOUNCE: 300 // 300ms pour debounce
+};
+
+// Limites d'affichage
+export const DISPLAY_LIMITS = {
+  MAX_DASHBOARD_ITEMS: 10,
+  MAX_TABLE_ROWS_DEFAULT: 50,
+  MAX_NOTIFICATIONS: 20
+};
+
+// Configuration des modals
+export const MODAL_CONFIG = {
+  ANIMATION_DURATION: 250, // ms
+  BACKDROP_BLUR: true
+};
+
+// Formats de date
+export const DATE_FORMATS = {
+  DISPLAY: 'DD MMMM YYYY', // Ex: 14 octobre 2025
+  API: 'YYYY-MM-DD', // Ex: 2025-10-14
+  DATETIME_DISPLAY: 'DD/MM/YYYY HH:mm',
+  DATETIME_API: 'YYYY-MM-DDTHH:mm:ss.SSSZ'
+};
+Étape 2.2 : Créer le Fichier d'Utilitaires de Date
+Fichier : src/utils/dateUtils.js
+javascript// ============================================
+// UTILITAIRES DE DATE - Extraits de StockEasy.jsx
+// ============================================
+
+/**
+ * Formate une date ISO en format français lisible
+ * @param {string} isoDate - Date ISO (ex: "2025-10-14T22:00:00.000Z")
+ * @returns {string|null} - Ex: "14 octobre 2025" ou null si invalide
+ */
+export const formatConfirmedDate = (isoDate) => {
+  if (!isoDate) {
+    console.warn('formatConfirmedDate: date vide ou null');
+    return null;
+  }
+  
+  try {
+    const date = new Date(isoDate);
+    
+    // Vérifier que la date est valide
+    if (isNaN(date.getTime())) {
+      console.error('formatConfirmedDate: date invalide:', isoDate);
+      return 'Date invalide';
+    }
+    
+    return date.toLocaleDateString('fr-FR', {
+      day: '2-digit',
+      month: 'long',
+      year: 'numeric'
+    });
+  } catch (error) {
+    console.error('Erreur formatage date:', error, 'Date reçue:', isoDate);
+    return 'Erreur de date';
+  }
+};
+
+/**
+ * Calcule le nombre de jours entre deux dates
+ * @param {string|Date} date1 
+ * @param {string|Date} date2 
+ * @returns {number} - Nombre de jours
+ */
+export const daysBetween = (date1, date2) => {
+  const d1 = new Date(date1);
+  const d2 = new Date(date2);
+  const diffTime = Math.abs(d2 - d1);
+  return Math.floor(diffTime / (1000 * 60 * 60 * 24));
+};
+
+/**
+ * Calcule les jours restants depuis une date d'expédition
+ * @param {string} shippedAt - Date d'expédition
+ * @param {number} leadTimeDays - Délai de livraison
+ * @returns {number} - Jours restants
+ */
+export const calculateDaysRemaining = (shippedAt, leadTimeDays) => {
+  if (!shippedAt) return leadTimeDays;
+  
+  const daysSinceShip = daysBetween(shippedAt, new Date());
+  return Math.max(0, leadTimeDays - daysSinceShip);
+};
+
+/**
+ * Vérifie si une date est aujourd'hui
+ * @param {string|Date} date 
+ * @returns {boolean}
+ */
+export const isToday = (date) => {
+  const today = new Date();
+  const checkDate = new Date(date);
+  return (
+    checkDate.getDate() === today.getDate() &&
+    checkDate.getMonth() === today.getMonth() &&
+    checkDate.getFullYear() === today.getFullYear()
+  );
+};
+
+/**
+ * Formate une date pour l'API (YYYY-MM-DD)
+ * @param {Date} date 
+ * @returns {string}
+ */
+export const formatDateForAPI = (date) => {
+  return date.toISOString().split('T')[0];
+};
+Étape 2.3 : Mettre à Jour StockEasy.jsx pour Utiliser les Constantes
+CURSOR, dans StockEasy.jsx, ajoute ces imports en haut :
+javascript// Ajouter ces imports après les autres imports
+import {
+  ORDER_STATUS_LABELS,
+  ORDER_STATUS_LABELS_EMOJI,
+  ORDER_STATUS_COLORS,
+  DISCREPANCY_TYPES,
+  MAIN_TABS,
+  TRACK_TABS,
+  STOCK_TABS,
+  SETTINGS_TABS,
+  ANALYTICS_TABS,
+  AI_TABS,
+  STOCK_FILTERS,
+  CURRENCIES,
+  DEFAULT_PARAMETERS,
+  VALIDATION_MESSAGES,
+  SUCCESS_MESSAGES,
+  ERROR_MESSAGES,
+  SYNC_INTERVALS,
+  DISPLAY_LIMITS
+} from './constants/stockEasyConstants';
+
+import {
+  formatConfirmedDate,
+  daysBetween,
+  calculateDaysRemaining,
+  isToday,
+  formatDateForAPI
+} from './utils/dateUtils';
+CURSOR, remplace ensuite toutes les valeurs hardcodées par les constantes importées.
+Par exemple :
+
+'dashboard' → MAIN_TABS.DASHBOARD
+'en_cours_commande' → TRACK_TABS.EN_COURS_COMMANDE
+'pending_confirmation' → use ORDER_STATUS_LABELS
+etc.
+
+Étape 2.4 : Tester
+bash# Dans le terminal
 npm run dev
 
-# Lancer les tests
-npm test
+# Vérifier que l'application démarre
+# Tester navigation entre les onglets
+# Vérifier que rien n'est cassé
+Étape 2.5 : Commit
+bashgit add src/constants/stockEasyConstants.js
+git add src/utils/dateUtils.js
+git add src/StockEasy.jsx
+git commit -m "♻️ Refactor: Extraction des constantes et utilitaires de date"
+git push
+✅ CHECKPOINT 1 : Constantes extraites - Application fonctionnelle
 
-# Build de production
-npm run build
+🔵 PHASE 3 : EXTRACTION DU COMPOSANT BUTTON (30 min)
+Étape 3.1 : Créer le Composant Button Réutilisable
+Fichier : src/components/shared/Button.jsx
+javascriptimport React from 'react';
+import { RefreshCw } from 'lucide-react';
 
-# Commit
-git add .
-git commit -m "refactor: Extract Button component from StockEasy.jsx"
-```
+/**
+ * Composant Button unifié et réutilisable
+ * Extrait de StockEasy.jsx
+ */
+export const Button = ({ 
+  variant = 'primary', 
+  size = 'md', 
+  children, 
+  className = '', 
+  icon: Icon,
+  loading = false,
+  ...props 
+}) => {
+  const baseStyles = 'inline-flex items-center justify-center gap-2 font-semibold transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed';
+  
+  const variants = {
+    primary: 'bg-black text-white hover:bg-[#333333] focus:ring-black shadow-lg',
+    secondary: 'bg-[#40403E] text-[#FAFAF7] hover:bg-[#666663] focus:ring-[#40403E]',
+    ghost: 'bg-transparent text-black hover:bg-black/10 focus:ring-black',
+    danger: 'bg-[#EF1C43] text-white hover:bg-red-700 focus:ring-[#EF1C43] shadow-sm',
+    success: 'bg-green-600 text-white hover:bg-green-700 focus:ring-green-600 shadow-sm',
+    outline: 'bg-transparent border-2 border-[#E5E4DF] text-[#191919] hover:bg-[#FAFAF7] focus:ring-black',
+  };
+  
+  const sizes = {
+    sm: 'px-3 py-1.5 text-xs rounded-md',
+    md: 'px-4 py-2.5 text-sm rounded-lg',
+    lg: 'px-6 py-3 text-base rounded-lg',
+  };
+  
+  return (
+    <button
+      className={`${baseStyles} ${variants[variant]} ${sizes[size]} ${className}`}
+      disabled={loading || props.disabled}
+      {...props}
+    >
+      {loading ? <RefreshCw className="w-4 h-4 shrink-0 animate-spin" /> : Icon && <Icon className="w-4 h-4 shrink-0" />}
+      {children}
+    </button>
+  );
+};
+Étape 3.2 : Mettre à Jour StockEasy.jsx
+javascript// SUPPRIMER la définition du composant Button de StockEasy.jsx
+// (lignes ~70-95)
 
-## PRIORITÉS
+// AJOUTER cet import en haut
+import { Button } from './components/shared/Button';
+Étape 3.3 : Tester et Commit
+bashnpm run dev
+# Tester tous les boutons de l'application
 
-1. ✅ TOUJOURS tester après chaque extraction
-2. ✅ TOUJOURS créer un test pour le nouveau code
-3. ✅ TOUJOURS committer après chaque composant extrait
-4. ✅ Suivre l'ordre du PLAN_ACTION_EXECUTABLE.md
+git add src/components/shared/Button.jsx
+git add src/StockEasy.jsx
+git commit -m "♻️ Refactor: Extraction du composant Button réutilisable"
+git push
+✅ CHECKPOINT 2 : Button extrait - Application fonctionnelle
 
-## EN CAS D'ERREUR
+🔵 PHASE 4 : CRÉATION DES HOOKS PERSONNALISÉS (2h)
+Étape 4.1 : Hook useStockData
+Fichier : src/hooks/useStockData.js
+javascriptimport { useState, useEffect } from 'react';
+import api from '../services/apiService';
+import { toast } from 'sonner';
 
-1. Lire l'erreur attentivement
-2. Vérifier les imports
-3. Vérifier que npm run dev fonctionne
-4. Si bloqué, revenir en arrière avec Git
+/**
+ * Hook personnalisé pour gérer les données de stock
+ * Extrait de StockEasy.jsx
+ */
+export const useStockData = () => {
+  const [loading, setLoading] = useState(true);
+  const [syncing, setSyncing] = useState(false);
+  const [products, setProducts] = useState([]);
+  const [suppliers, setSuppliers] = useState({});
+  const [warehouses, setWarehouses] = useState({});
+  const [orders, setOrders] = useState([]);
+  const [parameters, setParameters] = useState({});
+
+  const loadData = async () => {
+    try {
+      setLoading(true);
+      const data = await api.getAllData();
+      
+      // Construire suppliersMap
+      const suppliersMap = {};
+      data.suppliers.forEach(s => {
+        suppliersMap[s.name] = s;
+      });
+      
+      // Construire warehousesMap
+      const warehousesMap = {};
+      if (data.warehouses && Array.isArray(data.warehouses)) {
+        data.warehouses.forEach(w => {
+          warehousesMap[w.name] = w;
+        });
+      }
+      
+      setSuppliers(suppliersMap);
+      setWarehouses(warehousesMap);
+      setProducts(data.products);
+      setOrders(data.orders);
+      
+      // Charger les paramètres
+      if (data.parameters) {
+        setParameters(data.parameters);
+      }
+      
+      console.log('✅ Données chargées depuis Google Sheets');
+    } catch (error) {
+      console.error('❌ Erreur lors du chargement:', error);
+      toast.error('Erreur lors du chargement des données');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const syncData = async () => {
+    try {
+      setSyncing(true);
+      await loadData();
+      console.log('🔄 Synchronisation effectuée');
+    } catch (error) {
+      console.error('❌ Erreur lors de la synchronisation:', error);
+    } finally {
+      setSyncing(false);
+    }
+  };
+
+  useEffect(() => {
+    loadData();
+    const interval = setInterval(() => {
+      syncData();
+    }, 5 * 60 * 1000); // 5 minutes
+    return () => clearInterval(interval);
+  }, []);
+
+  return {
+    loading,
+    syncing,
+    products,
+    suppliers,
+    warehouses,
+    orders,
+    parameters,
+    loadData,
+    syncData,
+    setProducts,
+    setOrders,
+    setSuppliers,
+    setWarehouses,
+    setParameters
+  };
+};
+Étape 4.2 : Hook useOrderManagement
+Fichier : src/hooks/useOrderManagement.js
+javascriptimport { useState } from 'react';
+import api from '../services/apiService';
+import { toast } from 'sonner';
+import { formatDateForAPI } from '../utils/dateUtils';
+
+/**
+ * Hook pour gérer les actions sur les commandes
+ * Extrait de StockEasy.jsx
+ */
+export const useOrderManagement = (loadData) => {
+  const [orderQuantities, setOrderQuantities] = useState({});
+  const [selectedWarehouse, setSelectedWarehouse] = useState(null);
+
+  const updateOrderQuantity = (sku, newQuantity) => {
+    const qty = parseInt(newQuantity, 10);
+    setOrderQuantities(prev => ({
+      ...prev,
+      [sku]: isNaN(qty) || qty < 0 ? 0 : qty
+    }));
+  };
+
+  const generatePONumber = (existingOrders) => {
+    const poNumbers = existingOrders
+      .map(o => {
+        const match = o.id.match(/^PO-(\d+)$/);
+        return match ? parseInt(match[1], 10) : 0;
+      })
+      .filter(n => n > 0);
+    
+    const nextNumber = poNumbers.length > 0 ? Math.max(...poNumbers) + 1 : 1;
+    return `PO-${String(nextNumber).padStart(3, '0')}`;
+  };
+
+  const confirmOrder = async (orderId) => {
+    try {
+      const confirmedAt = new Date().toISOString();
+      await api.updateOrderStatus(orderId, {
+        status: 'preparing',
+        confirmedAt: confirmedAt
+      });
+      await loadData();
+      toast.success('Commande confirmée !');
+    } catch (error) {
+      console.error('❌ Erreur confirmation:', error);
+      toast.error('Erreur lors de la confirmation');
+    }
+  };
+
+  const shipOrder = async (orderId) => {
+    const tracking = prompt('Entrez le numéro de suivi (optionnel):');
+    try {
+      await api.updateOrderStatus(orderId, {
+        status: 'in_transit',
+        shippedAt: formatDateForAPI(new Date()),
+        trackingNumber: tracking || ''
+      });
+      await loadData();
+      toast.success('Commande expédiée !');
+    } catch (error) {
+      console.error('❌ Erreur:', error);
+      toast.error('Erreur lors de la mise à jour');
+    }
+  };
+
+  const receiveOrder = async (orderId) => {
+    try {
+      await api.updateOrderStatus(orderId, {
+        status: 'received',
+        receivedAt: formatDateForAPI(new Date())
+      });
+      await loadData();
+      toast.success('Commande reçue !');
+    } catch (error) {
+      console.error('❌ Erreur:', error);
+      toast.error('Erreur lors de la réception');
+    }
+  };
+
+  return {
+    orderQuantities,
+    setOrderQuantities,
+    selectedWarehouse,
+    setSelectedWarehouse,
+    updateOrderQuantity,
+    generatePONumber,
+    confirmOrder,
+    shipOrder,
+    receiveOrder
+  };
+};
+Étape 4.3 : Hook useSupplierManagement
+Fichier : src/hooks/useSupplierManagement.js
+javascriptimport { useState } from 'react';
+import api from '../services/apiService';
+import { toast } from 'sonner';
+
+/**
+ * Hook pour gérer les fournisseurs
+ * Extrait de StockEasy.jsx
+ */
+export const useSupplierManagement = (suppliers, loadData) => {
+  const [supplierModalOpen, setSupplierModalOpen] = useState(false);
+  const [editingSupplier, setEditingSupplier] = useState(null);
+  const [supplierFormData, setSupplierFormData] = useState({
+    name: '',
+    email: '',
+    leadTimeDays: 30,
+    moq: 50,
+    notes: ''
+  });
+
+  const handleOpenSupplierModal = (supplier = null) => {
+    if (supplier) {
+      setEditingSupplier(supplier);
+      setSupplierFormData({
+        name: supplier.name,
+        email: supplier.email,
+        leadTimeDays: supplier.leadTimeDays,
+        moq: supplier.moq || 50,
+        notes: supplier.notes || ''
+      });
+    } else {
+      setEditingSupplier(null);
+      setSupplierFormData({
+        name: '',
+        email: '',
+        leadTimeDays: 30,
+        moq: 50,
+        notes: ''
+      });
+    }
+    setSupplierModalOpen(true);
+  };
+
+  const handleCloseSupplierModal = () => {
+    setSupplierModalOpen(false);
+    setEditingSupplier(null);
+    setSupplierFormData({
+      name: '',
+      email: '',
+      leadTimeDays: 30,
+      moq: 50,
+      notes: ''
+    });
+  };
+
+  const handleSupplierFormChange = (field, value) => {
+    setSupplierFormData(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  const validateSupplierForm = () => {
+    const errors = [];
+    
+    if (!supplierFormData.name.trim()) {
+      errors.push('Le nom du fournisseur est obligatoire');
+    }
+    
+    if (!supplierFormData.email.trim()) {
+      errors.push('L\'email est obligatoire');
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(supplierFormData.email)) {
+      errors.push('L\'email n\'est pas valide');
+    }
+    
+    if (supplierFormData.leadTimeDays <= 0) {
+      errors.push('Le délai doit être supérieur à 0');
+    }
+    
+    if (supplierFormData.moq <= 0) {
+      errors.push('Le MOQ doit être supérieur à 0');
+    }
+    
+    if (!editingSupplier) {
+      const existingSupplier = Object.values(suppliers).find(
+        s => s.name.toLowerCase() === supplierFormData.name.toLowerCase()
+      );
+      if (existingSupplier) {
+        errors.push('Un fournisseur avec ce nom existe déjà');
+      }
+    }
+    
+    return errors;
+  };
+
+  const handleSaveSupplier = async () => {
+    const errors = validateSupplierForm();
+    
+    if (errors.length > 0) {
+      toast.error('Erreurs : ' + errors.join(', '));
+      return;
+    }
+    
+    try {
+      if (editingSupplier) {
+        await api.updateSupplier(editingSupplier.name, supplierFormData);
+        toast.success('Fournisseur mis à jour !');
+      } else {
+        await api.createSupplier(supplierFormData);
+        toast.success('Fournisseur créé !');
+      }
+      
+      await loadData();
+      handleCloseSupplierModal();
+    } catch (error) {
+      console.error('❌ Erreur sauvegarde fournisseur:', error);
+      toast.error('Erreur lors de la sauvegarde');
+    }
+  };
+
+  const handleDeleteSupplier = async (supplier) => {
+    try {
+      await api.deleteSupplier(supplier.name);
+      toast.success('Fournisseur supprimé !');
+      await loadData();
+    } catch (error) {
+      console.error('❌ Erreur suppression fournisseur:', error);
+      toast.error('Erreur lors de la suppression');
+    }
+  };
+
+  return {
+    supplierModalOpen,
+    editingSupplier,
+    supplierFormData,
+    handleOpenSupplierModal,
+    handleCloseSupplierModal,
+    handleSupplierFormChange,
+    handleSaveSupplier,
+    handleDeleteSupplier
+  };
+};
+CURSOR : Continue de créer les autres hooks suivants :
+
+useWarehouseManagement.js
+useParametersManagement.js
+useReconciliation.js
+useStockFilters.js
+
+Étape 4.4 : Mettre à Jour StockEasy.jsx pour Utiliser les Hooks
+javascript// En haut de StockEasy.jsx, ajouter les imports de hooks
+import { useStockData } from './hooks/useStockData';
+import { useOrderManagement } from './hooks/useOrderManagement';
+import { useSupplierManagement } from './hooks/useSupplierManagement';
+// ... autres hooks
+
+// Dans le composant StockEasy, remplacer les états et fonctions par les hooks
+function StockEasy() {
+  // ... auth et navigation
+  
+  // Hook pour les données
+  const {
+    loading,
+    syncing,
+    products,
+    suppliers,
+    warehouses,
+    orders,
+    parameters,
+    loadData,
+    syncData
+  } = useStockData();
+  
+  // Hook pour la gestion des commandes
+  const {
+    orderQuantities,
+    setOrderQuantities,
+    selectedWarehouse,
+    setSelectedWarehouse,
+    updateOrderQuantity,
+    generatePONumber,
+    confirmOrder,
+    shipOrder,
+    receiveOrder
+  } = useOrderManagement(loadData);
+  
+  // Hook pour la gestion des fournisseurs
+  const {
+    supplierModalOpen,
+    editingSupplier,
+    supplierFormData,
+    handleOpenSupplierModal,
+    handleCloseSupplierModal,
+    handleSupplierFormChange,
+    handleSaveSupplier,
+    handleDeleteSupplier
+  } = useSupplierManagement(suppliers, loadData);
+  
+  // ... reste du code
+}
+Étape 4.5 : Tester et Commit
+bashnpm run dev
+# Tester TOUTES les fonctionnalités
+
+git add src/hooks/
+git add src/StockEasy.jsx
+git commit -m "♻️ Refactor: Extraction des hooks personnalisés"
+git push
+✅ CHECKPOINT 3 : Hooks extraits - Application fonctionnelle
+
+🔵 PHASE 5 : EXTRACTION DES COMPOSANTS DASHBOARD (1h30)
+Étape 5.1 : Créer les Composants Dashboard
+Fichier : src/components/dashboard/ProductsToOrder.jsx
+javascriptimport React from 'react';
+import { motion } from 'framer-motion';
+import { AlertCircle } from 'lucide-react';
+import { InfoTooltip, tooltips } from '../ui/InfoTooltip';
+import { formatUnits } from '../../utils/decimalUtils';
+
+export const ProductsToOrder = ({ products }) => {
+  return (
+    <div className="bg-white rounded-xl shadow-sm border border-[#E5E4DF] p-6">
+      <div className="flex items-center gap-2 mb-4">
+        <div className="w-10 h-10 bg-red-50 rounded-lg flex items-center justify-center border border-red-200 shrink-0">
+          <AlertCircle className="w-6 h-6 text-[#EF1C43] shrink-0" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center">
+            <h2 className="text-lg font-bold text-[#191919]">Produits à commander</h2>
+            <InfoTooltip content={tooltips.toOrder} />
+          </div>
+          <p className="text-sm text-[#666663]">{products.length} produit(s)</p>
+        </div>
+      </div>
+      <div className="space-y-2 max-h-96 overflow-y-auto">
+        {products.length === 0 ? (
+          <p className="text-[#666663] text-center py-8 text-sm">Rien à commander</p>
+        ) : (
+          products.map((p, index) => (
+            <motion.div
+              key={p.sku}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: index * 0.03, duration: 0.3 }}
+              className="flex justify-between items-center p-3 bg-[#FAFAF7] rounded-lg hover:bg-[#F0F0EB] transition-colors border border-[#E5E4DF]">
+              <div className="min-w-0">
+                <p className="font-medium text-[#191919] text-sm truncate">{p.name}</p>
+                <p className="text-xs text-[#666663] truncate">{p.supplier}</p>
+              </div>
+              <div className="text-right shrink-0 ml-4">
+                <p className="font-bold text-[#EF1C43] text-sm">{formatUnits(p.qtyToOrder)} unités</p>
+                <p className="text-xs text-[#666663]">Stock: {formatUnits(p.stock)}</p>
+              </div>
+            </motion.div>
+          ))
+        )}
+      </div>
+    </div>
+  );
+};
+CURSOR : Crée les composants suivants de la même manière :
+
+ProductsToWatch.jsx
+InTransit.jsx
+ReceivedOrders.jsx
+
+Étape 5.2 : Créer le Composant DashboardTab
+Fichier : src/components/dashboard/DashboardTab.jsx
+javascriptimport React from 'react';
+import { motion } from 'framer-motion';
+import { ProductsToOrder } from './ProductsToOrder';
+import { ProductsToWatch } from './ProductsToWatch';
+import { InTransit } from './InTransit';
+import { ReceivedOrders } from './ReceivedOrders';
+
+export const DashboardTab = ({ productsByStatus, orders, setActiveTab, setTrackTabSection }) => {
+  return (
+    <motion.div
+      key="dashboard"
+      initial={{ opacity: 0, x: 20 }}
+      animate={{ opacity: 1, x: 0 }}
+      exit={{ opacity: 0, x: -20 }}
+      transition={{ duration: 0.25 }}
+      className="grid grid-cols-1 lg:grid-cols-2 gap-6"
+    >
+      <ProductsToOrder products={productsByStatus.to_order} />
+      <ProductsToWatch products={productsByStatus.watch} />
+      <InTransit orders={orders} setActiveTab={setActiveTab} setTrackTabSection={setTrackTabSection} />
+      <ReceivedOrders orders={orders} setActiveTab={setActiveTab} setTrackTabSection={setTrackTabSection} />
+    </motion.div>
+  );
+};
+Étape 5.3 : Mettre à Jour StockEasy.jsx
+javascript// Importer le composant Dashboard
+import { DashboardTab } from './components/dashboard/DashboardTab';
+
+// Dans le JSX, remplacer la section DASHBOARD TAB par :
+{activeTab === 'dashboard' && (
+  <DashboardTab 
+    productsByStatus={productsByStatus}
+    orders={orders}
+    setActiveTab={setActiveTab}
+    setTrackTabSection={setTrackTabSection}
+  />
+)}
+Étape 5.4 : Tester et Commit
+bashnpm run dev
+# Tester l'onglet Dashboard
+
+git add src/components/dashboard/
+git add src/StockEasy.jsx
+git commit -m "♻️ Refactor: Extraction des composants Dashboard"
+git push
+✅ CHECKPOINT 4 : Dashboard extrait - Application fonctionnelle
+
+📊 RÉSUMÉ DE PROGRESSION
+Après ces 5 phases, votre fichier StockEasy.jsx aura :
+
+✅ Passé de 3876 lignes à environ 2500 lignes (-35%)
+✅ Extrait les constantes dans un fichier séparé
+✅ Extrait les utilitaires de date
+✅ Extrait le composant Button
+✅ Créé 5+ hooks personnalisés
+✅ Extrait l'onglet Dashboard complet
+
+
+🎯 PHASES SUIVANTES (À CONTINUER)
+Phase 6 : Extraction des Composants Actions (2h)
+Phase 7 : Extraction des Composants Track (3h)
+Phase 8 : Extraction des Composants Stock (2h)
+Phase 9 : Extraction des Composants Analytics (2h)
+Phase 10 : Nettoyage Final et Documentation (1h)
+
+📌 NOTES IMPORTANTES POUR CURSOR
+CURSOR, voici tes instructions :
+
+Commence par la Phase 1 - Ne saute AUCUNE étape
+Teste APRÈS CHAQUE modification
+Commit APRÈS chaque étape validée
+Si quelque chose casse → ROLLBACK immédiat
+Documente chaque changement dans docs/refactoring/logs/REFACTORING_LOG.md
+Demande validation à l'utilisateur avant de passer à la phase suivante
+
+Format des logs :
+markdown## Phase X - [Nom de la phase]
+**Date** : [Date]
+**Durée** : [Durée]
+**Fichiers modifiés** :
+- [Liste des fichiers]
+**Changements** :
+- [Description des changements]
+**Tests** :
+- ✅ [Tests effectués]
+**Commit** : [Hash du commit]
+**Statut** : ✅ Validé
