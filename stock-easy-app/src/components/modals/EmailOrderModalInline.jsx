@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Mail, AlertCircle } from 'lucide-react';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
@@ -17,18 +17,82 @@ export const EmailOrderModalInline = ({
   emailGeneration,
   getUserSignature,
   handleCreateOrderWithoutEmail,
-  handleSendOrder
+  handleSendOrder,
+  suppliers
 }) => {
+  const [editableEmail, setEditableEmail] = useState('');
+  const [editableSubject, setEditableSubject] = useState('');
+  const [editableBody, setEditableBody] = useState('');
+
+  // Initialiser les valeurs éditables quand le modal s'ouvre
+  useEffect(() => {
+    if (isOpen && selectedSupplier) {
+      const emailContent = emailGeneration.generateOrderEmailDraft(
+        selectedSupplier,
+        toOrderBySupplier[selectedSupplier],
+        selectedWarehouse,
+        orderQuantities,
+        getUserSignature(),
+        suppliers,
+        warehouses
+      );
+      
+      const parsedEmail = parseEmail(emailContent);
+      setEditableEmail(parsedEmail.to);
+      setEditableSubject(parsedEmail.subject);
+      setEditableBody(parsedEmail.body);
+    }
+  }, [isOpen, selectedSupplier, selectedWarehouse, orderQuantities]);
+
   if (!isOpen || !selectedSupplier) return null;
 
   const productsToOrder = toOrderBySupplier[selectedSupplier];
-  const email = emailGeneration.generateOrderEmailDraft(
+  
+  // Debug logs
+  console.log('🔍 Debug EmailOrderModalInline:');
+  console.log('- selectedSupplier:', selectedSupplier);
+  console.log('- productsToOrder:', productsToOrder);
+  console.log('- selectedWarehouse:', selectedWarehouse);
+  console.log('- orderQuantities:', orderQuantities);
+  console.log('- getUserSignature():', getUserSignature());
+  
+  const emailContent = emailGeneration.generateOrderEmailDraft(
     selectedSupplier,
     productsToOrder,
     selectedWarehouse,
     orderQuantities,
-    getUserSignature()
+    getUserSignature(),
+    suppliers,
+    warehouses
   );
+  
+  console.log('- Generated email:', emailContent);
+  
+  // Parser l'email pour extraire les parties
+  const parseEmail = (content) => {
+    if (!content) return { to: '', subject: '', body: '' };
+    
+    const lines = content.split('\n');
+    let to = '';
+    let subject = '';
+    let body = '';
+    
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i].trim();
+      if (line.startsWith('À:')) {
+        to = line.replace('À:', '').trim();
+      } else if (line.startsWith('Objet:')) {
+        subject = line.replace('Objet:', '').trim();
+      } else if (line.startsWith('Bonjour,')) {
+        body = lines.slice(i).join('\n');
+        break;
+      }
+    }
+    
+    return { to, subject, body };
+  };
+  
+  const email = parseEmail(emailContent);
   const totalAmount = roundToTwoDecimals(productsToOrder.reduce((sum, p) => {
     const qty = orderQuantities[p.sku] || p.qtyToOrder;
     return sum + (qty * p.buyPrice);
@@ -39,15 +103,17 @@ export const EmailOrderModalInline = ({
       isOpen={isOpen && selectedSupplier}
       onClose={onClose}
       title={`Commande - ${selectedSupplier}`}
+      size="large"
       footer={
-        <div className="flex justify-end gap-3">
-          <Button variant="outline" onClick={onClose}>
+        <div className="flex justify-end gap-2">
+          <Button variant="outline" onClick={onClose} size="sm">
             Annuler
           </Button>
           <Button 
             variant="secondary" 
             onClick={handleCreateOrderWithoutEmail}
             disabled={!selectedWarehouse}
+            size="sm"
           >
             Créer commande sans email
           </Button>
@@ -56,6 +122,7 @@ export const EmailOrderModalInline = ({
             icon={Mail} 
             onClick={handleSendOrder}
             disabled={!selectedWarehouse}
+            size="sm"
           >
             Envoyer email et créer commande
           </Button>
@@ -81,62 +148,88 @@ export const EmailOrderModalInline = ({
           <select
             value={selectedWarehouse || ''}
             onChange={(e) => setSelectedWarehouse(e.target.value)}
-            className="w-full p-3 border-2 border-[#E5E4DF] rounded-lg bg-[#FAFAF7] text-[#191919] focus:outline-none focus:ring-2 focus:ring-black"
+            className="w-full px-4 py-2.5 border border-[#E5E4DF] rounded-lg focus:outline-none focus:ring-2 focus:ring-black bg-white"
+            required
           >
-            <option value="">Sélectionner un entrepôt</option>
-            {Object.values(warehouses).map(warehouse => (
+            {Object.values(warehouses).map((warehouse) => (
               <option key={warehouse.name} value={warehouse.name}>
-                {warehouse.name}
+                {warehouse.name} - {warehouse.city}, {warehouse.country}
               </option>
             ))}
           </select>
         )}
-      </div>
-
-      {/* Liste des produits avec quantités éditables */}
-      <div className="space-y-3 mb-6">
-        <h4 className="font-semibold text-[#191919]">Produits à commander:</h4>
-        {productsToOrder.map((product, index) => (
-          <div key={product.sku} className="flex items-center gap-4 p-3 bg-[#FAFAF7] rounded-lg border border-[#E5E4DF]">
-            <div className="flex-1 min-w-0">
-              <h5 className="font-medium text-[#191919] text-sm truncate">{product.name}</h5>
-              <p className="text-xs text-[#666663] truncate">SKU: {product.sku}</p>
-              <p className="text-xs text-[#666663]">Prix: {roundToTwoDecimals(product.buyPrice).toFixed(2)}€</p>
-            </div>
-            <div className="flex items-center gap-2">
-              <label className="text-sm text-[#666663]">Quantité:</label>
-              <input
-                type="number"
-                min="0"
-                value={orderQuantities[product.sku] || product.qtyToOrder}
-                onChange={(e) => updateOrderQuantity(product.sku, e.target.value)}
-                className="w-20 p-2 border border-[#E5E4DF] rounded text-center text-sm"
-              />
-            </div>
+        {selectedWarehouse && warehouses[selectedWarehouse] && (
+          <div className="mt-2 text-sm text-[#666663] bg-[#FAFAF7] p-3 rounded-lg">
+            <p className="font-medium text-[#191919] mb-1">Adresse de livraison :</p>
+            <p>{warehouses[selectedWarehouse].address}</p>
+            <p>{warehouses[selectedWarehouse].postalCode} {warehouses[selectedWarehouse].city}</p>
+            <p>{warehouses[selectedWarehouse].country}</p>
           </div>
-        ))}
+        )}
       </div>
 
-      {/* Total */}
-      <div className="bg-[#FAFAF7] rounded-lg p-4 border border-[#E5E4DF] mb-6">
-        <div className="flex justify-between items-center">
-          <span className="font-semibold text-[#191919]">Total de la commande:</span>
-          <span className="font-bold text-[#191919] text-lg">{totalAmount.toFixed(2)}€</span>
+      {/* Section d'édition des quantités */}
+      <div className="mb-4 bg-blue-50 border border-blue-200 rounded-lg p-3">
+        <h4 className="font-semibold text-[#191919] mb-2 text-sm">Ajuster les quantités</h4>
+        <div className="space-y-2">
+          {productsToOrder.map(p => (
+            <div key={p.sku} className="bg-white rounded p-2 border border-[#E5E4DF]">
+              <div className="grid grid-cols-4 gap-2 items-center">
+                <div className="col-span-2">
+                  <div className="font-medium text-[#191919] text-xs truncate">{p.name}</div>
+                  <div className="text-xs text-[#666663]">
+                    SKU: {p.sku} • Rec: {p.qtyToOrder}
+                  </div>
+                </div>
+                <div>
+                  <input
+                    type="number"
+                    min="0"
+                    value={orderQuantities[p.sku] !== undefined ? orderQuantities[p.sku] : p.qtyToOrder}
+                    onChange={(e) => updateOrderQuantity(p.sku, e.target.value)}
+                    className="w-full px-2 py-1 border border-[#E5E4DF] rounded text-center text-sm font-bold"
+                  />
+                </div>
+                <div className="text-xs text-right text-[#666663]">
+                  {roundToTwoDecimals((orderQuantities[p.sku] || p.qtyToOrder) * p.buyPrice).toFixed(2)}€
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+        <div className="mt-2 pt-2 border-t border-blue-200 flex justify-between items-center">
+          <span className="text-sm text-[#666663]">Total:</span>
+          <span className="text-lg font-bold text-[#191919]">{totalAmount.toFixed(2)}€</span>
         </div>
       </div>
-
-      {/* Aperçu de l'email */}
+      
+      {/* Prévisualisation email */}
       <div className="space-y-3">
-        <h4 className="font-semibold text-[#191919]">Aperçu de l'email:</h4>
-        <div className="bg-white border border-[#E5E4DF] rounded-lg p-4 max-h-60 overflow-y-auto">
-          <div className="space-y-2 text-sm">
-            <div><strong>À:</strong> {email.to}</div>
-            <div><strong>Objet:</strong> {email.subject}</div>
-            <div className="mt-3">
-              <strong>Corps:</strong>
-              <pre className="whitespace-pre-wrap text-xs mt-2 p-2 bg-[#FAFAF7] rounded border">{email.body}</pre>
-            </div>
-          </div>
+        <h4 className="font-semibold text-[#191919]">Prévisualisation email</h4>
+        <div>
+          <label className="block text-sm font-medium text-[#666663] mb-1">À:</label>
+          <input 
+            value={editableEmail} 
+            onChange={(e) => setEditableEmail(e.target.value)}
+            className="w-full px-3 py-2 border-2 border-[#E5E4DF] rounded-lg bg-white text-[#191919] text-sm focus:outline-none focus:ring-2 focus:ring-black" 
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-[#666663] mb-1">Objet:</label>
+          <input 
+            value={editableSubject} 
+            onChange={(e) => setEditableSubject(e.target.value)}
+            className="w-full px-3 py-2 border-2 border-[#E5E4DF] rounded-lg bg-white text-[#191919] text-sm focus:outline-none focus:ring-2 focus:ring-black" 
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-[#666663] mb-1">Message:</label>
+          <textarea 
+            value={editableBody} 
+            onChange={(e) => setEditableBody(e.target.value)}
+            rows={8} 
+            className="w-full px-3 py-2 border-2 border-[#E5E4DF] rounded-lg bg-white text-[#191919] font-mono text-xs focus:outline-none focus:ring-2 focus:ring-black" 
+          />
         </div>
       </div>
     </Modal>

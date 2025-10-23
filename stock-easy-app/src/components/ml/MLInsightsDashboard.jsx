@@ -14,7 +14,7 @@ import {
   Loader
 } from 'lucide-react';
 import { useDemandForecast } from '../../hooks/ml/useDemandForecast';
-import { InfoTooltip, tooltips } from '../ui/InfoTooltip';
+import { InfoTooltip } from '../ui/InfoTooltip';
 
 // Error Boundary pour capturer les erreurs
 class MLErrorBoundary extends Component {

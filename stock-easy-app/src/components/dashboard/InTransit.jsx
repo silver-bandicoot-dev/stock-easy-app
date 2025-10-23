@@ -1,8 +1,12 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { Truck } from 'lucide-react';
-import { InfoTooltip, tooltips } from '../ui/InfoTooltip';
+import { InfoTooltip } from '../ui/InfoTooltip';
 import { formatConfirmedDate, calculateDaysRemaining } from '../../utils/dateUtils';
+
+const tooltips = {
+  inTransit: "Commandes en cours de livraison par les fournisseurs."
+};
 
 export const InTransit = ({ orders, setActiveTab, setTrackTabSection }) => {
   const inTransitOrders = orders.filter(order => order.status === 'in_transit');

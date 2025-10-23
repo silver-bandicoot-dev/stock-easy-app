@@ -1,8 +1,12 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { Eye } from 'lucide-react';
-import { InfoTooltip, tooltips } from '../ui/InfoTooltip';
+import { InfoTooltip } from '../ui/InfoTooltip';
 import { formatUnits } from '../../utils/decimalUtils';
+
+const tooltips = {
+  toWatch: "Produits dont le stock approche du point de commande et nécessitent une surveillance attentive."
+};
 
 export const ProductsToWatch = ({ products }) => {
   return (

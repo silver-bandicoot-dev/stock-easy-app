@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Calendar, BarChart3, RefreshCw } from 'lucide-react';
+import { Calendar, ChevronDown } from 'lucide-react';
 
 export const DateRangePicker = ({ 
   value, 
@@ -8,6 +8,8 @@ export const DateRangePicker = ({
   customRange, 
   onCustomRangeChange 
 }) => {
+  const [isOpen, setIsOpen] = useState(false);
+
   const ranges = [
     { value: '7d', label: '7 derniers jours' },
     { value: '30d', label: '30 derniers jours' },
@@ -16,27 +18,51 @@ export const DateRangePicker = ({
     { value: 'custom', label: 'Période personnalisée' }
   ];
 
+  const selectedRange = ranges.find(range => range.value === value);
+
+  const handleSelect = (rangeValue) => {
+    onChange(rangeValue);
+    setIsOpen(false);
+  };
+
   return (
-    <div className="space-y-4">
-      <div className="flex items-center gap-3">
-        <Calendar className="w-5 h-5 text-[#191919]" />
-        <h3 className="text-lg font-semibold text-[#191919]">Période d'analyse</h3>
-      </div>
-      
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
-        {ranges.map((range) => (
+    <div className="relative">
+      <div className="space-y-3">
+        <div className="flex items-center gap-2">
+          <Calendar className="w-4 h-4 text-[#191919]" />
+          <h3 className="text-sm font-semibold text-[#191919]">Période</h3>
+        </div>
+        
+        <div className="relative">
           <button
-            key={range.value}
-            onClick={() => onChange(range.value)}
-            className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${
-              value === range.value
-                ? 'bg-black text-white'
-                : 'bg-[#FAFAF7] text-[#666663] hover:bg-[#F0F0EB]'
-            }`}
+            onClick={() => setIsOpen(!isOpen)}
+            className="w-full px-3 py-2 bg-white border border-[#E5E4DF] rounded-lg text-sm text-[#191919] flex items-center justify-between hover:border-[#D1D0CB] transition-colors"
           >
-            {range.label}
+            <span>{selectedRange?.label || 'Sélectionner une période'}</span>
+            <ChevronDown className={`w-4 h-4 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
           </button>
-        ))}
+
+          {isOpen && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="absolute top-full left-0 right-0 mt-1 bg-white border border-[#E5E4DF] rounded-lg shadow-lg z-10"
+            >
+              {ranges.map((range) => (
+                <button
+                  key={range.value}
+                  onClick={() => handleSelect(range.value)}
+                  className={`w-full px-3 py-2 text-sm text-left hover:bg-[#FAFAF7] transition-colors first:rounded-t-lg last:rounded-b-lg ${
+                    value === range.value ? 'bg-[#F0F0EB] text-[#191919]' : 'text-[#666663]'
+                  }`}
+                >
+                  {range.label}
+                </button>
+              ))}
+            </motion.div>
+          )}
+        </div>
       </div>
 
       {value === 'custom' && (
@@ -44,30 +70,31 @@ export const DateRangePicker = ({
           initial={{ opacity: 0, height: 0 }}
           animate={{ opacity: 1, height: 'auto' }}
           exit={{ opacity: 0, height: 0 }}
-          transition={{ duration: 0.3 }}
-          className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4"
+          className="mt-3 space-y-3"
         >
-          <div>
-            <label className="block text-sm font-medium text-[#191919] mb-2">
-              Date de début
-            </label>
-            <input
-              type="date"
-              value={customRange.start}
-              onChange={(e) => onCustomRangeChange({ ...customRange, start: e.target.value })}
-              className="w-full p-3 border-2 border-[#E5E4DF] rounded-lg bg-[#FAFAF7] text-[#191919] focus:outline-none focus:ring-2 focus:ring-black"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-[#191919] mb-2">
-              Date de fin
-            </label>
-            <input
-              type="date"
-              value={customRange.end}
-              onChange={(e) => onCustomRangeChange({ ...customRange, end: e.target.value })}
-              className="w-full p-3 border-2 border-[#E5E4DF] rounded-lg bg-[#FAFAF7] text-[#191919] focus:outline-none focus:ring-2 focus:ring-black"
-            />
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-medium text-[#666663] mb-1">
+                Date de début
+              </label>
+              <input
+                type="date"
+                value={customRange.start}
+                onChange={(e) => onCustomRangeChange({ ...customRange, start: e.target.value })}
+                className="w-full px-3 py-2 border border-[#E5E4DF] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-[#666663] mb-1">
+                Date de fin
+              </label>
+              <input
+                type="date"
+                value={customRange.end}
+                onChange={(e) => onCustomRangeChange({ ...customRange, end: e.target.value })}
+                className="w-full px-3 py-2 border border-[#E5E4DF] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent"
+              />
+            </div>
           </div>
         </motion.div>
       )}

@@ -17,10 +17,10 @@ export const useModals = () => {
 
   // Handlers pour email modal
   const emailModalHandlers = {
-    open: (supplier, products, warehouse) => {
+    open: (data) => {
       setEmailModal({
         isOpen: true,
-        data: { supplier, products, warehouse }
+        data: data
       });
     },
     close: () => {

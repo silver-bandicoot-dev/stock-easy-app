@@ -2,15 +2,13 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { AlertCircle, CheckCircle, Mail, Package } from 'lucide-react';
 import { Button } from '../shared/Button';
-import { InfoTooltip, tooltips } from '../ui/InfoTooltip';
+import { InfoTooltip } from '../ui/InfoTooltip';
 import { formatUnits } from '../../utils/decimalUtils';
 
 export const OrderBySupplier = ({ 
   toOrderBySupplier, 
   suppliers, 
   warehouses, 
-  selectedWarehouse, 
-  setSelectedWarehouse,
   orderQuantities,
   updateOrderQuantity,
   generatePONumber,
@@ -51,24 +49,6 @@ export const OrderBySupplier = ({
               </div>
             </div>
 
-            {/* Sélection de l'entrepôt */}
-            <div className="p-4 border-b border-[#E5E4DF]">
-              <label className="block text-sm font-medium text-[#191919] mb-2">
-                Entrepôt de destination
-              </label>
-              <select
-                value={selectedWarehouse || ''}
-                onChange={(e) => setSelectedWarehouse(e.target.value)}
-                className="w-full p-3 border-2 border-[#E5E4DF] rounded-lg bg-[#FAFAF7] text-[#191919] focus:outline-none focus:ring-2 focus:ring-black"
-              >
-                <option value="">Sélectionner un entrepôt</option>
-                {Object.values(warehouses).map(warehouse => (
-                  <option key={warehouse.name} value={warehouse.name}>
-                    {warehouse.name}
-                  </option>
-                ))}
-              </select>
-            </div>
 
             {/* Table des produits */}
             <div className="overflow-x-auto">
@@ -86,9 +66,6 @@ export const OrderBySupplier = ({
                     </th>
                     <th className="px-4 py-3 text-left text-xs font-semibold text-[#666663] uppercase tracking-wider">
                       Quantité à Commander
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-[#666663] uppercase tracking-wider">
-                      Actions
                     </th>
                   </tr>
                 </thead>
@@ -145,30 +122,6 @@ export const OrderBySupplier = ({
                           <span className="text-xs text-[#666663]">unités</span>
                         </div>
                       </td>
-                      
-                      {/* Actions */}
-                      <td className="px-4 py-4">
-                        <div className="flex gap-2">
-                          <Button
-                            variant="primary"
-                            size="sm"
-                            icon={Package}
-                            onClick={() => handleCreateOrder(supplier, products)}
-                            disabled={!selectedWarehouse}
-                          >
-                            Créer
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            icon={Mail}
-                            onClick={() => emailModalHandlers.open({ supplier, products })}
-                            disabled={!selectedWarehouse}
-                          >
-                            Email
-                          </Button>
-                        </div>
-                      </td>
                     </motion.tr>
                   ))}
                 </tbody>
@@ -181,20 +134,10 @@ export const OrderBySupplier = ({
                 <Button
                   variant="primary"
                   icon={Package}
-                  onClick={() => handleCreateOrder(supplier, products)}
-                  disabled={!selectedWarehouse}
+                  onClick={() => handleOpenEmailModal(supplier, products)}
                   className="flex-1 sm:flex-none"
                 >
-                  Créer la commande complète
-                </Button>
-                <Button
-                  variant="outline"
-                  icon={Mail}
-                  onClick={() => emailModalHandlers.open({ supplier, products })}
-                  disabled={!selectedWarehouse}
-                  className="flex-1 sm:flex-none"
-                >
-                  Envoyer commande par email
+                  Commander
                 </Button>
               </div>
             </div>

@@ -9,13 +9,8 @@ export const useEmailOrderModal = () => {
   const openEmailModal = (supplier) => {
     setSelectedSupplier(supplier);
     setEmailModalOpen(true);
-    // Initialiser les quantités avec les valeurs par défaut
-    const productsToOrder = supplier ? supplier.products : [];
-    const initialQuantities = {};
-    productsToOrder.forEach(product => {
-      initialQuantities[product.sku] = product.qtyToOrder;
-    });
-    setOrderQuantities(initialQuantities);
+    // Les quantités seront initialisées par le composant parent
+    setOrderQuantities({});
   };
 
   const closeEmailModal = () => {

@@ -1,8 +1,12 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { AlertCircle } from 'lucide-react';
-import { InfoTooltip, tooltips } from '../ui/InfoTooltip';
+import { InfoTooltip } from '../ui/InfoTooltip';
 import { formatUnits } from '../../utils/decimalUtils';
+
+const tooltips = {
+  toOrder: "Produits dont le stock est en dessous du point de commande et nécessitent une réapprovisionnement urgent."
+};
 
 export const ProductsToOrder = ({ products }) => {
   return (

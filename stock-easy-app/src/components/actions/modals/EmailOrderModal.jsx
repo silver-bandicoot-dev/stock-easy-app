@@ -18,11 +18,21 @@ export const EmailOrderModal = ({
   onQuantityChange,
   onSendEmail,
   onCreateWithoutEmail,
-  generateEmailDraft
+  generateEmailDraft,
+  getUserSignature
 }) => {
   const [emailContent, setEmailContent] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
-  const [userSignature, setUserSignature] = useState('L\'équipe StockEasy');
+  const [userSignature, setUserSignature] = useState('');
+
+  // Initialiser la signature avec les informations du profil utilisateur
+  useEffect(() => {
+    if (isOpen && getUserSignature) {
+      setUserSignature(getUserSignature());
+    } else if (isOpen) {
+      setUserSignature('L\'équipe StockEasy');
+    }
+  }, [isOpen, getUserSignature]);
 
   useEffect(() => {
     if (isOpen && supplier && products) {
@@ -93,7 +103,7 @@ export const EmailOrderModal = ({
   const { totalAmount, totalItems } = calculateTotals();
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} size="xl">
+    <Modal isOpen={isOpen} onClose={onClose} size="large">
       <div className="p-6">
         {/* En-tête */}
         <div className="flex items-center justify-between mb-6">

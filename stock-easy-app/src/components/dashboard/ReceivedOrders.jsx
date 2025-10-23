@@ -1,8 +1,12 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { CheckCircle } from 'lucide-react';
-import { InfoTooltip, tooltips } from '../ui/InfoTooltip';
+import { InfoTooltip } from '../ui/InfoTooltip';
 import { formatConfirmedDate } from '../../utils/dateUtils';
+
+const tooltips = {
+  received: "Commandes réceptionnées et en attente de validation finale."
+};
 
 export const ReceivedOrders = ({ orders, setActiveTab, setTrackTabSection }) => {
   const receivedOrders = orders.filter(order => order.status === 'received');

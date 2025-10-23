@@ -7,7 +7,7 @@ import { Toaster, toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
 import debounce from 'lodash.debounce';
 import api from './services/apiService';
-import { InfoTooltip, tooltips } from './components/ui/InfoTooltip';
+import { InfoTooltip } from './components/ui/InfoTooltip';
 import { HealthBar } from './components/ui/HealthBar';
 import { Modal } from './components/ui/Modal';
 import { KPICard } from './components/features/KPICard';
@@ -31,10 +31,8 @@ import { InlineModalsContainer } from './components/modals/InlineModalsContainer
 import { OrderCreationModal } from './components/actions/OrderCreationModal';
 
 import Sidebar from './components/layout/Sidebar';
-import { useAnalytics } from './hooks/useAnalytics';
 import { useInlineModals } from './hooks/useInlineModals';
 import { checkAndSaveKPISnapshot } from './utils/kpiScheduler';
-import { generateInsights } from './utils/insightGenerator';
 import { calculateMetrics } from './utils/calculations';
 import { formatUnits, formatPrice, roundToTwoDecimals, roundToInteger } from './utils/decimalUtils';
 
@@ -93,6 +91,7 @@ import { AITab } from './components/ai/AITab';
 import { ReconciliationModal } from './components/track/modals/ReconciliationModal';
 import { ReclamationEmailModal } from './components/track/modals/ReclamationEmailModal';
 import { EmailOrderModal } from './components/actions/modals/EmailOrderModal';
+import { EmailOrderModalInline } from './components/modals/EmailOrderModalInline';
 
 // ============================================
 // IMPORTS DES HOOKS PERSONNALISÉS
@@ -216,7 +215,7 @@ const StockEasy = () => {
   const reconciliationLogic = useReconciliation(loadData);
 
   // Hook pour la génération d'emails
-  const emailGeneration = useEmailGeneration(suppliers, warehouses, products);
+  const emailGeneration = useEmailGeneration();
 
   // Hook pour les modales inline
   const inlineModals = useInlineModals();
@@ -231,10 +230,6 @@ const StockEasy = () => {
   const [tempReceivedQty, setTempReceivedQty] = useState({});
   const [editingParam, setEditingParam] = useState(null);
   const [tempParamValue, setTempParamValue] = useState('');
-  const [dateRange, setDateRange] = useState('30d');
-  const [customRange, setCustomRange] = useState(null);
-  const [comparisonType, setComparisonType] = useState('previous');
-  const [comparisonPeriod, setComparisonPeriod] = useState('30d');
   const [chartModalOpen, setChartModalOpen] = useState(false);
   const [selectedKPI, setSelectedKPI] = useState(null);
   const [historyFilter, setHistoryFilter] = useState('all');
@@ -599,17 +594,6 @@ const StockEasy = () => {
     return notifs;
   }, [productsByStatus, orders]);
 
-  // CALCUL DES VRAIS KPIs ANALYTICS avec historique Firestore
-  const analyticsData = useAnalytics(enrichedProducts, orders, dateRange, customRange, comparisonType);
-  
-  // Génération des insights actionnables basés sur les KPIs
-  const insights = useMemo(() => {
-    if (analyticsData.loading || analyticsData.error || !analyticsData.skuAvailability) {
-      console.log('⚠️ Pas de données analytics pour générer les insights');
-      return [];
-    }
-    return generateInsights(analyticsData, enrichedProducts, orders, setActiveTab);
-  }, [analyticsData, enrichedProducts, orders, setActiveTab]);
   
   // Fonction pour ouvrir le modal de graphique détaillé
   const openChartModal = (kpiKey) => {
@@ -805,7 +789,7 @@ ${getUserSignature()}`
       }, 0));
       
       const orderData = {
-        id: generatePONumber(),
+        id: generatePONumber(orders),
         supplier: inlineModals.emailOrderModal.selectedSupplier,
         warehouseId: selectedWarehouse, // Ajouter le warehouse
         warehouseName: selectedWarehouse, // Nom de l'entrepôt pour affichage
@@ -841,23 +825,31 @@ ${getUserSignature()}`
 
   const createOrderWithoutEmail = async () => {
     try {
-      const productsToOrder = toOrderBySupplier[inlineModals.emailOrderModal.selectedSupplier];
+      const selectedSupplier = inlineModals.emailOrderModal.selectedSupplier;
+      const selectedWarehouse = inlineModals.emailOrderModal.selectedWarehouse;
+      const productsToOrder = toOrderBySupplier[selectedSupplier];
+      
+      if (!selectedWarehouse) {
+        toast.error('Veuillez sélectionner un entrepôt');
+        return;
+      }
+      
       const total = roundToTwoDecimals(productsToOrder.reduce((sum, p) => {
-        const qty = orderQuantities[p.sku] || p.qtyToOrder;
+        const qty = inlineModals.emailOrderModal.orderQuantities[p.sku] || p.qtyToOrder;
         return sum + (qty * p.buyPrice);
       }, 0));
       
       const orderData = {
-        id: generatePONumber(),
-        supplier: inlineModals.emailOrderModal.selectedSupplier,
-        warehouseId: selectedWarehouse, // Ajouter le warehouse
-        warehouseName: selectedWarehouse, // Nom de l'entrepôt pour affichage
+        id: generatePONumber(orders),
+        supplier: selectedSupplier,
+        warehouseId: selectedWarehouse,
+        warehouseName: selectedWarehouse,
         status: 'pending_confirmation',
         total: total,
         createdAt: new Date().toISOString().split('T')[0],
         items: productsToOrder.map(p => ({
           sku: p.sku,
-          quantity: orderQuantities[p.sku] || p.qtyToOrder,
+          quantity: inlineModals.emailOrderModal.orderQuantities[p.sku] || p.qtyToOrder,
           pricePerUnit: p.buyPrice
         })),
         notes: ''
@@ -866,8 +858,7 @@ ${getUserSignature()}`
       await api.createOrder(orderData);
       await loadData();
       
-      setEmailModalOpen(false);
-      setSelectedSupplier(null);
+      inlineModals.emailOrderModal.closeEmailModal();
       
       toast.success('Commande créée sans envoi d\'email !', {
         action: {
@@ -884,23 +875,19 @@ ${getUserSignature()}`
 
   // Handler pour ouvrir le modal d'email
   const handleOpenEmailModal = (supplier, products) => {
-    setSelectedSupplier(supplier);
-    setOrderQuantities({});
+    // Utiliser le système inline qui fonctionnait avant
+    inlineModals.emailOrderModal.openEmailModal(supplier);
     
-    // Pré-remplir les quantités
-    const quantities = {};
+    // Pré-remplir les quantités dans le système inline
     products.forEach(p => {
-      quantities[p.sku] = p.qtyToOrder;
+      inlineModals.emailOrderModal.updateOrderQuantity(p.sku, p.qtyToOrder);
     });
-    setOrderQuantities(quantities);
     
     // Sélectionner le premier warehouse par défaut
     const warehousesList = Object.values(warehouses);
     if (warehousesList.length > 0) {
-      setSelectedWarehouse(warehousesList[0].name);
+      inlineModals.emailOrderModal.setSelectedWarehouse(warehousesList[0].name);
     }
-    
-    emailModalHandlers.open({ supplier, products });
   };
 
   const handleCreateOrderFromTable = async (selectedProducts) => {
@@ -957,7 +944,7 @@ ${getUserSignature()}`
         const total = roundToTwoDecimals(products.reduce((sum, p) => sum + (p.orderQuantity * p.buyPrice), 0));
         
         const orderData = {
-          id: generatePONumber(),
+          id: generatePONumber(orders),
           supplier: supplier,
           warehouseId: warehousesList[0]?.name || null,
           status: 'pending_confirmation',
@@ -981,6 +968,36 @@ ${getUserSignature()}`
     }
   };
 
+  // Handler pour créer une commande simple (pour les boutons dans OrderBySupplier)
+  const handleCreateOrder = async (supplier, products) => {
+    if (!selectedWarehouse) {
+      toast.error('Veuillez sélectionner un entrepôt');
+      return;
+    }
+
+    try {
+      const poNumber = generatePONumber(orders);
+      const orderData = {
+        poNumber,
+        supplier,
+        warehouse: selectedWarehouse,
+        status: 'pending',
+        items: products.map(p => ({
+          sku: p.sku,
+          quantity: orderQuantities[p.sku] || p.qtyToOrder,
+          pricePerUnit: p.buyPrice
+        })),
+        notes: `Commande pour ${supplier}`
+      };
+
+      await api.createOrder(orderData);
+      await loadData();
+      toast.success(`Commande créée pour ${supplier} !`);
+    } catch (error) {
+      console.error('Erreur lors de la création de la commande:', error);
+      toast.error('Erreur lors de la création de la commande');
+    }
+  };
 
   const toggleOrderDetails = (orderId) => {
     setExpandedOrders(prev => ({
@@ -1664,24 +1681,34 @@ ${getUserSignature()}`
   // Handler pour envoyer une commande par email
   const handleSendOrder = async () => {
     try {
-      const productsToOrder = toOrderBySupplier[inlineModals.emailOrderModal.inlineModals.emailOrderModal.selectedSupplier];
+      const selectedSupplier = inlineModals.emailOrderModal.selectedSupplier;
+      const selectedWarehouse = inlineModals.emailOrderModal.selectedWarehouse;
+      const productsToOrder = toOrderBySupplier[selectedSupplier];
+      
+      if (!selectedWarehouse) {
+        toast.error('Veuillez sélectionner un entrepôt');
+        return;
+      }
+      
       const total = roundToTwoDecimals(productsToOrder.reduce((sum, p) => {
         const qty = inlineModals.emailOrderModal.orderQuantities[p.sku] || p.qtyToOrder;
         return sum + (qty * p.buyPrice);
       }, 0));
       
       const orderData = {
-        id: generatePONumber(),
-        supplier: inlineModals.emailOrderModal.selectedSupplier,
+        id: generatePONumber(orders),
+        supplier: selectedSupplier,
+        warehouseId: selectedWarehouse,
+        warehouseName: selectedWarehouse,
+        status: 'pending_confirmation',
+        total: total,
+        createdAt: new Date().toISOString().split('T')[0],
         items: productsToOrder.map(p => ({
           sku: p.sku,
-          quantity: orderQuantities[p.sku] || p.qtyToOrder,
+          quantity: inlineModals.emailOrderModal.orderQuantities[p.sku] || p.qtyToOrder,
           pricePerUnit: p.buyPrice
         })),
-        total: total,
-        status: 'pending_confirmation',
-        createdAt: new Date().toISOString(),
-        warehouse: selectedWarehouse
+        notes: ''
       };
 
       await api.createOrder(orderData);
@@ -1689,20 +1716,28 @@ ${getUserSignature()}`
       
       // Générer et envoyer l'email
       const emailContent = emailGeneration.generateOrderEmailDraft(
-        inlineModals.emailOrderModal.selectedSupplier,
+        selectedSupplier,
         productsToOrder,
         selectedWarehouse,
-        orderQuantities,
-        getUserSignature()
+        inlineModals.emailOrderModal.orderQuantities,
+        getUserSignature(),
+        suppliers,
+        warehouses
       );
       
       // Ici vous pouvez ajouter la logique d'envoi d'email
-      console.log('Email généré:', emailContent);
+      console.log('📧 Email généré:', emailContent);
       
-      emailModalHandlers.close();
-      toast.success('Commande créée et email généré avec succès');
+      inlineModals.emailOrderModal.closeEmailModal();
+      toast.success('Commande créée et email généré avec succès !', {
+        action: {
+          label: 'Voir',
+          onClick: () => setActiveTab('track')
+        },
+        duration: 6000
+      });
     } catch (error) {
-      console.error('Erreur lors de la création de la commande:', error);
+      console.error('❌ Erreur lors de la création de la commande:', error);
       toast.error('Erreur lors de la création de la commande');
     }
   };
@@ -1710,33 +1745,49 @@ ${getUserSignature()}`
   // Handler pour créer une commande sans email
   const handleCreateOrderWithoutEmail = async () => {
     try {
-      const productsToOrder = toOrderBySupplier[inlineModals.emailOrderModal.selectedSupplier];
+      const selectedSupplier = inlineModals.emailOrderModal.selectedSupplier;
+      const selectedWarehouse = inlineModals.emailOrderModal.selectedWarehouse;
+      const productsToOrder = toOrderBySupplier[selectedSupplier];
+      
+      if (!selectedWarehouse) {
+        toast.error('Veuillez sélectionner un entrepôt');
+        return;
+      }
+      
       const total = roundToTwoDecimals(productsToOrder.reduce((sum, p) => {
-        const qty = orderQuantities[p.sku] || p.qtyToOrder;
+        const qty = inlineModals.emailOrderModal.orderQuantities[p.sku] || p.qtyToOrder;
         return sum + (qty * p.buyPrice);
       }, 0));
       
       const orderData = {
-        id: generatePONumber(),
-        supplier: inlineModals.emailOrderModal.selectedSupplier,
+        id: generatePONumber(orders),
+        supplier: selectedSupplier,
+        warehouseId: selectedWarehouse,
+        warehouseName: selectedWarehouse,
+        status: 'pending_confirmation',
+        total: total,
+        createdAt: new Date().toISOString().split('T')[0],
         items: productsToOrder.map(p => ({
           sku: p.sku,
-          quantity: orderQuantities[p.sku] || p.qtyToOrder,
+          quantity: inlineModals.emailOrderModal.orderQuantities[p.sku] || p.qtyToOrder,
           pricePerUnit: p.buyPrice
         })),
-        total: total,
-        status: 'pending_confirmation',
-        createdAt: new Date().toISOString(),
-        warehouse: selectedWarehouse
+        notes: ''
       };
 
       await api.createOrder(orderData);
       await loadData();
       
-      emailModalHandlers.close();
-      toast.success('Commande créée avec succès');
+      inlineModals.emailOrderModal.closeEmailModal();
+      toast.success('Commande créée avec succès !', {
+        action: {
+          label: 'Voir',
+          onClick: () => setActiveTab('track')
+        },
+        duration: 6000
+      });
     } catch (error) {
-      console.error('Erreur lors de la création de la commande:', error);
+      console.error('❌ Erreur lors de la création de la commande:', error);
       toast.error('Erreur lors de la création de la commande');
     }
   };
@@ -1820,8 +1871,6 @@ ${getUserSignature()}`
                       toOrderBySupplier={toOrderBySupplier}
                       suppliers={suppliers}
                       warehouses={warehouses}
-                      selectedWarehouse={selectedWarehouse}
-                      setSelectedWarehouse={setSelectedWarehouse}
                       orderQuantities={orderQuantities}
                       updateOrderQuantity={updateOrderQuantity}
                       generatePONumber={generatePONumber}
@@ -1882,10 +1931,6 @@ ${getUserSignature()}`
                       orders={orders}
                       suppliers={suppliers}
                       warehouses={warehouses}
-                      dateRange={dateRange}
-                      setDateRange={setDateRange}
-                      comparisonPeriod={comparisonPeriod}
-                      setComparisonPeriod={setComparisonPeriod}
                     />
                   )}
 
@@ -1997,21 +2042,22 @@ ${getUserSignature()}`
         onCopy={emailGeneration.copyToClipboard}
       />
 
-      {/* Modal d'email de commande */}
-      <EmailOrderModal
-        isOpen={emailModal.isOpen}
-        onClose={emailModalHandlers.close}
-        supplier={emailModal.data.supplier}
-        products={emailModal.data.products}
-        suppliers={suppliers}
+      {/* Modal d'email de commande - Utilise le système inline qui fonctionnait */}
+      <EmailOrderModalInline
+        isOpen={inlineModals.emailOrderModal.emailModalOpen}
+        onClose={inlineModals.emailOrderModal.closeEmailModal}
+        selectedSupplier={inlineModals.emailOrderModal.selectedSupplier}
+        toOrderBySupplier={toOrderBySupplier}
         warehouses={warehouses}
-        selectedWarehouse={selectedWarehouse}
-        onWarehouseChange={setSelectedWarehouse}
-        orderQuantities={orderQuantities}
-        onQuantityChange={setOrderQuantities}
-        onSendEmail={handleSendOrder}
-        onCreateWithoutEmail={handleCreateOrderWithoutEmail}
-        generateEmailDraft={emailGeneration.generateOrderEmailDraft}
+        selectedWarehouse={inlineModals.emailOrderModal.selectedWarehouse}
+        setSelectedWarehouse={inlineModals.emailOrderModal.setSelectedWarehouse}
+        orderQuantities={inlineModals.emailOrderModal.orderQuantities}
+        updateOrderQuantity={inlineModals.emailOrderModal.updateOrderQuantity}
+        emailGeneration={emailGeneration}
+        getUserSignature={getUserSignature}
+        handleCreateOrderWithoutEmail={handleCreateOrderWithoutEmail}
+        handleSendOrder={handleSendOrder}
+        suppliers={suppliers}
       />
 
       {/* Modal de gestion des fournisseurs */}

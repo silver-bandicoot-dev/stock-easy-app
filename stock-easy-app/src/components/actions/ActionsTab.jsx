@@ -10,8 +10,6 @@ export const ActionsTab = ({
   toOrderBySupplier,
   suppliers,
   warehouses,
-  selectedWarehouse,
-  setSelectedWarehouse,
   orderQuantities,
   updateOrderQuantity,
   generatePONumber,
@@ -67,8 +65,6 @@ export const ActionsTab = ({
           toOrderBySupplier={toOrderBySupplier}
           suppliers={suppliers}
           warehouses={warehouses}
-          selectedWarehouse={selectedWarehouse}
-          setSelectedWarehouse={setSelectedWarehouse}
           orderQuantities={orderQuantities}
           updateOrderQuantity={updateOrderQuantity}
           generatePONumber={generatePONumber}
@@ -86,8 +82,6 @@ export const ActionsTab = ({
         products={productsByStatus.to_order}
         suppliers={suppliers}
         warehouses={warehouses}
-        selectedWarehouse={selectedWarehouse}
-        setSelectedWarehouse={setSelectedWarehouse}
         orderQuantities={orderQuantities}
         updateOrderQuantity={updateOrderQuantity}
         generatePONumber={generatePONumber}
