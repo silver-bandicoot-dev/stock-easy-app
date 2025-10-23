@@ -77,6 +77,7 @@ import { Button } from './components/shared/Button';
 // ============================================
 import { DashboardTab } from './components/dashboard/DashboardTab';
 import { ActionsTab } from './components/actions/ActionsTab';
+import { TrackTab } from './components/track/TrackTab';
 
 // ============================================
 // IMPORTS DES HOOKS PERSONNALISÉS
@@ -1638,7 +1639,7 @@ ${getUserSignature()}`
           )}
 
           {/* TRACK & MANAGE TAB */}
-          {activeTab === 'track' && (
+          {activeTab === MAIN_TABS.TRACK && (
             <motion.div
               key="track"
               initial={{ opacity: 0, x: 20 }}
