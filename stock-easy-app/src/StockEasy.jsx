@@ -73,6 +73,13 @@ import {
 import { Button } from './components/shared/Button';
 
 // ============================================
+// IMPORTS DES HOOKS PERSONNALISÉS
+// ============================================
+import { useStockData } from './hooks/useStockData';
+import { useOrderManagement } from './hooks/useOrderManagement';
+import { useSupplierManagement } from './hooks/useSupplierManagement';
+
+// ============================================
 // FONCTIONS API - Importées depuis apiService
 // ============================================
 // L'objet 'api' est maintenant importé depuis './services/apiService'
@@ -114,13 +121,45 @@ const StockEasy = () => {
     }
   };
 
-  const [loading, setLoading] = useState(true);
-  const [syncing, setSyncing] = useState(false);
-  const [products, setProducts] = useState([]);
-  const [suppliers, setSuppliers] = useState({});
-  const [warehouses, setWarehouses] = useState({});
-  const [orders, setOrders] = useState([]);
-  const [parameters, setParameters] = useState({});
+  // Hook pour les données
+  const {
+    loading,
+    syncing,
+    products,
+    suppliers,
+    warehouses,
+    orders,
+    parameters,
+    loadData,
+    syncData
+  } = useStockData();
+  
+  // Hook pour la gestion des commandes
+  const {
+    orderQuantities,
+    setOrderQuantities,
+    selectedWarehouse,
+    setSelectedWarehouse,
+    updateOrderQuantity,
+    generatePONumber,
+    confirmOrder,
+    shipOrder,
+    receiveOrder
+  } = useOrderManagement(loadData);
+  
+  // Hook pour la gestion des fournisseurs
+  const {
+    supplierModalOpen,
+    editingSupplier,
+    supplierFormData,
+    handleOpenSupplierModal,
+    handleCloseSupplierModal,
+    handleSupplierFormChange,
+    handleSaveSupplier,
+    handleDeleteSupplier
+  } = useSupplierManagement(suppliers, loadData);
+
+  // États restants pour l'UI et la navigation
   const [activeTab, setActiveTab] = useState(MAIN_TABS.DASHBOARD);
   const [trackTabSection, setTrackTabSection] = useState(TRACK_TABS.EN_COURS_COMMANDE);
   const [emailModalOpen, setEmailModalOpen] = useState(false);
@@ -160,19 +199,17 @@ const StockEasy = () => {
   const [currentReclamationOrder, setCurrentReclamationOrder] = useState(null);
 
   // NOUVEAUX ÉTATS pour les sous-onglets de Paramètres
-  const [parametersSubTab, setParametersSubTab] = useState(SETTINGS_TABS.GENERAL); // 'general', 'products', 'suppliers', 'mapping'
-  const [analyticsSubTab, setAnalyticsSubTab] = useState(ANALYTICS_TABS.KPIS); // 'kpis'
-  const [aiSubTab, setAiSubTab] = useState(AI_TABS.OVERVIEW); // 'overview', 'forecasts', 'optimization', 'anomalies'
+  const [parametersSubTab, setParametersSubTab] = useState(SETTINGS_TABS.GENERAL);
+  const [analyticsSubTab, setAnalyticsSubTab] = useState(ANALYTICS_TABS.KPIS);
+  const [aiSubTab, setAiSubTab] = useState(AI_TABS.OVERVIEW);
   
   // NOUVEAUX ÉTATS pour CORRECTION 5 et 6
   const [discrepancyTypes, setDiscrepancyTypes] = useState({});
-  const [damagedQuantities, setDamagedQuantities] = useState({}); // Quantités endommagées séparées
+  const [damagedQuantities, setDamagedQuantities] = useState({});
   const [unsavedParameterChanges, setUnsavedParameterChanges] = useState({});
   const [isSavingParameters, setIsSavingParameters] = useState(false);
 
   // CORRECTION 1: Gestion des quantités éditables dans la modal de commande
-  const [orderQuantities, setOrderQuantities] = useState({});
-  const [selectedWarehouse, setSelectedWarehouse] = useState(null);
   const [selectedProductsFromTable, setSelectedProductsFromTable] = useState(new Map());
 
   // CORRECTION 3: Gestion de l'expansion des détails de commandes
@@ -183,107 +220,10 @@ const StockEasy = () => {
   const [deviseDefaut, setDeviseDefaut] = useState('EUR');
   const [multiplicateurDefaut, setMultiplicateurDefaut] = useState(1.2);
 
-  // NOUVEAUX ÉTATS pour Gestion Fournisseurs
-  const [supplierModalOpen, setSupplierModalOpen] = useState(false);
-  const [editingSupplier, setEditingSupplier] = useState(null);
-  const [supplierFormData, setSupplierFormData] = useState({
-    name: '',
-    email: '',
-    leadTimeDays: 30,
-    moq: 50,
-    notes: ''
-  });
-
   // NOUVEAUX ÉTATS pour Mapping
   const [assignSupplierModalOpen, setAssignSupplierModalOpen] = useState(false);
   const [productToMap, setProductToMap] = useState(null);
   const [selectedSupplierForMapping, setSelectedSupplierForMapping] = useState('');
-
-  useEffect(() => {
-    loadData();
-    const interval = setInterval(() => {
-      syncData();
-    }, 5 * 60 * 1000);
-    return () => clearInterval(interval);
-  }, []);
-
-  const loadData = async () => {
-    try {
-      setLoading(true);
-      const data = await api.getAllData();
-      
-      const suppliersMap = {};
-      data.suppliers.forEach(s => {
-        suppliersMap[s.name] = s;
-      });
-      
-      // Charger les warehouses
-      const warehousesMap = {};
-      if (data.warehouses && Array.isArray(data.warehouses)) {
-        data.warehouses.forEach(w => {
-          warehousesMap[w.name] = w;
-        });
-      }
-      
-      setSuppliers(suppliersMap);
-      setWarehouses(warehousesMap);
-      setProducts(data.products);
-      setOrders(data.orders);
-      
-      // Debugging temporaire: afficher les dates des commandes
-      console.log('Orders chargés:', data.orders.map(o => ({
-        id: o.id,
-        confirmedAt: o.confirmedAt,
-        createdAt: o.createdAt
-      })));
-      
-      // Charger les paramètres si disponibles
-      if (data.parameters) {
-        setParameters(data.parameters);
-        setSeuilSurstockProfond(data.parameters.seuilSurstockProfond || 90);
-        setDeviseDefaut(data.parameters.deviseDefaut || 'EUR');
-        setMultiplicateurDefaut(data.parameters.multiplicateurDefaut || 1.2);
-      } else {
-        // Charger les paramètres individuellement si pas fournis par getAllData
-        try {
-          const seuilSurstock = await api.getParameter('SeuilSurstockProfond');
-          setParameters(prev => ({ ...prev, SeuilSurstockProfond: seuilSurstock }));
-          setSeuilSurstockProfond(seuilSurstock || 90);
-        } catch (err) {
-          console.warn('Paramètres non disponibles, utilisation des valeurs par défaut');
-        }
-      }
-      
-      console.log('✅ Données chargées depuis Google Sheets');
-    } catch (error) {
-      console.error('❌ Erreur lors du chargement:', error);
-      if (error.message?.includes('network') || error.message?.includes('fetch')) {
-        toast.error('Problème de connexion. Vérifiez votre connexion Internet.', {
-          action: {
-            label: 'Réessayer',
-            onClick: () => loadData()
-          },
-          duration: Infinity
-        });
-      } else {
-        toast.error('Erreur lors du chargement des données. Vérifiez la console.');
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const syncData = async () => {
-    try {
-      setSyncing(true);
-      await loadData();
-      console.log('🔄 Synchronisation effectuée');
-    } catch (error) {
-      console.error('❌ Erreur lors de la synchronisation:', error);
-    } finally {
-      setSyncing(false);
-    }
-  };
 
   // ============================================
   // HANDLERS PARAMÈTRES GÉNÉRAUX
