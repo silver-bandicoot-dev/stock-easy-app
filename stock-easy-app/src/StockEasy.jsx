@@ -829,23 +829,6 @@ ${getUserSignature()}`
     }
   };
 
-  const confirmOrder = async (orderId) => {
-    try {
-      const confirmedAt = new Date().toISOString();
-      console.log('Confirmation commande:', orderId, 'Date:', confirmedAt);
-      
-      await api.updateOrderStatus(orderId, {
-        status: 'preparing',
-        confirmedAt: confirmedAt
-      });
-      
-      await loadData();
-      toast.success('Commande confirmée et en cours de préparation!');
-    } catch (error) {
-      console.error('❌ Erreur confirmation:', error);
-      toast.error('Erreur lors de la confirmation');
-    }
-  };
 
   const toggleOrderDetails = (orderId) => {
     setExpandedOrders(prev => ({
@@ -854,55 +837,7 @@ ${getUserSignature()}`
     }));
   };
 
-  const shipOrder = async (orderId) => {
-    const tracking = prompt('Entrez le numéro de suivi (optionnel - laissez vide pour passer):');
-    // Tracking optionnel - on peut continuer même sans numéro
-    try {
-      await api.updateOrderStatus(orderId, {
-        status: 'in_transit',
-        shippedAt: new Date().toISOString().split('T')[0],
-        trackingNumber: tracking || ''
-      });
-      await loadData();
-      console.log('✅ Commande expédiée');
-    } catch (error) {
-      console.error('❌ Erreur:', error);
-      toast.error('Erreur lors de la mise à jour');
-    }
-  };
 
-  const receiveOrder = async (orderId) => {
-    try {
-      console.log('📦 Confirmation de réception de la commande:', orderId);
-      
-      const order = orders.find(o => o.id === orderId);
-      if (!order) {
-        toast.error('Commande introuvable');
-        return;
-      }
-
-      // Simplement changer le statut à 'received' sans ouvrir la modale
-      await api.updateOrderStatus(orderId, {
-        status: 'received',
-        receivedAt: new Date().toISOString().split('T')[0]
-      });
-
-      // Recharger les données pour mettre à jour l'affichage
-      await loadData();
-
-      toast.success(`Commande ${orderId} marquée comme reçue !`, {
-        description: 'Vous pouvez maintenant valider les quantités reçues.',
-        duration: 4000
-      });
-
-      // Changer automatiquement vers l'onglet "Commandes Reçues"
-      setTrackTabSection('commandes_recues');
-
-    } catch (error) {
-      console.error('❌ Erreur lors de la confirmation de réception:', error);
-      toast.error('Erreur lors de la confirmation: ' + error.message);
-    }
-  };
   
   const openReconciliationModal = (order) => {
     setReconciliationOrder(order);
