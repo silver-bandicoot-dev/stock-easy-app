@@ -196,6 +196,7 @@ const StockEasy = () => {
   
   // Stock Level filters
   const [stockLevelFilter, setStockLevelFilter] = useState(STOCK_FILTERS.ALL);
+  const [searchTerm, setSearchTerm] = useState('');
   const [stockLevelSupplierFilter, setStockLevelSupplierFilter] = useState('all');
   const [stockLevelSearch, setStockLevelSearch] = useState('');
   const [historyDateEnd, setHistoryDateEnd] = useState('');
