@@ -13,7 +13,8 @@ export const OrderStatusCard = ({
   toggleOrderDetails, 
   confirmOrder, 
   shipOrder, 
-  receiveOrder 
+  receiveOrder,
+  onStartReconciliation
 }) => {
   const getStatusIcon = (status) => {
     switch (status) {
@@ -74,11 +75,11 @@ export const OrderStatusCard = ({
             size="sm"
             onClick={(e) => {
               e.stopPropagation();
-              receiveOrder(order.id);
+              onStartReconciliation(order);
             }}
             className="shrink-0"
           >
-            Réceptionner
+            Valider la réception
           </Button>
         );
       case 'received':

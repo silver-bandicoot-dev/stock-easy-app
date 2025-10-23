@@ -13,7 +13,14 @@ export const TrackTab = ({
   toggleOrderDetails,
   confirmOrder,
   shipOrder,
-  receiveOrder
+  receiveOrder,
+  // Nouveaux props pour les modals
+  reconciliationModal,
+  reconciliationModalHandlers,
+  reclamationEmailModal,
+  reclamationEmailModalHandlers,
+  reconciliationLogic,
+  emailGeneration
 }) => {
   const trackSections = [
     {
@@ -47,6 +54,41 @@ export const TrackTab = ({
       shortTitle: 'Réconciliation'
     }
   ];
+
+  // Handler pour démarrer la réconciliation
+  const handleStartReconciliation = (order) => {
+    reconciliationModalHandlers.open(order);
+  };
+
+  // Handler pour confirmer la réconciliation
+  const handleReconciliationConfirm = async (reconciliationData) => {
+    try {
+      const result = await reconciliationLogic.processReconciliation(
+        reconciliationModal.data.order,
+        reconciliationData
+      );
+
+      if (result.success) {
+        reconciliationModalHandlers.close();
+        
+        if (result.requiresReclamation) {
+          // Générer l'email de réclamation
+          const emailContent = emailGeneration.generateReclamationEmail(
+            reconciliationModal.data.order,
+            reconciliationData.discrepancies,
+            reconciliationData.damages,
+            'L\'équipe StockEasy'
+          );
+          
+          if (emailContent) {
+            reclamationEmailModalHandlers.open(reconciliationModal.data.order, emailContent);
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Erreur lors de la réconciliation:', error);
+    }
+  };
 
   return (
     <motion.div
@@ -112,6 +154,7 @@ export const TrackTab = ({
               confirmOrder={confirmOrder}
               shipOrder={shipOrder}
               receiveOrder={receiveOrder}
+              onStartReconciliation={handleStartReconciliation}
             />
           )
         ))}

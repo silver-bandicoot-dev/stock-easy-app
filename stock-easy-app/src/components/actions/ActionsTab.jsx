@@ -21,7 +21,11 @@ export const ActionsTab = ({
   orderCreationModalOpen,
   setOrderCreationModalOpen,
   selectedProductsFromTable,
-  setSelectedProductsFromTable
+  setSelectedProductsFromTable,
+  // Nouveaux props pour les modals
+  emailModal,
+  emailModalHandlers,
+  emailGeneration
 }) => {
   return (
     <>
@@ -71,6 +75,7 @@ export const ActionsTab = ({
           orders={orders}
           handleCreateOrder={handleCreateOrder}
           handleOpenEmailModal={handleOpenEmailModal}
+          emailModalHandlers={emailModalHandlers}
         />
       </motion.div>
 

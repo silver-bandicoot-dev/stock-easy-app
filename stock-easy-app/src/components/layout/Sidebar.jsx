@@ -43,7 +43,7 @@ const Sidebar = ({
     { id: 'dashboard', label: 'Dashboard', icon: Package, type: 'tab' },
     { id: 'analytics', label: 'Analytics', icon: TrendingUp, type: 'tab' },
     { 
-      id: 'ai-forecasts', 
+      id: 'ai', 
       label: 'IA & Prévisions', 
       icon: Brain, 
       type: 'tab',
@@ -75,9 +75,9 @@ const Sidebar = ({
         setActiveTab(item.id);
         setAnalyticsExpanded(true);
       }
-    } else if (item.hasSubMenu && item.id === 'ai-forecasts') {
+    } else if (item.hasSubMenu && item.id === 'ai') {
       // Si on clique sur IA & Prévisions, basculer l'expansion
-      if (activeTab === 'ai-forecasts') {
+      if (activeTab === 'ai') {
         setAiExpanded(!aiExpanded);
       } else {
         setActiveTab(item.id);
@@ -87,7 +87,7 @@ const Sidebar = ({
       setActiveTab(item.id);
       // Fermer les sous-menus si on quitte
       if (item.id !== 'analytics') setAnalyticsExpanded(false);
-      if (item.id !== 'ai-forecasts') setAiExpanded(false);
+      if (item.id !== 'ai') setAiExpanded(false);
     }
     setMobileMenuOpen(false);
   };
@@ -96,9 +96,9 @@ const Sidebar = ({
     if (parentId === 'analytics') {
       setAnalyticsSubTab(subItem.id);
       setActiveTab('analytics');
-    } else if (parentId === 'ai-forecasts') {
+    } else if (parentId === 'ai') {
       setAiSubTab(subItem.id);
-      setActiveTab('ai-forecasts');
+      setActiveTab('ai');
     }
     setMobileMenuOpen(false);
   };
@@ -118,7 +118,7 @@ const Sidebar = ({
           const isActive = item.type === 'tab' && activeTab === item.id;
           const showSubMenu = item.hasSubMenu && (
             (item.id === 'analytics' && analyticsExpanded) ||
-            (item.id === 'ai-forecasts' && aiExpanded)
+            (item.id === 'ai' && aiExpanded)
           );
           
           return (
@@ -154,8 +154,8 @@ const Sidebar = ({
                     // Vérifier le bon sous-tab selon le parent
                     const isSubActive = item.id === 'analytics' 
                       ? (analyticsSubTab === subItem.id && activeTab === 'analytics')
-                      : item.id === 'ai-forecasts'
-                      ? (aiSubTab === subItem.id && activeTab === 'ai-forecasts')
+                      : item.id === 'ai'
+                      ? (aiSubTab === subItem.id && activeTab === 'ai')
                       : false;
                     
                     return (

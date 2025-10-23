@@ -142,7 +142,7 @@ export function AIOverviewDashboard({
                 action="Voir les anomalies"
                 color="red"
                 link="anomalies"
-                onClick={() => setAiSubTab('anomalies')}
+                onClick={() => setAiSubTab('analytics')}
               />
             )}
 
@@ -175,7 +175,7 @@ export function AIOverviewDashboard({
           ]}
           link="forecasts"
           color="purple"
-          onClick={() => setAiSubTab('forecasts')}
+          onClick={() => setAiSubTab('predictions')}
         />
 
         {/* Module Optimisation */}
@@ -205,7 +205,7 @@ export function AIOverviewDashboard({
           ]}
           link="anomalies"
           color="red"
-          onClick={() => setAiSubTab('anomalies')}
+          onClick={() => setAiSubTab('analytics')}
         />
 
         {/* Module Performance */}
@@ -220,7 +220,7 @@ export function AIOverviewDashboard({
           ]}
           link="forecasts"
           color="green"
-          onClick={() => setAiSubTab('forecasts')}
+          onClick={() => setAiSubTab('predictions')}
         />
       </div>
 

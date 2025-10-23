@@ -13,7 +13,8 @@ export const TrackSection = ({
   toggleOrderDetails,
   confirmOrder,
   shipOrder,
-  receiveOrder
+  receiveOrder,
+  onStartReconciliation
 }) => {
   const filteredOrders = orders.filter(order => {
     switch (sectionKey) {
@@ -55,6 +56,7 @@ export const TrackSection = ({
               confirmOrder={confirmOrder}
               shipOrder={shipOrder}
               receiveOrder={receiveOrder}
+              onStartReconciliation={onStartReconciliation}
             />
           ))
         )}

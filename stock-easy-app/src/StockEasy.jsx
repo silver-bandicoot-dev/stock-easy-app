@@ -27,9 +27,12 @@ import { MappingSKUFournisseur } from './components/settings/MappingSKUFournisse
 import { ParametresGeneraux } from './components/settings/ParametresGeneraux';
 import { GestionWarehouses } from './components/settings/GestionWarehouses';
 import CommentSection from './components/comments/CommentSection';
+import { InlineModalsContainer } from './components/modals/InlineModalsContainer';
+import { OrderCreationModal } from './components/actions/OrderCreationModal';
 
 import Sidebar from './components/layout/Sidebar';
 import { useAnalytics } from './hooks/useAnalytics';
+import { useInlineModals } from './hooks/useInlineModals';
 import { checkAndSaveKPISnapshot } from './utils/kpiScheduler';
 import { generateInsights } from './utils/insightGenerator';
 import { calculateMetrics } from './utils/calculations';
@@ -82,6 +85,14 @@ import { StockTab } from './components/stock/StockTab';
 import { AnalyticsTab } from './components/analytics/AnalyticsTab';
 import { HistoryTab } from './components/history/HistoryTab';
 import { SettingsTab } from './components/settings/SettingsTab';
+import { AITab } from './components/ai/AITab';
+
+// ============================================
+// IMPORTS DES MODALS
+// ============================================
+import { ReconciliationModal } from './components/track/modals/ReconciliationModal';
+import { ReclamationEmailModal } from './components/track/modals/ReclamationEmailModal';
+import { EmailOrderModal } from './components/actions/modals/EmailOrderModal';
 
 // ============================================
 // IMPORTS DES HOOKS PERSONNALISÉS
@@ -89,6 +100,9 @@ import { SettingsTab } from './components/settings/SettingsTab';
 import { useStockData } from './hooks/useStockData';
 import { useOrderManagement } from './hooks/useOrderManagement';
 import { useSupplierManagement } from './hooks/useSupplierManagement';
+import { useModals } from './hooks/useModals';
+import { useReconciliation } from './hooks/useReconciliation';
+import { useEmailGeneration } from './hooks/useEmailGeneration';
 
 // ============================================
 // FONCTIONS API - Importées depuis apiService
@@ -174,21 +188,49 @@ const StockEasy = () => {
     handleDeleteSupplier
   } = useSupplierManagement(suppliers, loadData);
 
+  // ============================================
+  // NOUVEAUX HOOKS POUR LES MODALS ET FONCTIONNALITÉS
+  // ============================================
+  
+  // Hook pour la gestion centralisée des modals
+  const {
+    emailModal,
+    orderCreationModal,
+    receivingModal,
+    reconciliationModal,
+    reclamationEmailModal,
+    supplierModal,
+    assignSupplierModal,
+    warehouseModal,
+    emailModalHandlers,
+    orderCreationModalHandlers,
+    receivingModalHandlers,
+    reconciliationModalHandlers,
+    reclamationEmailModalHandlers,
+    supplierModalHandlers,
+    assignSupplierModalHandlers,
+    warehouseModalHandlers
+  } = useModals();
+
+  // Hook pour la logique de réconciliation
+  const reconciliationLogic = useReconciliation(loadData);
+
+  // Hook pour la génération d'emails
+  const emailGeneration = useEmailGeneration(suppliers, warehouses, products);
+
+  // Hook pour les modales inline
+  const inlineModals = useInlineModals();
+
   // États restants pour l'UI et la navigation
   const [activeTab, setActiveTab] = useState(MAIN_TABS.DASHBOARD);
   const [trackTabSection, setTrackTabSection] = useState(TRACK_TABS.EN_COURS_COMMANDE);
-  const [emailModalOpen, setEmailModalOpen] = useState(false);
-  const [orderCreationModalOpen, setOrderCreationModalOpen] = useState(false);
   const [selectedProductsFromTable, setSelectedProductsFromTable] = useState([]);
   const [selectedSupplier, setSelectedSupplier] = useState(null);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
-  const [receivingModalOpen, setReceivingModalOpen] = useState(false);
   const [receivingProducts, setReceivingProducts] = useState([]);
   const [tempReceivedQty, setTempReceivedQty] = useState({});
   const [editingParam, setEditingParam] = useState(null);
   const [tempParamValue, setTempParamValue] = useState('');
-  const [reconciliationModalOpen, setReconciliationModalOpen] = useState(false);
-  const [reconciliationOrder, setReconciliationOrder] = useState(null);
   const [dateRange, setDateRange] = useState('30d');
   const [customRange, setCustomRange] = useState(null);
   const [comparisonType, setComparisonType] = useState('previous');
@@ -204,19 +246,7 @@ const StockEasy = () => {
   const [stockLevelSupplierFilter, setStockLevelSupplierFilter] = useState('all');
   const [stockLevelSearch, setStockLevelSearch] = useState('');
   const [historyDateEnd, setHistoryDateEnd] = useState('');
-  const [discrepancyModalOpen, setDiscrepancyModalOpen] = useState(false);
-  const [discrepancyItems, setDiscrepancyItems] = useState({});
-  const [damageModalOpen, setDamageModalOpen] = useState(false);
-  const [damageItems, setDamageItems] = useState({});
-  const [damageNotes, setDamageNotes] = useState('');
-  // NOUVEAU: Modal unifié pour réconciliation complète
-  const [unifiedReconciliationModalOpen, setUnifiedReconciliationModalOpen] = useState(false);
-  const [unifiedReconciliationItems, setUnifiedReconciliationItems] = useState({});
-  const [reconciliationNotes, setReconciliationNotes] = useState('');
-  const [reclamationEmailModalOpen, setReclamationEmailModalOpen] = useState(false);
-  const [reclamationEmailContent, setReclamationEmailContent] = useState('');
-  const [currentReclamationOrder, setCurrentReclamationOrder] = useState(null);
-
+  
   // NOUVEAUX ÉTATS pour les sous-onglets de Paramètres
   const [parametersSubTab, setParametersSubTab] = useState(SETTINGS_TABS.GENERAL);
   const [analyticsSubTab, setAnalyticsSubTab] = useState(ANALYTICS_TABS.KPIS);
@@ -224,7 +254,6 @@ const StockEasy = () => {
   
   // NOUVEAUX ÉTATS pour CORRECTION 5 et 6
   const [discrepancyTypes, setDiscrepancyTypes] = useState({});
-  const [damagedQuantities, setDamagedQuantities] = useState({});
   const [receivedQuantities, setReceivedQuantities] = useState({});
   const [unsavedParameterChanges, setUnsavedParameterChanges] = useState({});
   const [isSavingParameters, setIsSavingParameters] = useState(false);
@@ -449,6 +478,7 @@ const StockEasy = () => {
     }
   };
 
+
   // ============================================
   // HANDLERS MAPPING
   // ============================================
@@ -466,13 +496,13 @@ const StockEasy = () => {
   };
 
   const handleAssignSupplier = async () => {
-    if (!selectedSupplierForMapping) {
+    if (!inlineModals.emailOrderModal.selectedSupplierForMapping) {
       toast.warning('Veuillez sélectionner un fournisseur');
       return;
     }
     
     try {
-      await api.assignSupplierToProduct(productToMap.sku, selectedSupplierForMapping);
+      await api.assignSupplierToProduct(productToMap.sku, inlineModals.emailOrderModal.selectedSupplierForMapping);
       console.log(`✅ Fournisseur assigné à ${productToMap.sku}`);
       await loadData();
       handleCloseAssignSupplierModal();
@@ -768,7 +798,7 @@ ${getUserSignature()}`
 
   const sendOrder = async () => {
     try {
-      const productsToOrder = toOrderBySupplier[selectedSupplier];
+      const productsToOrder = toOrderBySupplier[inlineModals.emailOrderModal.selectedSupplier];
       const total = roundToTwoDecimals(productsToOrder.reduce((sum, p) => {
         const qty = orderQuantities[p.sku] || p.qtyToOrder;
         return sum + (qty * p.buyPrice);
@@ -776,7 +806,7 @@ ${getUserSignature()}`
       
       const orderData = {
         id: generatePONumber(),
-        supplier: selectedSupplier,
+        supplier: inlineModals.emailOrderModal.selectedSupplier,
         warehouseId: selectedWarehouse, // Ajouter le warehouse
         warehouseName: selectedWarehouse, // Nom de l'entrepôt pour affichage
         status: 'pending_confirmation',
@@ -811,7 +841,7 @@ ${getUserSignature()}`
 
   const createOrderWithoutEmail = async () => {
     try {
-      const productsToOrder = toOrderBySupplier[selectedSupplier];
+      const productsToOrder = toOrderBySupplier[inlineModals.emailOrderModal.selectedSupplier];
       const total = roundToTwoDecimals(productsToOrder.reduce((sum, p) => {
         const qty = orderQuantities[p.sku] || p.qtyToOrder;
         return sum + (qty * p.buyPrice);
@@ -819,7 +849,7 @@ ${getUserSignature()}`
       
       const orderData = {
         id: generatePONumber(),
-        supplier: selectedSupplier,
+        supplier: inlineModals.emailOrderModal.selectedSupplier,
         warehouseId: selectedWarehouse, // Ajouter le warehouse
         warehouseName: selectedWarehouse, // Nom de l'entrepôt pour affichage
         status: 'pending_confirmation',
@@ -850,6 +880,27 @@ ${getUserSignature()}`
       console.error('❌ Erreur lors de la création de la commande:', error);
       toast.error('Erreur lors de la création de la commande');
     }
+  };
+
+  // Handler pour ouvrir le modal d'email
+  const handleOpenEmailModal = (supplier, products) => {
+    setSelectedSupplier(supplier);
+    setOrderQuantities({});
+    
+    // Pré-remplir les quantités
+    const quantities = {};
+    products.forEach(p => {
+      quantities[p.sku] = p.qtyToOrder;
+    });
+    setOrderQuantities(quantities);
+    
+    // Sélectionner le premier warehouse par défaut
+    const warehousesList = Object.values(warehouses);
+    if (warehousesList.length > 0) {
+      setSelectedWarehouse(warehousesList[0].name);
+    }
+    
+    emailModalHandlers.open({ supplier, products });
   };
 
   const handleCreateOrderFromTable = async (selectedProducts) => {
@@ -957,14 +1008,14 @@ ${getUserSignature()}`
       initialDamaged[item.sku] = item.damagedQuantity || 0; // Quantités endommagées
     });
     
-    setDiscrepancyItems(initialItems);
+    inlineModals.reconciliationModal.setDiscrepancyItems(initialItems);
     setDiscrepancyTypes(initialTypes);
-    setDamagedQuantities(initialDamaged);
+    inlineModals.reconciliationModal.setDamagedQuantities(initialDamaged);
     setReconciliationModalOpen(true);
   };
   
   const updateDiscrepancyItem = (sku, field, value, orderedQuantity) => {
-    setDiscrepancyItems(prev => ({
+    inlineModals.reconciliationModal.setDiscrepancyItems(prev => ({
       ...prev,
       [sku]: {
         ...prev[sku],
@@ -978,15 +1029,15 @@ ${getUserSignature()}`
       if (!reconciliationOrder) return;
       
       console.log('🔍 Début de la réconciliation:', reconciliationOrder.id);
-      console.log('Quantités reçues:', discrepancyItems);
+      console.log('Quantités reçues:', inlineModals.reconciliationModal.discrepancyItems);
       console.log('Types de problèmes:', discrepancyTypes);
-      console.log('Quantités endommagées:', damagedQuantities);
+      console.log('Quantités endommagées:', inlineModals.reconciliationModal.damagedQuantities);
       
       // Préparer les items avec quantités et types de problèmes
       const updatedItems = reconciliationOrder.items.map(item => {
-        const receivedQty = parseInt(discrepancyItems[item.sku]?.received, 10);
-        const damagedQty = parseInt(damagedQuantities[item.sku] || 0, 10);
-        const notes = discrepancyItems[item.sku]?.notes || '';
+        const receivedQty = parseInt(inlineModals.reconciliationModal.discrepancyItems[item.sku]?.received, 10);
+        const damagedQty = parseInt(inlineModals.reconciliationModal.damagedQuantities[item.sku] || 0, 10);
+        const notes = inlineModals.reconciliationModal.discrepancyItems[item.sku]?.notes || '';
         
         // Validation
         if (isNaN(receivedQty) || receivedQty < 0) {
@@ -1067,8 +1118,8 @@ ${getUserSignature()}`
       // Fermer la modal et nettoyer les états
       setReconciliationModalOpen(false);
       setReconciliationOrder(null);
-      setDiscrepancyItems({});
-      setDamagedQuantities({});
+      inlineModals.reconciliationModal.setDiscrepancyItems({});
+      inlineModals.reconciliationModal.setDamagedQuantities({});
       setDiscrepancyTypes({});
       
       toast.success(
@@ -1146,7 +1197,7 @@ ${getUserSignature()}`
   const submitDiscrepancy = async () => {
     try {
       // Créer l'email de réclamation
-      const discrepancyList = Object.entries(discrepancyItems)
+      const discrepancyList = Object.entries(inlineModals.reconciliationModal.discrepancyItems)
         .filter(([sku, data]) => data.ordered !== data.received)
         .map(([sku, data]) => {
           const product = products.find(p => p.sku === sku);
@@ -1164,7 +1215,7 @@ ${getUserSignature()}`
       
       // CORRECTION 4A: Mettre à jour la commande avec les quantités reçues
       const updatedItems = reconciliationOrder.items.map(item => {
-        const receivedQty = discrepancyItems[item.sku]?.received;
+        const receivedQty = inlineModals.reconciliationModal.discrepancyItems[item.sku]?.received;
         return {
           sku: item.sku,
           quantity: item.quantity,
@@ -1184,7 +1235,7 @@ ${getUserSignature()}`
       });
       
       // CORRECTION 1: Mettre à jour le stock avec les quantités réellement reçues (conversion en nombre)
-      const stockUpdates = Object.entries(discrepancyItems).map(([sku, data]) => {
+      const stockUpdates = Object.entries(inlineModals.reconciliationModal.discrepancyItems).map(([sku, data]) => {
         const quantityReceived = parseInt(data.received, 10) || 0;
         console.log(`Stock update pour ${sku}: +${quantityReceived} unités`);
         return {
@@ -1200,7 +1251,7 @@ ${getUserSignature()}`
       
       await loadData();
       setDiscrepancyModalOpen(false);
-      setDiscrepancyItems({});
+      inlineModals.reconciliationModal.setDiscrepancyItems({});
       setReconciliationOrder(null);
     } catch (error) {
       console.error('❌ Erreur:', error);
@@ -1568,6 +1619,128 @@ ${getUserSignature()}`
     toast.success(`Export CSV réussi : ${filteredOrders.length} commande(s), ${totalItems} ligne(s) de produits exportée(s)`);
   };
 
+  // ============================================
+  // NOUVEAUX HANDLERS POUR LES MODALS ET FONCTIONNALITÉS
+  // ============================================
+
+  // Handler pour ouvrir le modal de réconciliation
+  const handleStartReconciliation = (order) => {
+    reconciliationModalHandlers.open(order);
+  };
+
+  // Handler pour confirmer la réconciliation
+  const handleReconciliationConfirm = async (reconciliationData) => {
+    try {
+      const result = await reconciliationLogic.processReconciliation(
+        reconciliationModal.data.order,
+        reconciliationData
+      );
+
+      if (result.success) {
+        reconciliationModalHandlers.close();
+        
+        if (result.requiresReclamation) {
+          // Générer l'email de réclamation
+          const emailContent = emailGeneration.generateReclamationEmail(
+            reconciliationModal.data.order,
+            reconciliationData.discrepancies,
+            reconciliationData.damages,
+            getUserSignature()
+          );
+          
+          if (emailContent) {
+            reclamationEmailModalHandlers.open(reconciliationModal.data.order, emailContent);
+          }
+        } else {
+          toast.success('Réconciliation terminée avec succès');
+        }
+      }
+    } catch (error) {
+      console.error('Erreur lors de la réconciliation:', error);
+      toast.error('Erreur lors de la réconciliation');
+    }
+  };
+
+  // Handler pour envoyer une commande par email
+  const handleSendOrder = async () => {
+    try {
+      const productsToOrder = toOrderBySupplier[inlineModals.emailOrderModal.inlineModals.emailOrderModal.selectedSupplier];
+      const total = roundToTwoDecimals(productsToOrder.reduce((sum, p) => {
+        const qty = inlineModals.emailOrderModal.orderQuantities[p.sku] || p.qtyToOrder;
+        return sum + (qty * p.buyPrice);
+      }, 0));
+      
+      const orderData = {
+        id: generatePONumber(),
+        supplier: inlineModals.emailOrderModal.selectedSupplier,
+        items: productsToOrder.map(p => ({
+          sku: p.sku,
+          quantity: orderQuantities[p.sku] || p.qtyToOrder,
+          pricePerUnit: p.buyPrice
+        })),
+        total: total,
+        status: 'pending_confirmation',
+        createdAt: new Date().toISOString(),
+        warehouse: selectedWarehouse
+      };
+
+      await api.createOrder(orderData);
+      await loadData();
+      
+      // Générer et envoyer l'email
+      const emailContent = emailGeneration.generateOrderEmailDraft(
+        inlineModals.emailOrderModal.selectedSupplier,
+        productsToOrder,
+        selectedWarehouse,
+        orderQuantities,
+        getUserSignature()
+      );
+      
+      // Ici vous pouvez ajouter la logique d'envoi d'email
+      console.log('Email généré:', emailContent);
+      
+      emailModalHandlers.close();
+      toast.success('Commande créée et email généré avec succès');
+    } catch (error) {
+      console.error('Erreur lors de la création de la commande:', error);
+      toast.error('Erreur lors de la création de la commande');
+    }
+  };
+
+  // Handler pour créer une commande sans email
+  const handleCreateOrderWithoutEmail = async () => {
+    try {
+      const productsToOrder = toOrderBySupplier[inlineModals.emailOrderModal.selectedSupplier];
+      const total = roundToTwoDecimals(productsToOrder.reduce((sum, p) => {
+        const qty = orderQuantities[p.sku] || p.qtyToOrder;
+        return sum + (qty * p.buyPrice);
+      }, 0));
+      
+      const orderData = {
+        id: generatePONumber(),
+        supplier: inlineModals.emailOrderModal.selectedSupplier,
+        items: productsToOrder.map(p => ({
+          sku: p.sku,
+          quantity: orderQuantities[p.sku] || p.qtyToOrder,
+          pricePerUnit: p.buyPrice
+        })),
+        total: total,
+        status: 'pending_confirmation',
+        createdAt: new Date().toISOString(),
+        warehouse: selectedWarehouse
+      };
+
+      await api.createOrder(orderData);
+      await loadData();
+      
+      emailModalHandlers.close();
+      toast.success('Commande créée avec succès');
+    } catch (error) {
+      console.error('Erreur lors de la création de la commande:', error);
+      toast.error('Erreur lors de la création de la commande');
+    }
+  };
+
   if (loading) {
     return (
       <motion.div 
@@ -1654,11 +1827,15 @@ ${getUserSignature()}`
                       generatePONumber={generatePONumber}
                       orders={orders}
                       handleCreateOrder={handleCreateOrderFromTable}
-                      handleOpenEmailModal={openEmailModal}
-                      orderCreationModalOpen={orderCreationModalOpen}
-                      setOrderCreationModalOpen={setOrderCreationModalOpen}
+                      handleOpenEmailModal={handleOpenEmailModal}
+                      orderCreationModalOpen={orderCreationModal.isOpen}
+                      setOrderCreationModalOpen={orderCreationModalHandlers.open}
                       selectedProductsFromTable={selectedProductsFromTable}
                       setSelectedProductsFromTable={setSelectedProductsFromTable}
+                      // Nouveaux props pour les modals
+                      emailModal={emailModal}
+                      emailModalHandlers={emailModalHandlers}
+                      emailGeneration={emailGeneration}
                     />
                   )}
 
@@ -1673,28 +1850,15 @@ ${getUserSignature()}`
                       confirmOrder={confirmOrder}
                       shipOrder={shipOrder}
                       receiveOrder={receiveOrder}
-                      reconciliationOrder={reconciliationOrder}
-                      setReconciliationOrder={setReconciliationOrder}
-                      reconciliationModalOpen={reconciliationModalOpen}
-                      setReconciliationModalOpen={setReconciliationModalOpen}
-                      openReconciliationModal={openReconciliationModal}
-                      receivedQuantities={receivedQuantities}
-                      setReceivedQuantities={setReceivedQuantities}
-                      discrepancyTypes={discrepancyTypes}
-                      setDiscrepancyTypes={setDiscrepancyTypes}
-                      damagedQuantities={damagedQuantities}
-                      setDamagedQuantities={setDamagedQuantities}
-                      discrepancyModalOpen={discrepancyModalOpen}
-                      setDiscrepancyModalOpen={setDiscrepancyModalOpen}
-                      damageModalOpen={damageModalOpen}
-                      setDamageModalOpen={setDamageModalOpen}
-                      unifiedReconciliationModalOpen={unifiedReconciliationModalOpen}
-                      setUnifiedReconciliationModalOpen={setUnifiedReconciliationModalOpen}
-                      currentReclamationOrder={currentReclamationOrder}
-                      setCurrentReclamationOrder={setCurrentReclamationOrder}
-                      reclamationEmailModalOpen={reclamationEmailModalOpen}
-                      setReclamationEmailModalOpen={setReclamationEmailModalOpen}
+                      suppliers={suppliers}
                       loadData={loadData}
+                      // Nouveaux props pour les modals
+                      reconciliationModal={reconciliationModal}
+                      reconciliationModalHandlers={reconciliationModalHandlers}
+                      reclamationEmailModal={reclamationEmailModal}
+                      reclamationEmailModalHandlers={reclamationEmailModalHandlers}
+                      reconciliationLogic={reconciliationLogic}
+                      emailGeneration={emailGeneration}
                     />
                   )}
 
@@ -1722,6 +1886,16 @@ ${getUserSignature()}`
                       setDateRange={setDateRange}
                       comparisonPeriod={comparisonPeriod}
                       setComparisonPeriod={setComparisonPeriod}
+                    />
+                  )}
+
+                  {/* AI TAB */}
+                  {activeTab === MAIN_TABS.AI && (
+                    <AITab
+                      products={products}
+                      orders={orders}
+                      aiSubTab={aiSubTab}
+                      setAiSubTab={setAiSubTab}
                     />
                   )}
 
@@ -1800,6 +1974,100 @@ ${getUserSignature()}`
           </div> {/* Fin Content Area relative */}
         </div> {/* Fin Main Content md:ml-64 */}
       </div> {/* Fin min-h-screen */}
+
+      {/* ============================================
+          MODALS
+      ============================================ */}
+      
+      {/* Modal de réconciliation */}
+      <ReconciliationModal
+        isOpen={reconciliationModal.isOpen}
+        onClose={reconciliationModalHandlers.close}
+        order={reconciliationModal.data.order}
+        products={products}
+        onConfirm={handleReconciliationConfirm}
+      />
+
+      {/* Modal d'email de réclamation */}
+      <ReclamationEmailModal
+        isOpen={reclamationEmailModal.isOpen}
+        onClose={reclamationEmailModalHandlers.close}
+        order={reclamationEmailModal.data.order}
+        emailContent={reclamationEmailModal.data.emailContent}
+        onCopy={emailGeneration.copyToClipboard}
+      />
+
+      {/* Modal d'email de commande */}
+      <EmailOrderModal
+        isOpen={emailModal.isOpen}
+        onClose={emailModalHandlers.close}
+        supplier={emailModal.data.supplier}
+        products={emailModal.data.products}
+        suppliers={suppliers}
+        warehouses={warehouses}
+        selectedWarehouse={selectedWarehouse}
+        onWarehouseChange={setSelectedWarehouse}
+        orderQuantities={orderQuantities}
+        onQuantityChange={setOrderQuantities}
+        onSendEmail={handleSendOrder}
+        onCreateWithoutEmail={handleCreateOrderWithoutEmail}
+        generateEmailDraft={emailGeneration.generateOrderEmailDraft}
+      />
+
+      {/* Modal de gestion des fournisseurs */}
+      <SupplierModal
+        isOpen={supplierModalOpen}
+        onClose={handleCloseSupplierModal}
+        formData={supplierFormData}
+        onChange={handleSupplierFormChange}
+        onSave={handleSaveSupplier}
+        isEditing={!!editingSupplier}
+      />
+
+      {/* Modal d'assignation de fournisseur */}
+      <AssignSupplierModal
+        isOpen={assignSupplierModalOpen}
+        onClose={handleCloseAssignSupplierModal}
+        product={productToMap}
+        suppliers={suppliers}
+          selectedSupplier={selectedSupplierForMapping}
+        onSupplierChange={setSelectedSupplierForMapping}
+        onAssign={handleAssignSupplier}
+      />
+
+      {/* Modal de création de commande personnalisée */}
+      <OrderCreationModal
+        isOpen={orderCreationModal.isOpen}
+        onClose={orderCreationModalHandlers.close}
+        products={productsByStatus.to_order}
+        suppliers={suppliers}
+        warehouses={warehouses}
+        selectedWarehouse={selectedWarehouse}
+        setSelectedWarehouse={setSelectedWarehouse}
+        orderQuantities={orderQuantities}
+        updateOrderQuantity={updateOrderQuantity}
+        generatePONumber={generatePONumber}
+        orders={orders}
+        handleCreateOrder={handleCreateOrderFromTable}
+        selectedProductsFromTable={selectedProductsFromTable}
+        setSelectedProductsFromTable={setSelectedProductsFromTable}
+      />
+
+      {/* Conteneur des modales inline */}
+      <InlineModalsContainer
+        emailOrderModal={inlineModals.emailOrderModal}
+        warehouses={warehouses}
+        toOrderBySupplier={toOrderBySupplier}
+        emailGeneration={emailGeneration}
+        getUserSignature={getUserSignature}
+        handleCreateOrderWithoutEmail={handleCreateOrderWithoutEmail}
+        handleSendOrder={handleSendOrder}
+        reconciliationModal={inlineModals.reconciliationModal}
+        products={products}
+        confirmReconciliationWithQuantities={confirmReconciliationWithQuantities}
+        reclamationEmailModal={inlineModals.reclamationEmailModal}
+      />
+
     </>
   );
 };
