@@ -71,6 +71,7 @@ export const MAIN_TABS = {
   TRACK: 'track',
   STOCK: 'stock',
   ANALYTICS: 'analytics',
+  HISTORY: 'history',
   SETTINGS: 'settings',
   AI: 'ai'
 };

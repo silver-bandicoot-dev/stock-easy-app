@@ -80,6 +80,8 @@ import { ActionsTab } from './components/actions/ActionsTab';
 import { TrackTab } from './components/track/TrackTab';
 import { StockTab } from './components/stock/StockTab';
 import { AnalyticsTab } from './components/analytics/AnalyticsTab';
+import { HistoryTab } from './components/history/HistoryTab';
+import { SettingsTab } from './components/settings/SettingsTab';
 
 // ============================================
 // IMPORTS DES HOOKS PERSONNALISÉS
@@ -232,10 +234,95 @@ const StockEasy = () => {
     // TODO: Implémenter la logique pour afficher les détails du produit
   };
 
+  // Fonctions pour la gestion des entrepôts
+  const handleOpenWarehouseModal = (warehouse = null) => {
+    if (warehouse) {
+      setEditingWarehouse(warehouse);
+      setWarehouseFormData({
+        name: warehouse.name || '',
+        address: warehouse.address || '',
+        city: warehouse.city || '',
+        postalCode: warehouse.postalCode || '',
+        country: warehouse.country || '',
+        contactPerson: warehouse.contactPerson || '',
+        phone: warehouse.phone || '',
+        email: warehouse.email || ''
+      });
+    } else {
+      setEditingWarehouse(null);
+      setWarehouseFormData({
+        name: '',
+        address: '',
+        city: '',
+        postalCode: '',
+        country: '',
+        contactPerson: '',
+        phone: '',
+        email: ''
+      });
+    }
+    setWarehouseModalOpen(true);
+  };
+
+  const handleCloseWarehouseModal = () => {
+    setWarehouseModalOpen(false);
+    setEditingWarehouse(null);
+    setWarehouseFormData({
+      name: '',
+      address: '',
+      city: '',
+      postalCode: '',
+      country: '',
+      contactPerson: '',
+      phone: '',
+      email: ''
+    });
+  };
+
+  const handleWarehouseFormChange = (field, value) => {
+    setWarehouseFormData(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  const handleSaveWarehouse = async () => {
+    try {
+      if (editingWarehouse) {
+        // Mise à jour d'un entrepôt existant
+        await api.updateWarehouse(editingWarehouse.id, warehouseFormData);
+        toast.success('Entrepôt mis à jour avec succès');
+      } else {
+        // Création d'un nouvel entrepôt
+        await api.createWarehouse(warehouseFormData);
+        toast.success('Entrepôt créé avec succès');
+      }
+      handleCloseWarehouseModal();
+      loadData();
+    } catch (error) {
+      console.error('Erreur lors de la sauvegarde de l\'entrepôt:', error);
+      toast.error('Erreur lors de la sauvegarde de l\'entrepôt');
+    }
+  };
+
   // NOUVEAUX ÉTATS pour Paramètres Généraux
   const [seuilSurstockProfond, setSeuilSurstockProfond] = useState(90);
   const [deviseDefaut, setDeviseDefaut] = useState('EUR');
   const [multiplicateurDefaut, setMultiplicateurDefaut] = useState(1.2);
+
+  // NOUVEAUX ÉTATS pour Gestion des Entrepôts
+  const [warehouseModalOpen, setWarehouseModalOpen] = useState(false);
+  const [editingWarehouse, setEditingWarehouse] = useState(null);
+  const [warehouseFormData, setWarehouseFormData] = useState({
+    name: '',
+    address: '',
+    city: '',
+    postalCode: '',
+    country: '',
+    contactPerson: '',
+    phone: '',
+    email: ''
+  });
 
   // NOUVEAUX ÉTATS pour Mapping
   const [assignSupplierModalOpen, setAssignSupplierModalOpen] = useState(false);
@@ -1629,6 +1716,73 @@ ${getUserSignature()}`
                       setDateRange={setDateRange}
                       comparisonPeriod={comparisonPeriod}
                       setComparisonPeriod={setComparisonPeriod}
+                    />
+                  )}
+
+                  {/* HISTORY TAB */}
+                  {activeTab === MAIN_TABS.HISTORY && (
+                    <HistoryTab
+                      orders={orders}
+                      historyFilter={historyFilter}
+                      setHistoryFilter={setHistoryFilter}
+                      historyDateStart={historyDateStart}
+                      setHistoryDateStart={setHistoryDateStart}
+                      historyDateEnd={historyDateEnd}
+                      setHistoryDateEnd={setHistoryDateEnd}
+                      onExportHistory={exportHistoryToCSV}
+                    />
+                  )}
+
+                  {/* SETTINGS TAB */}
+                  {activeTab === MAIN_TABS.SETTINGS && (
+                    <SettingsTab
+                      parametersSubTab={parametersSubTab}
+                      setParametersSubTab={setParametersSubTab}
+                      products={products}
+                      suppliers={suppliers}
+                      warehouses={warehouses}
+                      parameters={parameters}
+                      setParameters={setParameters}
+                      loadData={loadData}
+                      // Props pour ParametresGeneraux
+                      seuilSurstockProfond={seuilSurstockProfond}
+                      setSeuilSurstockProfond={setSeuilSurstockProfond}
+                      deviseDefaut={deviseDefaut}
+                      setDeviseDefaut={setDeviseDefaut}
+                      multiplicateurDefaut={multiplicateurDefaut}
+                      setMultiplicateurDefaut={setMultiplicateurDefaut}
+                      // Props pour GestionFournisseurs
+                      supplierModalOpen={supplierModalOpen}
+                      setSupplierModalOpen={setSupplierModalOpen}
+                      editingSupplier={editingSupplier}
+                      setEditingSupplier={setEditingSupplier}
+                      supplierFormData={supplierFormData}
+                      setSupplierFormData={setSupplierFormData}
+                      handleOpenSupplierModal={handleOpenSupplierModal}
+                      handleCloseSupplierModal={handleCloseSupplierModal}
+                      handleSupplierFormChange={handleSupplierFormChange}
+                      handleSaveSupplier={handleSaveSupplier}
+                      handleDeleteSupplier={handleDeleteSupplier}
+                      // Props pour MappingSKUFournisseur
+                      assignSupplierModalOpen={assignSupplierModalOpen}
+                      setAssignSupplierModalOpen={setAssignSupplierModalOpen}
+                      selectedProductForMapping={selectedProductForMapping}
+                      setSelectedProductForMapping={setSelectedProductForMapping}
+                      handleOpenAssignSupplierModal={handleOpenAssignSupplierModal}
+                      handleCloseAssignSupplierModal={handleCloseAssignSupplierModal}
+                      handleAssignSupplier={handleAssignSupplier}
+                      // Props pour GestionWarehouses
+                      warehouseModalOpen={warehouseModalOpen}
+                      setWarehouseModalOpen={setWarehouseModalOpen}
+                      editingWarehouse={editingWarehouse}
+                      setEditingWarehouse={setEditingWarehouse}
+                      warehouseFormData={warehouseFormData}
+                      setWarehouseFormData={setWarehouseFormData}
+                      handleOpenWarehouseModal={handleOpenWarehouseModal}
+                      handleCloseWarehouseModal={handleCloseWarehouseModal}
+                      handleWarehouseFormChange={handleWarehouseFormChange}
+                      handleSaveWarehouse={handleSaveWarehouse}
+                      handleDeleteWarehouse={handleDeleteWarehouse}
                     />
                   )}
 
