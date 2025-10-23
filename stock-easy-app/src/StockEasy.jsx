@@ -79,6 +79,7 @@ import { DashboardTab } from './components/dashboard/DashboardTab';
 import { ActionsTab } from './components/actions/ActionsTab';
 import { TrackTab } from './components/track/TrackTab';
 import { StockTab } from './components/stock/StockTab';
+import { AnalyticsTab } from './components/analytics/AnalyticsTab';
 
 // ============================================
 // IMPORTS DES HOOKS PERSONNALISÉS
@@ -2558,7 +2559,7 @@ ${getUserSignature()}`
           )}
 
           {/* ANALYTICS TAB */}
-          {activeTab === 'analytics' && (
+          {activeTab === MAIN_TABS.ANALYTICS && (
             <motion.div
               key="analytics"
               initial={{ opacity: 0, x: 20 }}
