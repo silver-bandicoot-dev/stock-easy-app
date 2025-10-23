@@ -333,6 +333,7 @@ const StockEasy = () => {
   const [assignSupplierModalOpen, setAssignSupplierModalOpen] = useState(false);
   const [productToMap, setProductToMap] = useState(null);
   const [selectedSupplierForMapping, setSelectedSupplierForMapping] = useState('');
+  const [selectedProductForMapping, setSelectedProductForMapping] = useState(null);
 
   // ============================================
   // HANDLERS PARAMÈTRES GÉNÉRAUX

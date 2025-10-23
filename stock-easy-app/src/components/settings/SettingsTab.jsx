@@ -90,7 +90,7 @@ export const SettingsTab = ({
       <SubTabsNavigation
         tabs={settingsTabs}
         activeTab={parametersSubTab}
-        onTabChange={setParametersSubTab}
+        onChange={setParametersSubTab}
       />
 
       {/* Contenu des sous-onglets */}
@@ -105,18 +105,19 @@ export const SettingsTab = ({
             parameters={parameters}
             setParameters={setParameters}
             loadData={loadData}
-            seuilSurstockProfond={seuilSurstockProfond}
-            setSeuilSurstockProfond={setSeuilSurstockProfond}
-            deviseDefaut={deviseDefaut}
-            setDeviseDefaut={setDeviseDefaut}
-            multiplicateurDefaut={multiplicateurDefaut}
-            setMultiplicateurDefaut={setMultiplicateurDefaut}
+            seuilSurstock={seuilSurstockProfond}
+            onUpdateSeuil={setSeuilSurstockProfond}
+            devise={deviseDefaut}
+            onUpdateDevise={setDeviseDefaut}
+            multiplicateur={multiplicateurDefaut}
+            onUpdateMultiplicateur={setMultiplicateurDefaut}
           />
         )}
 
         {parametersSubTab === SETTINGS_TABS.SUPPLIERS && (
           <GestionFournisseurs
             suppliers={suppliers}
+            products={products}
             supplierModalOpen={supplierModalOpen}
             setSupplierModalOpen={setSupplierModalOpen}
             editingSupplier={editingSupplier}
