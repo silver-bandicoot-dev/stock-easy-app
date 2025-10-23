@@ -1625,6 +1625,10 @@ ${getUserSignature()}`
             />
           )}
 
+        </AnimatePresence>
+      </div>
+    </div>
+
         </div> {/* Fin contenu principal avec padding */}
       </div> {/* Fin Content Area relative */}
     </div> {/* Fin Main Content md:ml-64 */}
