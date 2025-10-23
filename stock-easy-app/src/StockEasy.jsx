@@ -664,18 +664,6 @@ ${getUserSignature()}`
     };
   };
 
-  const generatePONumber = () => {
-    // Trouve le numéro PO le plus élevé actuel
-    const poNumbers = orders
-      .map(o => {
-        const match = o.id.match(/^PO-(\d+)$/);
-        return match ? parseInt(match[1], 10) : 0;
-      })
-      .filter(n => n > 0);
-    
-    const nextNumber = poNumbers.length > 0 ? Math.max(...poNumbers) + 1 : 1;
-    return `PO-${String(nextNumber).padStart(3, '0')}`;
-  };
 
   const sendOrder = async () => {
     try {
