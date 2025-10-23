@@ -172,6 +172,8 @@ const StockEasy = () => {
   const [activeTab, setActiveTab] = useState(MAIN_TABS.DASHBOARD);
   const [trackTabSection, setTrackTabSection] = useState(TRACK_TABS.EN_COURS_COMMANDE);
   const [emailModalOpen, setEmailModalOpen] = useState(false);
+  const [orderCreationModalOpen, setOrderCreationModalOpen] = useState(false);
+  const [selectedProductsFromTable, setSelectedProductsFromTable] = useState([]);
   const [selectedSupplier, setSelectedSupplier] = useState(null);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [receivingModalOpen, setReceivingModalOpen] = useState(false);
@@ -218,8 +220,6 @@ const StockEasy = () => {
   const [unsavedParameterChanges, setUnsavedParameterChanges] = useState({});
   const [isSavingParameters, setIsSavingParameters] = useState(false);
 
-  // CORRECTION 1: Gestion des quantités éditables dans la modal de commande
-  const [selectedProductsFromTable, setSelectedProductsFromTable] = useState(new Map());
 
   // CORRECTION 3: Gestion de l'expansion des détails de commandes
   const [expandedOrders, setExpandedOrders] = useState({});
