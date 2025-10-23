@@ -1546,7 +1546,7 @@ ${getUserSignature()}`
             <ActionsTab
               productsByStatus={productsByStatus}
               toOrderBySupplier={toOrderBySupplier}
-              suppliers={suppliers}
+                suppliers={suppliers}
               warehouses={warehouses}
               selectedWarehouse={selectedWarehouse}
               setSelectedWarehouse={setSelectedWarehouse}
@@ -1566,7 +1566,7 @@ ${getUserSignature()}`
           {/* TRACK & MANAGE TAB */}
           {activeTab === MAIN_TABS.TRACK && (
             <TrackTab
-              orders={orders}
+                orders={orders}
               trackTabSection={trackTabSection}
               setTrackTabSection={setTrackTabSection}
               expandedOrders={expandedOrders}
@@ -1602,7 +1602,7 @@ ${getUserSignature()}`
           {/* STOCK TAB */}
           {activeTab === MAIN_TABS.STOCK && (
             <StockTab
-              products={products}
+                  products={products}
               suppliers={suppliers}
               stockLevelFilter={stockLevelFilter}
               setStockLevelFilter={setStockLevelFilter}
@@ -1614,10 +1614,10 @@ ${getUserSignature()}`
           {/* ANALYTICS TAB */}
           {activeTab === MAIN_TABS.ANALYTICS && (
             <AnalyticsTab
-              products={products}
+                  products={products}
               orders={orders}
-              suppliers={suppliers}
-              warehouses={warehouses}
+                  suppliers={suppliers}
+                  warehouses={warehouses}
               dateRange={dateRange}
               setDateRange={setDateRange}
               comparisonPeriod={comparisonPeriod}
@@ -1625,16 +1625,16 @@ ${getUserSignature()}`
             />
           )}
 
-        </AnimatePresence>
-      </div>
-    </div>
+      </AnimatePresence>
+          </div>
+              </div>
 
-        </div> {/* Fin contenu principal avec padding */}
-      </div> {/* Fin Content Area relative */}
-    </div> {/* Fin Main Content md:ml-64 */}
-  </div> {/* Fin min-h-screen */}
-</>
-);
+            </div> {/* Fin contenu principal avec padding */}
+          </div> {/* Fin Content Area relative */}
+        </div> {/* Fin Main Content md:ml-64 */}
+      </div> {/* Fin min-h-screen */}
+    </>
+  );
 };
 
 export default StockEasy;
