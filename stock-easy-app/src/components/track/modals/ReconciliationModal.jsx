@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { X, AlertTriangle, CheckCircle, Package, Calculator } from 'lucide-react';
+import { AlertTriangle, CheckCircle, Package } from 'lucide-react';
 import { Modal } from '../../ui/Modal';
 import { Button } from '../../shared/Button';
 import { DISCREPANCY_TYPES } from '../../../constants/stockEasyConstants';
@@ -109,26 +108,31 @@ export const ReconciliationModal = ({
   const totals = calculateTotals();
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} size="xl">
-      <div className="p-6">
-        {/* En-tête */}
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-blue-50 rounded-lg flex items-center justify-center border border-blue-200">
-              <Package className="w-6 h-6 text-blue-600" />
-            </div>
-            <div>
-              <h2 className="text-xl font-semibold text-gray-900">Réconciliation de commande</h2>
-              <p className="text-sm text-gray-600">Commande {order.poNumber || order.id}</p>
-            </div>
-          </div>
-          <button
+    <Modal 
+      isOpen={isOpen} 
+      onClose={onClose} 
+      title={`Réconciliation de commande ${order.poNumber || order.id}`}
+      size="large"
+      footer={
+        <div className="flex items-center justify-end gap-3">
+          <Button
+            variant="outline"
             onClick={onClose}
-            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            disabled={isProcessing}
           >
-            <X className="w-5 h-5 text-gray-500" />
-          </button>
+            Annuler
+          </Button>
+          <Button
+            variant="primary"
+            onClick={handleConfirm}
+            disabled={isProcessing}
+            icon={isProcessing ? undefined : CheckCircle}
+          >
+            {isProcessing ? 'Traitement...' : 'Confirmer la réconciliation'}
+          </Button>
         </div>
+      }
+    >
 
         {/* Résumé des totaux */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
@@ -184,6 +188,11 @@ export const ReconciliationModal = ({
                       {discrepancy !== 0 && (
                         <p className={`text-sm font-medium ${discrepancy > 0 ? 'text-green-600' : 'text-red-600'}`}>
                           Écart: {discrepancy > 0 ? '+' : ''}{discrepancy}
+                        </p>
+                      )}
+                      {damageQty > 0 && (
+                        <p className="text-sm font-medium text-red-600">
+                          Endommagé: {damageQty}
                         </p>
                       )}
                     </div>
@@ -243,25 +252,6 @@ export const ReconciliationModal = ({
           />
         </div>
 
-        {/* Actions */}
-        <div className="flex items-center justify-end gap-3">
-          <Button
-            variant="outline"
-            onClick={onClose}
-            disabled={isProcessing}
-          >
-            Annuler
-          </Button>
-          <Button
-            variant="primary"
-            onClick={handleConfirm}
-            disabled={isProcessing}
-            icon={isProcessing ? undefined : CheckCircle}
-          >
-            {isProcessing ? 'Traitement...' : 'Confirmer la réconciliation'}
-          </Button>
-        </div>
-      </div>
     </Modal>
   );
 };

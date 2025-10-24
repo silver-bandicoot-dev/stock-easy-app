@@ -51,7 +51,7 @@ export const OrderStatusCard = ({
             size="sm"
             onClick={(e) => {
               e.stopPropagation();
-              onStartReconciliation(order);
+              receiveOrder(order.id);
             }}
             className="shrink-0"
           >
@@ -60,9 +60,17 @@ export const OrderStatusCard = ({
         );
       case 'received':
         return (
-          <div className="text-sm text-green-600 font-medium">
-            En attente de validation
-          </div>
+          <Button
+            variant="primary"
+            size="sm"
+            onClick={(e) => {
+              e.stopPropagation();
+              onStartReconciliation(order);
+            }}
+            className="shrink-0"
+          >
+            Réconcilier
+          </Button>
         );
       case 'reconciliation':
         return (
@@ -79,6 +87,7 @@ export const OrderStatusCard = ({
     <OrderCard
       order={order}
       products={products}
+      suppliers={suppliers}
       expandedOrders={expandedOrders}
       toggleOrderDetails={toggleOrderDetails}
       showStatus={false}

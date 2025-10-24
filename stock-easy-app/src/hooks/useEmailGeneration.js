@@ -82,16 +82,29 @@ ${userSignature}`;
   /**
    * Génère un email de réclamation
    */
-  const generateReclamationEmail = (order, discrepancyItems, damagedQuantities, notes) => {
+  const generateReclamationEmail = (order, receivedItems, damagedQuantities, notes) => {
     setIsGenerating(true);
     
     try {
-      const discrepancyText = discrepancyItems
-        .map(item => `- ${item.name} (SKU: ${item.sku}): Reçu ${item.receivedQuantity}, Commandé ${item.orderedQuantity}`)
+      // Traiter receivedItems comme un objet {sku: {received, ordered, notes}}
+      const discrepancyText = Object.entries(receivedItems || {})
+        .map(([sku, data]) => {
+          const product = products.find(p => p.sku === sku);
+          const productName = product?.name || sku;
+          const received = data.received || data || 0;
+          const ordered = order.items?.find(item => item.sku === sku)?.quantity || 0;
+          return `- ${productName} (SKU: ${sku}): Reçu ${received}, Commandé ${ordered}`;
+        })
         .join('\n');
 
-      const damagedText = damagedQuantities
-        .map(item => `- ${item.name} (SKU: ${item.sku}): ${item.damagedQuantity} unités endommagées`)
+      // Traiter damagedQuantities comme un objet {sku: quantity}
+      const damagedText = Object.entries(damagedQuantities || {})
+        .filter(([sku, quantity]) => quantity > 0)
+        .map(([sku, quantity]) => {
+          const product = products.find(p => p.sku === sku);
+          const productName = product?.name || sku;
+          return `- ${productName} (SKU: ${sku}): ${quantity} unités endommagées`;
+        })
         .join('\n');
 
       const emailContent = `Objet: Réclamation - Commande ${order.poNumber}

@@ -81,23 +81,24 @@ export const AuthProvider = ({ children }) => {
   };
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
       if (user) {
-        // Get additional user data from Firestore
-        const userData = await getUserData(user.uid);
-        // Utiliser setTimeout pour éviter le warning de setState pendant le rendu
-        setTimeout(() => {
+        // Get additional user data from Firestore de manière asynchrone
+        getUserData(user.uid).then((userData) => {
           setCurrentUser({
             ...user,
             ...userData
           });
           setLoading(false);
-        }, 0);
-      } else {
-        setTimeout(() => {
-          setCurrentUser(null);
+        }).catch((error) => {
+          console.error('Erreur lors du chargement des données utilisateur:', error);
+          // En cas d'erreur, utiliser seulement les données Firebase
+          setCurrentUser(user);
           setLoading(false);
-        }, 0);
+        });
+      } else {
+        setCurrentUser(null);
+        setLoading(false);
       }
     });
 

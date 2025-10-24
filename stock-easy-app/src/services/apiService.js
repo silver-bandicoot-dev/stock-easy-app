@@ -48,41 +48,18 @@ export async function getAllData() {
  */
 export async function createOrder(orderData) {
   try {
-    const response = await fetch(`${API_URL}?action=createOrder`, {
+    const response = await fetch(`${API_URL}`, {
       method: 'POST',
-      body: JSON.stringify(orderData)
+      body: JSON.stringify({
+        action: 'createOrder',
+        ...orderData
+      })
     });
     const data = await response.json();
     if (data.error) throw new Error(data.error);
     return data;
   } catch (error) {
     console.error('❌ Erreur lors de la création de la commande:', error);
-    throw error;
-  }
-}
-
-/**
- * Met à jour le statut d'une commande
- * 
- * @param {string|Object} orderIdOrData - ID de la commande ou objet avec les données
- * @param {Object} [updates] - Données de mise à jour (si premier param est un ID)
- */
-export async function updateOrderStatus(orderIdOrData, updates) {
-  try {
-    // Support pour les deux syntaxes : updateOrderStatus(orderId, updates) et updateOrderStatus({ orderId, ...updates })
-    const data = typeof orderIdOrData === 'string' 
-      ? { orderId: orderIdOrData, ...updates }
-      : orderIdOrData;
-      
-    const response = await fetch(`${API_URL}?action=updateOrderStatus`, {
-      method: 'POST',
-      body: JSON.stringify(data)
-    });
-    const result = await response.json();
-    if (result.error) throw new Error(result.error);
-    return result;
-  } catch (error) {
-    console.error('❌ Erreur lors de la mise à jour de la commande:', error);
     throw error;
   }
 }
@@ -98,7 +75,7 @@ export async function updateStock(items) {
   try {
     const response = await fetch(`${API_URL}?action=updateStock`, {
       method: 'POST',
-      body: JSON.stringify({ items })
+      body: JSON.stringify(items)
     });
     const data = await response.json();
     if (data.error) throw new Error(data.error);
@@ -417,6 +394,94 @@ export async function applyOptimizationsBatch(optimizations) {
   }
 }
 
+/**
+ * Met à jour le statut d'une commande
+ * 
+ * @param {string} orderId - ID de la commande
+ * @param {Object} statusData - Les données de mise à jour
+ * @param {string} statusData.status - Nouveau statut
+ * @param {string} statusData.shippedAt - Date d'expédition
+ * @param {string} statusData.receivedAt - Date de réception
+ * @param {string} statusData.trackingNumber - Numéro de suivi
+ * @param {string} statusData.trackingUrl - URL de tracking
+ * @param {string} statusData.eta - Date estimée de livraison
+ */
+export async function updateOrderStatus(orderId, statusData) {
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
+    
+    // Utiliser GET avec paramètres URL comme avant
+    const params = new URLSearchParams({
+      action: 'updateOrderStatus',
+      orderId: orderId,
+      ...statusData
+    });
+    
+    const response = await fetch(`${API_URL}?${params}`, {
+      method: 'GET',
+      signal: controller.signal
+    });
+    
+    clearTimeout(timeoutId);
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
+    const data = await response.json();
+    if (data.error) throw new Error(data.error);
+    
+    console.log('✅ Statut de commande mis à jour:', data);
+    return data;
+  } catch (error) {
+    console.error('❌ Erreur lors de la mise à jour du statut:', error);
+    throw error;
+  }
+}
+
+/**
+ * Traite la réconciliation d'une commande
+ * 
+ * @param {Object} reconciliationData - Les données de réconciliation
+ * @param {string} reconciliationData.orderId - ID de la commande
+ * @param {Object} reconciliationData.receivedItems - Articles reçus
+ * @param {Object} reconciliationData.discrepancies - Écarts détectés
+ * @param {Object} reconciliationData.damages - Produits endommagés
+ * @param {string} reconciliationData.notes - Notes de réconciliation
+ * @param {string} reconciliationData.receivedDate - Date de réception
+ */
+export async function processOrderReconciliation(reconciliationData) {
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
+    
+    const response = await fetch(`${API_URL}?action=processOrderReconciliation`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(reconciliationData),
+      signal: controller.signal
+    });
+    
+    clearTimeout(timeoutId);
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
+    const data = await response.json();
+    if (data.error) throw new Error(data.error);
+    
+    console.log('✅ Réconciliation traitée:', data);
+    return data;
+  } catch (error) {
+    console.error('❌ Erreur lors de la réconciliation:', error);
+    throw error;
+  }
+}
+
 // Objet API pour compatibilité avec le code existant
 export const api = {
   getAllData,
@@ -435,7 +500,8 @@ export const api = {
   createWarehouse,
   updateWarehouse,
   deleteWarehouse,
-  applyOptimizationsBatch
+  applyOptimizationsBatch,
+  processOrderReconciliation
 };
 
 export default api;

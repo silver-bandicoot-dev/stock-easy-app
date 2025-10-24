@@ -1,9 +1,10 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowDownRight } from 'lucide-react';
+import { ArrowDownRight, Truck, ExternalLink, CheckCircle } from 'lucide-react';
 import CommentSection from '../comments/CommentSection';
 import { formatConfirmedDate } from '../../utils/dateUtils';
 import { roundToTwoDecimals } from '../../utils/decimalUtils';
+import { formatTrackingUrl, getTrackingLinkText, isValidUrl } from '../../utils/trackingUtils';
 
 export const OrderCard = ({ 
   order, 
@@ -13,8 +14,22 @@ export const OrderCard = ({
   showStatus = true,
   showActions = false,
   actionButton = null,
-  compactMode = false
+  compactMode = false,
+  suppliers = [] // Fournisseurs pour les données de base
 }) => {
+  // Utiliser l'ETA du backend
+  const displayETA = order.eta;
+
+  // Utiliser les vraies données sans inventer de fallback
+  const getDisplayData = () => {
+    return {
+      trackingNumber: order.trackingNumber,
+      trackingUrl: order.trackingUrl,
+      eta: displayETA
+    };
+  };
+
+  const displayData = getDisplayData();
   const getStatusColor = (status) => {
     switch (status) {
       case 'pending_confirmation': return 'bg-yellow-50 text-yellow-600 border-yellow-200';
@@ -96,6 +111,35 @@ export const OrderCard = ({
               <span className="text-[#191919] font-bold">{roundToTwoDecimals(order.total).toFixed(2)}€</span>
             </div>
           </div>
+
+          {/* Ligne 5: Informations de transit (numéro de suivi et URL seulement) */}
+          {(displayData.trackingNumber || displayData.trackingUrl) && (
+            <div className="flex items-center justify-between bg-[#FAFAF7] border border-[#E5E4DF] rounded-lg px-3 py-2 mt-2">
+              <div className="flex items-center gap-2">
+                <Truck className="w-3 h-3 text-[#666663]" />
+                <span className="text-xs text-[#666663]">Numéro de suivi:</span>
+                
+                {/* Numéro de suivi */}
+                {displayData.trackingNumber && (
+                  <span className="text-xs text-[#191919] font-mono font-medium">{displayData.trackingNumber}</span>
+                )}
+              </div>
+              
+              {/* Bouton de tracking avec détection du transporteur */}
+              {displayData.trackingUrl && isValidUrl(formatTrackingUrl(displayData.trackingUrl)) && (
+                <a 
+                  href={formatTrackingUrl(displayData.trackingUrl)} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 px-2 py-1 bg-[#191919] text-white rounded hover:bg-[#333333] transition-colors text-xs"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <ExternalLink className="w-3 h-3" />
+                  {getTrackingLinkText(displayData.trackingUrl)}
+                </a>
+              )}
+            </div>
+          )}
           
           {/* Bouton d'action */}
           {showActions && actionButton && (
@@ -118,6 +162,7 @@ export const OrderCard = ({
           >
             <div className="p-3 sm:p-4">
               <h4 className="font-semibold text-sm text-[#666663] mb-2">Produits commandés:</h4>
+              
               
               {compactMode ? (
                 // Mode compact - une ligne par produit
@@ -197,9 +242,8 @@ export const OrderCard = ({
               {/* Section Commentaires */}
               <div className="mt-4 pt-4 border-t border-[#E5E4DF]">
                 <CommentSection 
-                  entityType="order"
-                  entityId={order.id}
-                  entityName={`Commande ${order.id}`}
+                  purchaseOrderId={order.id}
+                  purchaseOrderNumber={order.id}
                 />
               </div>
             </div>

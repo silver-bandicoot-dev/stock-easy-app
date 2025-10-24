@@ -10,6 +10,7 @@ import { roundToTwoDecimals, formatUnits } from '../../utils/decimalUtils';
 export const HistoryTab = ({
   orders,
   products,
+  suppliers, // Ajout des fournisseurs
   historyFilter,
   setHistoryFilter,
   historyDateStart,
@@ -219,6 +220,7 @@ export const HistoryTab = ({
                 key={order.id}
                 order={order}
                 products={products}
+                suppliers={suppliers}
                 expandedOrders={expandedOrders}
                 toggleOrderDetails={toggleOrderDetails}
                 showStatus={true}

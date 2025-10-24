@@ -3,6 +3,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Truck, Clock, Package, CheckCircle, AlertTriangle } from 'lucide-react';
 import { TrackSection } from './TrackSection';
 import { TRACK_TABS } from '../../constants/stockEasyConstants';
+import api from '../../services/apiService';
+import { toast } from 'sonner';
 
 export const TrackTab = ({
   trackTabSection,
@@ -61,33 +63,81 @@ export const TrackTab = ({
     reconciliationModalHandlers.open(order);
   };
 
-  // Handler pour confirmer la réconciliation
+  // Handler pour confirmer la réconciliation - Utilise la logique originale qui fonctionnait
   const handleReconciliationConfirm = async (reconciliationData) => {
     try {
-      const result = await reconciliationLogic.processReconciliation(
-        reconciliationModal.data.order,
-        reconciliationData
-      );
-
-      if (result.success) {
+      const order = reconciliationModal.data.order;
+      
+      // Analyser les données pour déterminer s'il y a des écarts ou dommages
+      const hasDiscrepancies = Object.values(reconciliationData.discrepancies || {}).some(d => d !== 0);
+      const hasDamages = Object.values(reconciliationData.damages || {}).some(d => d > 0);
+      
+      if (hasDiscrepancies || hasDamages) {
+        // Il y a des écarts ou dommages - passer au statut 'reconciliation'
+        await api.updateOrderStatus(order.id, {
+          status: 'reconciliation',
+          receivedAt: new Date().toISOString().split('T')[0],
+          hasDiscrepancy: hasDiscrepancies,
+          damageReport: hasDamages
+        });
+        
+        // Mettre à jour le stock avec les quantités reçues
+        const stockUpdates = Object.entries(reconciliationData.receivedItems || {}).map(([sku, data]) => {
+          const quantityReceived = parseInt(data.received || data, 10) || 0;
+          return {
+            sku,
+            quantityToAdd: quantityReceived
+          };
+        });
+        
+        await api.updateStock(stockUpdates);
+        
         reconciliationModalHandlers.close();
         
-        if (result.requiresReclamation) {
-          // Générer l'email de réclamation
-          const emailContent = emailGeneration.generateReclamationEmail(
-            reconciliationModal.data.order,
-            reconciliationData.discrepancies,
-            reconciliationData.damages,
-            'L\'équipe StockEasy'
-          );
-          
-          if (emailContent) {
-            reclamationEmailModalHandlers.open(reconciliationModal.data.order, emailContent);
-          }
+        // Générer l'email de réclamation si nécessaire
+        const emailContent = emailGeneration.generateReclamationEmail(
+          order,
+          reconciliationData.receivedItems,
+          reconciliationData.damages,
+          reconciliationData.notes || 'L\'équipe StockEasy'
+        );
+        
+        if (emailContent) {
+          reclamationEmailModalHandlers.open(order, emailContent);
         }
+        
+        toast.success('Commande mise en réconciliation avec réclamation générée');
+      } else {
+        // Pas d'écarts - marquer comme complétée
+        await api.updateOrderStatus(order.id, {
+          status: 'completed',
+          receivedAt: new Date().toISOString().split('T')[0],
+          completedAt: new Date().toISOString().split('T')[0],
+          hasDiscrepancy: false,
+          damageReport: false
+        });
+        
+        // Mettre à jour le stock
+        const stockUpdates = Object.entries(reconciliationData.receivedItems || {}).map(([sku, data]) => {
+          const quantityReceived = parseInt(data.received || data, 10) || 0;
+          return {
+            sku,
+            quantityToAdd: quantityReceived
+          };
+        });
+        
+        await api.updateStock(stockUpdates);
+        
+        reconciliationModalHandlers.close();
+        toast.success('Réconciliation validée - Commande complétée');
       }
+      
+      // Recharger les données
+      await loadData();
+      
     } catch (error) {
       console.error('Erreur lors de la réconciliation:', error);
+      toast.error('Erreur lors de la réconciliation');
     }
   };
 

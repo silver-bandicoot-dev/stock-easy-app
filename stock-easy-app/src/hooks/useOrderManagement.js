@@ -2,6 +2,7 @@ import { useState } from 'react';
 import api from '../services/apiService';
 import { toast } from 'sonner';
 import { formatDateForAPI } from '../utils/dateUtils';
+import { calculateETA } from '../utils/etaUtils';
 
 /**
  * Hook pour gérer les actions sur les commandes
@@ -20,15 +21,15 @@ export const useOrderManagement = (loadData) => {
   };
 
   const generatePONumber = (existingOrders) => {
-    const poNumbers = existingOrders
-      .map(o => {
-        const match = o.id.match(/^PO-(\d+)$/);
-        return match ? parseInt(match[1], 10) : 0;
-      })
-      .filter(n => n > 0);
+    // Utiliser un timestamp pour générer un ID unique et éviter les conflits
+    const timestamp = Date.now();
+    const date = new Date(timestamp);
+    const year = date.getFullYear().toString().slice(-2);
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const time = String(date.getHours()).padStart(2, '0') + String(date.getMinutes()).padStart(2, '0');
     
-    const nextNumber = poNumbers.length > 0 ? Math.max(...poNumbers) + 1 : 1;
-    return `PO-${String(nextNumber).padStart(3, '0')}`;
+    return `PO-${day}${month}${year}-${time}`;
   };
 
   const confirmOrder = async (orderId) => {
@@ -46,13 +47,32 @@ export const useOrderManagement = (loadData) => {
     }
   };
 
-  const shipOrder = async (orderId) => {
-    const tracking = prompt('Entrez le numéro de suivi (optionnel):');
+  const shipOrder = async (orderId, trackingNumber = '', trackingUrl = '', suppliers = [], orders = []) => {
     try {
+      const shippedAt = formatDateForAPI(new Date());
+      
+      // Trouver la commande pour connaître le fournisseur
+      const order = orders.find(o => o.id === orderId);
+      let eta = null;
+      
+      if (order && suppliers && suppliers.length > 0) {
+        // Trouver le fournisseur pour calculer l'ETA
+        const supplier = suppliers.find(s => s.name === order.supplier);
+        if (supplier && supplier.leadTimeDays) {
+          eta = calculateETA(shippedAt, supplier.leadTimeDays);
+          console.log('🚀 ETA calculé côté frontend:', eta, 'pour', supplier.name, 'avec', supplier.leadTimeDays, 'jours');
+        } else {
+          eta = calculateETA(shippedAt, 30); // Valeur par défaut
+          console.log('⚠️ ETA calculé avec valeur par défaut (30 jours)');
+        }
+      }
+      
       await api.updateOrderStatus(orderId, {
         status: 'in_transit',
-        shippedAt: formatDateForAPI(new Date()),
-        trackingNumber: tracking || ''
+        shippedAt: shippedAt,
+        trackingNumber: trackingNumber || '',
+        trackingUrl: trackingUrl || '',
+        eta: eta
       });
       await loadData();
       toast.success('Commande expédiée !');

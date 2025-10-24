@@ -92,6 +92,7 @@ import { ReconciliationModal } from './components/track/modals/ReconciliationMod
 import { ReclamationEmailModal } from './components/track/modals/ReclamationEmailModal';
 import { EmailOrderModal } from './components/actions/modals/EmailOrderModal';
 import { EmailOrderModalInline } from './components/modals/EmailOrderModalInline';
+import { ShipOrderModal } from './components/modals/ShipOrderModal';
 
 // ============================================
 // IMPORTS DES HOOKS PERSONNALISÉS
@@ -102,6 +103,7 @@ import { useSupplierManagement } from './hooks/useSupplierManagement';
 import { useModals } from './hooks/useModals';
 import { useReconciliation } from './hooks/useReconciliation';
 import { useEmailGeneration } from './hooks/useEmailGeneration';
+import { useShipOrderModal } from './hooks/useShipOrderModal';
 
 // ============================================
 // FONCTIONS API - Importées depuis apiService
@@ -219,6 +221,24 @@ const StockEasy = () => {
 
   // Hook pour les modales inline
   const inlineModals = useInlineModals();
+
+  // Hook pour la modale d'expédition
+  const shipOrderModal = useShipOrderModal();
+
+  // Handler pour ouvrir la modale d'expédition
+  const handleShipOrder = (orderId) => {
+    shipOrderModal.openModal(orderId);
+  };
+
+  // Handler pour confirmer l'expédition
+  const handleConfirmShipOrder = async (trackingNumber, trackingUrl) => {
+    try {
+      await shipOrder(shipOrderModal.orderId, trackingNumber, trackingUrl, suppliers, orders);
+      shipOrderModal.closeModal();
+    } catch (error) {
+      console.error('❌ Erreur lors de l\'expédition:', error);
+    }
+  };
 
   // États restants pour l'UI et la navigation
   const [activeTab, setActiveTab] = useState(MAIN_TABS.DASHBOARD);
@@ -1645,33 +1665,78 @@ ${getUserSignature()}`
     reconciliationModalHandlers.open(order);
   };
 
-  // Handler pour confirmer la réconciliation
+  // Handler pour confirmer la réconciliation - Logique directe qui fonctionne
   const handleReconciliationConfirm = async (reconciliationData) => {
     try {
-      const result = await reconciliationLogic.processReconciliation(
-        reconciliationModal.data.order,
-        reconciliationData
-      );
-
-      if (result.success) {
+      const order = reconciliationModal.data.order;
+      
+      // Analyser les données pour déterminer s'il y a des écarts ou dommages
+      const hasDiscrepancies = Object.values(reconciliationData.discrepancies || {}).some(d => d !== 0);
+      const hasDamages = Object.values(reconciliationData.damages || {}).some(d => d > 0);
+      
+      if (hasDiscrepancies || hasDamages) {
+        // Il y a des écarts ou dommages - passer au statut 'reconciliation'
+        await api.updateOrderStatus(order.id, {
+          status: 'reconciliation',
+          receivedAt: new Date().toISOString().split('T')[0],
+          hasDiscrepancy: hasDiscrepancies,
+          damageReport: hasDamages
+        });
+        
+        // Mettre à jour le stock avec les quantités reçues
+        const stockUpdates = Object.entries(reconciliationData.receivedItems || {}).map(([sku, data]) => {
+          const quantityReceived = parseInt(data.received || data, 10) || 0;
+          return {
+            sku,
+            quantityToAdd: quantityReceived
+          };
+        });
+        
+        await api.updateStock(stockUpdates);
+        
         reconciliationModalHandlers.close();
         
-        if (result.requiresReclamation) {
-          // Générer l'email de réclamation
-          const emailContent = emailGeneration.generateReclamationEmail(
-            reconciliationModal.data.order,
-            reconciliationData.discrepancies,
-            reconciliationData.damages,
-            getUserSignature()
-          );
-          
-          if (emailContent) {
-            reclamationEmailModalHandlers.open(reconciliationModal.data.order, emailContent);
-          }
-        } else {
-          toast.success('Réconciliation terminée avec succès');
+        // Générer l'email de réclamation si nécessaire
+        const emailContent = emailGeneration.generateReclamationEmail(
+          order,
+          reconciliationData.receivedItems,
+          reconciliationData.damages,
+          reconciliationData.notes || getUserSignature()
+        );
+        
+        if (emailContent) {
+          reclamationEmailModalHandlers.open(order, emailContent);
         }
+        
+        toast.success('Commande mise en réconciliation avec réclamation générée');
+      } else {
+        // Pas d'écarts - marquer comme complétée
+        await api.updateOrderStatus(order.id, {
+          status: 'completed',
+          receivedAt: new Date().toISOString().split('T')[0],
+          completedAt: new Date().toISOString().split('T')[0],
+          hasDiscrepancy: false,
+          damageReport: false
+        });
+        
+        // Mettre à jour le stock
+        const stockUpdates = Object.entries(reconciliationData.receivedItems || {}).map(([sku, data]) => {
+          const quantityReceived = parseInt(data.received || data, 10) || 0;
+          return {
+            sku,
+            quantityToAdd: quantityReceived
+          };
+        });
+        
+        await api.updateStock(stockUpdates);
+        
+        reconciliationModalHandlers.close();
+        toast.success('Réconciliation validée - Commande complétée');
       }
+      
+      // Recharger les données
+      await loadData();
+      
     } catch (error) {
       console.error('Erreur lors de la réconciliation:', error);
       toast.error('Erreur lors de la réconciliation');
@@ -1898,7 +1963,7 @@ ${getUserSignature()}`
                       expandedOrders={expandedOrders}
                       toggleOrderDetails={toggleOrderDetails}
                       confirmOrder={confirmOrder}
-                      shipOrder={shipOrder}
+                      shipOrder={handleShipOrder}
                       receiveOrder={receiveOrder}
                       suppliers={suppliers}
                       loadData={loadData}
@@ -2059,6 +2124,17 @@ ${getUserSignature()}`
         handleCreateOrderWithoutEmail={handleCreateOrderWithoutEmail}
         handleSendOrder={handleSendOrder}
         suppliers={suppliers}
+      />
+
+      {/* Modal d'expédition */}
+      <ShipOrderModal
+        isOpen={shipOrderModal.isOpen}
+        onClose={shipOrderModal.closeModal}
+        onConfirm={handleConfirmShipOrder}
+        trackingNumber={shipOrderModal.trackingNumber}
+        setTrackingNumber={shipOrderModal.setTrackingNumber}
+        trackingUrl={shipOrderModal.trackingUrl}
+        setTrackingUrl={shipOrderModal.setTrackingUrl}
       />
 
       {/* Modal de gestion des fournisseurs */}
