@@ -70,7 +70,8 @@ export const formatNumber = (num, decimals = 0) => {
  * @returns {string} Le nombre formaté sans décimales
  */
 export const formatUnits = (num) => {
-  return formatNumber(num, 0);
+  const rounded = Math.round(num || 0);
+  return rounded.toFixed(0);
 };
 
 /**

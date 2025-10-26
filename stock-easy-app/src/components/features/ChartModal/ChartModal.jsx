@@ -1,6 +1,6 @@
 import React from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { Download, TrendingUp, TrendingDown, Minus } from 'lucide-react';
+import { TrendingUp, TrendingDown, Minus } from 'lucide-react';
 import { Modal } from '../../ui/Modal';
 import { exportKPIToCSV, formatDateForDisplay } from '../../../utils/exportUtils';
 
@@ -72,14 +72,7 @@ export function ChartModal({
       title={title}
       size="large"
       footer={
-        <div className="flex justify-between items-center">
-          <button
-            onClick={handleExport}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-[#191919] text-white rounded-lg hover:bg-[#333333] transition-colors font-medium"
-          >
-            <Download className="w-4 h-4" />
-            Exporter CSV
-          </button>
+        <div className="flex justify-end items-center">
           <button
             onClick={onClose}
             className="px-4 py-2 text-[#666663] hover:text-[#191919] transition-colors font-medium"

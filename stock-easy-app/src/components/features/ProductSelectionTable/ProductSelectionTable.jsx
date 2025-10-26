@@ -18,6 +18,9 @@ export function ProductSelectionTable({ products, suppliers, onCreateOrder }) {
   
   // État pour les actions en masse
   const [bulkQuantity, setBulkQuantity] = useState('');
+  
+  // État pour gérer les valeurs en cours de saisie
+  const [editingQuantities, setEditingQuantities] = useState(new Map());
 
   // Filtrage et tri des produits
   const sortedAndFilteredProducts = useMemo(() => {
@@ -116,7 +119,7 @@ export function ProductSelectionTable({ products, suppliers, onCreateOrder }) {
     if (newMap.has(product.sku)) {
       newMap.delete(product.sku);
     } else {
-      newMap.set(product.sku, product.qtyToOrder || 0);
+      newMap.set(product.sku, Math.round(product.qtyToOrder || 0));
     }
     setSelectedProducts(newMap);
   };
@@ -134,7 +137,7 @@ export function ProductSelectionTable({ products, suppliers, onCreateOrder }) {
     } else {
       // Sélectionner tous les produits de la page
       pageProducts.forEach(product => {
-        newMap.set(product.sku, product.qtyToOrder || 0);
+        newMap.set(product.sku, Math.round(product.qtyToOrder || 0));
       });
     }
     setSelectedProducts(newMap);
@@ -145,7 +148,7 @@ export function ProductSelectionTable({ products, suppliers, onCreateOrder }) {
     const newMap = new Map();
     sortedAndFilteredProducts.forEach(product => {
       if (product.qtyToOrder > 0) {
-        newMap.set(product.sku, product.qtyToOrder);
+        newMap.set(product.sku, Math.round(product.qtyToOrder));
       }
     });
     setSelectedProducts(newMap);
@@ -398,7 +401,7 @@ export function ProductSelectionTable({ products, suppliers, onCreateOrder }) {
                         <span className={`text-sm font-semibold ${
                           product.qtyToOrder > 0 ? 'text-[#EF1C43]' : 'text-green-600'
                         }`}>
-                          {product.qtyToOrder || 0}
+                          {Math.round(product.qtyToOrder || 0)}
                         </span>
                       </td>
 
@@ -414,25 +417,41 @@ export function ProductSelectionTable({ products, suppliers, onCreateOrder }) {
                         <input
                           type="number"
                           min="0"
-                          value={isSelected ? quantity : ''}
+                          step="1"
+                          value={editingQuantities.has(product.sku) ? editingQuantities.get(product.sku) : (isSelected ? quantity : '')}
                           onChange={(e) => {
-                            const newQty = parseInt(e.target.value) || 0;
-                            if (newQty > 0) {
-                              if (!isSelected) {
-                                toggleProductSelection(product);
-                              }
+                            const value = e.target.value;
+                            const newMap = new Map(editingQuantities);
+                            newMap.set(product.sku, value);
+                            setEditingQuantities(newMap);
+                          }}
+                          onBlur={(e) => {
+                            const value = e.target.value;
+                            const newQty = parseInt(value) || 0;
+                            
+                            // Nettoyer l'état d'édition
+                            const newMap = new Map(editingQuantities);
+                            newMap.delete(product.sku);
+                            setEditingQuantities(newMap);
+                            
+                            // Si le produit est sélectionné ou si on vient de saisir une valeur, mettre à jour
+                            if (isSelected && value) {
                               updateQuantity(product.sku, newQty);
-                            } else if (isSelected) {
-                              toggleProductSelection(product);
+                            } else if (!isSelected && newQty > 0) {
+                              // Si le produit n'est pas sélectionné mais qu'on a saisi une quantité, le sélectionner
+                              const newSelectedMap = new Map(selectedProducts);
+                              newSelectedMap.set(product.sku, newQty);
+                              setSelectedProducts(newSelectedMap);
+                            }
+                          }}
+                          onKeyDown={(e) => {
+                            // Permettre de valider avec Enter
+                            if (e.key === 'Enter') {
+                              e.target.blur();
                             }
                           }}
                           placeholder="0"
-                          disabled={!isSelected}
-                          className={`w-24 px-3 py-2 border rounded-lg text-center font-semibold text-sm focus:outline-none focus:ring-2 focus:ring-[#8B5CF6] ${
-                            isSelected
-                              ? 'border-[#8B5CF6] bg-white text-[#191919]'
-                              : 'border-[#E5E4DF] bg-[#FAFAF7] text-[#666663] cursor-not-allowed'
-                          }`}
+                          className="w-24 px-3 py-2 border rounded-lg text-center font-semibold text-sm focus:outline-none focus:ring-2 focus:ring-[#8B5CF6] border-[#8B5CF6] bg-white text-[#191919]"
                         />
                       </td>
                     </tr>

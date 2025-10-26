@@ -265,6 +265,45 @@ export function useAnalytics(products, orders, dateRange = '30d', customRange = 
   }, [currentUser, dateRange, startDate, endDate, fetchStartDate, comparisonType]);
 
   // ========================================
+  // CALCUL DES KPIs DE LA PÉRIODE ACTUELLE (DEPUIS L'HISTORIQUE)
+  // ========================================
+  const periodCurrentKPIs = useMemo(() => {
+    if (history.length === 0) {
+      console.log('⚠️ Pas d\'historique, utilisation des KPIs actuels');
+      return currentKPIs;
+    }
+
+    // Filtrer l'historique pour la période actuelle
+    const periodData = history.filter(h => {
+      const historyDate = new Date(h.date);
+      return historyDate >= startDate && historyDate <= endDate;
+    });
+
+    if (periodData.length === 0) {
+      console.log('⚠️ Pas de données pour la période actuelle, utilisation des KPIs actuels');
+      return currentKPIs;
+    }
+
+    console.log('📊 Calcul des KPIs de la période actuelle:', periodData.length, 'points');
+
+    // Calculer les moyennes pour la période actuelle
+    const avgKPIs = {
+      skuAvailabilityRate: periodData.reduce((sum, d) => sum + d.skuAvailabilityRate, 0) / periodData.length,
+      salesLostAmount: periodData.reduce((sum, d) => sum + d.salesLostAmount, 0) / periodData.length,
+      overstockCost: periodData.reduce((sum, d) => sum + d.overstockCost, 0) / periodData.length,
+      inventoryValuation: periodData.reduce((sum, d) => sum + (d.inventoryValuation || 0), 0) / periodData.length,
+      // Ajouter les données supplémentaires
+      availableSKUs: currentKPIs.availableSKUs,
+      totalSKUs: currentKPIs.totalSKUs,
+      salesLostCount: currentKPIs.salesLostCount,
+      overstockSKUs: currentKPIs.overstockSKUs
+    };
+
+    console.log('📊 KPIs période actuelle:', avgKPIs);
+    return avgKPIs;
+  }, [history, startDate, endDate, currentKPIs]);
+
+  // ========================================
   // CALCUL DES DONNÉES DE COMPARAISON
   // ========================================
   const comparisonKPIs = useMemo(() => {
@@ -372,22 +411,22 @@ export function useAnalytics(products, orders, dateRange = '30d', customRange = 
 
     // SKU Availability
     const skuAvailabilityComparison = comparisonKPIs 
-      ? calculatePeriodComparison(currentKPIs.skuAvailabilityRate, comparisonKPIs.skuAvailabilityRate)
+      ? calculatePeriodComparison(periodCurrentKPIs.skuAvailabilityRate, comparisonKPIs.skuAvailabilityRate)
       : { change: 0, changePercent: 0, trend: 'neutral' };
 
     // Sales Lost
     const salesLostComparison = comparisonKPIs
-      ? calculatePeriodComparison(currentKPIs.salesLostAmount, comparisonKPIs.salesLostAmount)
+      ? calculatePeriodComparison(periodCurrentKPIs.salesLostAmount, comparisonKPIs.salesLostAmount)
       : { change: 0, changePercent: 0, trend: 'neutral' };
 
     // Overstock
     const overstockComparison = comparisonKPIs
-      ? calculatePeriodComparison(currentKPIs.overstockCost, comparisonKPIs.overstockCost)
+      ? calculatePeriodComparison(periodCurrentKPIs.overstockCost, comparisonKPIs.overstockCost)
       : { change: 0, changePercent: 0, trend: 'neutral' };
 
     // Inventory Valuation
     const inventoryValuationComparison = comparisonKPIs
-      ? calculatePeriodComparison(currentKPIs.inventoryValuation, comparisonKPIs.inventoryValuation)
+      ? calculatePeriodComparison(periodCurrentKPIs.inventoryValuation, comparisonKPIs.inventoryValuation)
       : { change: 0, changePercent: 0, trend: 'neutral' };
 
     // Formater la période de comparaison pour l'affichage
@@ -423,35 +462,35 @@ export function useAnalytics(products, orders, dateRange = '30d', customRange = 
 
     const result = {
       skuAvailability: {
-        value: `${currentKPIs.skuAvailabilityRate.toFixed(1)}%`,
-        rawValue: currentKPIs.skuAvailabilityRate,
+        value: `${periodCurrentKPIs.skuAvailabilityRate.toFixed(1)}%`,
+        rawValue: periodCurrentKPIs.skuAvailabilityRate,
         change: skuAvailabilityComparison.change,
         changePercent: skuAvailabilityComparison.changePercent,
         trend: skuAvailabilityComparison.trend,
         chartData: chartData.skuAvailability,
-        description: `${currentKPIs.availableSKUs} SKUs disponibles sur ${currentKPIs.totalSKUs}`,
+        description: `${periodCurrentKPIs.availableSKUs} SKUs disponibles sur ${periodCurrentKPIs.totalSKUs}`,
         comparisonPeriod: comparisonPeriodLabel,
         comparisonValue: comparisonKPIs?.skuAvailabilityRate.toFixed(1) || null
       },
       salesLost: {
-        value: `${currentKPIs.salesLostAmount.toFixed(0)}€`,
-        rawValue: currentKPIs.salesLostAmount,
+        value: `${periodCurrentKPIs.salesLostAmount.toFixed(0)}€`,
+        rawValue: periodCurrentKPIs.salesLostAmount,
         change: salesLostComparison.change,
         changePercent: salesLostComparison.changePercent,
         trend: salesLostComparison.trend,
         chartData: chartData.salesLost,
-        description: `${currentKPIs.salesLostCount} SKUs en rupture`,
+        description: `${periodCurrentKPIs.salesLostCount} SKUs en rupture`,
         comparisonPeriod: comparisonPeriodLabel,
         comparisonValue: comparisonKPIs?.salesLostAmount.toFixed(0) || null
       },
       overstockCost: {
-        value: `${currentKPIs.overstockCost.toFixed(0)}€`,
-        rawValue: currentKPIs.overstockCost,
+        value: `${periodCurrentKPIs.overstockCost.toFixed(0)}€`,
+        rawValue: periodCurrentKPIs.overstockCost,
         change: overstockComparison.change,
         changePercent: overstockComparison.changePercent,
         trend: overstockComparison.trend,
         chartData: chartData.overstock,
-        description: `${currentKPIs.overstockSKUs} SKUs en surstock`,
+        description: `${periodCurrentKPIs.overstockSKUs} SKUs en surstock`,
         comparisonPeriod: comparisonPeriodLabel,
         comparisonValue: comparisonKPIs?.overstockCost.toFixed(0) || null
       },
@@ -460,8 +499,8 @@ export function useAnalytics(products, orders, dateRange = '30d', customRange = 
           style: 'currency',
           currency: 'EUR',
           minimumFractionDigits: 0
-        }).format(currentKPIs.inventoryValuation),
-        rawValue: currentKPIs.inventoryValuation,
+        }).format(periodCurrentKPIs.inventoryValuation),
+        rawValue: periodCurrentKPIs.inventoryValuation,
         change: inventoryValuationComparison.change,
         changePercent: inventoryValuationComparison.changePercent,
         trend: inventoryValuationComparison.trend,

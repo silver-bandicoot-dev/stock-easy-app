@@ -234,7 +234,7 @@ export const HistoryTab = ({
       <div className="flex justify-center sm:justify-end">
         <Button
           onClick={handleExportCSV}
-          variant="outline"
+          variant="primary"
           className="flex items-center gap-2"
         >
           <Download className="w-4 h-4" />

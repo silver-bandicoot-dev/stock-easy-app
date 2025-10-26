@@ -115,8 +115,12 @@ export const OrderBySupplier = ({
                           <input
                             type="number"
                             min="0"
-                            value={orderQuantities[product.sku] || product.qtyToOrder}
-                            onChange={(e) => updateOrderQuantity(product.sku, e.target.value)}
+                            step="1"
+                            value={Math.round(orderQuantities[product.sku] || product.qtyToOrder || 0)}
+                            onChange={(e) => {
+                              const value = parseInt(e.target.value) || 0;
+                              updateOrderQuantity(product.sku, value);
+                            }}
                             className="w-20 p-2 border border-[#E5E4DF] rounded text-center text-sm focus:outline-none focus:ring-2 focus:ring-black"
                           />
                           <span className="text-xs text-[#666663]">unités</span>
@@ -130,12 +134,11 @@ export const OrderBySupplier = ({
 
             {/* Actions globales */}
             <div className="p-4 border-t border-[#E5E4DF] bg-[#FAFAF7]">
-              <div className="flex flex-wrap gap-3">
+              <div className="flex flex-wrap gap-3 justify-end">
                 <Button
                   variant="primary"
                   icon={Package}
                   onClick={() => handleOpenEmailModal(supplier, products)}
-                  className="flex-1 sm:flex-none"
                 >
                   Commander
                 </Button>
