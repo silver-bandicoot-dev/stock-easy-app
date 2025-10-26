@@ -1,12 +1,8 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { Eye } from 'lucide-react';
-import { InfoTooltip } from '../ui/InfoTooltip';
+import { InfoTooltip, tooltips } from '../ui/InfoTooltip/InfoTooltip';
 import { formatUnits } from '../../utils/decimalUtils';
-
-const tooltips = {
-  toWatch: "Produits dont le stock approche du point de commande et nécessitent une surveillance attentive."
-};
 
 export const ProductsToWatch = ({ products }) => {
   return (
@@ -16,7 +12,7 @@ export const ProductsToWatch = ({ products }) => {
           <Eye className="w-6 h-6 text-orange-600 shrink-0" />
         </div>
         <div className="flex-1 min-w-0">
-          <div className="flex items-center">
+          <div className="flex items-center gap-1">
             <h2 className="text-lg font-bold text-[#191919]">Produits à surveiller</h2>
             <InfoTooltip content={tooltips.watch} />
           </div>

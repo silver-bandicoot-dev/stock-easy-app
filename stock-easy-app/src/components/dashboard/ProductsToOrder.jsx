@@ -1,12 +1,8 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { AlertCircle } from 'lucide-react';
-import { InfoTooltip } from '../ui/InfoTooltip';
+import { InfoTooltip, tooltips } from '../ui/InfoTooltip/InfoTooltip';
 import { formatUnits } from '../../utils/decimalUtils';
-
-const tooltips = {
-  toOrder: "Produits dont le stock est en dessous du point de commande et nécessitent une réapprovisionnement urgent."
-};
 
 export const ProductsToOrder = ({ products }) => {
   return (
@@ -16,7 +12,7 @@ export const ProductsToOrder = ({ products }) => {
           <AlertCircle className="w-6 h-6 text-[#EF1C43] shrink-0" />
         </div>
         <div className="flex-1 min-w-0">
-          <div className="flex items-center">
+          <div className="flex items-center gap-1">
             <h2 className="text-lg font-bold text-[#191919]">Produits à commander</h2>
             <InfoTooltip content={tooltips.toOrder} />
           </div>

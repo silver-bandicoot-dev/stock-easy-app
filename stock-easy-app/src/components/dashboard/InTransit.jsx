@@ -1,12 +1,8 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { Truck } from 'lucide-react';
-import { InfoTooltip } from '../ui/InfoTooltip';
+import { InfoTooltip, tooltips } from '../ui/InfoTooltip/InfoTooltip';
 import { formatConfirmedDate, calculateDaysRemaining } from '../../utils/dateUtils';
-
-const tooltips = {
-  inTransit: "Commandes en cours de livraison par les fournisseurs."
-};
 
 export const InTransit = ({ orders, setActiveTab, setTrackTabSection }) => {
   const inTransitOrders = orders.filter(order => order.status === 'in_transit');
@@ -23,7 +19,7 @@ export const InTransit = ({ orders, setActiveTab, setTrackTabSection }) => {
           <Truck className="w-6 h-6 text-purple-600 shrink-0" />
         </div>
         <div className="flex-1 min-w-0">
-          <div className="flex items-center">
+          <div className="flex items-center gap-1">
             <h2 className="text-lg font-bold text-[#191919]">En transit</h2>
             <InfoTooltip content={tooltips.inTransit} />
           </div>

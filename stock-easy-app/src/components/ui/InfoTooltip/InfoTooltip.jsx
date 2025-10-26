@@ -11,7 +11,7 @@ export function InfoTooltip({ content }) {
   const [show, setShow] = useState(false);
   
   return (
-    <div className="relative inline-block">
+    <div className="relative inline-block group">
       <button
         type="button"
         onMouseEnter={() => setShow(true)}
@@ -22,7 +22,7 @@ export function InfoTooltip({ content }) {
         <Info className="w-4 h-4 shrink-0" />
       </button>
       {show && (
-        <div className="absolute left-0 top-6 bg-black text-white text-xs rounded-lg p-3 shadow-2xl border-2 border-black z-[100] min-w-80 max-w-md">
+        <div className="absolute left-0 top-full mt-2 bg-black text-white text-xs rounded-lg p-3 shadow-2xl border-2 border-black z-[100] min-w-80 max-w-md whitespace-normal break-words">
           <div className="absolute -top-2 left-4 w-0 h-0 border-l-4 border-r-4 border-b-8 border-transparent border-b-black"></div>
           {content}
         </div>

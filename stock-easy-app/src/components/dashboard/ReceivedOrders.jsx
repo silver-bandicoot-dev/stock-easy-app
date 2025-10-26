@@ -1,12 +1,8 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { CheckCircle } from 'lucide-react';
-import { InfoTooltip } from '../ui/InfoTooltip';
+import { InfoTooltip, tooltips } from '../ui/InfoTooltip/InfoTooltip';
 import { formatConfirmedDate } from '../../utils/dateUtils';
-
-const tooltips = {
-  received: "Commandes réceptionnées et en attente de validation finale."
-};
 
 export const ReceivedOrders = ({ orders, setActiveTab, setTrackTabSection }) => {
   const receivedOrders = orders.filter(order => order.status === 'received');
@@ -23,7 +19,7 @@ export const ReceivedOrders = ({ orders, setActiveTab, setTrackTabSection }) => 
           <CheckCircle className="w-6 h-6 text-green-600 shrink-0" />
         </div>
         <div className="flex-1 min-w-0">
-          <div className="flex items-center">
+          <div className="flex items-center gap-1">
             <h2 className="text-lg font-bold text-[#191919]">Commandes reçues</h2>
             <InfoTooltip content={tooltips.received} />
           </div>
