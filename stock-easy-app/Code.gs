@@ -1055,6 +1055,7 @@ function updateOrderItems(orderId, items) {
   try {
     Logger.log('=== UPDATE ORDER ITEMS ===');
     Logger.log('Order ID: ' + orderId);
+    Logger.log('Items: ' + JSON.stringify(items));
     
     const sheet = getSpreadsheet().getSheetByName(SHEETS.ORDER_ITEMS);
     const values = sheet.getDataRange().getValues();
@@ -1063,8 +1064,11 @@ function updateOrderItems(orderId, items) {
     const orderIdIndex = headers.indexOf('orderId');
     const skuIndex = headers.indexOf('sku');
     const receivedQtyIndex = headers.indexOf('receivedQuantity');
+    const damagedQtyIndex = headers.indexOf('damagedQuantity');
     const discrepancyTypeIndex = headers.indexOf('discrepancyType');
     const discrepancyNotesIndex = headers.indexOf('discrepancyNotes');
+    
+    Logger.log('Column indices - receivedQty: ' + receivedQtyIndex + ', damagedQty: ' + damagedQtyIndex);
     
     items.forEach(item => {
       for (let i = 1; i < values.length; i++) {
@@ -1075,10 +1079,17 @@ function updateOrderItems(orderId, items) {
             sheet.getRange(i + 1, receivedQtyIndex + 1).setValue(Number(item.receivedQuantity));
             Logger.log('  receivedQuantity: ' + item.receivedQuantity);
           }
+          
+          if (item.damagedQuantity !== undefined && damagedQtyIndex !== -1) {
+            sheet.getRange(i + 1, damagedQtyIndex + 1).setValue(Number(item.damagedQuantity));
+            Logger.log('  damagedQuantity: ' + item.damagedQuantity);
+          }
+          
           if (item.discrepancyType !== undefined && discrepancyTypeIndex !== -1) {
             sheet.getRange(i + 1, discrepancyTypeIndex + 1).setValue(item.discrepancyType);
             Logger.log('  discrepancyType: ' + item.discrepancyType);
           }
+          
           if (item.discrepancyNotes !== undefined && discrepancyNotesIndex !== -1) {
             sheet.getRange(i + 1, discrepancyNotesIndex + 1).setValue(item.discrepancyNotes);
             Logger.log('  discrepancyNotes: ' + item.discrepancyNotes);

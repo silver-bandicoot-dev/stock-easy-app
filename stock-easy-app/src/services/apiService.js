@@ -75,7 +75,7 @@ export async function updateStock(items) {
   try {
     const response = await fetch(`${API_URL}?action=updateStock`, {
       method: 'POST',
-      body: JSON.stringify(items)
+      body: JSON.stringify({ items })
     });
     const data = await response.json();
     if (data.error) throw new Error(data.error);
@@ -406,20 +406,19 @@ export async function applyOptimizationsBatch(optimizations) {
  * @param {string} statusData.trackingUrl - URL de tracking
  * @param {string} statusData.eta - Date estimée de livraison
  */
-export async function updateOrderStatus(orderId, statusData) {
+export async function updateOrderStatus(orderIdOrData, statusData) {
   try {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 30000);
     
-    // Utiliser GET avec paramètres URL comme avant
-    const params = new URLSearchParams({
-      action: 'updateOrderStatus',
-      orderId: orderId,
-      ...statusData
-    });
+    // Support pour les deux syntaxes : updateOrderStatus(orderId, updates) et updateOrderStatus({ orderId, ...updates })
+    const data = typeof orderIdOrData === 'string' 
+      ? { orderId: orderIdOrData, ...statusData }
+      : orderIdOrData;
     
-    const response = await fetch(`${API_URL}?${params}`, {
-      method: 'GET',
+    const response = await fetch(`${API_URL}?action=updateOrderStatus`, {
+      method: 'POST',
+      body: JSON.stringify(data),
       signal: controller.signal
     });
     
@@ -429,11 +428,11 @@ export async function updateOrderStatus(orderId, statusData) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
     
-    const data = await response.json();
-    if (data.error) throw new Error(data.error);
+    const result = await response.json();
+    if (result.error) throw new Error(result.error);
     
-    console.log('✅ Statut de commande mis à jour:', data);
-    return data;
+    console.log('✅ Statut de commande mis à jour:', result);
+    return result;
   } catch (error) {
     console.error('❌ Erreur lors de la mise à jour du statut:', error);
     throw error;
