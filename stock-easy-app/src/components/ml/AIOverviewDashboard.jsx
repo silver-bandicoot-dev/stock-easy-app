@@ -16,6 +16,7 @@ import {
   Sparkles,
   ArrowRight
 } from 'lucide-react';
+import { AI_TABS } from '../../constants/stockEasyConstants';
 // Hooks ML temporaires (à remplacer par les vrais hooks)
 const useDemandForecast = (products) => ({
   forecasts: products ? products.reduce((acc, product) => {
@@ -189,7 +190,7 @@ export function AIOverviewDashboard({
                 action="Voir les anomalies"
                 color="red"
                 link="anomalies"
-                onClick={() => setAiSubTab('analytics')}
+                onClick={() => setAiSubTab && setAiSubTab(AI_TABS.ANOMALIES)}
               />
             )}
 
@@ -201,7 +202,7 @@ export function AIOverviewDashboard({
                 action="Optimiser maintenant"
                 color="blue"
                 link="optimization"
-                onClick={() => setAiSubTab('optimization')}
+                onClick={() => setAiSubTab && setAiSubTab(AI_TABS.OPTIMIZATION)}
               />
             )}
           </div>
@@ -222,7 +223,7 @@ export function AIOverviewDashboard({
           ]}
           link="forecasts"
           color="purple"
-          onClick={() => setAiSubTab('predictions')}
+          onClick={() => setAiSubTab && setAiSubTab(AI_TABS.FORECASTS)}
         />
 
         {/* Module Optimisation */}
@@ -237,7 +238,7 @@ export function AIOverviewDashboard({
           ]}
           link="optimization"
           color="blue"
-          onClick={() => setAiSubTab('optimization')}
+          onClick={() => setAiSubTab && setAiSubTab(AI_TABS.OPTIMIZATION)}
         />
 
         {/* Module Anomalies */}
@@ -252,7 +253,7 @@ export function AIOverviewDashboard({
           ]}
           link="anomalies"
           color="red"
-          onClick={() => setAiSubTab('analytics')}
+          onClick={() => setAiSubTab && setAiSubTab(AI_TABS.ANOMALIES)}
         />
 
         {/* Module Performance */}
@@ -267,7 +268,7 @@ export function AIOverviewDashboard({
           ]}
           link="forecasts"
           color="green"
-          onClick={() => setAiSubTab('predictions')}
+          onClick={() => setAiSubTab && setAiSubTab(AI_TABS.FORECASTS)}
         />
       </div>
 
