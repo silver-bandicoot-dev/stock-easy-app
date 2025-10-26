@@ -1,5 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
+import { Package } from 'lucide-react';
 import { ProductsToOrder } from './ProductsToOrder';
 import { ProductsToWatch } from './ProductsToWatch';
 import { InTransit } from './InTransit';
@@ -26,8 +27,15 @@ export const DashboardTab = ({ productsByStatus, orders, setActiveTab, setTrackT
       {enrichedProducts && enrichedProducts.length > 0 && (
         <div className="bg-white rounded-xl shadow-sm border border-[#E5E4DF] p-6">
           <div className="mb-4">
-            <h2 className="text-2xl font-bold text-[#191919]">Santé de l'Inventaire</h2>
-            <p className="text-sm text-[#666663] mt-1">Vue d'ensemble de l'état de vos stocks</p>
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 bg-purple-50 rounded-lg flex items-center justify-center border border-purple-200 shrink-0">
+                <Package className="w-6 h-6 text-purple-600 shrink-0" />
+              </div>
+              <div>
+                <h2 className="text-2xl font-bold text-[#191919]">Santé de l'Inventaire</h2>
+                <p className="text-sm text-[#666663]">Vue d'ensemble de l'état de vos stocks</p>
+              </div>
+            </div>
           </div>
           <StockHealthDashboard 
             totalUrgent={urgentCount}
