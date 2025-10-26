@@ -1,7 +1,5 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Package } from 'lucide-react';
-import { StockHealthDashboard } from '../features/StockHealthDashboard';
 import { HealthBar } from '../ui/HealthBar';
 import { formatUnits } from '../../utils/decimalUtils';
 
@@ -14,11 +12,6 @@ export const StockTab = ({
   setSearchTerm,
   onViewDetails
 }) => {
-  // Calculer les statistiques de santé
-  const urgentCount = products.filter(p => p.healthStatus === 'urgent').length;
-  const warningCount = products.filter(p => p.healthStatus === 'warning').length;
-  const healthyCount = products.filter(p => p.healthStatus === 'healthy').length;
-
   return (
     <motion.div
       key="stock"
@@ -28,31 +21,6 @@ export const StockTab = ({
       transition={{ duration: 0.25 }}
       className="space-y-6"
     >
-      {/* Header et Dashboard */}
-      <div className="bg-white rounded-xl shadow-sm border border-[#E5E4DF] p-6">
-        <div className="mb-6">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 bg-purple-50 rounded-lg flex items-center justify-center border border-purple-200 shrink-0">
-              <Package className="w-6 h-6 text-purple-600 shrink-0" />
-            </div>
-            <div>
-              <h2 className="text-2xl font-bold text-[#191919]">Santé de l'Inventaire</h2>
-              <p className="text-sm text-[#666663]">Visualisez la disponibilité actuelle de chaque SKU avec filtres et tri</p>
-            </div>
-          </div>
-        </div>
-        
-        {/* Dashboard global de santé */}
-        <div className="mb-6">
-          <StockHealthDashboard 
-            totalUrgent={urgentCount}
-            totalWarning={warningCount}
-            totalHealthy={healthyCount}
-            totalProducts={products.length}
-          />
-        </div>
-      </div>
-
       {/* Table des produits */}
       <div className="bg-white rounded-xl shadow-sm border border-[#E5E4DF] overflow-hidden">
         {/* Header de la table avec filtres */}
