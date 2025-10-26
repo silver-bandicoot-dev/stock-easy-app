@@ -1926,6 +1926,7 @@ ${getUserSignature()}`
                       orders={orders}
                       setActiveTab={setActiveTab}
                       setTrackTabSection={setTrackTabSection}
+                      enrichedProducts={enrichedProducts}
                     />
                   )}
 
