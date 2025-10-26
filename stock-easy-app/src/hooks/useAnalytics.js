@@ -28,6 +28,7 @@ function getComparisonPeriod(currentStart, currentEnd, comparisonType) {
       };
     
     case 'year_ago':
+    case 'same_last_year':
       // Même période l'année dernière
       const yearAgoStart = new Date(currentStart);
       yearAgoStart.setFullYear(yearAgoStart.getFullYear() - 1);
@@ -152,11 +153,17 @@ export function useAnalytics(products, orders, dateRange = '30d', customRange = 
     let start, end;
     
     // Gérer le mode custom
-    if (dateRange === 'custom' && customRange?.startDate && customRange?.endDate) {
-      start = new Date(customRange.startDate);
-      end = new Date(customRange.endDate);
-      
-      console.log('📅 Mode personnalisé:', customRange.startDate, 'à', customRange.endDate);
+    if (dateRange === 'custom' && (customRange?.startDate && customRange?.endDate) || (customRange?.start && customRange?.end)) {
+      // Gérer les deux formats possibles : startDate/endDate ou start/end
+      if (customRange.startDate && customRange.endDate) {
+        start = new Date(customRange.startDate);
+        end = new Date(customRange.endDate);
+        console.log('📅 Mode personnalisé (startDate/endDate):', customRange.startDate, 'à', customRange.endDate);
+      } else if (customRange.start && customRange.end) {
+        start = new Date(customRange.start);
+        end = new Date(customRange.end);
+        console.log('📅 Mode personnalisé (start/end):', customRange.start, 'à', customRange.end);
+      }
     } else {
       // Mode preset
       end = new Date();
@@ -167,6 +174,7 @@ export function useAnalytics(products, orders, dateRange = '30d', customRange = 
       if (dateRange === '7d') days = 7;
       else if (dateRange === '30d') days = 30;
       else if (dateRange === '90d') days = 90;
+      else if (dateRange === '1y') days = 365;
       
       start.setDate(end.getDate() - days);
     }
