@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
-import { Filter, Search, ShoppingCart, Check, X, Package, AlertCircle, ArrowUpDown, ArrowUp, ArrowDown, ChevronLeft, ChevronRight, Hash } from 'lucide-react';
+import { Filter, Search, Check, X, Package, AlertCircle, ArrowUpDown, ArrowUp, ArrowDown, ChevronLeft, ChevronRight, Hash } from 'lucide-react';
 import { toast } from 'sonner';
+import { Button } from '../../shared/Button';
 
 export function ProductSelectionTable({ products, suppliers, onCreateOrder }) {
   const [selectedProducts, setSelectedProducts] = useState(new Map());
@@ -452,8 +453,9 @@ export function ProductSelectionTable({ products, suppliers, onCreateOrder }) {
                               e.target.blur();
                             }
                           }}
+                          disabled={!isSelected}
                           placeholder="0"
-                          className="w-24 px-3 py-2 border rounded-lg text-center font-semibold text-sm focus:outline-none focus:ring-2 focus:ring-[#8B5CF6] border-[#8B5CF6] bg-white text-[#191919]"
+                          className="w-24 px-3 py-2 border rounded-lg text-center font-semibold text-sm focus:outline-none focus:ring-2 focus:ring-[#8B5CF6] border-[#8B5CF6] bg-white text-[#191919] disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-100"
                         />
                       </td>
                     </tr>
@@ -530,16 +532,17 @@ export function ProductSelectionTable({ products, suppliers, onCreateOrder }) {
       {/* Afficher le bouton seulement si onCreateOrder est fourni (usage dans modal) */}
       {selectedProducts.size > 0 && onCreateOrder && (
         <div className="fixed bottom-6 right-6 z-50">
-          <button
+          <Button
+            variant="primary"
+            icon={Package}
             onClick={handleCreateOrder}
-            className="bg-[#8B5CF6] text-white px-6 py-4 rounded-xl shadow-2xl hover:bg-[#7C3AED] transition-all flex items-center gap-3 font-semibold group"
+            className="shadow-2xl"
           >
-            <ShoppingCart className="w-5 h-5 group-hover:scale-110 transition-transform" />
             <span>Créer une commande</span>
             <span className="bg-white/20 px-3 py-1 rounded-full text-sm">
               {selectedProducts.size}
             </span>
-          </button>
+          </Button>
         </div>
       )}
 

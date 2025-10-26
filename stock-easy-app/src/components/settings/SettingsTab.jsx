@@ -172,32 +172,20 @@ export const SettingsTab = ({
                 <MappingSKUFournisseur
                   products={products}
                   suppliers={suppliers}
-                  assignSupplierModalOpen={assignSupplierModalOpen}
-                  setAssignSupplierModalOpen={setAssignSupplierModalOpen}
-                  selectedProductForMapping={selectedProductForMapping}
-                  setSelectedProductForMapping={setSelectedProductForMapping}
-                  handleOpenAssignSupplierModal={handleOpenAssignSupplierModal}
-                  handleCloseAssignSupplierModal={handleCloseAssignSupplierModal}
-                  handleAssignSupplier={handleAssignSupplier}
-                  loadData={loadData}
+                  onOpenAssignModal={handleOpenAssignSupplierModal}
+                  onRemoveSupplier={(product) => {
+                    // TODO: Implémenter la logique pour retirer le fournisseur
+                    console.log('Remove supplier from', product.sku);
+                  }}
                 />
               )}
 
               {parametersSubTab === SETTINGS_TABS.WAREHOUSES && (
                 <GestionWarehouses
                   warehouses={warehouses}
-                  warehouseModalOpen={warehouseModalOpen}
-                  setWarehouseModalOpen={setWarehouseModalOpen}
-                  editingWarehouse={editingWarehouse}
-                  setEditingWarehouse={setEditingWarehouse}
-                  warehouseFormData={warehouseFormData}
-                  setWarehouseFormData={setWarehouseFormData}
-                  handleOpenWarehouseModal={handleOpenWarehouseModal}
-                  handleCloseWarehouseModal={handleCloseWarehouseModal}
-                  handleWarehouseFormChange={handleWarehouseFormChange}
-                  handleSaveWarehouse={handleSaveWarehouse}
-                  handleDeleteWarehouse={handleDeleteWarehouse}
-                  loadData={loadData}
+                  onCreateWarehouse={handleSaveWarehouse}
+                  onUpdateWarehouse={handleSaveWarehouse}
+                  onDeleteWarehouse={handleDeleteWarehouse}
                 />
               )}
             </motion.div>

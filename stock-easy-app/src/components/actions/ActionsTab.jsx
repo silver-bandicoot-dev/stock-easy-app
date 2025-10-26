@@ -3,8 +3,11 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, Package, Sparkles } from 'lucide-react';
 import { Button } from '../shared/Button';
 import { OrderBySupplier } from './OrderBySupplier';
-import { OrderCreationModal } from './OrderCreationModal';
+import { ProductSelectionTable } from '../features/ProductSelectionTable/ProductSelectionTable';
+import { CustomOrderModal } from './modals/CustomOrderModal';
 import { ACTIONS_TABS } from '../../constants/stockEasyConstants';
+import { toast } from 'sonner';
+import api from '../../services/apiService';
 
 export const ActionsTab = ({
   productsByStatus,
@@ -17,10 +20,8 @@ export const ActionsTab = ({
   orders,
   handleCreateOrder,
   handleOpenEmailModal,
-  orderCreationModalOpen,
-  setOrderCreationModalOpen,
-  selectedProductsFromTable,
-  setSelectedProductsFromTable,
+  loadData,
+  getUserSignature,
   // Nouveaux props pour les modals
   emailModal,
   emailModalHandlers,
@@ -28,6 +29,10 @@ export const ActionsTab = ({
 }) => {
   // État local pour la sous-navigation Actions
   const [actionsSubTab, setActionsSubTab] = useState(ACTIONS_TABS.RECOMMENDATIONS);
+  
+  // État pour le modal de commande personnalisée
+  const [customOrderModalOpen, setCustomOrderModalOpen] = useState(false);
+  const [selectedProductsForModal, setSelectedProductsForModal] = useState([]);
 
   const actionsSections = [
     {
@@ -43,6 +48,95 @@ export const ActionsTab = ({
       shortTitle: 'Personnalisée'
     }
   ];
+
+  // Handler pour créer une commande personnalisée
+  const handleCreateCustomOrder = (selectedProductsMap) => {
+    if (selectedProductsMap.size === 0) {
+      toast.error('Veuillez sélectionner au moins un produit');
+      return;
+    }
+
+    // Convertir les produits sélectionnés en array avec les bonnes quantités
+    const products = Array.from(selectedProductsMap.entries()).map(([sku, quantity]) => {
+      const product = productsByStatus.to_order.find(p => p.sku === sku);
+      return {
+        ...product,
+        qtyToOrder: quantity // Utiliser la quantité personnalisée au lieu de qtyToOrder
+      };
+    });
+
+    // Grouper par fournisseur
+    const productsBySupplier = {};
+    products.forEach(p => {
+      if (!p || !p.supplier) return;
+      if (!productsBySupplier[p.supplier]) {
+        productsBySupplier[p.supplier] = [];
+      }
+      productsBySupplier[p.supplier].push(p);
+    });
+
+    const suppliers = Object.keys(productsBySupplier);
+    
+    if (suppliers.length === 0) {
+      toast.error('Aucun fournisseur trouvé pour les produits sélectionnés');
+      return;
+    }
+
+    // Si plusieurs fournisseurs, informer l'utilisateur
+    if (suppliers.length > 1) {
+      toast.info(`${suppliers.length} fournisseurs détectés. Sélectionner des produits d'un seul fournisseur.`, {
+        duration: 4000
+      });
+      return;
+    }
+
+    // Un seul fournisseur - ouvrir le modal de commande personnalisée
+    const supplier = suppliers[0];
+    const supplierProducts = productsBySupplier[supplier];
+    
+    setSelectedProductsForModal(supplierProducts);
+    setCustomOrderModalOpen(true);
+  };
+
+  // Handler pour confirmer la création de la commande personnalisée
+  const handleConfirmCustomOrder = async (mode, warehouse, quantities, emailData) => {
+    try {
+      const supplier = selectedProductsForModal[0]?.supplier;
+      const total = selectedProductsForModal.reduce((sum, p) => {
+        const qty = quantities[p.sku] || p.qtyToOrder || 0;
+        return sum + (qty * (p.buyPrice || 0));
+      }, 0);
+
+      const orderData = {
+        id: generatePONumber(orders),
+        supplier: supplier,
+        warehouseId: warehouse,
+        warehouseName: warehouse,
+        status: 'pending_confirmation',
+        total: total.toFixed(2),
+        createdAt: new Date().toISOString().split('T')[0],
+        items: selectedProductsForModal.map(p => ({
+          sku: p.sku,
+          quantity: quantities[p.sku] || p.qtyToOrder || 0,
+          pricePerUnit: p.buyPrice
+        })),
+        notes: mode === 'with_email' ? 'Commande créée avec email' : 'Commande créée sans email'
+      };
+
+      await api.createOrder(orderData);
+      
+      if (mode === 'with_email' && emailData) {
+        console.log('📧 Email à envoyer:', emailData);
+      }
+
+      await loadData();
+      setCustomOrderModalOpen(false);
+      toast.success('Commande créée avec succès !');
+    } catch (error) {
+      console.error('Erreur lors de la création de la commande:', error);
+      toast.error('Erreur lors de la création de la commande');
+    }
+  };
 
   return (
     <>
@@ -120,45 +214,30 @@ export const ActionsTab = ({
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
               transition={{ duration: 0.25 }}
-              className="bg-white rounded-xl shadow-sm border border-[#E5E4DF] p-6"
             >
-              <div className="text-center py-12">
-                <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-[#FAFAF7] mb-4">
-                  <Plus className="w-8 h-8 text-[#666663]" />
-                </div>
-                <h3 className="text-xl font-semibold text-[#191919] mb-2">
-                  Créer une commande personnalisée
-                </h3>
-                <p className="text-[#666663] mb-6">
-                  Commencez par sélectionner un fournisseur et des produits
-                </p>
-                <Button
-                  variant="primary"
-                  icon={Plus}
-                  onClick={() => setOrderCreationModalOpen(true)}
-                >
-                  Ouvrir le créateur de commande
-                </Button>
-              </div>
+              {/* Table de sélection des produits avec bouton de création */}
+              <ProductSelectionTable
+                products={productsByStatus.to_order}
+                suppliers={suppliers}
+                onCreateOrder={(selectedProductsMap) => {
+                  handleCreateCustomOrder(selectedProductsMap);
+                }}
+              />
             </motion.div>
           )}
         </AnimatePresence>
       </motion.div>
 
-      {/* Modal de création de commande personnalisée */}
-      <OrderCreationModal
-        isOpen={orderCreationModalOpen}
-        onClose={() => setOrderCreationModalOpen(false)}
-        products={productsByStatus.to_order}
-        suppliers={suppliers}
+      {/* Modal de commande personnalisée */}
+      <CustomOrderModal
+        isOpen={customOrderModalOpen}
+        onClose={() => setCustomOrderModalOpen(false)}
+        selectedProducts={selectedProductsForModal}
         warehouses={warehouses}
-        orderQuantities={orderQuantities}
-        updateOrderQuantity={updateOrderQuantity}
-        generatePONumber={generatePONumber}
-        orders={orders}
-        handleCreateOrder={handleCreateOrder}
-        selectedProductsFromTable={selectedProductsFromTable}
-        setSelectedProductsFromTable={setSelectedProductsFromTable}
+        emailGeneration={emailGeneration}
+        getUserSignature={getUserSignature}
+        suppliers={suppliers}
+        onConfirm={handleConfirmCustomOrder}
       />
     </>
   );

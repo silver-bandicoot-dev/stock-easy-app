@@ -28,7 +28,6 @@ import { ParametresGeneraux } from './components/settings/ParametresGeneraux';
 import { GestionWarehouses } from './components/settings/GestionWarehouses';
 import CommentSection from './components/comments/CommentSection';
 import { InlineModalsContainer } from './components/modals/InlineModalsContainer';
-import { OrderCreationModal } from './components/actions/OrderCreationModal';
 
 import Sidebar from './components/layout/Sidebar';
 import { useInlineModals } from './hooks/useInlineModals';
@@ -335,22 +334,16 @@ const StockEasy = () => {
     }));
   };
 
-  const handleSaveWarehouse = async () => {
+  const handleSaveWarehouse = async (data) => {
     try {
-      if (editingWarehouse) {
-        // Mise à jour d'un entrepôt existant
-        await api.updateWarehouse(editingWarehouse.id, warehouseFormData);
-        toast.success('Entrepôt mis à jour avec succès');
-      } else {
-        // Création d'un nouvel entrepôt
-        await api.createWarehouse(warehouseFormData);
-        toast.success('Entrepôt créé avec succès');
-      }
-      handleCloseWarehouseModal();
+      const formData = data || warehouseFormData;
+      await api.createWarehouse(formData);
+      toast.success('Entrepôt créé avec succès');
       loadData();
     } catch (error) {
       console.error('Erreur lors de la sauvegarde de l\'entrepôt:', error);
       toast.error('Erreur lors de la sauvegarde de l\'entrepôt');
+      throw error;
     }
   };
 
@@ -1943,10 +1936,8 @@ ${getUserSignature()}`
                       orders={orders}
                       handleCreateOrder={handleCreateOrderFromTable}
                       handleOpenEmailModal={handleOpenEmailModal}
-                      orderCreationModalOpen={orderCreationModal.isOpen}
-                      setOrderCreationModalOpen={orderCreationModalHandlers.open}
-                      selectedProductsFromTable={selectedProductsFromTable}
-                      setSelectedProductsFromTable={setSelectedProductsFromTable}
+                      loadData={loadData}
+                      getUserSignature={getUserSignature}
                       // Nouveaux props pour les modals
                       emailModal={emailModal}
                       emailModalHandlers={emailModalHandlers}
@@ -2157,24 +2148,6 @@ ${getUserSignature()}`
           selectedSupplier={selectedSupplierForMapping}
         onSupplierChange={setSelectedSupplierForMapping}
         onAssign={handleAssignSupplier}
-      />
-
-      {/* Modal de création de commande personnalisée */}
-      <OrderCreationModal
-        isOpen={orderCreationModal.isOpen}
-        onClose={orderCreationModalHandlers.close}
-        products={productsByStatus.to_order}
-        suppliers={suppliers}
-        warehouses={warehouses}
-        selectedWarehouse={selectedWarehouse}
-        setSelectedWarehouse={setSelectedWarehouse}
-        orderQuantities={orderQuantities}
-        updateOrderQuantity={updateOrderQuantity}
-        generatePONumber={generatePONumber}
-        orders={orders}
-        handleCreateOrder={handleCreateOrderFromTable}
-        selectedProductsFromTable={selectedProductsFromTable}
-        setSelectedProductsFromTable={setSelectedProductsFromTable}
       />
 
       {/* Conteneur des modales inline */}

@@ -134,9 +134,19 @@ export const HistoryTab = ({
       <div className="bg-white rounded-xl shadow-sm border border-[#E5E4DF] p-4 sm:p-6">
         {/* Header et filtres optimisés mobile */}
         <div className="space-y-4 mb-6">
-          <div>
-            <h2 className="text-xl sm:text-2xl font-bold text-[#191919] mb-1 sm:mb-2">Historique des Commandes</h2>
-            <p className="text-xs sm:text-sm text-[#666663]">Consultez toutes vos commandes passées et leur statut</p>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div>
+              <h2 className="text-xl sm:text-2xl font-bold text-[#191919] mb-1 sm:mb-2">Historique des Commandes</h2>
+              <p className="text-xs sm:text-sm text-[#666663]">Consultez toutes vos commandes passées et leur statut</p>
+            </div>
+            <Button
+              onClick={handleExportCSV}
+              variant="primary"
+              className="flex items-center gap-2 w-full sm:w-auto"
+            >
+              <Download className="w-4 h-4" />
+              Exporter CSV
+            </Button>
           </div>
           
           {/* Filtres en colonne sur mobile, ligne sur desktop */}
@@ -229,17 +239,6 @@ export const HistoryTab = ({
               />
             ))
         )}
-      </div>
-
-      <div className="flex justify-center sm:justify-end">
-        <Button
-          onClick={handleExportCSV}
-          variant="primary"
-          className="flex items-center gap-2"
-        >
-          <Download className="w-4 h-4" />
-          Exporter CSV
-        </Button>
       </div>
     </motion.div>
   );
