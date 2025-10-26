@@ -1980,7 +1980,7 @@ ${getUserSignature()}`
                   {/* STOCK TAB */}
                   {activeTab === MAIN_TABS.STOCK && (
                     <StockTab
-                      products={products}
+                      products={enrichedProducts}
                       suppliers={suppliers}
                       stockLevelFilter={stockLevelFilter}
                       setStockLevelFilter={setStockLevelFilter}
