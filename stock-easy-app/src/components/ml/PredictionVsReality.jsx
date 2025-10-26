@@ -8,7 +8,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsive
 import { CheckCircle, AlertCircle, TrendingUp } from 'lucide-react';
 import { format, subDays } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { InfoTooltip } from '../ui/InfoTooltip';
+import { InfoTooltip, tooltips } from '../ui/InfoTooltip/InfoTooltip';
 
 export function PredictionVsReality({ comparisonData, product }) {
   // Préparer les données pour le graphique

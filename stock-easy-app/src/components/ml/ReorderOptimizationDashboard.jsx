@@ -26,24 +26,47 @@ import { toast } from 'sonner';
 
 // Hook temporaire pour l'optimisation des points de commande
 const useReorderOptimization = (products) => {
-  const optimizations = products ? products.map(product => ({
-    sku: product.sku,
-    name: product.name || product.sku,
-    currentSettings: {
-      reorderPoint: product.reorderPoint || Math.floor(Math.random() * 50) + 20,
-      currentStock: product.currentStock || Math.floor(Math.random() * 100) + 10,
-      leadTime: product.leadTime || Math.floor(Math.random() * 10) + 5
-    },
-    reorderPoint: Math.floor(Math.random() * 30) + 15, // Point de commande optimisé
-    savings: Math.floor(Math.random() * 1000) + 500,
-    confidence: 0.9,
-    costAnalysis: {
-      savings: {
-        perYear: Math.floor(Math.random() * 5000) + 1000,
-        perMonth: Math.floor(Math.random() * 400) + 100
-      }
-    }
-  })) : [];
+  const [isAnalyzing, setIsAnalyzing] = React.useState(false);
+  const [progress, setProgress] = React.useState(0);
+  const [error, setError] = React.useState(null);
+  const [optimizations, setOptimizations] = React.useState([]);
+
+  const [optimizationsList, setOptimizationsList] = React.useState(
+    products ? products.map(product => ({
+      sku: product.sku,
+      name: product.name || product.sku,
+      currentSettings: {
+        stock: product.stock || product.currentStock || Math.floor(Math.random() * 100) + 10,
+        reorderPoint: product.reorderPoint || Math.floor(Math.random() * 50) + 20,
+        currentStock: product.stock || product.currentStock || Math.floor(Math.random() * 100) + 10,
+        leadTime: product.leadTime || Math.floor(Math.random() * 10) + 5
+      },
+      reorderPoint: Math.floor(Math.random() * 30) + 15, // Point de commande optimisé
+      savings: Math.floor(Math.random() * 1000) + 500,
+      confidence: 0.9,
+      costAnalysis: {
+        current: {
+          stockoutCost: Math.floor(Math.random() * 2000) + 500,
+          overstockCost: Math.floor(Math.random() * 1000) + 200,
+          totalCost: Math.floor(Math.random() * 3000) + 700
+        },
+        optimized: {
+          totalCost: Math.floor(Math.random() * 2000) + 300
+        },
+        savings: {
+          perYear: Math.floor(Math.random() * 5000) + 1000,
+          percent: Math.floor(Math.random() * 30) + 10
+        }
+      },
+      reasoning: [
+        {
+          type: 'decrease',
+          change: 'Réduire de 5 unités',
+          reason: 'Consommation plus faible que prévue'
+        }
+      ]
+    })) : []
+  );
 
   const summary = {
     totalSavings: products ? products.length * (Math.floor(Math.random() * 1000) + 500) : 0,
@@ -53,16 +76,75 @@ const useReorderOptimization = (products) => {
     averageSavings: products ? Math.floor(Math.random() * 1000) + 500 : 0
   };
 
+  const handleAnalyze = async () => {
+    try {
+      setIsAnalyzing(true);
+      setProgress(0);
+      setError(null);
+
+      // Simulation d'une analyse en cours
+      for (let i = 0; i <= 100; i += 10) {
+        await new Promise(resolve => setTimeout(resolve, 200));
+        setProgress(i);
+      }
+
+      // Régénérer les optimisations
+      setOptimizationsList(products ? products.map(product => ({
+        sku: product.sku,
+        name: product.name || product.sku,
+        currentSettings: {
+          stock: product.stock || product.currentStock || Math.floor(Math.random() * 100) + 10,
+          reorderPoint: product.reorderPoint || Math.floor(Math.random() * 50) + 20,
+          currentStock: product.stock || product.currentStock || Math.floor(Math.random() * 100) + 10,
+          leadTime: product.leadTime || Math.floor(Math.random() * 10) + 5
+        },
+        reorderPoint: Math.floor(Math.random() * 30) + 15,
+        savings: Math.floor(Math.random() * 1000) + 500,
+        confidence: Math.floor(Math.random() * 30) + 70,
+        costAnalysis: {
+          current: {
+            stockoutCost: Math.floor(Math.random() * 2000) + 500,
+            overstockCost: Math.floor(Math.random() * 1000) + 200,
+            totalCost: Math.floor(Math.random() * 3000) + 700
+          },
+          optimized: {
+            totalCost: Math.floor(Math.random() * 2000) + 300
+          },
+          savings: {
+            perYear: Math.floor(Math.random() * 5000) + 1000,
+            percent: Math.floor(Math.random() * 30) + 10
+          }
+        },
+        reasoning: [
+          {
+            type: Math.random() > 0.5 ? 'increase' : 'decrease',
+            change: `${Math.random() > 0.5 ? 'Augmenter' : 'Réduire'} de ${Math.floor(Math.random() * 10) + 1} unités`,
+            reason: 'Optimisation basée sur l\'analyse des tendances'
+          }
+        ]
+      })) : []);
+
+      toast.success('Analyse terminée avec succès');
+    } catch (err) {
+      setError('Erreur lors de l\'analyse');
+      toast.error('Erreur lors de l\'analyse');
+      console.error(err);
+    } finally {
+      setIsAnalyzing(false);
+      setProgress(100);
+    }
+  };
+
   return {
-    optimizations,
+    optimizations: optimizationsList,
     summary,
-    isAnalyzing: false,
-    error: null,
-    progress: 100,
-    onAnalyze: () => {},
-    onApplyOptimization: () => {},
-    onApplyAll: () => {},
-    onRejectOptimization: () => {},
+    isAnalyzing,
+    error,
+    progress,
+    onAnalyze: handleAnalyze,
+    onApplyOptimization: () => toast.success('Optimisation appliquée'),
+    onApplyAll: () => toast.success('Toutes les optimisations ont été appliquées'),
+    onRejectOptimization: () => toast.info('Optimisation rejetée'),
     getTotalSavings: () => summary.totalSavings,
     getTopProblems: () => []
   };
@@ -426,60 +508,72 @@ function OptimizationCard({ optimization, onApply, onReject, isSelected, onSelec
             {/* Analyse des coûts */}
             <div>
               <h4 className="font-semibold text-[#191919] mb-3">Analyse des Coûts</h4>
-              <div className="space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span className="text-[#666663]">Coût ruptures (actuel):</span>
-                  <span className="font-semibold text-red-600">
-                    {optimization.costAnalysis.current.stockoutCost}€
-                  </span>
+              {optimization.costAnalysis?.current ? (
+                <div className="space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-[#666663]">Coût ruptures (actuel):</span>
+                    <span className="font-semibold text-red-600">
+                      {optimization.costAnalysis.current.stockoutCost || 0}€
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-[#666663]">Coût surstock (actuel):</span>
+                    <span className="font-semibold text-blue-600">
+                      {optimization.costAnalysis.current.overstockCost || 0}€
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-sm pt-2 border-t border-[#E5E4DF]">
+                    <span className="text-[#666663] font-medium">Total actuel:</span>
+                    <span className="font-bold text-[#191919]">
+                      {optimization.costAnalysis.current.totalCost || 0}€/an
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-[#666663] font-medium">Total optimisé:</span>
+                    <span className="font-bold text-green-600">
+                      {optimization.costAnalysis.optimized?.totalCost || 0}€/an
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-sm pt-2 border-t border-[#E5E4DF]">
+                    <span className="text-green-700 font-medium">Économies:</span>
+                    <span className="font-bold text-green-700">
+                      {optimization.costAnalysis.savings?.perYear || 0}€/an (-{optimization.costAnalysis.savings?.percent || 0}%)
+                    </span>
+                  </div>
                 </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-[#666663]">Coût surstock (actuel):</span>
-                  <span className="font-semibold text-blue-600">
-                    {optimization.costAnalysis.current.overstockCost}€
-                  </span>
+              ) : (
+                <div className="text-sm text-[#666663]">
+                  Calcul des coûts en cours...
                 </div>
-                <div className="flex justify-between text-sm pt-2 border-t border-[#E5E4DF]">
-                  <span className="text-[#666663] font-medium">Total actuel:</span>
-                  <span className="font-bold text-[#191919]">
-                    {optimization.costAnalysis.current.totalCost}€/an
-                  </span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-[#666663] font-medium">Total optimisé:</span>
-                  <span className="font-bold text-green-600">
-                    {optimization.costAnalysis.optimized.totalCost}€/an
-                  </span>
-                </div>
-                <div className="flex justify-between text-sm pt-2 border-t border-[#E5E4DF]">
-                  <span className="text-green-700 font-medium">Économies:</span>
-                  <span className="font-bold text-green-700">
-                    {optimization.costAnalysis.savings.perYear}€/an (-{optimization.costAnalysis.savings.percent}%)
-                  </span>
-                </div>
-              </div>
+              )}
             </div>
 
             {/* Raisons des ajustements */}
             <div>
               <h4 className="font-semibold text-[#191919] mb-3">Raisons des Ajustements</h4>
-              <div className="space-y-2">
-                {optimization.reasoning.map((reason, idx) => (
-                  <div key={idx} className="flex items-start gap-2 text-sm">
-                    {reason.type === 'increase' ? (
-                      <TrendingUp className="w-4 h-4 text-orange-600 shrink-0 mt-0.5" />
-                    ) : reason.type === 'decrease' ? (
-                      <TrendingDown className="w-4 h-4 text-green-600 shrink-0 mt-0.5" />
-                    ) : (
-                      <CheckCircle className="w-4 h-4 text-green-600 shrink-0 mt-0.5" />
-                    )}
-                    <div>
-                      <p className="font-medium text-[#191919]">{reason.change}</p>
-                      <p className="text-[#666663]">{reason.reason}</p>
+              {optimization.reasoning && Array.isArray(optimization.reasoning) ? (
+                <div className="space-y-2">
+                  {optimization.reasoning.map((reason, idx) => (
+                    <div key={idx} className="flex items-start gap-2 text-sm">
+                      {reason.type === 'increase' ? (
+                        <TrendingUp className="w-4 h-4 text-orange-600 shrink-0 mt-0.5" />
+                      ) : reason.type === 'decrease' ? (
+                        <TrendingDown className="w-4 h-4 text-green-600 shrink-0 mt-0.5" />
+                      ) : (
+                        <CheckCircle className="w-4 h-4 text-green-600 shrink-0 mt-0.5" />
+                      )}
+                      <div>
+                        <p className="font-medium text-[#191919]">{reason.change}</p>
+                        <p className="text-[#666663]">{reason.reason}</p>
+                      </div>
                     </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-sm text-[#666663]">
+                  Aucune raison spécifique disponible
+                </div>
+              )}
 
               {/* Score de confiance */}
               <div className="mt-4 pt-4 border-t border-[#E5E4DF]">

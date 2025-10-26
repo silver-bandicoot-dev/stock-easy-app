@@ -1,5 +1,5 @@
 import React from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Settings, Users, Package, MapPin, Cog } from 'lucide-react';
 import { SubTabsNavigation } from '../features/SubTabsNavigation';
 import { ParametresGeneraux } from '../settings/ParametresGeneraux';
@@ -57,11 +57,31 @@ export const SettingsTab = ({
   handleSaveWarehouse,
   handleDeleteWarehouse
 }) => {
-  const settingsTabs = [
-    { id: SETTINGS_TABS.GENERAL, label: 'Paramètres Généraux', icon: Cog },
-    { id: SETTINGS_TABS.SUPPLIERS, label: 'Gestion Fournisseurs', icon: Users },
-    { id: SETTINGS_TABS.MAPPING, label: 'Mapping SKU-Fournisseur', icon: Package },
-    { id: SETTINGS_TABS.WAREHOUSES, label: 'Gestion Entrepôts', icon: MapPin }
+  const settingsSections = [
+    {
+      key: SETTINGS_TABS.GENERAL,
+      title: 'Paramètres Généraux',
+      icon: Cog,
+      shortTitle: 'Généraux'
+    },
+    {
+      key: SETTINGS_TABS.SUPPLIERS,
+      title: 'Gestion Fournisseurs',
+      icon: Users,
+      shortTitle: 'Fournisseurs'
+    },
+    {
+      key: SETTINGS_TABS.MAPPING,
+      title: 'Mapping SKU-Fournisseur',
+      icon: Package,
+      shortTitle: 'Mapping'
+    },
+    {
+      key: SETTINGS_TABS.WAREHOUSES,
+      title: 'Gestion Entrepôts',
+      icon: MapPin,
+      shortTitle: 'Entrepôts'
+    }
   ];
 
   return (
@@ -73,99 +93,117 @@ export const SettingsTab = ({
       transition={{ duration: 0.25 }}
       className="space-y-6"
     >
-      {/* En-tête */}
+      {/* Header avec titre et sous-titre */}
       <div className="bg-white rounded-xl shadow-sm border border-[#E5E4DF] p-6">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-gray-50 rounded-lg flex items-center justify-center border border-gray-200 shrink-0">
-            <Settings className="w-6 h-6 text-gray-600 shrink-0" />
-          </div>
-          <div>
-            <h2 className="text-xl font-semibold text-gray-900">Paramètres</h2>
-            <p className="text-sm text-gray-600">Configurez les paramètres de votre application</p>
-          </div>
+        <div className="flex items-center gap-3 mb-2">
+          <Settings className="w-8 h-8 text-[#191919]" />
+          <h1 className="text-2xl font-bold text-[#191919]">Paramètres</h1>
+        </div>
+        <p className="text-[#666663] ml-11">Configurez les paramètres de votre application</p>
+        
+        {/* Onglets de navigation - Optimisés mobile */}
+        <div className="flex gap-2 mt-6 overflow-x-auto pb-2 -mx-2 px-2 sm:mx-0 sm:px-0">
+          {settingsSections.map(section => {
+            const Icon = section.icon;
+            return (
+              <button
+                key={section.key}
+                onClick={() => setParametersSubTab(section.key)}
+                className={`flex items-center gap-2 px-3 sm:px-4 py-2 rounded-lg font-medium text-xs sm:text-sm whitespace-nowrap transition-all ${
+                  parametersSubTab === section.key
+                    ? 'bg-black text-white'
+                    : 'bg-[#FAFAF7] text-[#666663] hover:bg-[#F0F0EB]'
+                }`}
+              >
+                <Icon className="w-4 h-4 shrink-0" />
+                <span className="hidden sm:inline">{section.title}</span>
+                <span className="sm:hidden">{section.shortTitle}</span>
+              </button>
+            );
+          })}
         </div>
       </div>
 
-      {/* Navigation des sous-onglets */}
-      <SubTabsNavigation
-        tabs={settingsTabs}
-        activeTab={parametersSubTab}
-        onChange={setParametersSubTab}
-      />
-
       {/* Contenu des sous-onglets */}
-      <motion.div
-        key={parametersSubTab}
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.2 }}
-      >
-        {parametersSubTab === SETTINGS_TABS.GENERAL && (
-          <ParametresGeneraux
-            parameters={parameters}
-            setParameters={setParameters}
-            loadData={loadData}
-            seuilSurstock={seuilSurstockProfond}
-            onUpdateSeuil={setSeuilSurstockProfond}
-            devise={deviseDefaut}
-            onUpdateDevise={setDeviseDefaut}
-            multiplicateur={multiplicateurDefaut}
-            onUpdateMultiplicateur={setMultiplicateurDefaut}
-          />
-        )}
+      <AnimatePresence mode="wait">
+        {settingsSections.map(section => (
+          parametersSubTab === section.key && (
+            <motion.div
+              key={section.key}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.25 }}
+            >
+              {parametersSubTab === SETTINGS_TABS.GENERAL && (
+                <ParametresGeneraux
+                  parameters={parameters}
+                  setParameters={setParameters}
+                  loadData={loadData}
+                  seuilSurstock={seuilSurstockProfond}
+                  onUpdateSeuil={setSeuilSurstockProfond}
+                  devise={deviseDefaut}
+                  onUpdateDevise={setDeviseDefaut}
+                  multiplicateur={multiplicateurDefaut}
+                  onUpdateMultiplicateur={setMultiplicateurDefaut}
+                />
+              )}
 
-        {parametersSubTab === SETTINGS_TABS.SUPPLIERS && (
-          <GestionFournisseurs
-            suppliers={suppliers}
-            products={products}
-            supplierModalOpen={supplierModalOpen}
-            setSupplierModalOpen={setSupplierModalOpen}
-            editingSupplier={editingSupplier}
-            setEditingSupplier={setEditingSupplier}
-            supplierFormData={supplierFormData}
-            setSupplierFormData={setSupplierFormData}
-            handleOpenSupplierModal={handleOpenSupplierModal}
-            handleCloseSupplierModal={handleCloseSupplierModal}
-            handleSupplierFormChange={handleSupplierFormChange}
-            handleSaveSupplier={handleSaveSupplier}
-            handleDeleteSupplier={handleDeleteSupplier}
-            loadData={loadData}
-          />
-        )}
+              {parametersSubTab === SETTINGS_TABS.SUPPLIERS && (
+                <GestionFournisseurs
+                  suppliers={suppliers}
+                  products={products}
+                  supplierModalOpen={supplierModalOpen}
+                  setSupplierModalOpen={setSupplierModalOpen}
+                  editingSupplier={editingSupplier}
+                  setEditingSupplier={setEditingSupplier}
+                  supplierFormData={supplierFormData}
+                  setSupplierFormData={setSupplierFormData}
+                  handleOpenSupplierModal={handleOpenSupplierModal}
+                  handleCloseSupplierModal={handleCloseSupplierModal}
+                  handleSupplierFormChange={handleSupplierFormChange}
+                  handleSaveSupplier={handleSaveSupplier}
+                  handleDeleteSupplier={handleDeleteSupplier}
+                  loadData={loadData}
+                />
+              )}
 
-        {parametersSubTab === SETTINGS_TABS.MAPPING && (
-          <MappingSKUFournisseur
-            products={products}
-            suppliers={suppliers}
-            assignSupplierModalOpen={assignSupplierModalOpen}
-            setAssignSupplierModalOpen={setAssignSupplierModalOpen}
-            selectedProductForMapping={selectedProductForMapping}
-            setSelectedProductForMapping={setSelectedProductForMapping}
-            handleOpenAssignSupplierModal={handleOpenAssignSupplierModal}
-            handleCloseAssignSupplierModal={handleCloseAssignSupplierModal}
-            handleAssignSupplier={handleAssignSupplier}
-            loadData={loadData}
-          />
-        )}
+              {parametersSubTab === SETTINGS_TABS.MAPPING && (
+                <MappingSKUFournisseur
+                  products={products}
+                  suppliers={suppliers}
+                  assignSupplierModalOpen={assignSupplierModalOpen}
+                  setAssignSupplierModalOpen={setAssignSupplierModalOpen}
+                  selectedProductForMapping={selectedProductForMapping}
+                  setSelectedProductForMapping={setSelectedProductForMapping}
+                  handleOpenAssignSupplierModal={handleOpenAssignSupplierModal}
+                  handleCloseAssignSupplierModal={handleCloseAssignSupplierModal}
+                  handleAssignSupplier={handleAssignSupplier}
+                  loadData={loadData}
+                />
+              )}
 
-        {parametersSubTab === SETTINGS_TABS.WAREHOUSES && (
-          <GestionWarehouses
-            warehouses={warehouses}
-            warehouseModalOpen={warehouseModalOpen}
-            setWarehouseModalOpen={setWarehouseModalOpen}
-            editingWarehouse={editingWarehouse}
-            setEditingWarehouse={setEditingWarehouse}
-            warehouseFormData={warehouseFormData}
-            setWarehouseFormData={setWarehouseFormData}
-            handleOpenWarehouseModal={handleOpenWarehouseModal}
-            handleCloseWarehouseModal={handleCloseWarehouseModal}
-            handleWarehouseFormChange={handleWarehouseFormChange}
-            handleSaveWarehouse={handleSaveWarehouse}
-            handleDeleteWarehouse={handleDeleteWarehouse}
-            loadData={loadData}
-          />
-        )}
-      </motion.div>
+              {parametersSubTab === SETTINGS_TABS.WAREHOUSES && (
+                <GestionWarehouses
+                  warehouses={warehouses}
+                  warehouseModalOpen={warehouseModalOpen}
+                  setWarehouseModalOpen={setWarehouseModalOpen}
+                  editingWarehouse={editingWarehouse}
+                  setEditingWarehouse={setEditingWarehouse}
+                  warehouseFormData={warehouseFormData}
+                  setWarehouseFormData={setWarehouseFormData}
+                  handleOpenWarehouseModal={handleOpenWarehouseModal}
+                  handleCloseWarehouseModal={handleCloseWarehouseModal}
+                  handleWarehouseFormChange={handleWarehouseFormChange}
+                  handleSaveWarehouse={handleSaveWarehouse}
+                  handleDeleteWarehouse={handleDeleteWarehouse}
+                  loadData={loadData}
+                />
+              )}
+            </motion.div>
+          )
+        ))}
+      </AnimatePresence>
     </motion.div>
   );
 };

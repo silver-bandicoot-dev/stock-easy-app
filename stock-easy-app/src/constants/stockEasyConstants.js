@@ -86,6 +86,12 @@ export const TRACK_TABS = {
   COMPLETED: 'completed'
 };
 
+// Sous-onglets Actions
+export const ACTIONS_TABS = {
+  CUSTOM_ORDER: 'custom_order',
+  RECOMMENDATIONS: 'recommendations'
+};
+
 // Sous-onglets Stock
 export const STOCK_TABS = {
   NIVEAU_STOCK: 'niveau_stock',
