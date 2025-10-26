@@ -23,7 +23,7 @@ export const useEmailOrderModal = () => {
   const updateOrderQuantity = (sku, quantity) => {
     setOrderQuantities(prev => ({
       ...prev,
-      [sku]: parseInt(quantity) || 0
+      [sku]: Math.ceil(parseFloat(quantity)) || 0
     }));
   };
 
