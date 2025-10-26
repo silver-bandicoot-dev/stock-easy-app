@@ -90,7 +90,12 @@ export const AITab = ({
             exit={{ opacity: 0, y: -20 }}
             transition={{ duration: 0.25 }}
           >
-            <AIOverviewDashboard products={products} orders={orders} />
+            <AIOverviewDashboard 
+              products={products} 
+              orders={orders}
+              setAiSubTab={setAiSubTab}
+              aiSubTab={aiSubTab}
+            />
           </motion.div>
         )}
 
