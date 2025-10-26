@@ -64,9 +64,6 @@ export const OrderBySupplier = ({
                     <th className="px-4 py-3 text-left text-xs font-semibold text-[#666663] uppercase tracking-wider">
                       Quantité Suggérée
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-[#666663] uppercase tracking-wider">
-                      Quantité à Commander
-                    </th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-[#E5E4DF]">
@@ -106,24 +103,6 @@ export const OrderBySupplier = ({
                           <div className="text-xs text-[#666663]">
                             Autonomie: {product.daysOfStock || 0} jours
                           </div>
-                        </div>
-                      </td>
-                      
-                      {/* Quantité à Commander */}
-                      <td className="px-4 py-4">
-                        <div className="flex items-center gap-2">
-                          <input
-                            type="number"
-                            min="0"
-                            step="1"
-                            value={Math.round(orderQuantities[product.sku] || product.qtyToOrder || 0)}
-                            onChange={(e) => {
-                              const value = parseInt(e.target.value) || 0;
-                              updateOrderQuantity(product.sku, value);
-                            }}
-                            className="w-20 p-2 border border-[#E5E4DF] rounded text-center text-sm focus:outline-none focus:ring-2 focus:ring-black"
-                          />
-                          <span className="text-xs text-[#666663]">unités</span>
                         </div>
                       </td>
                     </motion.tr>
