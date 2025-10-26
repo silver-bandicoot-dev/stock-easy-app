@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
-import { InfoTooltip, tooltips } from '../InfoTooltip';
+import { InfoTooltip } from '../InfoTooltip';
 
 describe('InfoTooltip', () => {
   it('should render info icon', () => {

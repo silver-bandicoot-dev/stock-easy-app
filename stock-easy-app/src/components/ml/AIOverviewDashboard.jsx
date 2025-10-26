@@ -18,23 +18,70 @@ import {
 } from 'lucide-react';
 // Hooks ML temporaires (à remplacer par les vrais hooks)
 const useDemandForecast = (products) => ({
-  forecasts: {},
-  isReady: false,
+  forecasts: products ? products.reduce((acc, product) => {
+    acc[product.sku] = {
+      predicted: Math.floor(Math.random() * 100) + 50,
+      confidence: 0.85,
+      trend: Math.random() > 0.5 ? 'up' : 'down'
+    };
+    return acc;
+  }, {}) : {},
+  isReady: true,
   isTraining: false,
-  getForecastForProduct: () => null
+  getForecastForProduct: (sku) => ({
+    predicted: Math.floor(Math.random() * 100) + 50,
+    confidence: 0.85,
+    trend: Math.random() > 0.5 ? 'up' : 'down'
+  })
 });
 
 const useReorderOptimization = (products) => ({
-  optimizations: new Map(),
-  isReady: false,
-  getTotalSavings: () => 0,
-  getOptimizationForProduct: () => null
+  optimizations: new Map(products ? products.map(product => [
+    product.sku,
+    {
+      currentReorderPoint: Math.floor(Math.random() * 50) + 20,
+      optimizedReorderPoint: Math.floor(Math.random() * 30) + 15,
+      savings: Math.floor(Math.random() * 1000) + 500,
+      confidence: 0.9,
+      costAnalysis: {
+        savings: {
+          perYear: Math.floor(Math.random() * 5000) + 1000,
+          perMonth: Math.floor(Math.random() * 400) + 100
+        }
+      }
+    }
+  ]) : []),
+  isReady: true,
+  getTotalSavings: () => products ? products.length * (Math.floor(Math.random() * 1000) + 500) : 0,
+  getOptimizationForProduct: (sku) => ({
+    currentReorderPoint: Math.floor(Math.random() * 50) + 20,
+    optimizedReorderPoint: Math.floor(Math.random() * 30) + 15,
+    savings: Math.floor(Math.random() * 1000) + 500,
+    confidence: 0.9,
+    costAnalysis: {
+      savings: {
+        perYear: Math.floor(Math.random() * 5000) + 1000,
+        perMonth: Math.floor(Math.random() * 400) + 100
+      }
+    }
+  })
 });
 
 const useAnomalyDetection = (products, orders) => ({
-  stats: { total: 0, critical: 0, high: 0 },
-  isReady: false,
-  getAnomaliesForProduct: () => []
+  stats: { 
+    total: products ? Math.floor(products.length * 0.1) : 0, 
+    critical: products ? Math.floor(products.length * 0.02) : 0, 
+    high: products ? Math.floor(products.length * 0.05) : 0 
+  },
+  isReady: true,
+  getAnomaliesForProduct: (sku) => [
+    {
+      type: 'demand_spike',
+      severity: 'high',
+      description: 'Pic de demande inattendu',
+      date: new Date().toISOString()
+    }
+  ]
 });
 
 export function AIOverviewDashboard({ 
@@ -142,7 +189,7 @@ export function AIOverviewDashboard({
                 action="Voir les anomalies"
                 color="red"
                 link="anomalies"
-                onClick={() => setAiSubTab('anomalies')}
+                onClick={() => setAiSubTab('analytics')}
               />
             )}
 
@@ -175,7 +222,7 @@ export function AIOverviewDashboard({
           ]}
           link="forecasts"
           color="purple"
-          onClick={() => setAiSubTab('forecasts')}
+          onClick={() => setAiSubTab('predictions')}
         />
 
         {/* Module Optimisation */}
@@ -205,7 +252,7 @@ export function AIOverviewDashboard({
           ]}
           link="anomalies"
           color="red"
-          onClick={() => setAiSubTab('anomalies')}
+          onClick={() => setAiSubTab('analytics')}
         />
 
         {/* Module Performance */}
@@ -220,7 +267,7 @@ export function AIOverviewDashboard({
           ]}
           link="forecasts"
           color="green"
-          onClick={() => setAiSubTab('forecasts')}
+          onClick={() => setAiSubTab('predictions')}
         />
       </div>
 

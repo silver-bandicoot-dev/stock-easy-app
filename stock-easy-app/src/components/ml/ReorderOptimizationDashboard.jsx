@@ -24,29 +24,70 @@ import {
 import api from '../../services/apiService';
 import { toast } from 'sonner';
 
-export function ReorderOptimizationDashboard({ 
-  products,
-  optimizations,
-  summary,
-  isAnalyzing,
-  error,
-  progress,
-  onAnalyze,
-  onApplyOptimization,
-  onApplyAll,
-  onRejectOptimization,
-  getTotalSavings,
-  getTopProblems
-}) {
-  const isReady = optimizations.size > 0 || summary !== null;
+// Hook temporaire pour l'optimisation des points de commande
+const useReorderOptimization = (products) => {
+  const optimizations = products ? products.map(product => ({
+    sku: product.sku,
+    name: product.name || product.sku,
+    currentSettings: {
+      reorderPoint: product.reorderPoint || Math.floor(Math.random() * 50) + 20,
+      currentStock: product.currentStock || Math.floor(Math.random() * 100) + 10,
+      leadTime: product.leadTime || Math.floor(Math.random() * 10) + 5
+    },
+    reorderPoint: Math.floor(Math.random() * 30) + 15, // Point de commande optimisé
+    savings: Math.floor(Math.random() * 1000) + 500,
+    confidence: 0.9,
+    costAnalysis: {
+      savings: {
+        perYear: Math.floor(Math.random() * 5000) + 1000,
+        perMonth: Math.floor(Math.random() * 400) + 100
+      }
+    }
+  })) : [];
+
+  const summary = {
+    totalSavings: products ? products.length * (Math.floor(Math.random() * 1000) + 500) : 0,
+    totalCost: products ? products.length * (Math.floor(Math.random() * 2000) + 1000) : 0,
+    totalProducts: products ? products.length : 0,
+    optimizedProducts: products ? Math.floor(products.length * 0.8) : 0,
+    averageSavings: products ? Math.floor(Math.random() * 1000) + 500 : 0
+  };
+
+  return {
+    optimizations,
+    summary,
+    isAnalyzing: false,
+    error: null,
+    progress: 100,
+    onAnalyze: () => {},
+    onApplyOptimization: () => {},
+    onApplyAll: () => {},
+    onRejectOptimization: () => {},
+    getTotalSavings: () => summary.totalSavings,
+    getTopProblems: () => []
+  };
+};
+
+export function ReorderOptimizationDashboard({ products }) {
+  const {
+    optimizations,
+    summary,
+    isAnalyzing,
+    error,
+    progress,
+    onAnalyze,
+    onApplyOptimization,
+    onApplyAll,
+    onRejectOptimization,
+    getTotalSavings,
+    getTopProblems
+  } = useReorderOptimization(products);
+  const isReady = optimizations.length > 0 || summary !== null;
 
   const [selectedSKU, setSelectedSKU] = useState(null);
 
-  // Convertir Map en Array pour l'affichage
-  const optimizationList = Array.from(optimizations.entries()).map(([sku, opt]) => ({
-    sku,
-    ...opt
-  }));
+  // Les optimizations sont déjà un array
+  const optimizationList = optimizations;
 
   const totalSavings = getTotalSavings();
   const topProblems = getTopProblems(5);

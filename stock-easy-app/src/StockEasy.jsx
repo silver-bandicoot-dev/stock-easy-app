@@ -7,7 +7,7 @@ import { Toaster, toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
 import debounce from 'lodash.debounce';
 import api from './services/apiService';
-import { InfoTooltip, tooltips } from './components/ui/InfoTooltip';
+import { InfoTooltip } from './components/ui/InfoTooltip';
 import { HealthBar } from './components/ui/HealthBar';
 import { Modal } from './components/ui/Modal';
 import { KPICard } from './components/features/KPICard';
@@ -27,95 +27,89 @@ import { MappingSKUFournisseur } from './components/settings/MappingSKUFournisse
 import { ParametresGeneraux } from './components/settings/ParametresGeneraux';
 import { GestionWarehouses } from './components/settings/GestionWarehouses';
 import CommentSection from './components/comments/CommentSection';
+import { InlineModalsContainer } from './components/modals/InlineModalsContainer';
+import { OrderCreationModal } from './components/actions/OrderCreationModal';
 
 import Sidebar from './components/layout/Sidebar';
-import { useAnalytics } from './hooks/useAnalytics';
+import { useInlineModals } from './hooks/useInlineModals';
 import { checkAndSaveKPISnapshot } from './utils/kpiScheduler';
-import { generateInsights } from './utils/insightGenerator';
 import { calculateMetrics } from './utils/calculations';
 import { formatUnits, formatPrice, roundToTwoDecimals, roundToInteger } from './utils/decimalUtils';
+
+// ============================================
+// IMPORTS DES CONSTANTES ET UTILITAIRES
+// ============================================
+import {
+  ORDER_STATUS_LABELS,
+  ORDER_STATUS_LABELS_EMOJI,
+  ORDER_STATUS_COLORS,
+  DISCREPANCY_TYPES,
+  MAIN_TABS,
+  TRACK_TABS,
+  STOCK_TABS,
+  SETTINGS_TABS,
+  ANALYTICS_TABS,
+  AI_TABS,
+  STOCK_FILTERS,
+  CURRENCIES,
+  DEFAULT_PARAMETERS,
+  VALIDATION_MESSAGES,
+  SUCCESS_MESSAGES,
+  ERROR_MESSAGES,
+  SYNC_INTERVALS,
+  DISPLAY_LIMITS
+} from './constants/stockEasyConstants';
+
+import {
+  formatConfirmedDate,
+  daysBetween,
+  calculateDaysRemaining,
+  isToday,
+  formatDateForAPI
+} from './utils/dateUtils';
+
+// ============================================
+// IMPORTS DES COMPOSANTS SHARED
+// ============================================
+import { Button } from './components/shared/Button';
+
+// ============================================
+// IMPORTS DES COMPOSANTS DASHBOARD
+// ============================================
+import { DashboardTab } from './components/dashboard/DashboardTab';
+import { ActionsTab } from './components/actions/ActionsTab';
+import { TrackTab } from './components/track/TrackTab';
+import { StockTab } from './components/stock/StockTab';
+import { AnalyticsTab } from './components/analytics/AnalyticsTab';
+import { HistoryTab } from './components/history/HistoryTab';
+import { SettingsTab } from './components/settings/SettingsTab';
+import { AITab } from './components/ai/AITab';
+
+// ============================================
+// IMPORTS DES MODALS
+// ============================================
+import { ReconciliationModal } from './components/track/modals/ReconciliationModal';
+import { ReclamationEmailModal } from './components/track/modals/ReclamationEmailModal';
+import { EmailOrderModal } from './components/actions/modals/EmailOrderModal';
+import { EmailOrderModalInline } from './components/modals/EmailOrderModalInline';
+import { ShipOrderModal } from './components/modals/ShipOrderModal';
+
+// ============================================
+// IMPORTS DES HOOKS PERSONNALISÉS
+// ============================================
+import { useStockData } from './hooks/useStockData';
+import { useOrderManagement } from './hooks/useOrderManagement';
+import { useSupplierManagement } from './hooks/useSupplierManagement';
+import { useModals } from './hooks/useModals';
+import { useReconciliation } from './hooks/useReconciliation';
+import { useEmailGeneration } from './hooks/useEmailGeneration';
+import { useShipOrderModal } from './hooks/useShipOrderModal';
 
 // ============================================
 // FONCTIONS API - Importées depuis apiService
 // ============================================
 // L'objet 'api' est maintenant importé depuis './services/apiService'
 // Toutes les fonctions API sont centralisées dans ce service pour une meilleure maintenabilité
-
-// ============================================
-// COMPOSANT BUTTON UNIFIÉ
-// ============================================
-const Button = ({ 
-  variant = 'primary', 
-  size = 'md', 
-  children, 
-  className = '', 
-  icon: Icon,
-  loading = false,
-  ...props 
-}) => {
-  const baseStyles = 'inline-flex items-center justify-center gap-2 font-semibold transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed';
-  
-  const variants = {
-    primary: 'bg-black text-white hover:bg-[#333333] focus:ring-black shadow-lg',
-    secondary: 'bg-[#40403E] text-[#FAFAF7] hover:bg-[#666663] focus:ring-[#40403E]',
-    ghost: 'bg-transparent text-black hover:bg-black/10 focus:ring-black',
-    danger: 'bg-[#EF1C43] text-white hover:bg-red-700 focus:ring-[#EF1C43] shadow-sm',
-    success: 'bg-green-600 text-white hover:bg-green-700 focus:ring-green-600 shadow-sm',
-    outline: 'bg-transparent border-2 border-[#E5E4DF] text-[#191919] hover:bg-[#FAFAF7] focus:ring-black',
-  };
-  
-  const sizes = {
-    sm: 'px-3 py-1.5 text-xs rounded-md',
-    md: 'px-4 py-2.5 text-sm rounded-lg',
-    lg: 'px-6 py-3 text-base rounded-lg',
-  };
-  
-  return (
-    <button
-      className={`${baseStyles} ${variants[variant]} ${sizes[size]} ${className}`}
-      disabled={loading}
-      {...props}
-    >
-      {loading ? <RefreshCw className="w-4 h-4 shrink-0 animate-spin" /> : Icon && <Icon className="w-4 h-4 shrink-0" />}
-      {children}
-    </button>
-  );
-};
-
-// ============================================
-// FONCTIONS UTILITAIRES
-// ============================================
-
-/**
- * Formate la date de confirmation pour l'affichage
- * @param {string} isoDate - Date ISO (ex: "2025-10-14T22:00:00.000Z") ou date simple (ex: "2025-10-14")
- * @returns {string} - Ex: "14 octobre 2025" ou "-" si pas de date
- */
-const formatConfirmedDate = (isoDate) => {
-  if (!isoDate) {
-    console.warn('formatConfirmedDate: date vide ou null');
-    return null;
-  }
-  
-  try {
-    const date = new Date(isoDate);
-    
-    // Vérifier que la date est valide
-    if (isNaN(date.getTime())) {
-      console.error('formatConfirmedDate: date invalide:', isoDate);
-      return 'Date invalide';
-    }
-    
-    return date.toLocaleDateString('fr-FR', {
-      day: '2-digit',
-      month: 'long',
-      year: 'numeric'
-    });
-  } catch (error) {
-    console.error('Erreur formatage date:', error, 'Date reçue:', isoDate);
-    return 'Erreur de date';
-  }
-};
 
 // ============================================
 // FONCTIONS UTILITAIRES
@@ -153,176 +147,237 @@ const StockEasy = () => {
     }
   };
 
-  const [loading, setLoading] = useState(true);
-  const [syncing, setSyncing] = useState(false);
-  const [products, setProducts] = useState([]);
-  const [suppliers, setSuppliers] = useState({});
-  const [warehouses, setWarehouses] = useState({});
-  const [orders, setOrders] = useState([]);
-  const [parameters, setParameters] = useState({});
-  const [activeTab, setActiveTab] = useState('dashboard');
-  const [trackTabSection, setTrackTabSection] = useState('en_cours_commande');
-  const [emailModalOpen, setEmailModalOpen] = useState(false);
+  // Hook pour les données
+  const {
+    loading,
+    syncing,
+    products,
+    suppliers,
+    warehouses,
+    orders,
+    parameters,
+    setParameters,
+    loadData,
+    syncData
+  } = useStockData();
+  
+  // Hook pour la gestion des commandes
+  const {
+    orderQuantities,
+    setOrderQuantities,
+    selectedWarehouse,
+    setSelectedWarehouse,
+    updateOrderQuantity,
+    generatePONumber,
+    confirmOrder,
+    shipOrder,
+    receiveOrder
+  } = useOrderManagement(loadData);
+  
+  // Hook pour la gestion des fournisseurs
+  const {
+    supplierModalOpen,
+    setSupplierModalOpen,
+    editingSupplier,
+    setEditingSupplier,
+    supplierFormData,
+    setSupplierFormData,
+    handleOpenSupplierModal,
+    handleCloseSupplierModal,
+    handleSupplierFormChange,
+    handleSaveSupplier,
+    handleDeleteSupplier
+  } = useSupplierManagement(suppliers, loadData);
+
+  // ============================================
+  // NOUVEAUX HOOKS POUR LES MODALS ET FONCTIONNALITÉS
+  // ============================================
+  
+  // Hook pour la gestion centralisée des modals
+  const {
+    emailModal,
+    orderCreationModal,
+    receivingModal,
+    reconciliationModal,
+    reclamationEmailModal,
+    supplierModal,
+    assignSupplierModal,
+    warehouseModal,
+    emailModalHandlers,
+    orderCreationModalHandlers,
+    receivingModalHandlers,
+    reconciliationModalHandlers,
+    reclamationEmailModalHandlers,
+    supplierModalHandlers,
+    assignSupplierModalHandlers,
+    warehouseModalHandlers
+  } = useModals();
+
+  // Hook pour la logique de réconciliation
+  const reconciliationLogic = useReconciliation(loadData);
+
+  // Hook pour la génération d'emails
+  const emailGeneration = useEmailGeneration();
+
+  // Hook pour les modales inline
+  const inlineModals = useInlineModals();
+
+  // Hook pour la modale d'expédition
+  const shipOrderModal = useShipOrderModal();
+
+  // Handler pour ouvrir la modale d'expédition
+  const handleShipOrder = (orderId) => {
+    shipOrderModal.openModal(orderId);
+  };
+
+  // Handler pour confirmer l'expédition
+  const handleConfirmShipOrder = async (trackingNumber, trackingUrl) => {
+    try {
+      await shipOrder(shipOrderModal.orderId, trackingNumber, trackingUrl, suppliers, orders);
+      shipOrderModal.closeModal();
+    } catch (error) {
+      console.error('❌ Erreur lors de l\'expédition:', error);
+    }
+  };
+
+  // États restants pour l'UI et la navigation
+  const [activeTab, setActiveTab] = useState(MAIN_TABS.DASHBOARD);
+  const [trackTabSection, setTrackTabSection] = useState(TRACK_TABS.EN_COURS_COMMANDE);
+  const [selectedProductsFromTable, setSelectedProductsFromTable] = useState([]);
   const [selectedSupplier, setSelectedSupplier] = useState(null);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
-  const [receivingModalOpen, setReceivingModalOpen] = useState(false);
   const [receivingProducts, setReceivingProducts] = useState([]);
   const [tempReceivedQty, setTempReceivedQty] = useState({});
   const [editingParam, setEditingParam] = useState(null);
   const [tempParamValue, setTempParamValue] = useState('');
-  const [reconciliationModalOpen, setReconciliationModalOpen] = useState(false);
-  const [reconciliationOrder, setReconciliationOrder] = useState(null);
-  const [dateRange, setDateRange] = useState('30d');
-  const [customRange, setCustomRange] = useState(null);
-  const [comparisonType, setComparisonType] = useState('previous');
   const [chartModalOpen, setChartModalOpen] = useState(false);
   const [selectedKPI, setSelectedKPI] = useState(null);
   const [historyFilter, setHistoryFilter] = useState('all');
   const [historyDateStart, setHistoryDateStart] = useState('');
   
   // Stock Level filters
-  const [stockLevelFilter, setStockLevelFilter] = useState('all');
+  const [stockLevelFilter, setStockLevelFilter] = useState(STOCK_FILTERS.ALL);
+  const [searchTerm, setSearchTerm] = useState('');
   const [stockLevelSupplierFilter, setStockLevelSupplierFilter] = useState('all');
   const [stockLevelSearch, setStockLevelSearch] = useState('');
   const [historyDateEnd, setHistoryDateEnd] = useState('');
-  const [discrepancyModalOpen, setDiscrepancyModalOpen] = useState(false);
-  const [discrepancyItems, setDiscrepancyItems] = useState({});
-  const [damageModalOpen, setDamageModalOpen] = useState(false);
-  const [damageItems, setDamageItems] = useState({});
-  const [damageNotes, setDamageNotes] = useState('');
-  // NOUVEAU: Modal unifié pour réconciliation complète
-  const [unifiedReconciliationModalOpen, setUnifiedReconciliationModalOpen] = useState(false);
-  const [unifiedReconciliationItems, setUnifiedReconciliationItems] = useState({});
-  const [reconciliationNotes, setReconciliationNotes] = useState('');
-  const [reclamationEmailModalOpen, setReclamationEmailModalOpen] = useState(false);
-  const [reclamationEmailContent, setReclamationEmailContent] = useState('');
-  const [currentReclamationOrder, setCurrentReclamationOrder] = useState(null);
-
+  
   // NOUVEAUX ÉTATS pour les sous-onglets de Paramètres
-  const [parametersSubTab, setParametersSubTab] = useState('general'); // 'general', 'products', 'suppliers', 'mapping'
-  const [analyticsSubTab, setAnalyticsSubTab] = useState('kpis'); // 'kpis'
-  const [aiSubTab, setAiSubTab] = useState('overview'); // 'overview', 'forecasts', 'optimization', 'anomalies'
+  const [parametersSubTab, setParametersSubTab] = useState(SETTINGS_TABS.GENERAL);
+  const [analyticsSubTab, setAnalyticsSubTab] = useState(ANALYTICS_TABS.KPIS);
+  const [aiSubTab, setAiSubTab] = useState(AI_TABS.OVERVIEW);
   
   // NOUVEAUX ÉTATS pour CORRECTION 5 et 6
   const [discrepancyTypes, setDiscrepancyTypes] = useState({});
-  const [damagedQuantities, setDamagedQuantities] = useState({}); // Quantités endommagées séparées
+  const [receivedQuantities, setReceivedQuantities] = useState({});
   const [unsavedParameterChanges, setUnsavedParameterChanges] = useState({});
   const [isSavingParameters, setIsSavingParameters] = useState(false);
 
-  // CORRECTION 1: Gestion des quantités éditables dans la modal de commande
-  const [orderQuantities, setOrderQuantities] = useState({});
-  const [selectedWarehouse, setSelectedWarehouse] = useState(null);
-  const [selectedProductsFromTable, setSelectedProductsFromTable] = useState(new Map());
 
   // CORRECTION 3: Gestion de l'expansion des détails de commandes
   const [expandedOrders, setExpandedOrders] = useState({});
+
+  // Fonction pour voir les détails d'un produit
+  const onViewDetails = (product) => {
+    console.log('Voir détails du produit:', product);
+    // TODO: Implémenter la logique pour afficher les détails du produit
+  };
+
+  // Fonctions pour la gestion des entrepôts
+  const handleOpenWarehouseModal = (warehouse = null) => {
+    if (warehouse) {
+      setEditingWarehouse(warehouse);
+      setWarehouseFormData({
+        name: warehouse.name || '',
+        address: warehouse.address || '',
+        city: warehouse.city || '',
+        postalCode: warehouse.postalCode || '',
+        country: warehouse.country || '',
+        contactPerson: warehouse.contactPerson || '',
+        phone: warehouse.phone || '',
+        email: warehouse.email || ''
+      });
+    } else {
+      setEditingWarehouse(null);
+      setWarehouseFormData({
+        name: '',
+        address: '',
+        city: '',
+        postalCode: '',
+        country: '',
+        contactPerson: '',
+        phone: '',
+        email: ''
+      });
+    }
+    setWarehouseModalOpen(true);
+  };
+
+  const handleCloseWarehouseModal = () => {
+    setWarehouseModalOpen(false);
+    setEditingWarehouse(null);
+    setWarehouseFormData({
+      name: '',
+      address: '',
+      city: '',
+      postalCode: '',
+      country: '',
+      contactPerson: '',
+      phone: '',
+      email: ''
+    });
+  };
+
+  const handleWarehouseFormChange = (field, value) => {
+    setWarehouseFormData(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  const handleSaveWarehouse = async () => {
+    try {
+      if (editingWarehouse) {
+        // Mise à jour d'un entrepôt existant
+        await api.updateWarehouse(editingWarehouse.id, warehouseFormData);
+        toast.success('Entrepôt mis à jour avec succès');
+      } else {
+        // Création d'un nouvel entrepôt
+        await api.createWarehouse(warehouseFormData);
+        toast.success('Entrepôt créé avec succès');
+      }
+      handleCloseWarehouseModal();
+      loadData();
+    } catch (error) {
+      console.error('Erreur lors de la sauvegarde de l\'entrepôt:', error);
+      toast.error('Erreur lors de la sauvegarde de l\'entrepôt');
+    }
+  };
 
   // NOUVEAUX ÉTATS pour Paramètres Généraux
   const [seuilSurstockProfond, setSeuilSurstockProfond] = useState(90);
   const [deviseDefaut, setDeviseDefaut] = useState('EUR');
   const [multiplicateurDefaut, setMultiplicateurDefaut] = useState(1.2);
 
-  // NOUVEAUX ÉTATS pour Gestion Fournisseurs
-  const [supplierModalOpen, setSupplierModalOpen] = useState(false);
-  const [editingSupplier, setEditingSupplier] = useState(null);
-  const [supplierFormData, setSupplierFormData] = useState({
+  // NOUVEAUX ÉTATS pour Gestion des Entrepôts
+  const [warehouseModalOpen, setWarehouseModalOpen] = useState(false);
+  const [editingWarehouse, setEditingWarehouse] = useState(null);
+  const [warehouseFormData, setWarehouseFormData] = useState({
     name: '',
-    email: '',
-    leadTimeDays: 30,
-    moq: 50,
-    notes: ''
+    address: '',
+    city: '',
+    postalCode: '',
+    country: '',
+    contactPerson: '',
+    phone: '',
+    email: ''
   });
 
   // NOUVEAUX ÉTATS pour Mapping
   const [assignSupplierModalOpen, setAssignSupplierModalOpen] = useState(false);
   const [productToMap, setProductToMap] = useState(null);
   const [selectedSupplierForMapping, setSelectedSupplierForMapping] = useState('');
-
-  useEffect(() => {
-    loadData();
-    const interval = setInterval(() => {
-      syncData();
-    }, 5 * 60 * 1000);
-    return () => clearInterval(interval);
-  }, []);
-
-  const loadData = async () => {
-    try {
-      setLoading(true);
-      const data = await api.getAllData();
-      
-      const suppliersMap = {};
-      data.suppliers.forEach(s => {
-        suppliersMap[s.name] = s;
-      });
-      
-      // Charger les warehouses
-      const warehousesMap = {};
-      if (data.warehouses && Array.isArray(data.warehouses)) {
-        data.warehouses.forEach(w => {
-          warehousesMap[w.name] = w;
-        });
-      }
-      
-      setSuppliers(suppliersMap);
-      setWarehouses(warehousesMap);
-      setProducts(data.products);
-      setOrders(data.orders);
-      
-      // Debugging temporaire: afficher les dates des commandes
-      console.log('Orders chargés:', data.orders.map(o => ({
-        id: o.id,
-        confirmedAt: o.confirmedAt,
-        createdAt: o.createdAt
-      })));
-      
-      // Charger les paramètres si disponibles
-      if (data.parameters) {
-        setParameters(data.parameters);
-        setSeuilSurstockProfond(data.parameters.seuilSurstockProfond || 90);
-        setDeviseDefaut(data.parameters.deviseDefaut || 'EUR');
-        setMultiplicateurDefaut(data.parameters.multiplicateurDefaut || 1.2);
-      } else {
-        // Charger les paramètres individuellement si pas fournis par getAllData
-        try {
-          const seuilSurstock = await api.getParameter('SeuilSurstockProfond');
-          setParameters(prev => ({ ...prev, SeuilSurstockProfond: seuilSurstock }));
-          setSeuilSurstockProfond(seuilSurstock || 90);
-        } catch (err) {
-          console.warn('Paramètres non disponibles, utilisation des valeurs par défaut');
-        }
-      }
-      
-      console.log('✅ Données chargées depuis Google Sheets');
-    } catch (error) {
-      console.error('❌ Erreur lors du chargement:', error);
-      if (error.message?.includes('network') || error.message?.includes('fetch')) {
-        toast.error('Problème de connexion. Vérifiez votre connexion Internet.', {
-          action: {
-            label: 'Réessayer',
-            onClick: () => loadData()
-          },
-          duration: Infinity
-        });
-      } else {
-        toast.error('Erreur lors du chargement des données. Vérifiez la console.');
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const syncData = async () => {
-    try {
-      setSyncing(true);
-      await loadData();
-      console.log('🔄 Synchronisation effectuée');
-    } catch (error) {
-      console.error('❌ Erreur lors de la synchronisation:', error);
-    } finally {
-      setSyncing(false);
-    }
-  };
+  const [selectedProductForMapping, setSelectedProductForMapping] = useState(null);
 
   // ============================================
   // HANDLERS PARAMÈTRES GÉNÉRAUX
@@ -396,139 +451,6 @@ const StockEasy = () => {
   };
 
   // ============================================
-  // HANDLERS GESTION FOURNISSEURS
-  // ============================================
-
-  const handleOpenSupplierModal = (supplier = null) => {
-    if (supplier) {
-      // Mode édition
-      setEditingSupplier(supplier);
-      setSupplierFormData({
-        name: supplier.name,
-        email: supplier.email,
-        leadTimeDays: supplier.leadTimeDays,
-        moq: supplier.moq || 50,
-        notes: supplier.notes || ''
-      });
-    } else {
-      // Mode création
-      setEditingSupplier(null);
-      setSupplierFormData({
-        name: '',
-        email: '',
-        leadTimeDays: 30,
-        moq: 50,
-        notes: ''
-      });
-    }
-    setSupplierModalOpen(true);
-  };
-
-  const handleCloseSupplierModal = () => {
-    setSupplierModalOpen(false);
-    setEditingSupplier(null);
-    setSupplierFormData({
-      name: '',
-      email: '',
-      leadTimeDays: 30,
-      moq: 50,
-      notes: ''
-    });
-  };
-
-  const handleSupplierFormChange = (field, value) => {
-    setSupplierFormData(prev => ({
-      ...prev,
-      [field]: value
-    }));
-  };
-
-  const validateSupplierForm = () => {
-    const errors = [];
-    
-    if (!supplierFormData.name.trim()) {
-      errors.push('Le nom du fournisseur est obligatoire');
-    }
-    
-    if (!supplierFormData.email.trim()) {
-      errors.push('L\'email est obligatoire');
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(supplierFormData.email)) {
-      errors.push('L\'email n\'est pas valide');
-    }
-    
-    if (supplierFormData.leadTimeDays <= 0) {
-      errors.push('Le délai doit être supérieur à 0');
-    }
-    
-    if (supplierFormData.moq <= 0) {
-      errors.push('Le MOQ doit être supérieur à 0');
-    }
-    
-    // Vérifier que le nom n'existe pas déjà (sauf en mode édition)
-    if (!editingSupplier) {
-      const existingSupplier = Object.values(suppliers).find(
-        s => s.name.toLowerCase() === supplierFormData.name.toLowerCase()
-      );
-      if (existingSupplier) {
-        errors.push('Un fournisseur avec ce nom existe déjà');
-      }
-    }
-    
-    return errors;
-  };
-
-  const handleSaveSupplier = async () => {
-    const errors = validateSupplierForm();
-    
-    if (errors.length > 0) {
-      toast.error('Erreurs : ' + errors.join(', '));
-      return;
-    }
-    
-    try {
-      if (editingSupplier) {
-        // Mode édition
-        await api.updateSupplier(editingSupplier.name, supplierFormData);
-        console.log('✅ Fournisseur mis à jour');
-      } else {
-        // Mode création
-        await api.createSupplier(supplierFormData);
-        console.log('✅ Fournisseur créé');
-      }
-      
-      await loadData();
-      handleCloseSupplierModal();
-    } catch (error) {
-      console.error('❌ Erreur sauvegarde fournisseur:', error);
-      toast.error('Erreur lors de la sauvegarde');
-    }
-  };
-
-  const handleDeleteSupplier = async (supplier) => {
-    // Vérifier si des produits utilisent ce fournisseur
-    const productsUsingSupplier = products.filter(p => p.supplier === supplier.name);
-    
-    if (productsUsingSupplier.length > 0) {
-      const confirmDelete = window.confirm(
-        `⚠️ ATTENTION : ${productsUsingSupplier.length} produit(s) utilisent ce fournisseur.\n\n` +
-        `Si vous supprimez ce fournisseur, ces produits n'auront plus de fournisseur assigné.\n\n` +
-        `Voulez-vous vraiment continuer ?`
-      );
-      
-      if (!confirmDelete) return;
-    }
-    
-    try {
-      await api.deleteSupplier(supplier.name);
-      console.log('✅ Fournisseur supprimé');
-      await loadData();
-    } catch (error) {
-      console.error('❌ Erreur suppression fournisseur:', error);
-      toast.error('Erreur lors de la suppression');
-    }
-  };
-
-  // ============================================
   // GESTION DES WAREHOUSES
   // ============================================
   
@@ -571,6 +493,7 @@ const StockEasy = () => {
     }
   };
 
+
   // ============================================
   // HANDLERS MAPPING
   // ============================================
@@ -588,13 +511,13 @@ const StockEasy = () => {
   };
 
   const handleAssignSupplier = async () => {
-    if (!selectedSupplierForMapping) {
+    if (!inlineModals.emailOrderModal.selectedSupplierForMapping) {
       toast.warning('Veuillez sélectionner un fournisseur');
       return;
     }
     
     try {
-      await api.assignSupplierToProduct(productToMap.sku, selectedSupplierForMapping);
+      await api.assignSupplierToProduct(productToMap.sku, inlineModals.emailOrderModal.selectedSupplierForMapping);
       console.log(`✅ Fournisseur assigné à ${productToMap.sku}`);
       await loadData();
       handleCloseAssignSupplierModal();
@@ -691,17 +614,6 @@ const StockEasy = () => {
     return notifs;
   }, [productsByStatus, orders]);
 
-  // CALCUL DES VRAIS KPIs ANALYTICS avec historique Firestore
-  const analyticsData = useAnalytics(enrichedProducts, orders, dateRange, customRange, comparisonType);
-  
-  // Génération des insights actionnables basés sur les KPIs
-  const insights = useMemo(() => {
-    if (analyticsData.loading || analyticsData.error || !analyticsData.skuAvailability) {
-      console.log('⚠️ Pas de données analytics pour générer les insights');
-      return [];
-    }
-    return generateInsights(analyticsData, enrichedProducts, orders, setActiveTab);
-  }, [analyticsData, enrichedProducts, orders, setActiveTab]);
   
   // Fonction pour ouvrir le modal de graphique détaillé
   const openChartModal = (kpiKey) => {
@@ -850,14 +762,6 @@ const StockEasy = () => {
     setEmailModalOpen(true);
   };
 
-  const updateOrderQuantity = (sku, newQuantity) => {
-    const qty = parseInt(newQuantity, 10);
-    setOrderQuantities(prev => ({
-      ...prev,
-      [sku]: isNaN(qty) || qty < 0 ? 0 : qty
-    }));
-  };
-
   const generateEmailDraft = (supplier, products) => {
     const supplierInfo = suppliers[supplier];
     const productList = products.map(p => {
@@ -895,30 +799,18 @@ ${getUserSignature()}`
     };
   };
 
-  const generatePONumber = () => {
-    // Trouve le numéro PO le plus élevé actuel
-    const poNumbers = orders
-      .map(o => {
-        const match = o.id.match(/^PO-(\d+)$/);
-        return match ? parseInt(match[1], 10) : 0;
-      })
-      .filter(n => n > 0);
-    
-    const nextNumber = poNumbers.length > 0 ? Math.max(...poNumbers) + 1 : 1;
-    return `PO-${String(nextNumber).padStart(3, '0')}`;
-  };
 
   const sendOrder = async () => {
     try {
-      const productsToOrder = toOrderBySupplier[selectedSupplier];
+      const productsToOrder = toOrderBySupplier[inlineModals.emailOrderModal.selectedSupplier];
       const total = roundToTwoDecimals(productsToOrder.reduce((sum, p) => {
         const qty = orderQuantities[p.sku] || p.qtyToOrder;
         return sum + (qty * p.buyPrice);
       }, 0));
       
       const orderData = {
-        id: generatePONumber(),
-        supplier: selectedSupplier,
+        id: generatePONumber(orders),
+        supplier: inlineModals.emailOrderModal.selectedSupplier,
         warehouseId: selectedWarehouse, // Ajouter le warehouse
         warehouseName: selectedWarehouse, // Nom de l'entrepôt pour affichage
         status: 'pending_confirmation',
@@ -953,23 +845,31 @@ ${getUserSignature()}`
 
   const createOrderWithoutEmail = async () => {
     try {
+      const selectedSupplier = inlineModals.emailOrderModal.selectedSupplier;
+      const selectedWarehouse = inlineModals.emailOrderModal.selectedWarehouse;
       const productsToOrder = toOrderBySupplier[selectedSupplier];
+      
+      if (!selectedWarehouse) {
+        toast.error('Veuillez sélectionner un entrepôt');
+        return;
+      }
+      
       const total = roundToTwoDecimals(productsToOrder.reduce((sum, p) => {
-        const qty = orderQuantities[p.sku] || p.qtyToOrder;
+        const qty = inlineModals.emailOrderModal.orderQuantities[p.sku] || p.qtyToOrder;
         return sum + (qty * p.buyPrice);
       }, 0));
       
       const orderData = {
-        id: generatePONumber(),
+        id: generatePONumber(orders),
         supplier: selectedSupplier,
-        warehouseId: selectedWarehouse, // Ajouter le warehouse
-        warehouseName: selectedWarehouse, // Nom de l'entrepôt pour affichage
+        warehouseId: selectedWarehouse,
+        warehouseName: selectedWarehouse,
         status: 'pending_confirmation',
         total: total,
         createdAt: new Date().toISOString().split('T')[0],
         items: productsToOrder.map(p => ({
           sku: p.sku,
-          quantity: orderQuantities[p.sku] || p.qtyToOrder,
+          quantity: inlineModals.emailOrderModal.orderQuantities[p.sku] || p.qtyToOrder,
           pricePerUnit: p.buyPrice
         })),
         notes: ''
@@ -978,8 +878,7 @@ ${getUserSignature()}`
       await api.createOrder(orderData);
       await loadData();
       
-      setEmailModalOpen(false);
-      setSelectedSupplier(null);
+      inlineModals.emailOrderModal.closeEmailModal();
       
       toast.success('Commande créée sans envoi d\'email !', {
         action: {
@@ -991,6 +890,23 @@ ${getUserSignature()}`
     } catch (error) {
       console.error('❌ Erreur lors de la création de la commande:', error);
       toast.error('Erreur lors de la création de la commande');
+    }
+  };
+
+  // Handler pour ouvrir le modal d'email
+  const handleOpenEmailModal = (supplier, products) => {
+    // Utiliser le système inline qui fonctionnait avant
+    inlineModals.emailOrderModal.openEmailModal(supplier);
+    
+    // Pré-remplir les quantités dans le système inline
+    products.forEach(p => {
+      inlineModals.emailOrderModal.updateOrderQuantity(p.sku, p.qtyToOrder);
+    });
+    
+    // Sélectionner le premier warehouse par défaut
+    const warehousesList = Object.values(warehouses);
+    if (warehousesList.length > 0) {
+      inlineModals.emailOrderModal.setSelectedWarehouse(warehousesList[0].name);
     }
   };
 
@@ -1048,7 +964,7 @@ ${getUserSignature()}`
         const total = roundToTwoDecimals(products.reduce((sum, p) => sum + (p.orderQuantity * p.buyPrice), 0));
         
         const orderData = {
-          id: generatePONumber(),
+          id: generatePONumber(orders),
           supplier: supplier,
           warehouseId: warehousesList[0]?.name || null,
           status: 'pending_confirmation',
@@ -1072,21 +988,34 @@ ${getUserSignature()}`
     }
   };
 
-  const confirmOrder = async (orderId) => {
+  // Handler pour créer une commande simple (pour les boutons dans OrderBySupplier)
+  const handleCreateOrder = async (supplier, products) => {
+    if (!selectedWarehouse) {
+      toast.error('Veuillez sélectionner un entrepôt');
+      return;
+    }
+
     try {
-      const confirmedAt = new Date().toISOString();
-      console.log('Confirmation commande:', orderId, 'Date:', confirmedAt);
-      
-      await api.updateOrderStatus(orderId, {
-        status: 'preparing',
-        confirmedAt: confirmedAt
-      });
-      
+      const poNumber = generatePONumber(orders);
+      const orderData = {
+        poNumber,
+        supplier,
+        warehouse: selectedWarehouse,
+        status: 'pending',
+        items: products.map(p => ({
+          sku: p.sku,
+          quantity: orderQuantities[p.sku] || p.qtyToOrder,
+          pricePerUnit: p.buyPrice
+        })),
+        notes: `Commande pour ${supplier}`
+      };
+
+      await api.createOrder(orderData);
       await loadData();
-      toast.success('Commande confirmée et en cours de préparation!');
+      toast.success(`Commande créée pour ${supplier} !`);
     } catch (error) {
-      console.error('❌ Erreur confirmation:', error);
-      toast.error('Erreur lors de la confirmation');
+      console.error('Erreur lors de la création de la commande:', error);
+      toast.error('Erreur lors de la création de la commande');
     }
   };
 
@@ -1097,55 +1026,7 @@ ${getUserSignature()}`
     }));
   };
 
-  const shipOrder = async (orderId) => {
-    const tracking = prompt('Entrez le numéro de suivi (optionnel - laissez vide pour passer):');
-    // Tracking optionnel - on peut continuer même sans numéro
-    try {
-      await api.updateOrderStatus(orderId, {
-        status: 'in_transit',
-        shippedAt: new Date().toISOString().split('T')[0],
-        trackingNumber: tracking || ''
-      });
-      await loadData();
-      console.log('✅ Commande expédiée');
-    } catch (error) {
-      console.error('❌ Erreur:', error);
-      toast.error('Erreur lors de la mise à jour');
-    }
-  };
 
-  const receiveOrder = async (orderId) => {
-    try {
-      console.log('📦 Confirmation de réception de la commande:', orderId);
-      
-      const order = orders.find(o => o.id === orderId);
-      if (!order) {
-        toast.error('Commande introuvable');
-        return;
-      }
-
-      // Simplement changer le statut à 'received' sans ouvrir la modale
-      await api.updateOrderStatus(orderId, {
-        status: 'received',
-        receivedAt: new Date().toISOString().split('T')[0]
-      });
-
-      // Recharger les données pour mettre à jour l'affichage
-      await loadData();
-
-      toast.success(`Commande ${orderId} marquée comme reçue !`, {
-        description: 'Vous pouvez maintenant valider les quantités reçues.',
-        duration: 4000
-      });
-
-      // Changer automatiquement vers l'onglet "Commandes Reçues"
-      setTrackTabSection('commandes_recues');
-
-    } catch (error) {
-      console.error('❌ Erreur lors de la confirmation de réception:', error);
-      toast.error('Erreur lors de la confirmation: ' + error.message);
-    }
-  };
   
   const openReconciliationModal = (order) => {
     setReconciliationOrder(order);
@@ -1164,14 +1045,14 @@ ${getUserSignature()}`
       initialDamaged[item.sku] = item.damagedQuantity || 0; // Quantités endommagées
     });
     
-    setDiscrepancyItems(initialItems);
+    inlineModals.reconciliationModal.setDiscrepancyItems(initialItems);
     setDiscrepancyTypes(initialTypes);
-    setDamagedQuantities(initialDamaged);
+    inlineModals.reconciliationModal.setDamagedQuantities(initialDamaged);
     setReconciliationModalOpen(true);
   };
   
   const updateDiscrepancyItem = (sku, field, value, orderedQuantity) => {
-    setDiscrepancyItems(prev => ({
+    inlineModals.reconciliationModal.setDiscrepancyItems(prev => ({
       ...prev,
       [sku]: {
         ...prev[sku],
@@ -1185,15 +1066,15 @@ ${getUserSignature()}`
       if (!reconciliationOrder) return;
       
       console.log('🔍 Début de la réconciliation:', reconciliationOrder.id);
-      console.log('Quantités reçues:', discrepancyItems);
+      console.log('Quantités reçues:', inlineModals.reconciliationModal.discrepancyItems);
       console.log('Types de problèmes:', discrepancyTypes);
-      console.log('Quantités endommagées:', damagedQuantities);
+      console.log('Quantités endommagées:', inlineModals.reconciliationModal.damagedQuantities);
       
       // Préparer les items avec quantités et types de problèmes
       const updatedItems = reconciliationOrder.items.map(item => {
-        const receivedQty = parseInt(discrepancyItems[item.sku]?.received, 10);
-        const damagedQty = parseInt(damagedQuantities[item.sku] || 0, 10);
-        const notes = discrepancyItems[item.sku]?.notes || '';
+        const receivedQty = parseInt(inlineModals.reconciliationModal.discrepancyItems[item.sku]?.received, 10);
+        const damagedQty = parseInt(inlineModals.reconciliationModal.damagedQuantities[item.sku] || 0, 10);
+        const notes = inlineModals.reconciliationModal.discrepancyItems[item.sku]?.notes || '';
         
         // Validation
         if (isNaN(receivedQty) || receivedQty < 0) {
@@ -1274,8 +1155,8 @@ ${getUserSignature()}`
       // Fermer la modal et nettoyer les états
       setReconciliationModalOpen(false);
       setReconciliationOrder(null);
-      setDiscrepancyItems({});
-      setDamagedQuantities({});
+      inlineModals.reconciliationModal.setDiscrepancyItems({});
+      inlineModals.reconciliationModal.setDamagedQuantities({});
       setDiscrepancyTypes({});
       
       toast.success(
@@ -1353,7 +1234,7 @@ ${getUserSignature()}`
   const submitDiscrepancy = async () => {
     try {
       // Créer l'email de réclamation
-      const discrepancyList = Object.entries(discrepancyItems)
+      const discrepancyList = Object.entries(inlineModals.reconciliationModal.discrepancyItems)
         .filter(([sku, data]) => data.ordered !== data.received)
         .map(([sku, data]) => {
           const product = products.find(p => p.sku === sku);
@@ -1371,7 +1252,7 @@ ${getUserSignature()}`
       
       // CORRECTION 4A: Mettre à jour la commande avec les quantités reçues
       const updatedItems = reconciliationOrder.items.map(item => {
-        const receivedQty = discrepancyItems[item.sku]?.received;
+        const receivedQty = inlineModals.reconciliationModal.discrepancyItems[item.sku]?.received;
         return {
           sku: item.sku,
           quantity: item.quantity,
@@ -1391,7 +1272,7 @@ ${getUserSignature()}`
       });
       
       // CORRECTION 1: Mettre à jour le stock avec les quantités réellement reçues (conversion en nombre)
-      const stockUpdates = Object.entries(discrepancyItems).map(([sku, data]) => {
+      const stockUpdates = Object.entries(inlineModals.reconciliationModal.discrepancyItems).map(([sku, data]) => {
         const quantityReceived = parseInt(data.received, 10) || 0;
         console.log(`Stock update pour ${sku}: +${quantityReceived} unités`);
         return {
@@ -1407,7 +1288,7 @@ ${getUserSignature()}`
       
       await loadData();
       setDiscrepancyModalOpen(false);
-      setDiscrepancyItems({});
+      inlineModals.reconciliationModal.setDiscrepancyItems({});
       setReconciliationOrder(null);
     } catch (error) {
       console.error('❌ Erreur:', error);
@@ -1775,6 +1656,207 @@ ${getUserSignature()}`
     toast.success(`Export CSV réussi : ${filteredOrders.length} commande(s), ${totalItems} ligne(s) de produits exportée(s)`);
   };
 
+  // ============================================
+  // NOUVEAUX HANDLERS POUR LES MODALS ET FONCTIONNALITÉS
+  // ============================================
+
+  // Handler pour ouvrir le modal de réconciliation
+  const handleStartReconciliation = (order) => {
+    reconciliationModalHandlers.open(order);
+  };
+
+  // Handler pour confirmer la réconciliation - Logique directe qui fonctionne
+  const handleReconciliationConfirm = async (reconciliationData) => {
+    try {
+      const order = reconciliationModal.data.order;
+      
+      // Analyser les données pour déterminer s'il y a des écarts ou dommages
+      const hasDiscrepancies = Object.values(reconciliationData.discrepancies || {}).some(d => d !== 0);
+      const hasDamages = Object.values(reconciliationData.damages || {}).some(d => d > 0);
+      
+      if (hasDiscrepancies || hasDamages) {
+        // Il y a des écarts ou dommages - passer au statut 'reconciliation'
+        await api.updateOrderStatus(order.id, {
+          status: 'reconciliation',
+          receivedAt: new Date().toISOString().split('T')[0],
+          hasDiscrepancy: hasDiscrepancies,
+          damageReport: hasDamages
+        });
+        
+        // Mettre à jour le stock avec les quantités reçues
+        const stockUpdates = Object.entries(reconciliationData.receivedItems || {}).map(([sku, data]) => {
+          const quantityReceived = parseInt(data.received || data, 10) || 0;
+          return {
+            sku,
+            quantityToAdd: quantityReceived
+          };
+        });
+        
+        await api.updateStock(stockUpdates);
+        
+        reconciliationModalHandlers.close();
+        
+        // Générer l'email de réclamation si nécessaire
+        const emailContent = emailGeneration.generateReclamationEmail(
+          order,
+          reconciliationData.receivedItems,
+          reconciliationData.damages,
+          reconciliationData.notes || getUserSignature()
+        );
+        
+        if (emailContent) {
+          reclamationEmailModalHandlers.open(order, emailContent);
+        }
+        
+        toast.success('Commande mise en réconciliation avec réclamation générée');
+      } else {
+        // Pas d'écarts - marquer comme complétée
+        await api.updateOrderStatus(order.id, {
+          status: 'completed',
+          receivedAt: new Date().toISOString().split('T')[0],
+          completedAt: new Date().toISOString().split('T')[0],
+          hasDiscrepancy: false,
+          damageReport: false
+        });
+        
+        // Mettre à jour le stock
+        const stockUpdates = Object.entries(reconciliationData.receivedItems || {}).map(([sku, data]) => {
+          const quantityReceived = parseInt(data.received || data, 10) || 0;
+          return {
+            sku,
+            quantityToAdd: quantityReceived
+          };
+        });
+        
+        await api.updateStock(stockUpdates);
+        
+        reconciliationModalHandlers.close();
+        toast.success('Réconciliation validée - Commande complétée');
+      }
+      
+      // Recharger les données
+      await loadData();
+      
+    } catch (error) {
+      console.error('Erreur lors de la réconciliation:', error);
+      toast.error('Erreur lors de la réconciliation');
+    }
+  };
+
+  // Handler pour envoyer une commande par email
+  const handleSendOrder = async () => {
+    try {
+      const selectedSupplier = inlineModals.emailOrderModal.selectedSupplier;
+      const selectedWarehouse = inlineModals.emailOrderModal.selectedWarehouse;
+      const productsToOrder = toOrderBySupplier[selectedSupplier];
+      
+      if (!selectedWarehouse) {
+        toast.error('Veuillez sélectionner un entrepôt');
+        return;
+      }
+      
+      const total = roundToTwoDecimals(productsToOrder.reduce((sum, p) => {
+        const qty = inlineModals.emailOrderModal.orderQuantities[p.sku] || p.qtyToOrder;
+        return sum + (qty * p.buyPrice);
+      }, 0));
+      
+      const orderData = {
+        id: generatePONumber(orders),
+        supplier: selectedSupplier,
+        warehouseId: selectedWarehouse,
+        warehouseName: selectedWarehouse,
+        status: 'pending_confirmation',
+        total: total,
+        createdAt: new Date().toISOString().split('T')[0],
+        items: productsToOrder.map(p => ({
+          sku: p.sku,
+          quantity: inlineModals.emailOrderModal.orderQuantities[p.sku] || p.qtyToOrder,
+          pricePerUnit: p.buyPrice
+        })),
+        notes: ''
+      };
+
+      await api.createOrder(orderData);
+      await loadData();
+      
+      // Générer et envoyer l'email
+      const emailContent = emailGeneration.generateOrderEmailDraft(
+        selectedSupplier,
+        productsToOrder,
+        selectedWarehouse,
+        inlineModals.emailOrderModal.orderQuantities,
+        getUserSignature(),
+        suppliers,
+        warehouses
+      );
+      
+      // Ici vous pouvez ajouter la logique d'envoi d'email
+      console.log('📧 Email généré:', emailContent);
+      
+      inlineModals.emailOrderModal.closeEmailModal();
+      toast.success('Commande créée et email généré avec succès !', {
+        action: {
+          label: 'Voir',
+          onClick: () => setActiveTab('track')
+        },
+        duration: 6000
+      });
+    } catch (error) {
+      console.error('❌ Erreur lors de la création de la commande:', error);
+      toast.error('Erreur lors de la création de la commande');
+    }
+  };
+
+  // Handler pour créer une commande sans email
+  const handleCreateOrderWithoutEmail = async () => {
+    try {
+      const selectedSupplier = inlineModals.emailOrderModal.selectedSupplier;
+      const selectedWarehouse = inlineModals.emailOrderModal.selectedWarehouse;
+      const productsToOrder = toOrderBySupplier[selectedSupplier];
+      
+      if (!selectedWarehouse) {
+        toast.error('Veuillez sélectionner un entrepôt');
+        return;
+      }
+      
+      const total = roundToTwoDecimals(productsToOrder.reduce((sum, p) => {
+        const qty = inlineModals.emailOrderModal.orderQuantities[p.sku] || p.qtyToOrder;
+        return sum + (qty * p.buyPrice);
+      }, 0));
+      
+      const orderData = {
+        id: generatePONumber(orders),
+        supplier: selectedSupplier,
+        warehouseId: selectedWarehouse,
+        warehouseName: selectedWarehouse,
+        status: 'pending_confirmation',
+        total: total,
+        createdAt: new Date().toISOString().split('T')[0],
+        items: productsToOrder.map(p => ({
+          sku: p.sku,
+          quantity: inlineModals.emailOrderModal.orderQuantities[p.sku] || p.qtyToOrder,
+          pricePerUnit: p.buyPrice
+        })),
+        notes: ''
+      };
+
+      await api.createOrder(orderData);
+      await loadData();
+      
+      inlineModals.emailOrderModal.closeEmailModal();
+      toast.success('Commande créée avec succès !', {
+        action: {
+          label: 'Voir',
+          onClick: () => setActiveTab('track')
+        },
+        duration: 6000
+      });
+    } catch (error) {
+      console.error('❌ Erreur lors de la création de la commande:', error);
+      toast.error('Erreur lors de la création de la commande');
+    }
+  };
+
   if (loading) {
     return (
       <motion.div 
@@ -1835,2996 +1917,280 @@ ${getUserSignature()}`
 
             {/* Contenu principal avec padding */}
             <div className="p-4 sm:p-6 lg:p-8 pt-16 sm:pt-20">
-
-      <div className="max-w-7xl mx-auto">
-        
-        {/* DASHBOARD TAB */}
-        <AnimatePresence mode="wait">
-          {activeTab === 'dashboard' && (
-            <motion.div
-              key="dashboard"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              transition={{ duration: 0.25 }}
-              className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            
-            {/* Produits à commander */}
-            <div className="bg-white rounded-xl shadow-sm border border-[#E5E4DF] p-6">
-              <div className="flex items-center gap-2 mb-4">
-                <div className="w-10 h-10 bg-red-50 rounded-lg flex items-center justify-center border border-red-200 shrink-0">
-                  <AlertCircle className="w-6 h-6 text-[#EF1C43] shrink-0" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center">
-                    <h2 className="text-lg font-bold text-[#191919]">Produits à commander</h2>
-                    <InfoTooltip content={tooltips.toOrder} />
-                  </div>
-                  <p className="text-sm text-[#666663]">{productsByStatus.to_order.length} produit(s)</p>
-                </div>
-              </div>
-              <div className="space-y-2 max-h-96 overflow-y-auto">
-                {productsByStatus.to_order.length === 0 ? (
-                  <p className="text-[#666663] text-center py-8 text-sm">Rien à commander</p>
-                ) : (
-                  productsByStatus.to_order.map((p, index) => (
-                    <motion.div
-                      key={p.sku}
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: index * 0.03, duration: 0.3 }}
-                      className="flex justify-between items-center p-3 bg-[#FAFAF7] rounded-lg hover:bg-[#F0F0EB] transition-colors border border-[#E5E4DF]">
-                      <div className="min-w-0">
-                        <p className="font-medium text-[#191919] text-sm truncate">{p.name}</p>
-                        <p className="text-xs text-[#666663] truncate">{p.supplier}</p>
-                      </div>
-                      <div className="text-right shrink-0 ml-4">
-                        <p className="font-bold text-[#EF1C43] text-sm">{formatUnits(p.qtyToOrder)} unités</p>
-                        <p className="text-xs text-[#666663]">Stock: {formatUnits(p.stock)}</p>
-                      </div>
-                    </motion.div>
-                  ))
-                )}
-              </div>
-            </div>
-
-            {/* Produits à surveiller */}
-            <div className="bg-white rounded-xl shadow-sm border border-[#E5E4DF] p-6">
-              <div className="flex items-center gap-2 mb-4">
-                <div className="w-10 h-10 bg-yellow-50 rounded-lg flex items-center justify-center border border-yellow-200 shrink-0">
-                  <Eye className="w-6 h-6 text-yellow-600 shrink-0" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center">
-                    <h2 className="text-lg font-bold text-[#191919]">Produits à surveiller</h2>
-                    <InfoTooltip content={tooltips.watch} />
-                  </div>
-                  <p className="text-sm text-[#666663]">{productsByStatus.watch.length} produit(s)</p>
-                </div>
-              </div>
-              <div className="space-y-2 max-h-96 overflow-y-auto">
-                {productsByStatus.watch.length === 0 ? (
-                  <p className="text-[#666663] text-center py-8 text-sm">Rien à surveiller</p>
-                ) : (
-                  productsByStatus.watch.map(p => (
-                    <div key={p.sku} className="flex justify-between items-center p-3 bg-[#FAFAF7] rounded-lg hover:bg-[#F0F0EB] transition-colors border border-[#E5E4DF]">
-                      <div className="min-w-0">
-                        <p className="font-medium text-[#191919] text-sm truncate">{p.name}</p>
-                        <p className="text-xs text-[#666663] truncate">{p.supplier}</p>
-                      </div>
-                      <div className="text-right shrink-0 ml-4">
-                        <p className="font-bold text-yellow-600 text-sm">Stock: {formatUnits(p.stock)}</p>
-                        <p className="text-xs text-[#666663]">Point: {p.reorderPoint}</p>
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
-
-            {/* En cours de livraison */}
-            <div className="bg-white rounded-xl shadow-sm border border-[#E5E4DF] p-6 cursor-pointer hover:shadow-md transition-shadow" onClick={() => { setActiveTab('track'); setTrackTabSection('en_transit'); }}>
-              <div className="flex items-center gap-2 mb-4">
-                <div className="w-10 h-10 bg-blue-50 rounded-lg flex items-center justify-center border border-blue-200 shrink-0">
-                  <Truck className="w-6 h-6 text-[#64A4F2] shrink-0" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center">
-                    <h2 className="text-lg font-bold text-[#191919]">En cours de livraison</h2>
-                    <InfoTooltip content={tooltips.inTransit} />
-                  </div>
-                  <p className="text-sm text-[#666663]">{orders.filter(o => o.status === 'in_transit').length} commande(s)</p>
-                </div>
-              </div>
-              <div className="space-y-2 max-h-96 overflow-y-auto">
-                {orders.filter(o => o.status === 'in_transit').length === 0 ? (
-                  <p className="text-[#666663] text-center py-8 text-sm">Aucune commande en transit</p>
-                ) : (
-                  orders.filter(o => o.status === 'in_transit').map(order => {
-                    const daysSinceShip = order.shippedAt ? Math.floor((new Date() - new Date(order.shippedAt)) / (1000 * 60 * 60 * 24)) : 0;
-                    const supplierDelay = suppliers[order.supplier]?.leadTimeDays || 30;
-                    const daysRemaining = Math.max(0, supplierDelay - daysSinceShip);
-                    
-                    return (
-                      <div key={order.id} className="p-3 bg-[#FAFAF7] rounded-lg hover:bg-[#F0F0EB] transition-colors border border-[#E5E4DF]">
-                        <div className="flex justify-between items-start mb-2">
-                          <div className="min-w-0">
-                            <p className="font-medium text-[#191919] text-sm truncate">{order.id}</p>
-                            <p className="text-xs text-[#666663] truncate">{order.supplier}</p>
-                          </div>
-                          <div className="text-right shrink-0 ml-4">
-                            <p className="font-bold text-[#64A4F2] text-sm">{order.items.length} produit(s)</p>
-                            <p className="text-xs text-[#666663]">~{daysRemaining}j</p>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })
-                )}
-              </div>
-            </div>
-
-            {/* Commandes reçues */}
-            <div className="bg-white rounded-xl shadow-sm border border-[#E5E4DF] p-6 cursor-pointer hover:shadow-md transition-shadow" onClick={() => { setActiveTab('track'); setTrackTabSection('commandes_recues'); }}>
-              <div className="flex items-center gap-2 mb-4">
-                <div className="w-10 h-10 bg-green-50 rounded-lg flex items-center justify-center border border-green-200 shrink-0">
-                  <CheckCircle className="w-6 h-6 text-green-600 shrink-0" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center">
-                    <h2 className="text-lg font-bold text-[#191919]">Commandes reçues</h2>
-                    <InfoTooltip content={tooltips.received} />
-                  </div>
-                  <p className="text-sm text-[#666663]">{orders.filter(o => o.status === 'received').length} à valider</p>
-                </div>
-              </div>
-              <div className="space-y-2 max-h-96 overflow-y-auto">
-                {orders.filter(o => o.status === 'received').length === 0 ? (
-                  <p className="text-[#666663] text-center py-8 text-sm">Aucune réception en attente</p>
-                ) : (
-                  orders.filter(o => o.status === 'received').map(order => (
-                    <div key={order.id} className="flex justify-between items-center p-3 bg-[#FAFAF7] rounded-lg hover:bg-[#F0F0EB] transition-colors border border-[#E5E4DF]">
-                      <div className="min-w-0">
-                        <p className="font-medium text-[#191919] text-sm truncate">{order.id}</p>
-                        <p className="text-xs text-[#666663] truncate">{order.supplier}</p>
-                      </div>
-                      <div className="text-right shrink-0 ml-4">
-                        <p className="font-bold text-green-600 text-sm">{order.items.length} produit(s)</p>
-                        <p className="text-xs text-green-600">À valider</p>
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
-
-            </motion.div>
-          )}
-
-          {/* ONGLET ACTIONS */}
-          {activeTab === 'actions' && (
-            <motion.div
-              key="actions"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              transition={{ duration: 0.25 }}
-              className="space-y-6">
-            <div className="bg-white rounded-xl shadow-sm border border-[#E5E4DF] p-6">
-              <div className="flex items-center gap-3 mb-6">
-                <div className="w-10 h-10 bg-red-50 rounded-lg flex items-center justify-center border border-red-200 shrink-0">
-                  <AlertCircle className="w-6 h-6 text-[#EF1C43] shrink-0" />
-                </div>
-                <div>
-                  <h2 className="text-xl font-bold text-[#191919]">Produits à commander</h2>
-                  <p className="text-sm text-[#666663]">{productsByStatus.to_order.length} produit(s)</p>
-                </div>
-              </div>
-              <div>
-              {Object.keys(toOrderBySupplier).length === 0 ? (
-                <div className="text-center py-12">
-                  <CheckCircle className="w-16 h-16 text-green-400 mx-auto mb-4 shrink-0" />
-                  <p className="text-[#666663] text-lg">Aucune commande nécessaire</p>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {Object.entries(toOrderBySupplier).map(([supplier, prods]) => (
-                    <div key={supplier} className="border border-[#E5E4DF] rounded-lg overflow-hidden">
-                      <div className="bg-[#FAFAF7] px-4 py-3 flex items-center justify-between gap-4">
-                        <div className="min-w-0">
-                          <h3 className="font-bold text-[#191919]">{supplier}</h3>
-                          <p className="text-sm text-[#666663]">{prods.length} produit(s)</p>
-                        </div>
-                        <Button
-                          variant="primary"
-                          icon={Mail}
-                          onClick={() => openEmailModal(supplier)}
-                          className="shrink-0"
-                        >
-                          Commander
-                        </Button>
-                      </div>
-                      <div className="p-4">
-                        <table className="w-full text-sm">
-                          <thead className="text-xs text-[#666663] border-b border-[#E5E4DF]">
-                            <tr>
-                              <th className="text-left py-2">Produit</th>
-                              <th className="text-right py-2">Qté</th>
-                              <th className="text-right py-2">Montant</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {prods.map(p => (
-                              <tr key={p.sku} className="border-b border-[#E5E4DF] last:border-0">
-                                <td className="py-2 text-[#191919]">{p.name}</td>
-                                <td className="text-right text-[#191919]">{formatUnits(p.qtyToOrder)}</td>
-                                <td className="text-right font-bold text-[#191919]">{roundToTwoDecimals(p.qtyToOrder * p.buyPrice).toFixed(2)}€</td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-              </div>
-            </div>
-
-            {/* NOUVEAU : Table de sélection de produits */}
-            <div className="bg-white rounded-xl shadow-sm border border-[#E5E4DF] p-6">
-              <div className="flex items-center gap-3 mb-6">
-                <div className="w-10 h-10 bg-purple-50 rounded-lg flex items-center justify-center border border-purple-200 shrink-0">
-                  <Package className="w-6 h-6 text-[#8B5CF6] shrink-0" />
-                </div>
-                <div>
-                  <h2 className="text-xl font-bold text-[#191919]">Sélection manuelle de produits</h2>
-                  <p className="text-sm text-[#666663]">Choisissez les produits et quantités à commander</p>
-                </div>
-              </div>
-              
-              <ProductSelectionTable
-                products={enrichedProducts}
-                suppliers={suppliers}
-                onCreateOrder={handleCreateOrderFromTable}
-              />
-            </div>
-            </motion.div>
-          )}
-
-          {/* TRACK & MANAGE TAB */}
-          {activeTab === 'track' && (
-            <motion.div
-              key="track"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              transition={{ duration: 0.25 }}
-              className="space-y-6">
-            
-            {/* Header avec titre et sous-titre */}
-            <div className="bg-white rounded-xl shadow-sm border border-[#E5E4DF] p-6">
-              <div className="flex items-center gap-3 mb-2">
-                <Truck className="w-8 h-8 text-[#191919]" />
-                <h1 className="text-2xl font-bold text-[#191919]">Track & Manage</h1>
-              </div>
-              <p className="text-[#666663] ml-11">Suivez vos commandes et gérez les réceptions</p>
-              
-              {/* Onglets de navigation - Optimisés mobile */}
-              <div className="flex gap-2 mt-6 overflow-x-auto pb-2 -mx-2 px-2 sm:mx-0 sm:px-0">
-                <button
-                  onClick={() => setTrackTabSection('en_cours_commande')}
-                  className={`px-3 sm:px-4 py-2 rounded-lg font-medium text-xs sm:text-sm whitespace-nowrap transition-all ${
-                    trackTabSection === 'en_cours_commande'
-                      ? 'bg-black text-white'
-                      : 'bg-[#FAFAF7] text-[#666663] hover:bg-[#F0F0EB]'
-                  }`}
-                >
-                  <span className="hidden sm:inline">En Cours de Commande</span>
-                  <span className="sm:hidden">En Cours</span>
-                  <span className="ml-1">({orders.filter(o => o.status === 'pending_confirmation').length})</span>
-                </button>
-                <button
-                  onClick={() => setTrackTabSection('preparation')}
-                  className={`px-3 sm:px-4 py-2 rounded-lg font-medium text-xs sm:text-sm whitespace-nowrap transition-all ${
-                    trackTabSection === 'preparation'
-                      ? 'bg-black text-white'
-                      : 'bg-[#FAFAF7] text-[#666663] hover:bg-[#F0F0EB]'
-                  }`}
-                >
-                  <span className="hidden sm:inline">En cours de préparation</span>
-                  <span className="sm:hidden">Préparation</span>
-                  <span className="ml-1">({orders.filter(o => o.status === 'preparing').length})</span>
-                </button>
-                <button
-                  onClick={() => setTrackTabSection('en_transit')}
-                  className={`px-3 sm:px-4 py-2 rounded-lg font-medium text-xs sm:text-sm whitespace-nowrap transition-all ${
-                    trackTabSection === 'en_transit'
-                      ? 'bg-black text-white'
-                      : 'bg-[#FAFAF7] text-[#666663] hover:bg-[#F0F0EB]'
-                  }`}
-                >
-                  En Transit ({orders.filter(o => o.status === 'in_transit').length})
-                </button>
-                <button
-                  onClick={() => setTrackTabSection('commandes_recues')}
-                  className={`px-3 sm:px-4 py-2 rounded-lg font-medium text-xs sm:text-sm whitespace-nowrap transition-all ${
-                    trackTabSection === 'commandes_recues'
-                      ? 'bg-black text-white'
-                      : 'bg-[#FAFAF7] text-[#666663] hover:bg-[#F0F0EB]'
-                  }`}
-                >
-                  <span className="hidden sm:inline">Commandes Reçues</span>
-                  <span className="sm:hidden">Reçues</span>
-                  <span className="ml-1">({orders.filter(o => o.status === 'received').length})</span>
-                </button>
-                <button
-                  onClick={() => setTrackTabSection('reconciliation')}
-                  className={`px-3 sm:px-4 py-2 rounded-lg font-medium text-xs sm:text-sm whitespace-nowrap transition-all ${
-                    trackTabSection === 'reconciliation'
-                      ? 'bg-black text-white'
-                      : 'bg-[#FAFAF7] text-[#666663] hover:bg-[#F0F0EB]'
-                  }`}
-                >
-                  Réconciliation ({orders.filter(o => o.status === 'reconciliation').length})
-                </button>
-              </div>
-            </div>
-
-            {/* Contenu de chaque section */}
-            {trackTabSection === 'en_cours_commande' && (
-            <div className="bg-white rounded-xl shadow-sm border border-[#E5E4DF] p-4 sm:p-6">
-              <div className="flex items-center gap-2 mb-4">
-                <Clock className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-600 shrink-0" />
-                <h2 className="text-base sm:text-lg font-bold text-[#191919]">En Cours de Commande</h2>
-              </div>
-              <div className="space-y-3">
-                {orders.filter(o => o.status === 'pending_confirmation').length === 0 ? (
-                  <p className="text-[#666663] text-center py-8 text-sm">Aucune commande en attente</p>
-                ) : (
-                  orders.filter(o => o.status === 'pending_confirmation').map(order => (
-                    <div key={order.id} className="bg-[#FAFAF7] rounded-lg border border-[#E5E4DF] overflow-hidden">
-                      {/* Header de la commande - Cliquable - Optimisé mobile */}
-                      <div 
-                        className="p-3 sm:p-4 cursor-pointer hover:bg-[#F5F5F0] transition-colors"
-                        onClick={() => toggleOrderDetails(order.id)}
-                      >
-                        <div className="space-y-3">
-                          {/* Ligne 1: N° PO + Chevron */}
-                          <div className="flex items-center justify-between gap-2">
-                            <div className="flex items-center gap-2 min-w-0 flex-1">
-                              <span className="font-bold text-[#191919] text-sm sm:text-base">{order.id}</span>
-                              <motion.div
-                                animate={{ rotate: expandedOrders[order.id] ? 180 : 0 }}
-                                transition={{ duration: 0.2 }}
-                                className="shrink-0"
-                              >
-                                <ArrowDownRight className="w-4 h-4 text-[#666663]" />
-                              </motion.div>
-                            </div>
-                          </div>
-                          
-                          {/* Ligne 2: Fournisseur */}
-                          <div className="flex items-center gap-2">
-                            <span className="text-[#666663] text-xs sm:text-sm">Fournisseur:</span>
-                            <span className="text-[#191919] font-medium text-xs sm:text-sm truncate">{order.supplier}</span>
-                          </div>
-                          
-                          {/* Ligne 3: Entrepôt */}
-                          {(order.warehouseName || order.warehouseId) && (
-                            <div className="flex items-center gap-2">
-                              <span className="text-[#666663] text-xs sm:text-sm">Entrepôt de livraison:</span>
-                              <span className="text-[#191919] font-medium text-xs sm:text-sm truncate">{order.warehouseName || order.warehouseId}</span>
-                            </div>
-                          )}
-                          
-                          {/* Ligne 4: Infos */}
-                          <div className="text-xs sm:text-sm space-y-1">
-                            <div>
-                              <span className="text-[#666663]">Date: </span>
-                              <span className="text-[#191919]">{formatConfirmedDate(order.createdAt)}</span>
-                            </div>
-                            <div>
-                              <span className="text-[#666663]">Total: </span>
-                              <span className="text-[#191919] font-bold">{roundToTwoDecimals(order.total).toFixed(2)}€</span>
-                            </div>
-                          </div>
-                          
-                          {/* Bouton d'action */}
-                          <div className="pt-2" onClick={(e) => e.stopPropagation()}>
-                            <Button
-                              variant="success"
-                              size="sm"
-                              icon={Check}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                confirmOrder(order.id);
-                              }}
-                              className="w-full sm:w-auto"
-                            >
-                              <span className="hidden sm:inline">Confirmer réception email</span>
-                              <span className="sm:hidden">Confirmer réception</span>
-                            </Button>
-                          </div>
-                        </div>
-                      </div>
-                      
-                      {/* Détails des produits - Expansible */}
-                      <AnimatePresence>
-                        {expandedOrders[order.id] && (
-                          <motion.div
-                            initial={{ height: 0, opacity: 0 }}
-                            animate={{ height: 'auto', opacity: 1 }}
-                            exit={{ height: 0, opacity: 0 }}
-                            transition={{ duration: 0.3 }}
-                            className="border-t border-[#E5E4DF] bg-white"
-                          >
-                            <div className="p-4">
-                              <h4 className="font-semibold text-sm text-[#666663] mb-3">Produits commandés:</h4>
-                              <div className="space-y-2">
-                                {order.items.map((item, idx) => {
-                                  const product = products.find(p => p.sku === item.sku);
-                                  return (
-                                    <div key={idx} className="flex justify-between items-center p-2 bg-[#FAFAF7] rounded border border-[#E5E4DF]">
-                                      <div className="flex-1">
-                                        <div className="font-medium text-[#191919] text-sm">
-                                          {product?.name || item.sku}
-                                        </div>
-                                        <div className="text-xs text-[#666663]">
-                                          SKU: {item.sku}
-                                        </div>
-                                      </div>
-                                      <div className="text-right">
-                                        <div className="font-bold text-[#191919]">
-                                          {formatUnits(item.quantity)} unités
-                                        </div>
-                                        <div className="text-xs text-[#666663]">
-                                          {roundToTwoDecimals(item.pricePerUnit).toFixed(2)}€/unité
-                                        </div>
-                                      </div>
-                                      <div className="ml-4 text-right font-bold text-[#191919] min-w-[80px]">
-                                        {roundToTwoDecimals(item.quantity * item.pricePerUnit).toFixed(2)}€
-                                      </div>
-                                    </div>
-                                  );
-                                })}
-                              </div>
-                              <div className="mt-3 pt-3 border-t border-[#E5E4DF] flex justify-between">
-                                <span className="font-semibold text-[#666663]">Total:</span>
-                                <span className="font-bold text-[#191919] text-lg">{roundToTwoDecimals(order.total).toFixed(2)}€</span>
-                              </div>
-                              
-                              {/* Section Commentaires */}
-                              <div className="mt-6 pt-6 border-t border-[#E5E4DF]">
-                                <CommentSection 
-                                  purchaseOrderId={order.id}
-                                  purchaseOrderNumber={order.id}
-                                />
-                              </div>
-                            </div>
-                          </motion.div>
-                        )}
-                      </AnimatePresence>
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
-            )}
-
-            {/* En cours de préparation */}
-            {trackTabSection === 'preparation' && (
-            <div className="bg-white rounded-xl shadow-sm border border-[#E5E4DF] p-4 sm:p-6">
-              <div className="flex items-center gap-2 mb-4">
-                <Package className="w-4 h-4 sm:w-5 sm:h-5 text-[#64A4F2] shrink-0" />
-                <h2 className="text-base sm:text-lg font-bold text-[#191919]">En cours de préparation</h2>
-              </div>
-              <div className="space-y-3">
-                {orders.filter(o => o.status === 'preparing').length === 0 ? (
-                  <p className="text-[#666663] text-center py-8 text-sm">Aucune commande en préparation</p>
-                ) : (
-                  orders.filter(o => o.status === 'preparing').map(order => (
-                    <div key={order.id} className="bg-[#FAFAF7] rounded-lg border border-[#E5E4DF] overflow-hidden">
-                      {/* Header de la commande - Cliquable - Optimisé mobile */}
-                      <div 
-                        className="p-3 sm:p-4 cursor-pointer hover:bg-[#F5F5F0] transition-colors"
-                        onClick={() => toggleOrderDetails(order.id)}
-                      >
-                        <div className="space-y-3">
-                          {/* Ligne 1: N° PO + Chevron */}
-                          <div className="flex items-center justify-between gap-2">
-                            <div className="flex items-center gap-2 min-w-0 flex-1">
-                              <span className="font-bold text-[#191919] text-sm sm:text-base">{order.id}</span>
-                              <motion.div
-                                animate={{ rotate: expandedOrders[order.id] ? 180 : 0 }}
-                                transition={{ duration: 0.2 }}
-                                className="shrink-0"
-                              >
-                                <ArrowDownRight className="w-4 h-4 text-[#666663]" />
-                              </motion.div>
-                            </div>
-                          </div>
-                          
-                          {/* Ligne 2: Fournisseur */}
-                          <div className="flex items-center gap-2">
-                            <span className="text-[#666663] text-xs sm:text-sm">Fournisseur:</span>
-                            <span className="text-[#191919] font-medium text-xs sm:text-sm truncate">{order.supplier}</span>
-                          </div>
-                          
-                          {/* Ligne 3: Entrepôt */}
-                          {(order.warehouseName || order.warehouseId) && (
-                            <div className="flex items-center gap-2">
-                              <span className="text-[#666663] text-xs sm:text-sm">Entrepôt de livraison:</span>
-                              <span className="text-[#191919] font-medium text-xs sm:text-sm truncate">{order.warehouseName || order.warehouseId}</span>
-                            </div>
-                          )}
-                          
-                          {/* Ligne 4: Infos */}
-                          <div className="text-xs sm:text-sm space-y-1">
-                            <div>
-                              <span className="text-[#666663]">Date création: </span>
-                              <span className="text-[#191919]">{formatConfirmedDate(order.createdAt)}</span>
-                            </div>
-                            {order.confirmedAt && (
-                              <div className="text-green-600">
-                                ✓ Confirmée le {formatConfirmedDate(order.confirmedAt)}
-                              </div>
-                            )}
-                            <div>
-                              <span className="text-[#666663]">Total: </span>
-                              <span className="text-[#191919] font-bold">{roundToTwoDecimals(order.total).toFixed(2)}€</span>
-                            </div>
-                          </div>
-                          
-                          {/* Bouton d'action */}
-                          <div className="pt-2" onClick={(e) => e.stopPropagation()}>
-                            <Button
-                              variant="primary"
-                              size="sm"
-                              icon={Truck}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                shipOrder(order.id);
-                              }}
-                              className="w-full sm:w-auto"
-                            >
-                              <span className="hidden sm:inline">Marquer comme expédiée</span>
-                              <span className="sm:hidden">Expédiée</span>
-                            </Button>
-                          </div>
-                        </div>
-                      </div>
-                      
-                      {/* Détails des produits - Expansible */}
-                      <AnimatePresence>
-                        {expandedOrders[order.id] && (
-                          <motion.div
-                            initial={{ height: 0, opacity: 0 }}
-                            animate={{ height: 'auto', opacity: 1 }}
-                            exit={{ height: 0, opacity: 0 }}
-                            transition={{ duration: 0.3 }}
-                            className="border-t border-[#E5E4DF] bg-white"
-                          >
-                            <div className="p-4">
-                              <h4 className="font-semibold text-sm text-[#666663] mb-3">Produits commandés:</h4>
-                              <div className="space-y-2">
-                                {order.items.map((item, idx) => {
-                                  const product = products.find(p => p.sku === item.sku);
-                                  return (
-                                    <div key={idx} className="flex justify-between items-center p-2 bg-[#FAFAF7] rounded border border-[#E5E4DF]">
-                                      <div className="flex-1">
-                                        <div className="font-medium text-[#191919] text-sm">
-                                          {product?.name || item.sku}
-                                        </div>
-                                        <div className="text-xs text-[#666663]">
-                                          SKU: {item.sku}
-                                        </div>
-                                      </div>
-                                      <div className="text-right">
-                                        <div className="font-bold text-[#191919]">
-                                          {formatUnits(item.quantity)} unités
-                                        </div>
-                                        <div className="text-xs text-[#666663]">
-                                          {roundToTwoDecimals(item.pricePerUnit).toFixed(2)}€/unité
-                                        </div>
-                                      </div>
-                                      <div className="ml-4 text-right font-bold text-[#191919] min-w-[80px]">
-                                        {roundToTwoDecimals(item.quantity * item.pricePerUnit).toFixed(2)}€
-                                      </div>
-                                    </div>
-                                  );
-                                })}
-                              </div>
-                              <div className="mt-3 pt-3 border-t border-[#E5E4DF] flex justify-between">
-                                <span className="font-semibold text-[#666663]">Total:</span>
-                                <span className="font-bold text-[#191919] text-lg">{roundToTwoDecimals(order.total).toFixed(2)}€</span>
-                              </div>
-                              
-                              {/* Section Commentaires */}
-                              <div className="mt-6 pt-6 border-t border-[#E5E4DF]">
-                                <CommentSection 
-                                  purchaseOrderId={order.id}
-                                  purchaseOrderNumber={order.id}
-                                />
-                              </div>
-                            </div>
-                          </motion.div>
-                        )}
-                      </AnimatePresence>
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
-            )}
-
-            {/* En Transit */}
-            {trackTabSection === 'en_transit' && (
-            <div className="bg-white rounded-xl shadow-sm border border-[#E5E4DF] p-4 sm:p-6">
-              <div className="flex items-center gap-2 mb-4">
-                <Truck className="w-4 h-4 sm:w-5 sm:h-5 text-purple-600 shrink-0" />
-                <h2 className="text-base sm:text-lg font-bold text-[#191919]">En Transit</h2>
-              </div>
-              <div className="space-y-3">
-                {orders.filter(o => o.status === 'in_transit').length === 0 ? (
-                  <p className="text-[#666663] text-center py-8 text-sm">Aucune commande en transit</p>
-                ) : (
-                  orders.filter(o => o.status === 'in_transit').map(order => (
-                    <div key={order.id} className="bg-[#FAFAF7] rounded-lg border border-[#E5E4DF] overflow-hidden">
-                      {/* Header de la commande - Cliquable - Optimisé mobile */}
-                      <div 
-                        className="p-3 sm:p-4 cursor-pointer hover:bg-[#F5F5F0] transition-colors"
-                        onClick={() => toggleOrderDetails(order.id)}
-                      >
-                        <div className="space-y-3">
-                          {/* Ligne 1: N° PO + Chevron */}
-                          <div className="flex items-center justify-between gap-2">
-                            <div className="flex items-center gap-2 min-w-0 flex-1">
-                              <span className="font-bold text-[#191919] text-sm sm:text-base">{order.id}</span>
-                              <motion.div
-                                animate={{ rotate: expandedOrders[order.id] ? 180 : 0 }}
-                                transition={{ duration: 0.2 }}
-                                className="shrink-0"
-                              >
-                                <ArrowDownRight className="w-4 h-4 text-[#666663]" />
-                              </motion.div>
-                            </div>
-                          </div>
-                          
-                          {/* Ligne 2: Fournisseur */}
-                          <div className="flex items-center gap-2">
-                            <span className="text-[#666663] text-xs sm:text-sm">Fournisseur:</span>
-                            <span className="text-[#191919] font-medium text-xs sm:text-sm truncate">{order.supplier}</span>
-                          </div>
-                          
-                          {/* Ligne 3: Entrepôt */}
-                          {(order.warehouseName || order.warehouseId) && (
-                            <div className="flex items-center gap-2">
-                              <span className="text-[#666663] text-xs sm:text-sm">Entrepôt de livraison:</span>
-                              <span className="text-[#191919] font-medium text-xs sm:text-sm truncate">{order.warehouseName || order.warehouseId}</span>
-                            </div>
-                          )}
-                          
-                          {/* Ligne 4: Infos */}
-                          <div className="text-xs sm:text-sm space-y-1">
-                            <div>
-                              <span className="text-[#666663]">Créée le: </span>
-                              <span className="text-[#191919]">{formatConfirmedDate(order.createdAt)}</span>
-                            </div>
-                            {order.confirmedAt && (
-                              <div className="text-green-600">
-                                ✓ Confirmée le {formatConfirmedDate(order.confirmedAt)}
-                              </div>
-                            )}
-                            {order.shippedAt && (
-                              <div className="text-purple-600">
-                                🚚 Expédiée le {formatConfirmedDate(order.shippedAt)}
-                              </div>
-                            )}
-                            {order.trackingNumber && (
-                              <div>
-                                <span className="text-[#666663]">Suivi: </span>
-                                <span className="text-purple-600 font-mono break-all">{order.trackingNumber}</span>
-                              </div>
-                            )}
-                            <div>
-                              <span className="text-[#666663]">Total: </span>
-                              <span className="text-[#191919] font-bold">{roundToTwoDecimals(order.total).toFixed(2)}€</span>
-                            </div>
-                          </div>
-                          
-                          {/* Bouton d'action */}
-                          <div className="pt-2" onClick={(e) => e.stopPropagation()}>
-                            <Button
-                              variant="success"
-                              size="sm"
-                              icon={CheckCircle}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                receiveOrder(order.id);
-                              }}
-                              className="w-full sm:w-auto"
-                            >
-                              <span className="hidden sm:inline">Marquer comme reçue</span>
-                              <span className="sm:hidden">Reçue</span>
-                            </Button>
-                          </div>
-                        </div>
-                      </div>
-                      
-                      {/* Détails des produits - Expansible */}
-                      <AnimatePresence>
-                        {expandedOrders[order.id] && (
-                          <motion.div
-                            initial={{ height: 0, opacity: 0 }}
-                            animate={{ height: 'auto', opacity: 1 }}
-                            exit={{ height: 0, opacity: 0 }}
-                            transition={{ duration: 0.3 }}
-                            className="border-t border-[#E5E4DF] bg-white"
-                          >
-                            <div className="p-4">
-                              <h4 className="font-semibold text-sm text-[#666663] mb-3">Produits commandés:</h4>
-                              <div className="space-y-2">
-                                {order.items.map((item, idx) => {
-                                  const product = products.find(p => p.sku === item.sku);
-                                  return (
-                                    <div key={idx} className="flex justify-between items-center p-2 bg-[#FAFAF7] rounded border border-[#E5E4DF]">
-                                      <div className="flex-1">
-                                        <div className="font-medium text-[#191919] text-sm">
-                                          {product?.name || item.sku}
-                                        </div>
-                                        <div className="text-xs text-[#666663]">
-                                          SKU: {item.sku}
-                                        </div>
-                                      </div>
-                                      <div className="text-right">
-                                        <div className="font-bold text-[#191919]">
-                                          {formatUnits(item.quantity)} unités
-                                        </div>
-                                        <div className="text-xs text-[#666663]">
-                                          {roundToTwoDecimals(item.pricePerUnit).toFixed(2)}€/unité
-                                        </div>
-                                      </div>
-                                      <div className="ml-4 text-right font-bold text-[#191919] min-w-[80px]">
-                                        {roundToTwoDecimals(item.quantity * item.pricePerUnit).toFixed(2)}€
-                                      </div>
-                                    </div>
-                                  );
-                                })}
-                              </div>
-                              <div className="mt-3 pt-3 border-t border-[#E5E4DF] flex justify-between">
-                                <span className="font-semibold text-[#666663]">Total:</span>
-                                <span className="font-bold text-[#191919] text-lg">{roundToTwoDecimals(order.total).toFixed(2)}€</span>
-                              </div>
-                              
-                              {/* Section Commentaires */}
-                              <div className="mt-6 pt-6 border-t border-[#E5E4DF]">
-                                <CommentSection 
-                                  purchaseOrderId={order.id}
-                                  purchaseOrderNumber={order.id}
-                                />
-                              </div>
-                            </div>
-                          </motion.div>
-                        )}
-                      </AnimatePresence>
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
-            )}
-
-            {/* Commandes Reçues */}
-            {trackTabSection === 'commandes_recues' && (
-            <div className="bg-white rounded-xl shadow-sm border border-[#E5E4DF] p-4 sm:p-6">
-              <div className="flex items-center gap-2 mb-4">
-                <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5 text-green-600 shrink-0" />
-                <h2 className="text-base sm:text-lg font-bold text-[#191919]">Commandes Reçues</h2>
-              </div>
-              <div className="space-y-3">
-                {orders.filter(o => o.status === 'received').length === 0 ? (
-                  <p className="text-[#666663] text-center py-8 text-sm">Aucune commande reçue</p>
-                ) : (
-                  orders.filter(o => o.status === 'received').map(order => (
-                    <div key={order.id} className="bg-[#FAFAF7] rounded-lg border border-[#E5E4DF] overflow-hidden">
-                      {/* Header de la commande - Optimisé mobile */}
-                      <div 
-                        className="p-3 sm:p-4 cursor-pointer hover:bg-[#F5F5F0] transition-colors"
-                        onClick={() => toggleOrderDetails(order.id)}
-                      >
-                        <div className="space-y-3">
-                          {/* Ligne 1: N° PO + Chevron */}
-                          <div className="flex items-center justify-between gap-2">
-                            <div className="flex items-center gap-2 min-w-0 flex-1">
-                              <span className="font-bold text-[#191919] text-sm sm:text-base">{order.id}</span>
-                              <motion.div
-                                animate={{ rotate: expandedOrders[order.id] ? 180 : 0 }}
-                                transition={{ duration: 0.2 }}
-                                className="shrink-0"
-                              >
-                                <ArrowDownRight className="w-4 h-4 text-[#666663]" />
-                              </motion.div>
-                            </div>
-                          </div>
-                          
-                          {/* Ligne 2: Fournisseur */}
-                          <div className="flex items-center gap-2">
-                            <span className="text-[#666663] text-xs sm:text-sm">Fournisseur:</span>
-                            <span className="text-[#191919] font-medium text-xs sm:text-sm truncate">{order.supplier}</span>
-                          </div>
-                          
-                          {/* Ligne 3: Entrepôt */}
-                          {(order.warehouseName || order.warehouseId) && (
-                            <div className="flex items-center gap-2">
-                              <span className="text-[#666663] text-xs sm:text-sm">Entrepôt de livraison:</span>
-                              <span className="text-[#191919] font-medium text-xs sm:text-sm truncate">{order.warehouseName || order.warehouseId}</span>
-                            </div>
-                          )}
-                          
-                          {/* Ligne 4: Infos */}
-                          <div className="text-xs sm:text-sm space-y-1">
-                            <div>
-                              <span className="text-[#666663]">Créée le: </span>
-                              <span className="text-[#191919]">{formatConfirmedDate(order.createdAt)}</span>
-                            </div>
-                            {order.receivedAt && (
-                              <div className="text-green-600">
-                                ✓ Reçue le {formatConfirmedDate(order.receivedAt)}
-                              </div>
-                            )}
-                            <div>
-                              <span className="text-[#666663]">Total: </span>
-                              <span className="text-[#191919] font-bold">{roundToTwoDecimals(order.total).toFixed(2)}€</span>
-                            </div>
-                          </div>
-                          
-                          {/* Bouton d'action */}
-                          <div className="pt-2" onClick={(e) => e.stopPropagation()}>
-                            <Button
-                              variant="success"
-                              size="sm"
-                              icon={CheckCircle}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                openReconciliationModal(order);
-                              }}
-                              className="w-full sm:w-auto"
-                            >
-                              <span className="hidden sm:inline">Valider réception</span>
-                              <span className="sm:hidden">Valider</span>
-                            </Button>
-                          </div>
-                        </div>
-                      </div>
-                      
-                      {/* Détails des produits */}
-                      <AnimatePresence>
-                        {expandedOrders[order.id] && (
-                          <motion.div
-                            initial={{ height: 0, opacity: 0 }}
-                            animate={{ height: 'auto', opacity: 1 }}
-                            exit={{ height: 0, opacity: 0 }}
-                            transition={{ duration: 0.3 }}
-                            className="border-t border-[#E5E4DF] bg-white"
-                          >
-                            <div className="p-4">
-                              <h4 className="font-semibold text-sm text-[#666663] mb-3">Produits commandés:</h4>
-                              <div className="space-y-2">
-                                {order.items.map((item, idx) => {
-                                  const product = products.find(p => p.sku === item.sku);
-                                  return (
-                                    <div key={idx} className="flex justify-between items-center p-2 bg-[#FAFAF7] rounded border border-[#E5E4DF]">
-                                      <div className="flex-1">
-                                        <div className="font-medium text-[#191919] text-sm">
-                                          {product?.name || item.sku}
-                                        </div>
-                                        <div className="text-xs text-[#666663]">
-                                          SKU: {item.sku}
-                                        </div>
-                                      </div>
-                                      <div className="text-right">
-                                        <div className="font-bold text-[#191919]">
-                                          {formatUnits(item.quantity)} unités
-                                        </div>
-                                        <div className="text-xs text-[#666663]">
-                                          {roundToTwoDecimals(item.pricePerUnit).toFixed(2)}€/unité
-                                        </div>
-                                      </div>
-                                      <div className="ml-4 text-right font-bold text-[#191919] min-w-[80px]">
-                                        {roundToTwoDecimals(item.quantity * item.pricePerUnit).toFixed(2)}€
-                                      </div>
-                                    </div>
-                                  );
-                                })}
-                              </div>
-                              <div className="mt-3 pt-3 border-t border-[#E5E4DF] flex justify-between">
-                                <span className="font-semibold text-[#666663]">Total:</span>
-                                <span className="font-bold text-[#191919] text-lg">{roundToTwoDecimals(order.total).toFixed(2)}€</span>
-                              </div>
-                              
-                              {/* Section Commentaires */}
-                              <div className="mt-6 pt-6 border-t border-[#E5E4DF]">
-                                <CommentSection 
-                                  purchaseOrderId={order.id}
-                                  purchaseOrderNumber={order.id}
-                                />
-                              </div>
-                            </div>
-                          </motion.div>
-                        )}
-                      </AnimatePresence>
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
-            )}
-
-            {/* Réconciliation */}
-            {trackTabSection === 'reconciliation' && (
-            <div className="bg-white rounded-xl shadow-sm border border-[#E5E4DF] p-4 sm:p-6">
-              <div className="flex items-center gap-2 mb-4">
-                <AlertCircle className="w-4 h-4 sm:w-5 sm:h-5 text-[#EF1C43] shrink-0" />
-                <h2 className="text-base sm:text-lg font-bold text-[#191919]">Réconciliation</h2>
-              </div>
-              <div className="space-y-3">
-                {/* DEBUG INFO */}
-                {(() => {
-                  const reconciliationOrders = orders.filter(o => o.status === 'reconciliation');
-                  const receivedOrders = orders.filter(o => o.status === 'received');
-                  const ordersWithDiscrepancy = orders.filter(o => o.hasDiscrepancy === true);
-                  
-                  console.log('=== DEBUG RÉCONCILIATION ===');
-                  console.log('Total commandes:', orders.length);
-                  console.log('Commandes status=reconciliation:', reconciliationOrders.length);
-                  console.log('Commandes status=received:', receivedOrders.length);
-                  console.log('Commandes avec hasDiscrepancy:', ordersWithDiscrepancy.length);
-                  console.log('Détails commandes avec écarts:', ordersWithDiscrepancy);
-                  
-                  return null;
-                })()}
-                
-                {orders.filter(o => o.status === 'reconciliation').length === 0 ? (
-                  <div className="text-center py-8">
-                    <p className="text-[#666663] text-sm mb-2">Aucune commande à réconcilier</p>
-                    <p className="text-xs text-[#999] mt-4">
-                      Debug: {orders.length} commandes totales • 
-                      {orders.filter(o => o.hasDiscrepancy).length} avec écarts détectés • 
-                      {orders.filter(o => o.status === 'received').length} avec status 'received'
-                    </p>
-                    {orders.filter(o => o.hasDiscrepancy).length > 0 && (
-                      <div className="mt-4 p-4 bg-yellow-50 rounded-lg border border-yellow-200 text-left">
-                        <p className="text-sm text-yellow-800 font-medium mb-2">
-                          ⚠️ Attention: {orders.filter(o => o.hasDiscrepancy).length} commande(s) avec écarts détectés mais pas en statut 'reconciliation'
-                        </p>
-                        <div className="text-xs text-yellow-700 space-y-1">
-                          {orders.filter(o => o.hasDiscrepancy).map(o => (
-                            <div key={o.id}>
-                              • {o.id} - Status actuel: {o.status}
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  orders.filter(o => o.status === 'reconciliation').map(order => {
-                    const isDamage = order.damageReport === true;
-                    const bgColor = isDamage ? 'bg-orange-50' : 'bg-red-50';
-                    const borderColor = isDamage ? 'border-orange-500' : 'border-[#EF1C43]';
-                    const badgeBgColor = isDamage ? 'bg-orange-500/20' : 'bg-[#EF1C43]/20';
-                    const badgeTextColor = isDamage ? 'text-orange-600' : 'text-[#EF1C43]';
-                    const badgeText = isDamage ? '⚠️ RÉCEPTION ENDOMMAGÉE' : '📦 ÉCART DE QUANTITÉ';
-                    
-                    return (
-                    <div key={order.id} className={`${bgColor} rounded-lg border-l-4 ${borderColor} overflow-hidden`}>
-                      {/* Header de la commande - Cliquable - Optimisé mobile */}
-                      <div 
-                        className="p-3 sm:p-4 cursor-pointer hover:bg-opacity-80 transition-colors"
-                        onClick={() => toggleOrderDetails(order.id)}
-                      >
-                        <div className="space-y-3">
-                          {/* Ligne 1: N° PO + Badge + Chevron */}
-                          <div className="flex items-center justify-between gap-2">
-                            <div className="flex items-center gap-2 min-w-0 flex-1 flex-wrap">
-                              <span className="font-bold text-[#191919] text-sm sm:text-base">{order.id}</span>
-                              <motion.div
-                                animate={{ rotate: expandedOrders[order.id] ? 180 : 0 }}
-                                transition={{ duration: 0.2 }}
-                                className="shrink-0"
-                              >
-                                <ArrowDownRight className="w-4 h-4 text-[#666663]" />
-                              </motion.div>
-                            </div>
-                            <span className={`px-2 py-1 ${badgeBgColor} ${badgeTextColor} rounded text-xs font-medium shrink-0`}>
-                              <span className="hidden sm:inline">{badgeText}</span>
-                              <span className="sm:hidden">{isDamage ? '⚠️ Endommagée' : '📦 Écart'}</span>
-                            </span>
-                          </div>
-                          
-                          {/* Ligne 2: Fournisseur */}
-                          <div className="flex items-center gap-2">
-                            <span className="text-[#666663] text-xs sm:text-sm">Fournisseur:</span>
-                            <span className="text-[#191919] font-medium text-xs sm:text-sm truncate">{order.supplier}</span>
-                          </div>
-                          
-                          {/* Ligne 3: Entrepôt */}
-                          {(order.warehouseName || order.warehouseId) && (
-                            <div className="flex items-center gap-2">
-                              <span className="text-[#666663] text-xs sm:text-sm">Entrepôt de livraison:</span>
-                              <span className="text-[#191919] font-medium text-xs sm:text-sm truncate">{order.warehouseName || order.warehouseId}</span>
-                            </div>
-                          )}
-                          
-                          {/* Ligne 4: Infos */}
-                          <div className="text-xs sm:text-sm space-y-1">
-                            <div>
-                              <span className="text-[#666663]">Créée le: </span>
-                              <span className="text-[#191919]">{formatConfirmedDate(order.createdAt)}</span>
-                            </div>
-                            {order.receivedAt && (
-                              <div className="text-[#666663]">
-                                📦 Reçue le {formatConfirmedDate(order.receivedAt)}
-                              </div>
-                            )}
-                            <div>
-                              <span className="text-[#666663]">Total: </span>
-                              <span className="text-[#191919] font-bold">{order.total}€</span>
-                            </div>
-                          </div>
-                          
-                          {/* Boutons d'action */}
-                          <div className="pt-2 flex flex-col sm:flex-row gap-2" onClick={(e) => e.stopPropagation()}>
-                            <Button
-                              variant="primary"
-                              size="sm"
-                              icon={Mail}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                openReclamationModal(order);
-                              }}
-                              className="w-full sm:w-auto"
-                            >
-                              <span className="hidden sm:inline">Envoyer réclamation</span>
-                              <span className="sm:hidden">Réclamation</span>
-                            </Button>
-                            <Button
-                              variant="success"
-                              size="sm"
-                              icon={CheckCircle}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                openReconciliationModal(order);
-                              }}
-                              className="w-full sm:w-auto"
-                            >
-                              <span className="hidden sm:inline">Valider réception</span>
-                              <span className="sm:hidden">Valider</span>
-                            </Button>
-                          </div>
-                        </div>
-                      </div>
-                      
-                      {/* Détails des produits - Expansible */}
-                      <AnimatePresence>
-                        {expandedOrders[order.id] && (
-                          <motion.div
-                            initial={{ height: 0, opacity: 0 }}
-                            animate={{ height: 'auto', opacity: 1 }}
-                            exit={{ height: 0, opacity: 0 }}
-                            transition={{ duration: 0.3 }}
-                            className="border-t border-[#E5E4DF] bg-white"
-                          >
-                            <div className="p-4">
-                              <h4 className="font-semibold text-sm text-[#666663] mb-3">Détails de réconciliation:</h4>
-                              <div className="space-y-2">
-                                {order.items.map((item, idx) => {
-                                  const product = products.find(p => p.sku === item.sku);
-                                  const receivedHealthy = item.receivedQuantity !== undefined ? item.receivedQuantity : 0;
-                                  const damaged = item.damagedQuantity !== undefined ? item.damagedQuantity : 0;
-                                  const totalReceived = receivedHealthy + damaged;
-                                  const missing = item.quantity - totalReceived;
-                                  const hasIssues = missing > 0 || damaged > 0;
-                                  
-                                  return (
-                                    <div key={idx} className={`p-3 rounded border ${hasIssues ? 'bg-yellow-50 border-yellow-200' : 'bg-white border-[#E5E4DF]'}`}>
-                                      <div className="font-medium text-[#191919] mb-2">
-                                        {product?.name || item.sku} <span className="text-xs text-[#666663]">(SKU: {item.sku})</span>
-                                      </div>
-                                      <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
-                                        <div>
-                                          <span className="text-[#666663]">📦 Commandé: </span>
-                                          <span className="font-bold text-[#191919]">{formatUnits(item.quantity)}</span>
-                                        </div>
-                                        <div>
-                                          <span className="text-[#666663]">✅ Reçu sain: </span>
-                                          <span className="font-bold text-green-600">{receivedHealthy}</span>
-                                        </div>
-                                        {damaged > 0 && (
-                                          <>
-                                            <div>
-                                              <span className="text-[#666663]">🔴 Endommagé: </span>
-                                              <span className="font-bold text-orange-600">{damaged}</span>
-                                            </div>
-                                            <div>
-                                              <span className="text-[#666663]">Total reçu: </span>
-                                              <span className="font-bold text-[#191919]">{totalReceived}</span>
-                                            </div>
-                                          </>
-                                        )}
-                                        {missing > 0 && (
-                                          <div className={damaged > 0 ? 'col-span-2' : ''}>
-                                            <span className="text-[#666663]">⚠️ Manquant: </span>
-                                            <span className="font-bold text-[#EF1C43]">{missing}</span>
-                                          </div>
-                                        )}
-                                        <div className={missing > 0 ? '' : 'col-span-2'}>
-                                          <span className="text-[#666663]">💾 Ajouté au stock: </span>
-                                          <span className="font-bold text-blue-600">{receivedHealthy}</span>
-                                        </div>
-                                      </div>
-                                      {item.discrepancyNotes && (
-                                        <div className="mt-2 pt-2 border-t border-[#E5E4DF]">
-                                          <span className="text-[#666663] text-xs">📝 Notes: </span>
-                                          <span className="text-[#191919] text-xs italic">{item.discrepancyNotes}</span>
-                                        </div>
-                                      )}
-                                    </div>
-                                  );
-                                })}
-                              </div>
-                              
-                              {/* Section Commentaires */}
-                              <div className="mt-6 pt-6 border-t border-[#E5E4DF]">
-                                <CommentSection 
-                                  purchaseOrderId={order.id}
-                                  purchaseOrderNumber={order.id}
-                                />
-                              </div>
-                            </div>
-                          </motion.div>
-                        )}
-                      </AnimatePresence>
-                    </div>
-                    );
-                  })
-                )}
-              </div>
-            </div>
-            )}
-
-            </motion.div>
-          )}
-
-          {/* ANALYTICS TAB */}
-          {activeTab === 'analytics' && (
-            <motion.div
-              key="analytics"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              transition={{ duration: 0.25 }}
-              className="space-y-6">
-            
-            {/* Section KPIs (plus besoin de sous-onglets) */}
-            <>
-                <div className="bg-white rounded-xl shadow-sm border border-[#E5E4DF] p-6">
-                  <h2 className="text-2xl font-bold text-[#191919] mb-2">Indicateurs Clés de l'Inventaire</h2>
-                  <p className="text-sm text-[#666663] mb-6">
-                    Suivez en temps réel les principaux KPIs ayant un impact direct sur vos résultats financiers
-                  </p>
-              
-              <div className="flex flex-col gap-4 mb-6">
-                <DateRangePicker
-                  value={dateRange}
-                  onChange={setDateRange}
-                  customRange={customRange}
-                  onCustomRangeChange={setCustomRange}
-                />
-                
-                <ComparisonSelector
-                  value={comparisonType}
-                  onChange={setComparisonType}
-                  disabled={dateRange === 'custom'}
-                />
-              </div>
-            </div>
-
-            {/* État de chargement */}
-            {analyticsData.loading ? (
-              <div className="flex items-center justify-center h-40 bg-white rounded-xl shadow-sm border border-[#E5E4DF]">
-                <RefreshCw className="w-6 h-6 animate-spin text-[#666663]" />
-                <span className="ml-2 text-[#666663]">Chargement des analytics...</span>
-              </div>
-            ) : analyticsData.error ? (
-              <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                <p className="text-red-700">Erreur: {analyticsData.error}</p>
-              </div>
-            ) : (
-              <>
-                {/* KPI Cards - Toutes avec la même hauteur */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                {/* KPI 1: Disponibilité */}
-                <KPICard
-                  title="Taux de Disponibilité des SKU"
-                  value={analyticsData.skuAvailability.value}
-                  change={analyticsData.skuAvailability.change}
-                  changePercent={analyticsData.skuAvailability.changePercent}
-                  trend={analyticsData.skuAvailability.trend}
-                  description={analyticsData.skuAvailability.description}
-                  chartData={analyticsData.skuAvailability.chartData}
-                  comparisonPeriod={analyticsData.skuAvailability.comparisonPeriod}
-                  onClick={() => openChartModal('skuAvailability')}
-                />
-                
-                {/* KPI 2: Inventory Valuation */}
-                <KPICard
-                  title="Valeur de l'Inventaire"
-                  value={analyticsData.inventoryValuation.value}
-                  change={analyticsData.inventoryValuation.change}
-                  changePercent={analyticsData.inventoryValuation.changePercent}
-                  trend={analyticsData.inventoryValuation.trend}
-                  description={analyticsData.inventoryValuation.description}
-                  chartData={analyticsData.inventoryValuation.chartData}
-                  comparisonPeriod={analyticsData.inventoryValuation.comparisonPeriod}
-                  onClick={() => openChartModal('inventoryValuation')}
-                />
-                
-                {/* KPI 3: Ventes Perdues */}
-                <KPICard
-                  title="Ventes Perdues - Rupture de Stock"
-                  value={analyticsData.salesLost.value}
-                  change={analyticsData.salesLost.change}
-                  changePercent={analyticsData.salesLost.changePercent}
-                  trend={analyticsData.salesLost.trend}
-                  description={analyticsData.salesLost.description}
-                  chartData={analyticsData.salesLost.chartData}
-                  comparisonPeriod={analyticsData.salesLost.comparisonPeriod}
-                  onClick={() => openChartModal('salesLost')}
-                />
-                
-                {/* KPI 4: Surstocks */}
-                <KPICard
-                  title="Valeur Surstocks Profonds"
-                  value={analyticsData.overstockCost.value}
-                  change={analyticsData.overstockCost.change}
-                  changePercent={analyticsData.overstockCost.changePercent}
-                  trend={analyticsData.overstockCost.trend}
-                  description={analyticsData.overstockCost.description}
-                  chartData={analyticsData.overstockCost.chartData}
-                  comparisonPeriod={analyticsData.overstockCost.comparisonPeriod}
-                  onClick={() => openChartModal('overstockCost')}
-                />
-              </div>
-
-              {/* Insights séparés - Affichage sous les KPI Cards */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mt-6">
-                {/* Insights pour KPI 1 */}
-                <div className="space-y-3">
-                  {insights
-                    .filter(insight => insight.kpi === 'skuAvailability')
-                    .map(insight => (
-                      <InsightAlert
-                        key={insight.id}
-                        type={insight.type}
-                        message={insight.message}
-                        actionLabel={insight.actionLabel}
-                        onActionClick={insight.action}
-                      />
-                    ))
-                  }
-                </div>
-                
-                {/* Insights pour KPI 2 */}
-                <div className="space-y-3">
-                  {insights
-                    .filter(insight => insight.kpi === 'inventoryValuation')
-                    .map(insight => (
-                      <InsightAlert
-                        key={insight.id}
-                        type={insight.type}
-                        message={insight.message}
-                        actionLabel={insight.actionLabel}
-                        onActionClick={insight.action}
-                      />
-                    ))
-                  }
-                </div>
-                
-                {/* Insights pour KPI 3 */}
-                <div className="space-y-3">
-                  {insights
-                    .filter(insight => insight.kpi === 'salesLost')
-                    .map(insight => (
-                      <InsightAlert
-                        key={insight.id}
-                        type={insight.type}
-                        message={insight.message}
-                        actionLabel={insight.actionLabel}
-                        onActionClick={insight.action}
-                      />
-                    ))
-                  }
-                </div>
-                
-                {/* Insights pour KPI 4 */}
-                <div className="space-y-3">
-                  {insights
-                    .filter(insight => insight.kpi === 'overstockCost')
-                    .map(insight => (
-                      <InsightAlert
-                        key={insight.id}
-                        type={insight.type}
-                        message={insight.message}
-                        actionLabel={insight.actionLabel}
-                        onActionClick={insight.action}
-                      />
-                    ))
-                  }
-                </div>
-              </div>
-              </>
-            )}
-
-            {/* Insights globaux - Affichage regroupé des insights non liés à un KPI spécifique */}
-            {!analyticsData.loading && !analyticsData.error && insights.filter(i => i.kpi === 'global').length > 0 && (
-              <div className="bg-white rounded-xl shadow-sm border border-[#E5E4DF] p-6">
-                <h3 className="text-lg font-bold text-[#191919] mb-4 flex items-center gap-2">
-                  <AlertCircle className="w-5 h-5 text-[#191919]" />
-                  Alertes Importantes
-                </h3>
-                <div className="space-y-3">
-                  {insights
-                    .filter(insight => insight.kpi === 'global')
-                    .map(insight => (
-                      <InsightAlert
-                        key={insight.id}
-                        type={insight.type}
-                        message={insight.message}
-                        actionLabel={insight.actionLabel}
-                        onActionClick={insight.action}
-                        />
-                      ))
-                    }
-                  </div>
-                </div>
-            )}
-              </>
-          </motion.div>
-        )}
-
-        {/* Modal de graphique détaillé */}
-        <ChartModal
-          isOpen={chartModalOpen}
-          onClose={() => setChartModalOpen(false)}
-          kpiData={selectedKPI ? analyticsData[selectedKPI] : null}
-          title={selectedKPI ? kpiTitles[selectedKPI] : ''}
-        />
-
-          {/* IA & PRÉVISIONS TAB */}
-          {activeTab === 'ai-forecasts' && (
-            <div className="space-y-6">
-              <AIMainDashboard
-                products={enrichedProducts}
-                orders={orders}
-                aiSubTab={aiSubTab}
-                setAiSubTab={setAiSubTab}
-              />
-            </div>
-          )}
-
-          {/* STOCK LEVEL TAB */}
-          {activeTab === 'stock-level' && (
-            <motion.div
-              key="stock-level"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              transition={{ duration: 0.25 }}
-              className="space-y-6">
-              
-              {/* Header et Dashboard */}
-              <div className="bg-white rounded-xl shadow-sm border border-[#E5E4DF] p-6">
-                <div className="mb-6">
-                  <h2 className="text-2xl font-bold text-[#191919] mb-2">Santé de l'Inventaire</h2>
-                  <p className="text-sm text-[#666663]">Visualisez la disponibilité actuelle de chaque SKU avec filtres et tri</p>
-                </div>
-                
-                {/* Dashboard global de santé */}
-                <div className="mb-6">
-                  <StockHealthDashboard 
-                    totalUrgent={enrichedProducts.filter(p => p.healthStatus === 'urgent').length}
-                    totalWarning={enrichedProducts.filter(p => p.healthStatus === 'warning').length}
-                    totalHealthy={enrichedProducts.filter(p => p.healthStatus === 'healthy').length}
-                    totalProducts={enrichedProducts.length}
-                  />
-                </div>
-              </div>
-
-              {/* Table des produits */}
-              <div className="bg-white rounded-xl shadow-sm border border-[#E5E4DF] overflow-hidden">
-                {/* Header de la table avec filtres */}
-                <div className="bg-[#FAFAF7] border-b border-[#E5E4DF] p-4">
-                  <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-                    <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-                      <h3 className="text-lg font-bold text-[#191919]">Produits en Stock</h3>
-                      <span className="text-sm text-[#666663]">
-                        {enrichedProducts.length} produit(s) au total
-                      </span>
-                    </div>
-                    
-                    {/* Filtres */}
-                    <div className="flex flex-col sm:flex-row gap-3">
-                      <select 
-                        value={stockLevelFilter}
-                        onChange={(e) => setStockLevelFilter(e.target.value)}
-                        className="px-3 py-2 bg-white border border-[#E5E4DF] rounded-lg text-[#191919] text-sm focus:outline-none focus:ring-2 focus:ring-black"
-                      >
-                        <option value="all">Tous les statuts</option>
-                        <option value="urgent">Urgent (rouge)</option>
-                        <option value="warning">Attention (orange)</option>
-                        <option value="healthy">Bon (vert)</option>
-                      </select>
-                      
-                      <select 
-                        value={stockLevelSupplierFilter}
-                        onChange={(e) => setStockLevelSupplierFilter(e.target.value)}
-                        className="px-3 py-2 bg-white border border-[#E5E4DF] rounded-lg text-[#191919] text-sm focus:outline-none focus:ring-2 focus:ring-black"
-                      >
-                        <option value="all">Tous les fournisseurs</option>
-                        {[...new Set(enrichedProducts.map(p => p.supplier))].map(supplier => (
-                          <option key={supplier} value={supplier}>{supplier}</option>
-                        ))}
-                      </select>
-                      
-                      <input
-                        type="text"
-                        placeholder="Rechercher un produit..."
-                        value={stockLevelSearch}
-                        onChange={(e) => setStockLevelSearch(e.target.value)}
-                        className="px-3 py-2 bg-white border border-[#E5E4DF] rounded-lg text-[#191919] text-sm focus:outline-none focus:ring-2 focus:ring-black placeholder-[#666663]"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Table */}
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead className="bg-[#FAFAF7] border-b border-[#E5E4DF]">
-                      <tr>
-                        <th className="px-4 py-3 text-left text-xs font-semibold text-[#666663] uppercase tracking-wider">
-                          Produit
-                        </th>
-                        <th className="px-4 py-3 text-left text-xs font-semibold text-[#666663] uppercase tracking-wider">
-                          Fournisseur
-                        </th>
-                        <th className="px-4 py-3 text-left text-xs font-semibold text-[#666663] uppercase tracking-wider">
-                          Stock
-                        </th>
-                        <th className="px-4 py-3 text-left text-xs font-semibold text-[#666663] uppercase tracking-wider">
-                          Autonomie
-                        </th>
-                        <th className="px-4 py-3 text-left text-xs font-semibold text-[#666663] uppercase tracking-wider">
-                          Santé
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody className="bg-white divide-y divide-[#E5E4DF]">
-                      {enrichedProducts
-                        .filter(product => {
-                          const matchesStatus = stockLevelFilter === 'all' || product.healthStatus === stockLevelFilter;
-                          const matchesSupplier = stockLevelSupplierFilter === 'all' || product.supplier === stockLevelSupplierFilter;
-                          const matchesSearch = stockLevelSearch === '' || 
-                            product.name.toLowerCase().includes(stockLevelSearch.toLowerCase()) ||
-                            product.sku.toLowerCase().includes(stockLevelSearch.toLowerCase());
-                          return matchesStatus && matchesSupplier && matchesSearch;
-                        })
-                        .map(product => (
-                          <tr key={product.sku} className="hover:bg-[#FAFAF7] transition-colors">
-                            {/* Produit */}
-                            <td className="px-4 py-4">
-                              <div className="flex flex-col">
-                                <div className="font-bold text-[#191919] text-sm">{product.name}</div>
-                                <div className="text-xs text-[#666663]">{product.sku}</div>
-                                <div className="text-xs text-[#666663] mt-1">
-                                  Ventes/jour: <span className="font-medium">{product.salesPerDay.toFixed(1)}</span>
-                                </div>
-                              </div>
-                            </td>
-                            
-                            {/* Fournisseur */}
-                            <td className="px-4 py-4">
-                              <div className="flex flex-col">
-                                <div className="font-medium text-[#191919] text-sm">{product.supplier}</div>
-                                <div className="text-xs text-[#666663]">
-                                  Délai: {product.leadTimeDays} jours
-                                </div>
-                              </div>
-                            </td>
-                            
-                            {/* Stock */}
-                            <td className="px-4 py-4">
-                              <div className="flex flex-col">
-                                <div className="font-bold text-[#191919] text-sm">{formatUnits(product.stock)} unités</div>
-                                <div className="text-xs text-[#666663]">
-                                  Point: {product.reorderPoint} • MOQ: {product.moq}
-                                </div>
-                              </div>
-                            </td>
-                            
-                            {/* Autonomie */}
-                            <td className="px-4 py-4">
-                              <div className="flex flex-col">
-                                <div className={`font-bold text-sm ${
-                                  product.healthStatus === 'urgent' ? 'text-red-600' :
-                                  product.healthStatus === 'warning' ? 'text-orange-500' :
-                                  'text-green-600'
-                                }`}>
-                                  {product.daysOfStock} jours
-                                </div>
-                                {product.qtyToOrder > 0 && (
-                                  <div className="text-xs text-red-600 font-medium">
-                                    Commander {formatUnits(product.qtyToOrder)}
-                                  </div>
-                                )}
-                              </div>
-                            </td>
-                            
-                            {/* Santé */}
-                            <td className="px-4 py-4">
-                              <div className="flex flex-col items-start">
-                                <div className="text-sm font-bold text-[#191919]">
-                                  {Math.round(product.healthPercentage)}%
-                                </div>
-                                <div className="w-16 mt-1">
-                                  <HealthBar percentage={product.healthPercentage} status={product.healthStatus} />
-                                </div>
-                              </div>
-                            </td>
-                          </tr>
-                        ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </motion.div>
-          )}
-
-          {/* HISTORIQUE TAB */}
-          {activeTab === 'history' && (
-            <motion.div
-              key="history"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              transition={{ duration: 0.25 }}
-              className="space-y-6">
-            <div className="bg-white rounded-xl shadow-sm border border-[#E5E4DF] p-4 sm:p-6">
-              {/* Header et filtres optimisés mobile */}
-              <div className="space-y-4 mb-6">
-                <div>
-                  <h2 className="text-xl sm:text-2xl font-bold text-[#191919] mb-1 sm:mb-2">Historique des Commandes</h2>
-                  <p className="text-xs sm:text-sm text-[#666663]">Consultez toutes vos commandes passées et leur statut</p>
-                </div>
-                
-                {/* Filtres en colonne sur mobile, ligne sur desktop */}
-                <div className="space-y-3 sm:space-y-0 sm:flex sm:items-center sm:gap-3 sm:flex-wrap">
-                  {/* Sélecteur de statut en premier sur mobile (plus important) */}
-                  <select 
-                    value={historyFilter}
-                    onChange={(e) => setHistoryFilter(e.target.value)}
-                    className="w-full sm:w-auto px-3 sm:px-4 py-2 bg-[#FAFAF7] border border-[#E5E4DF] rounded-lg text-[#191919] text-sm font-medium focus:outline-none focus:ring-2 focus:ring-black"
-                  >
-                    <option value="all">Tous les statuts</option>
-                    <option value="pending_confirmation">En attente</option>
-                    <option value="preparing">En traitement</option>
-                    <option value="in_transit">En transit</option>
-                    <option value="received">Reçues</option>
-                    <option value="completed">Complétées</option>
-                    <option value="reconciliation">À réconcilier</option>
-                  </select>
-                  
-                  {/* Dates en grid sur mobile */}
-                  <div className="grid grid-cols-2 gap-2 sm:flex sm:gap-3">
-                    <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
-                      <label className="text-xs sm:text-sm text-[#666663] font-medium">Du:</label>
-                      <input
-                        type="date"
-                        value={historyDateStart}
-                        onChange={(e) => setHistoryDateStart(e.target.value)}
-                        className="px-2 sm:px-3 py-2 bg-[#FAFAF7] border border-[#E5E4DF] rounded-lg text-[#191919] text-xs sm:text-sm font-medium focus:outline-none focus:ring-2 focus:ring-black"
-                      />
-                    </div>
-                    <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
-                      <label className="text-xs sm:text-sm text-[#666663] font-medium">Au:</label>
-                      <input
-                        type="date"
-                        value={historyDateEnd}
-                        onChange={(e) => setHistoryDateEnd(e.target.value)}
-                        className="px-2 sm:px-3 py-2 bg-[#FAFAF7] border border-[#E5E4DF] rounded-lg text-[#191919] text-xs sm:text-sm font-medium focus:outline-none focus:ring-2 focus:ring-black"
-                      />
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* KPIs en grid responsive */}
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
-                <div className="bg-[#FAFAF7] rounded-lg p-3 sm:p-4 border border-[#E5E4DF]">
-                  <div className="text-xl sm:text-2xl font-bold text-[#191919]">{orders.length}</div>
-                  <div className="text-xs sm:text-sm text-[#666663] mt-1">Total commandes</div>
-                </div>
-                <div className="bg-green-50 rounded-lg p-3 sm:p-4 border border-green-200">
-                  <div className="text-xl sm:text-2xl font-bold text-green-600">
-                    {orders.filter(o => o.status === 'completed').length}
-                  </div>
-                  <div className="text-xs sm:text-sm text-[#666663] mt-1">Complétées</div>
-                </div>
-                <div className="bg-blue-50 rounded-lg p-3 sm:p-4 border border-blue-200">
-                  <div className="text-xl sm:text-2xl font-bold text-[#64A4F2]">
-                    {orders.filter(o => o.status === 'in_transit' || o.status === 'preparing' || o.status === 'pending_confirmation').length}
-                  </div>
-                  <div className="text-xs sm:text-sm text-[#666663] mt-1">En cours</div>
-                </div>
-                <div className="bg-[#FAFAF7] rounded-lg p-3 sm:p-4 border border-[#E5E4DF]">
-                  <div className="text-xl sm:text-2xl font-bold text-[#191919]">
-                    {orders.reduce((sum, o) => sum + o.total, 0).toFixed(0)}€
-                  </div>
-                  <div className="text-xs sm:text-sm text-[#666663] mt-1">Montant total</div>
-                </div>
-              </div>
-            </div>
-
-            <div className="space-y-3">
-              {orders
-                .filter(o => {
-                  // Filtrage par statut
-                  if (historyFilter !== 'all' && o.status !== historyFilter) return false;
-                  
-                  // Filtrage par dates
-                  if (historyDateStart || historyDateEnd) {
-                    const orderDate = new Date(o.createdAt);
-                    if (historyDateStart && orderDate < new Date(historyDateStart)) return false;
-                    if (historyDateEnd && orderDate > new Date(historyDateEnd)) return false;
-                  }
-                  
-                  return true;
-                })
-                .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
-                .length === 0 ? (
-                  <div className="bg-white rounded-xl shadow-sm border border-[#E5E4DF] p-8">
-                    <p className="text-[#666663] text-center text-sm">Aucune commande trouvée pour ces critères</p>
-                  </div>
-                ) : (
-                  orders
-                    .filter(o => {
-                      // Filtrage par statut
-                      if (historyFilter !== 'all' && o.status !== historyFilter) return false;
-                      
-                      // Filtrage par dates
-                      if (historyDateStart || historyDateEnd) {
-                        const orderDate = new Date(o.createdAt);
-                        if (historyDateStart && orderDate < new Date(historyDateStart)) return false;
-                        if (historyDateEnd && orderDate > new Date(historyDateEnd)) return false;
-                      }
-                      
-                      return true;
-                    })
-                    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
-                    .map(order => {
-                      const statusConfig = {
-                        pending_confirmation: { label: 'En attente', color: 'bg-yellow-50 text-yellow-600 border-yellow-200' },
-                        preparing: { label: 'En traitement', color: 'bg-blue-50 text-[#64A4F2] border-blue-200' },
-                        in_transit: { label: 'En transit', color: 'bg-purple-50 text-purple-600 border-purple-200' },
-                        received: { label: 'Reçues', color: 'bg-green-50 text-green-600 border-green-200' },
-                        completed: { label: 'Complétée', color: 'bg-green-50 text-green-600 border-green-200' },
-                        reconciliation: { label: 'À réconcilier', color: 'bg-red-50 text-[#EF1C43] border-red-200' }
-                      };
-                      
-                      const status = statusConfig[order.status] || { label: order.status || 'Inconnu', color: 'bg-gray-50 text-gray-600 border-gray-200' };
-                      
-                      return (
-                        <div key={order.id} className="bg-white rounded-xl shadow-sm border border-[#E5E4DF] overflow-hidden">
-                          {/* Header de la commande - Cliquable */}
-                          <div 
-                            className="p-3 sm:p-4 cursor-pointer hover:bg-[#FAFAF7] transition-colors"
-                            onClick={() => toggleOrderDetails(order.id)}
-                          >
-                            {/* Layout mobile-first optimisé */}
-                            <div className="space-y-3">
-                              {/* Ligne 1: N° PO + Badge Statut + Chevron */}
-                              <div className="flex items-center justify-between gap-2">
-                                <div className="flex items-center gap-2 min-w-0 flex-1">
-                                  <span className="font-bold text-[#191919] text-sm sm:text-base">{order.id}</span>
-                                  <motion.div
-                                    animate={{ rotate: expandedOrders[order.id] ? 180 : 0 }}
-                                    transition={{ duration: 0.2 }}
-                                    className="shrink-0"
-                                  >
-                                    <ArrowDownRight className="w-4 h-4 text-[#666663]" />
-                                  </motion.div>
-                                </div>
-                                <span className={`px-2 sm:px-3 py-1 rounded-full text-xs font-medium border inline-block shrink-0 ${status.color}`}>
-                                  {status.label}
-                                </span>
-                              </div>
-                              
-                              {/* Ligne 2: Fournisseur */}
-                              <div className="flex items-center gap-2">
-                                <span className="text-[#666663] text-xs sm:text-sm">Fournisseur:</span>
-                                <span className="text-[#191919] font-medium text-xs sm:text-sm truncate">{order.supplier}</span>
-                              </div>
-                              
-                              {/* Ligne 3: Entrepôt */}
-                              {(order.warehouseName || order.warehouseId) && (
-                                <div className="flex items-center gap-2">
-                                  <span className="text-[#666663] text-xs sm:text-sm">Entrepôt de livraison:</span>
-                                  <span className="text-[#191919] font-medium text-xs sm:text-sm truncate">{order.warehouseName || order.warehouseId}</span>
-                                </div>
-                              )}
-                              
-                              {/* Ligne 4: Infos principales en grid */}
-                              <div className="grid grid-cols-2 gap-2 text-xs sm:text-sm">
-                                <div>
-                                  <span className="text-[#666663]">Date: </span>
-                                  <span className="text-[#191919]">{formatConfirmedDate(order.createdAt)}</span>
-                                </div>
-                                <div>
-                                  <span className="text-[#666663]">Produits: </span>
-                                  <span className="text-[#191919] font-medium">{order.items.length}</span>
-                                </div>
-                                <div className="col-span-2">
-                                  <span className="text-[#666663]">Total: </span>
-                                  <span className="text-[#191919] font-bold text-sm sm:text-base">{roundToTwoDecimals(order.total).toFixed(2)}€</span>
-                                </div>
-                                {order.trackingNumber && (
-                                  <div className="col-span-2">
-                                    <span className="text-[#666663]">Suivi: </span>
-                                    <span className="text-[#191919] font-mono text-xs break-all">{order.trackingNumber}</span>
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                          
-                          {/* Détails des produits - Expansible */}
-                          <AnimatePresence>
-                            {expandedOrders[order.id] && (
-                              <motion.div
-                                initial={{ height: 0, opacity: 0 }}
-                                animate={{ height: 'auto', opacity: 1 }}
-                                exit={{ height: 0, opacity: 0 }}
-                                transition={{ duration: 0.3 }}
-                                className="border-t border-[#E5E4DF] bg-white"
-                              >
-                                <div className="p-3 sm:p-4">
-                                  <h4 className="font-semibold text-xs sm:text-sm text-[#666663] mb-3">Produits commandés:</h4>
-                                  <div className="space-y-2">
-                                    {order.items.map((item, idx) => {
-                                      const product = products.find(p => p.sku === item.sku);
-                                      return (
-                                        <div key={idx} className="bg-[#FAFAF7] rounded border border-[#E5E4DF] p-2 sm:p-3">
-                                          {/* Layout mobile optimisé */}
-                                          <div className="space-y-2">
-                                            {/* Nom du produit */}
-                                            <div>
-                                              <div className="font-medium text-[#191919] text-xs sm:text-sm">
-                                                {product?.name || item.sku}
-                                              </div>
-                                              <div className="text-xs text-[#666663] mt-0.5">
-                                                SKU: {item.sku}
-                                              </div>
-                                            </div>
-                                            
-                                            {/* Infos quantité et prix en grid */}
-                                            <div className="grid grid-cols-2 gap-2 text-xs pt-2 border-t border-[#E5E4DF]">
-                                              <div>
-                                                <div className="text-[#666663]">Quantité</div>
-                                                <div className="font-bold text-[#191919]">{formatUnits(item.quantity)} unités</div>
-                                              </div>
-                                              <div className="text-right">
-                                                <div className="text-[#666663]">Prix unitaire</div>
-                                                <div className="font-medium text-[#191919]">{roundToTwoDecimals(item.pricePerUnit).toFixed(2)}€</div>
-                                              </div>
-                                              <div className="col-span-2 pt-1 border-t border-[#E5E4DF]">
-                                                <div className="flex justify-between items-center">
-                                                  <span className="text-[#666663] font-medium">Total ligne</span>
-                                                  <span className="font-bold text-[#191919] text-sm">{roundToTwoDecimals(item.quantity * item.pricePerUnit).toFixed(2)}€</span>
-                                                </div>
-                                              </div>
-                                            </div>
-                                          </div>
-                                        </div>
-                                      );
-                                    })}
-                                  </div>
-                                  
-                                  {/* Total de la commande */}
-                                  <div className="mt-3 pt-3 border-t-2 border-[#E5E4DF] flex justify-between items-center">
-                                    <span className="font-semibold text-[#666663] text-sm">Total commande:</span>
-                                    <span className="font-bold text-[#191919] text-lg">{roundToTwoDecimals(order.total).toFixed(2)}€</span>
-                                  </div>
-                                  
-                                  {/* Informations supplémentaires */}
-                                  <div className="mt-4 pt-4 border-t border-[#E5E4DF] space-y-2 text-xs sm:text-sm">
-                                    {order.confirmedAt && (
-                                      <div className="flex flex-col sm:flex-row sm:gap-2">
-                                        <span className="text-[#666663] font-medium">Date confirmation:</span>
-                                        <span className="text-[#191919]">{formatConfirmedDate(order.confirmedAt)}</span>
-                                      </div>
-                                    )}
-                                    {order.shippedAt && (
-                                      <div className="flex flex-col sm:flex-row sm:gap-2">
-                                        <span className="text-[#666663] font-medium">Date expédition:</span>
-                                        <span className="text-[#191919]">{formatConfirmedDate(order.shippedAt)}</span>
-                                      </div>
-                                    )}
-                                    {order.receivedAt && (
-                                      <div className="flex flex-col sm:flex-row sm:gap-2">
-                                        <span className="text-[#666663] font-medium">Date réception:</span>
-                                        <span className="text-[#191919]">{formatConfirmedDate(order.receivedAt)}</span>
-                                      </div>
-                                    )}
-                                    {order.trackingNumber && (
-                                      <div className="flex flex-col sm:flex-row sm:gap-2">
-                                        <span className="text-[#666663] font-medium">Suivi:</span>
-                                        <span className="text-[#191919] font-mono text-xs break-all">{order.trackingNumber}</span>
-                                      </div>
-                                    )}
-                                  </div>
-                                  
-                                  {/* Section Commentaires */}
-                                  <div className="mt-6 pt-6 border-t border-[#E5E4DF]">
-                                    <CommentSection 
-                                      purchaseOrderId={order.id}
-                                      purchaseOrderNumber={order.id}
-                                    />
-                                  </div>
-                                </div>
-                              </motion.div>
-                            )}
-                          </AnimatePresence>
-                        </div>
-                      );
-                    })
-                )}
-            </div>
-
-            <div className="flex justify-center sm:justify-end">
-              <Button variant="primary" icon={Upload} onClick={exportHistoryToCSV} className="w-full sm:w-auto">
-                <span className="hidden sm:inline">Exporter en CSV</span>
-                <span className="sm:hidden">Exporter CSV</span>
-              </Button>
-            </div>
-            </motion.div>
-          )}
-
-          {/* ONGLET PARAMETRES */}
-          {activeTab === 'settings' && (
-            <motion.div
-              key="settings"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              transition={{ duration: 0.25 }}
-              className="space-y-6">
-            <div>
-              <h2 className="text-3xl font-bold text-[#191919] mb-2">⚙️ Paramètres</h2>
-              <p className="text-[#666663]">Gérez la configuration de votre application</p>
-            </div>
-            
-            {/* Navigation des sous-onglets */}
-            <SubTabsNavigation 
-              tabs={[
-                { id: 'general', label: 'Général', icon: Settings },
-                { id: 'products', label: 'Produits', icon: Package },
-                { id: 'suppliers', label: 'Fournisseurs', icon: Truck },
-                { id: 'mapping', label: 'Mapping', icon: Activity },
-                { id: 'warehouses', label: 'Entrepôts', icon: Warehouse }
-              ]}
-              activeTab={parametersSubTab}
-              onChange={setParametersSubTab}
-            />
-            
-            {/* Contenu dynamique selon le sous-onglet */}
-            {parametersSubTab === 'general' && (
-              <div className="space-y-6">
-                {/* Indicateur de modifications non sauvegardées */}
-                {Object.keys(unsavedParameterChanges).length > 0 && (
-                  <motion.div
-                    initial={{ opacity: 0, y: -10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="bg-yellow-50 border-2 border-yellow-300 rounded-lg p-4"
-                  >
-                    <div className="flex items-center justify-between gap-4">
-                      <div className="flex items-center gap-3">
-                        <AlertCircle className="w-5 h-5 text-yellow-600 shrink-0" />
-                        <div>
-                          <span className="text-sm font-semibold text-yellow-800">
-                            {Object.keys(unsavedParameterChanges).length} modification(s) non sauvegardée(s)
-                          </span>
-                          <div className="text-xs text-yellow-700 mt-1">
-                            Cliquez sur "Sauvegarder" pour appliquer vos modifications
-                          </div>
-                        </div>
-                      </div>
-                      <Button
-                        variant="primary"
-                        onClick={saveAllParameters}
-                        disabled={isSavingParameters}
-                        icon={isSavingParameters ? RefreshCw : Check}
-                        className={isSavingParameters ? 'animate-pulse' : ''}
-                      >
-                        {isSavingParameters ? 'Sauvegarde...' : 'Sauvegarder'}
-                      </Button>
-                    </div>
-                  </motion.div>
-                )}
-                
-                {/* Formulaire des paramètres */}
-                <div className="bg-white rounded-xl shadow-sm border border-[#E5E4DF] p-6 space-y-6">
-                  <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <label className="block text-sm font-semibold text-[#191919]">
-                        Multiplicateur par défaut
-                      </label>
-                      {unsavedParameterChanges.MultiplicateurDefaut !== undefined && (
-                        <span className="text-xs text-yellow-600 font-medium">● Modifié</span>
-                      )}
-                    </div>
-                    <input
-                      type="number"
-                      step="0.1"
-                      min="1"
-                      max="3"
-                      value={
-                        unsavedParameterChanges.MultiplicateurDefaut !== undefined 
-                          ? unsavedParameterChanges.MultiplicateurDefaut 
-                          : (parameters.MultiplicateurDefaut || 1.2)
-                      }
-                      onChange={(e) => handleParameterChange('MultiplicateurDefaut', parseFloat(e.target.value))}
-                      className="w-full px-4 py-3 border-2 border-[#E5E4DF] rounded-lg text-[#191919] font-semibold focus:border-[#8B5CF6] focus:ring-2 focus:ring-[#8B5CF6]/20 outline-none transition-colors"
+              <div className="max-w-7xl mx-auto">
+                {/* DASHBOARD TAB */}
+                <AnimatePresence mode="wait">
+                  {activeTab === MAIN_TABS.DASHBOARD && (
+                    <DashboardTab 
+                      productsByStatus={productsByStatus}
+                      orders={orders}
+                      setActiveTab={setActiveTab}
+                      setTrackTabSection={setTrackTabSection}
                     />
-                    <p className="text-xs text-[#666663] mt-2">
-                      📊 Coefficient appliqué aux ventes moyennes pour calculer les quantités à commander (recommandé: 1.2 à 1.5)
-                    </p>
-                  </div>
-                  
-                  <div className="border-t border-[#E5E4DF] pt-6">
-                    <div className="flex items-center justify-between mb-2">
-                      <label className="block text-sm font-semibold text-[#191919]">
-                        Devise par défaut
-                      </label>
-                      {unsavedParameterChanges.DeviseDefaut !== undefined && (
-                        <span className="text-xs text-yellow-600 font-medium">● Modifié</span>
-                      )}
-                    </div>
-                    <select
-                      value={
-                        unsavedParameterChanges.DeviseDefaut !== undefined 
-                          ? unsavedParameterChanges.DeviseDefaut 
-                          : (parameters.DeviseDefaut || 'EUR')
-                      }
-                      onChange={(e) => handleParameterChange('DeviseDefaut', e.target.value)}
-                      className="w-full px-4 py-3 border-2 border-[#E5E4DF] rounded-lg text-[#191919] font-semibold focus:border-[#8B5CF6] focus:ring-2 focus:ring-[#8B5CF6]/20 outline-none transition-colors"
-                    >
-                      <option value="EUR">EUR (€) - Euro</option>
-                      <option value="USD">USD ($) - Dollar américain</option>
-                      <option value="GBP">GBP (£) - Livre sterling</option>
-                      <option value="CHF">CHF (Fr.) - Franc suisse</option>
-                    </select>
-                    <p className="text-xs text-[#666663] mt-2">
-                      💰 Devise utilisée pour l'affichage des prix dans l'application
-                    </p>
-                  </div>
-                  
-                  <div className="border-t border-[#E5E4DF] pt-6">
-                    <div className="flex items-center justify-between mb-2">
-                      <label className="block text-sm font-semibold text-[#191919]">
-                        Seuil surstock profond (jours)
-                      </label>
-                      {unsavedParameterChanges.SeuilSurstockProfond !== undefined && (
-                        <span className="text-xs text-yellow-600 font-medium">● Modifié</span>
-                      )}
-                    </div>
-                    <input
-                      type="number"
-                      min="30"
-                      max="365"
-                      value={
-                        unsavedParameterChanges.SeuilSurstockProfond !== undefined 
-                          ? unsavedParameterChanges.SeuilSurstockProfond 
-                          : (parameters.SeuilSurstockProfond || 90)
-                      }
-                      onChange={(e) => handleParameterChange('SeuilSurstockProfond', parseInt(e.target.value))}
-                      className="w-full px-4 py-3 border-2 border-[#E5E4DF] rounded-lg text-[#191919] font-semibold focus:border-[#8B5CF6] focus:ring-2 focus:ring-[#8B5CF6]/20 outline-none transition-colors"
+                  )}
+
+                  {/* ONGLET ACTIONS */}
+                  {activeTab === MAIN_TABS.ACTIONS && (
+                    <ActionsTab
+                      productsByStatus={productsByStatus}
+                      toOrderBySupplier={toOrderBySupplier}
+                      suppliers={suppliers}
+                      warehouses={warehouses}
+                      orderQuantities={orderQuantities}
+                      updateOrderQuantity={updateOrderQuantity}
+                      generatePONumber={generatePONumber}
+                      orders={orders}
+                      handleCreateOrder={handleCreateOrderFromTable}
+                      handleOpenEmailModal={handleOpenEmailModal}
+                      orderCreationModalOpen={orderCreationModal.isOpen}
+                      setOrderCreationModalOpen={orderCreationModalHandlers.open}
+                      selectedProductsFromTable={selectedProductsFromTable}
+                      setSelectedProductsFromTable={setSelectedProductsFromTable}
+                      // Nouveaux props pour les modals
+                      emailModal={emailModal}
+                      emailModalHandlers={emailModalHandlers}
+                      emailGeneration={emailGeneration}
                     />
-                    <p className="text-xs text-[#666663] mt-2">
-                      ⚠️ Au-delà de ce seuil × 2, le produit est considéré en surstock profond et apparaît dans les alertes
-                    </p>
-                    <div className="mt-2 text-xs text-[#191919] bg-[#FAFAF7] border border-[#E5E4DF] rounded px-3 py-2">
-                      Seuil actuel: <strong>{(unsavedParameterChanges.SeuilSurstockProfond || parameters.SeuilSurstockProfond || 90) * 2} jours</strong>
-                    </div>
-                  </div>
-                </div>
-                
-                {/* Bouton de sauvegarde répété en bas */}
-                {Object.keys(unsavedParameterChanges).length > 0 && (
-                  <div className="flex justify-end gap-3">
-                    <Button
-                      variant="outline"
-                      onClick={() => {
-                        setUnsavedParameterChanges({});
-                        toast.info('Modifications annulées');
-                      }}
-                      disabled={isSavingParameters}
-                    >
-                      Annuler les modifications
-                    </Button>
-                    <Button
-                      variant="primary"
-                      size="lg"
-                      onClick={saveAllParameters}
-                      disabled={isSavingParameters}
-                      icon={isSavingParameters ? RefreshCw : Check}
-                      className={isSavingParameters ? 'animate-pulse' : ''}
-                    >
-                      {isSavingParameters ? 'Sauvegarde en cours...' : 'Sauvegarder tous les paramètres'}
-                    </Button>
-                  </div>
-                )}
-                
-                {/* Section d'aide */}
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                  <div className="flex items-start gap-3">
-                    <Info className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
-                    <div className="text-sm text-blue-900">
-                      <strong>Comment ça marche ?</strong>
-                      <ul className="mt-2 space-y-1 list-disc list-inside text-blue-800">
-                        <li>Modifiez les valeurs selon vos besoins</li>
-                        <li>Un indicateur jaune apparaît pour les modifications non sauvegardées</li>
-                        <li>Cliquez sur "Sauvegarder" pour appliquer définitivement les changements</li>
-                        <li>Les paramètres sont stockés dans Google Sheets et persistants</li>
-                      </ul>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-            
-            {parametersSubTab === 'products' && (
-              <div className="bg-white rounded-xl shadow-sm border border-[#E5E4DF] p-6">
-                <div className="mb-6">
-                  <h2 className="text-2xl font-bold text-[#191919] mb-2">Paramètres des produits</h2>
-                  <p className="text-sm text-[#666663]">Ajustez les paramètres de prévision pour chaque produit selon vos besoins.</p>
-                </div>
+                  )}
 
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead className="bg-[#FAFAF7] border-b border-[#E5E4DF]">
-                      <tr>
-                        <th className="px-4 py-3 text-left text-xs font-semibold text-[#666663] uppercase">Produit</th>
-                        <th className="px-4 py-3 text-left text-xs font-semibold text-[#666663] uppercase">Fournisseur</th>
-                        <th className="px-4 py-3 text-center text-xs font-semibold text-[#666663] uppercase">
-                          <div className="inline-flex items-center justify-center">
-                            Multiplicateur
-                            <InfoTooltip content={tooltips.multiplier} />
-                          </div>
-                        </th>
-                        <th className="px-4 py-3 text-center text-xs font-semibold text-[#666663] uppercase">
-                          <div className="inline-flex items-center justify-center">
-                            Stock Sécurité (jours)
-                            <InfoTooltip content={tooltips.securityStock} />
-                          </div>
-                        </th>
-                        <th className="px-4 py-3 text-right text-xs font-semibold text-[#666663] uppercase">
-                          <div className="inline-flex items-center justify-end">
-                            Point de Commande
-                            <InfoTooltip content={tooltips.reorderPoint} />
-                          </div>
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-[#E5E4DF]">
-                      {enrichedProducts.map(p => (
-                        <tr key={p.sku} className="hover:bg-[#FAFAF7] transition-colors">
-                          <td className="px-4 py-3">
-                            <div>
-                              <p className="font-medium text-[#191919] text-sm">{p.name}</p>
-                              <p className="text-xs text-[#666663]">{p.sku}</p>
-                            </div>
-                          </td>
-                          <td className="px-4 py-3 text-sm text-[#191919]">{p.supplier}</td>
-                          <td className="px-4 py-3 text-center">
-                            {editingParam?.sku === p.sku && editingParam?.field === 'multiplier' ? (
-                              <div className="inline-flex items-center justify-center gap-1">
-                                <input
-                                  type="number"
-                                  step="0.1"
-                                  value={tempParamValue}
-                                  onChange={(e) => setTempParamValue(e.target.value)}
-                                  className="w-20 px-2 py-1 border-2 border-black rounded text-sm text-center bg-white text-[#191919] font-medium focus:outline-none focus:ring-2 focus:ring-black"
-                                  autoFocus
-                                />
-                                <button onClick={saveParam} className="text-green-600 hover:text-green-700 p-1 focus:outline-none focus:ring-2 focus:ring-green-600 rounded">
-                                  <Check className="w-4 h-4 shrink-0" />
-                                </button>
-                                <button onClick={cancelEditParam} className="text-[#EF1C43] hover:text-red-700 p-1 focus:outline-none focus:ring-2 focus:ring-[#EF1C43] rounded">
-                                  <X className="w-4 h-4 shrink-0" />
-                                </button>
-                              </div>
-                            ) : (
-                              <button
-                                onClick={() => startEditParam(p.sku, 'multiplier', p.multiplier)}
-                                className="inline-flex items-center gap-1 px-3 py-1 bg-[#F0F0EB] hover:bg-[#E5E4DF] rounded text-sm font-medium text-[#191919] transition-colors focus:outline-none focus:ring-2 focus:ring-black"
-                              >
-                                {p.multiplier}×
-                                <Edit2 className="w-3 h-3 shrink-0" />
-                              </button>
-                            )}
-                          </td>
-                          <td className="px-4 py-3 text-center">
-                            {editingParam?.sku === p.sku && editingParam?.field === 'customSecurityStock' ? (
-                              <div className="inline-flex items-center justify-center gap-1">
-                                <input
-                                  type="number"
-                                  step="1"
-                                  value={tempParamValue}
-                                  onChange={(e) => setTempParamValue(e.target.value)}
-                                  placeholder="Auto"
-                                  className="w-20 px-2 py-1 border-2 border-black rounded text-sm text-center bg-white text-[#191919] font-medium focus:outline-none focus:ring-2 focus:ring-black"
-                                  autoFocus
-                                />
-                                <button onClick={saveParam} className="text-green-600 hover:text-green-700 p-1 focus:outline-none focus:ring-2 focus:ring-green-600 rounded">
-                                  <Check className="w-4 h-4 shrink-0" />
-                                </button>
-                                <button onClick={cancelEditParam} className="text-[#EF1C43] hover:text-red-700 p-1 focus:outline-none focus:ring-2 focus:ring-[#EF1C43] rounded">
-                                  <X className="w-4 h-4 shrink-0" />
-                                </button>
-                              </div>
-                            ) : (
-                              <button
-                                onClick={() => startEditParam(p.sku, 'customSecurityStock', p.customSecurityStock)}
-                                className="inline-flex items-center gap-1 px-3 py-1 bg-[#F0F0EB] hover:bg-[#E5E4DF] rounded text-sm font-medium text-[#191919] transition-colors focus:outline-none focus:ring-2 focus:ring-black"
-                              >
-                                {p.securityStock} jours
-                                {p.customSecurityStock === undefined || p.customSecurityStock === null ? (
-                                  <span className="text-xs text-[#666663] ml-1">(auto)</span>
-                                ) : (
-                                  <span className="text-xs text-green-600 ml-1">(custom)</span>
-                                )}
-                                <Edit2 className="w-3 h-3 shrink-0" />
-                              </button>
-                            )}
-                          </td>
-                          <td className="px-4 py-3 text-right">
-                            <span className="inline-block px-3 py-1 bg-blue-50 text-[#64A4F2] rounded text-sm font-medium border border-blue-200">
-                              {p.reorderPoint} unités
-                            </span>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                  {/* TRACK & MANAGE TAB */}
+                  {activeTab === MAIN_TABS.TRACK && (
+                    <TrackTab
+                      orders={orders}
+                      products={products}
+                      trackTabSection={trackTabSection}
+                      setTrackTabSection={setTrackTabSection}
+                      expandedOrders={expandedOrders}
+                      toggleOrderDetails={toggleOrderDetails}
+                      confirmOrder={confirmOrder}
+                      shipOrder={handleShipOrder}
+                      receiveOrder={receiveOrder}
+                      suppliers={suppliers}
+                      loadData={loadData}
+                      // Nouveaux props pour les modals
+                      reconciliationModal={reconciliationModal}
+                      reconciliationModalHandlers={reconciliationModalHandlers}
+                      reclamationEmailModal={reclamationEmailModal}
+                      reclamationEmailModalHandlers={reclamationEmailModalHandlers}
+                      reconciliationLogic={reconciliationLogic}
+                      emailGeneration={emailGeneration}
+                    />
+                  )}
 
-                <div className="mt-6 p-4 bg-[#FAFAF7] rounded-lg border border-[#E5E4DF]">
-                  <h3 className="font-semibold text-[#191919] mb-2 inline-flex items-center gap-2">
-                    <Info className="w-5 h-5 text-[#666663] shrink-0" />
-                    Guide d'utilisation
-                  </h3>
-                  <ul className="space-y-2 text-sm text-[#191919]">
-                    <li><strong>Multiplicateur :</strong> Ajustez selon la saisonnalité (0.3 = hors saison, 1 = normal, 5 = BFCM/pic)</li>
-                    <li><strong>Stock Sécurité :</strong> Par défaut calculé à 20% du délai fournisseur. Personnalisez selon vos besoins (laissez vide pour revenir au mode auto)</li>
-                    <li><strong>Point de Commande :</strong> Calculé automatiquement, se met à jour en temps réel</li>
-                    <li><strong>Modifications :</strong> Toutes les modifications sont sauvegardées automatiquement dans Google Sheets</li>
-                  </ul>
-                </div>
-              </div>
-            )}
-            
-            {parametersSubTab === 'suppliers' && (
-              <>
-                <GestionFournisseurs
-                  suppliers={suppliers}
-                  products={products}
-                  onOpenModal={handleOpenSupplierModal}
-                  onDelete={handleDeleteSupplier}
-                />
-                
-                <SupplierModal
-                  isOpen={supplierModalOpen}
-                  onClose={handleCloseSupplierModal}
-                  formData={supplierFormData}
-                  onChange={handleSupplierFormChange}
-                  onSave={handleSaveSupplier}
-                  isEditing={!!editingSupplier}
-                />
-              </>
-            )}
-            
-            {parametersSubTab === 'mapping' && (
-              <>
-                <MappingSKUFournisseur
-                  products={products}
-                  suppliers={suppliers}
-                  onOpenAssignModal={handleOpenAssignSupplierModal}
-                  onRemoveSupplier={handleRemoveSupplierFromProduct}
-                />
-                
-                <AssignSupplierModal
-                  isOpen={assignSupplierModalOpen}
-                  onClose={handleCloseAssignSupplierModal}
-                  product={productToMap}
-                  suppliers={suppliers}
-                  selectedSupplier={selectedSupplierForMapping}
-                  onSelectSupplier={setSelectedSupplierForMapping}
-                  onAssign={handleAssignSupplier}
-                />
-                </>
-              )}
+                  {/* STOCK TAB */}
+                  {activeTab === MAIN_TABS.STOCK && (
+                    <StockTab
+                      products={products}
+                      suppliers={suppliers}
+                      stockLevelFilter={stockLevelFilter}
+                      setStockLevelFilter={setStockLevelFilter}
+                      searchTerm={searchTerm}
+                      setSearchTerm={setSearchTerm}
+                      onViewDetails={onViewDetails}
+                    />
+                  )}
 
-              {/* Sub-tab Warehouses */}
-              {parametersSubTab === 'warehouses' && (
-                <GestionWarehouses
-                  warehouses={warehouses}
-                  onCreateWarehouse={handleCreateWarehouse}
-                  onUpdateWarehouse={handleUpdateWarehouse}
-                  onDeleteWarehouse={handleDeleteWarehouse}
-                />
-              )}
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
+                  {/* ANALYTICS TAB */}
+                  {activeTab === MAIN_TABS.ANALYTICS && (
+                    <AnalyticsTab
+                      products={products}
+                      orders={orders}
+                      suppliers={suppliers}
+                      warehouses={warehouses}
+                    />
+                  )}
 
-      {/* Notifications Panel */}
-      <AnimatePresence>
-        {notificationsOpen && (
-          <>
-            <motion.div 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="fixed inset-0 z-[65]" 
-              onClick={() => setNotificationsOpen(false)}
-              aria-hidden="true"
-            />
-            <motion.div
-              initial={{ opacity: 0, y: -20, scale: 0.95 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: -20, scale: 0.95 }}
-              transition={{ duration: 0.2, ease: "easeOut" }}
-              className="fixed right-4 top-20 w-96 bg-white rounded-xl shadow-2xl border border-[#E5E4DF] z-[70]">
-            <div className="p-4 border-b border-[#E5E4DF]">
-              <h3 className="font-bold text-[#191919]">Notifications</h3>
-            </div>
-            <div className="max-h-96 overflow-y-auto">
-              {notifications.length === 0 ? (
-                <div className="p-8 text-center text-[#666663]">
-                  Aucune notification
-                </div>
-              ) : (
-                notifications.map((notif, idx) => (
-                  <div key={idx} className={`p-4 border-b border-[#E5E4DF] hover:bg-[#FAFAF7] transition-colors ${
-                    notif.type === 'warning' ? 'bg-red-50' : 
-                    notif.type === 'info' ? 'bg-yellow-50' : 'bg-green-50'
-                  }`}>
-                    <p className="text-sm text-[#191919]">{notif.message}</p>
-                  </div>
-                ))
-              )}
-            </div>
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
+                  {/* AI TAB */}
+                  {activeTab === MAIN_TABS.AI && (
+                    <AITab
+                      products={products}
+                      orders={orders}
+                      aiSubTab={aiSubTab}
+                      setAiSubTab={setAiSubTab}
+                    />
+                  )}
 
-      {/* Modal Email */}
-      <Modal
-        isOpen={emailModalOpen && selectedSupplier}
-        onClose={() => {
-          setEmailModalOpen(false);
-          setOrderQuantities({});
-        }}
-        title={`Commande - ${selectedSupplier}`}
-        footer={
-          <div className="flex justify-end gap-3">
-            <Button variant="outline" onClick={() => {
-              setEmailModalOpen(false);
-              setOrderQuantities({});
-            }}>
-              Annuler
-            </Button>
-            <Button 
-              variant="secondary" 
-              onClick={createOrderWithoutEmail}
-              disabled={!selectedWarehouse}
-            >
-              Créer commande sans email
-            </Button>
-            <Button 
-              variant="primary" 
-              icon={Mail} 
-              onClick={sendOrder}
-              disabled={!selectedWarehouse}
-            >
-              Envoyer email et créer commande
-            </Button>
-          </div>
-        }
-      >
-        {selectedSupplier && (() => {
-          const productsToOrder = toOrderBySupplier[selectedSupplier];
-          const email = generateEmailDraft(selectedSupplier, productsToOrder);
-          const totalAmount = roundToTwoDecimals(productsToOrder.reduce((sum, p) => {
-            const qty = orderQuantities[p.sku] || p.qtyToOrder;
-            return sum + (qty * p.buyPrice);
-          }, 0));
-          
-          return (
-            <>
-              {/* Sélection de l'entrepôt */}
-              <div className="mb-6">
-                <label className="block text-sm font-medium text-[#191919] mb-2">
-                  Entrepôt de livraison *
-                </label>
-                {Object.keys(warehouses).length === 0 ? (
-                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 flex items-start gap-3">
-                    <AlertCircle className="w-5 h-5 text-yellow-600 shrink-0 mt-0.5" />
-                    <div>
-                      <p className="text-sm text-yellow-800 font-medium">Aucun entrepôt configuré</p>
-                      <p className="text-sm text-yellow-700 mt-1">
-                        Veuillez d'abord créer un entrepôt dans Paramètres → Entrepôts
-                      </p>
-                    </div>
-                  </div>
-                ) : (
-                  <select
-                    value={selectedWarehouse || ''}
-                    onChange={(e) => setSelectedWarehouse(e.target.value)}
-                    className="w-full px-4 py-2.5 border border-[#E5E4DF] rounded-lg focus:outline-none focus:ring-2 focus:ring-black bg-white"
-                    required
-                  >
-                    {Object.values(warehouses).map((warehouse) => (
-                      <option key={warehouse.name} value={warehouse.name}>
-                        {warehouse.name} - {warehouse.city}, {warehouse.country}
-                      </option>
-                    ))}
-                  </select>
-                )}
-                {selectedWarehouse && warehouses[selectedWarehouse] && (
-                  <div className="mt-2 text-sm text-[#666663] bg-[#FAFAF7] p-3 rounded-lg">
-                    <p className="font-medium text-[#191919] mb-1">Adresse de livraison :</p>
-                    <p>{warehouses[selectedWarehouse].address}</p>
-                    <p>{warehouses[selectedWarehouse].postalCode} {warehouses[selectedWarehouse].city}</p>
-                    <p>{warehouses[selectedWarehouse].country}</p>
-                  </div>
-                )}
-              </div>
+                  {/* HISTORY TAB */}
+                  {activeTab === MAIN_TABS.HISTORY && (
+                    <HistoryTab
+                      orders={orders}
+                      products={products}
+                      historyFilter={historyFilter}
+                      setHistoryFilter={setHistoryFilter}
+                      historyDateStart={historyDateStart}
+                      setHistoryDateStart={setHistoryDateStart}
+                      historyDateEnd={historyDateEnd}
+                      setHistoryDateEnd={setHistoryDateEnd}
+                      expandedOrders={expandedOrders}
+                      toggleOrderDetails={toggleOrderDetails}
+                    />
+                  )}
 
-              {/* Section d'édition des quantités */}
-              <div className="mb-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <h4 className="font-semibold text-[#191919] mb-3">Ajuster les quantités</h4>
-                <div className="space-y-3">
-                  {productsToOrder.map(p => (
-                    <div key={p.sku} className="bg-white rounded-lg p-3 border border-[#E5E4DF]">
-                      <div className="grid grid-cols-3 gap-3 items-center">
-                        <div className="col-span-2">
-                          <div className="font-medium text-[#191919] text-sm">{p.name}</div>
-                          <div className="text-xs text-[#666663]">
-                            SKU: {p.sku} • Recommandé: {formatUnits(p.qtyToOrder)} unités
-                          </div>
-                        </div>
-                        <div>
-                          <input
-                            type="number"
-                            min="0"
-                            value={orderQuantities[p.sku] !== undefined ? orderQuantities[p.sku] : p.qtyToOrder}
-                            onChange={(e) => updateOrderQuantity(p.sku, e.target.value)}
-                            className="w-full px-3 py-2 border-2 border-[#E5E4DF] rounded-lg text-center font-bold"
-                          />
-                          <div className="text-xs text-right text-[#666663] mt-1">
-                            {roundToTwoDecimals((orderQuantities[p.sku] || p.qtyToOrder) * p.buyPrice).toFixed(2)}€
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-                <div className="mt-3 pt-3 border-t border-blue-200 flex justify-between items-center">
-                  <span className="text-sm text-[#666663]">Total de la commande:</span>
-                  <span className="text-xl font-bold text-[#191919]">{totalAmount.toFixed(2)}€</span>
-                </div>
-              </div>
-              
-              {/* Prévisualisation email */}
-              <div className="space-y-3">
-                <h4 className="font-semibold text-[#191919]">Prévisualisation email</h4>
-                <div>
-                  <label className="block text-sm font-medium text-[#666663] mb-1">À:</label>
-                  <input value={email.to} readOnly className="w-full px-3 py-2 border-2 border-[#E5E4DF] rounded-lg bg-[#FAFAF7] text-[#191919] text-sm" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-[#666663] mb-1">Objet:</label>
-                  <input value={email.subject} readOnly className="w-full px-3 py-2 border-2 border-[#E5E4DF] rounded-lg bg-[#FAFAF7] text-[#191919] text-sm" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-[#666663] mb-1">Message:</label>
-                  <textarea value={email.body} readOnly rows={10} className="w-full px-3 py-2 border-2 border-[#E5E4DF] rounded-lg bg-[#FAFAF7] text-[#191919] font-mono text-xs" />
-                </div>
-              </div>
-            </>
-          );
-        })()}
-      </Modal>
+                  {/* SETTINGS TAB */}
+                  {activeTab === MAIN_TABS.SETTINGS && (
+                    <SettingsTab
+                      parametersSubTab={parametersSubTab}
+                      setParametersSubTab={setParametersSubTab}
+                      products={products}
+                      suppliers={suppliers}
+                      warehouses={warehouses}
+                      parameters={parameters}
+                      setParameters={setParameters}
+                      loadData={loadData}
+                      // Props pour ParametresGeneraux
+                      seuilSurstockProfond={seuilSurstockProfond}
+                      setSeuilSurstockProfond={setSeuilSurstockProfond}
+                      deviseDefaut={deviseDefaut}
+                      setDeviseDefaut={setDeviseDefaut}
+                      multiplicateurDefaut={multiplicateurDefaut}
+                      setMultiplicateurDefaut={setMultiplicateurDefaut}
+                      // Props pour GestionFournisseurs
+                      supplierModalOpen={supplierModalOpen}
+                      setSupplierModalOpen={setSupplierModalOpen}
+                      editingSupplier={editingSupplier}
+                      setEditingSupplier={setEditingSupplier}
+                      supplierFormData={supplierFormData}
+                      setSupplierFormData={setSupplierFormData}
+                      handleOpenSupplierModal={handleOpenSupplierModal}
+                      handleCloseSupplierModal={handleCloseSupplierModal}
+                      handleSupplierFormChange={handleSupplierFormChange}
+                      handleSaveSupplier={handleSaveSupplier}
+                      handleDeleteSupplier={handleDeleteSupplier}
+                      // Props pour MappingSKUFournisseur
+                      assignSupplierModalOpen={assignSupplierModalOpen}
+                      setAssignSupplierModalOpen={setAssignSupplierModalOpen}
+                      selectedProductForMapping={selectedProductForMapping}
+                      setSelectedProductForMapping={setSelectedProductForMapping}
+                      handleOpenAssignSupplierModal={handleOpenAssignSupplierModal}
+                      handleCloseAssignSupplierModal={handleCloseAssignSupplierModal}
+                      handleAssignSupplier={handleAssignSupplier}
+                      // Props pour GestionWarehouses
+                      warehouseModalOpen={warehouseModalOpen}
+                      setWarehouseModalOpen={setWarehouseModalOpen}
+                      editingWarehouse={editingWarehouse}
+                      setEditingWarehouse={setEditingWarehouse}
+                      warehouseFormData={warehouseFormData}
+                      setWarehouseFormData={setWarehouseFormData}
+                      handleOpenWarehouseModal={handleOpenWarehouseModal}
+                      handleCloseWarehouseModal={handleCloseWarehouseModal}
+                      handleWarehouseFormChange={handleWarehouseFormChange}
+                      handleSaveWarehouse={handleSaveWarehouse}
+                      handleDeleteWarehouse={handleDeleteWarehouse}
+                    />
+                  )}
 
-      {/* Modal Reconciliation */}
-      <Modal
-        isOpen={reconciliationModalOpen && reconciliationOrder}
-        onClose={() => {
-          setReconciliationModalOpen(false);
-          setReconciliationOrder(null);
-          setDiscrepancyItems({});
-          setDiscrepancyTypes({});
-        }}
-        title="Vérification de la réception"
-        footer={
-          <div className="flex justify-end gap-3">
-            <Button 
-              variant="outline" 
-              onClick={() => {
-                setReconciliationModalOpen(false);
-                setReconciliationOrder(null);
-                setDiscrepancyItems({});
-                setDiscrepancyTypes({});
-                setDamagedQuantities({});
-              }}
-            >
-              Annuler
-            </Button>
-            <Button 
-              variant="success" 
-              icon={Check}
-              onClick={confirmReconciliationWithQuantities}
-            >
-              Valider la réception
-            </Button>
-          </div>
-        }
-      >
-        {reconciliationOrder && (
-          <div className="space-y-4">
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <div className="flex items-start gap-3">
-                <Info className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
-                <div>
-                  <h4 className="font-semibold text-blue-900 mb-1">Commande: {reconciliationOrder.id}</h4>
-                  <p className="text-sm text-blue-700">
-                    Fournisseur: {reconciliationOrder.supplier}<br />
-                    Saisissez les quantités réellement reçues et leur état pour chaque produit.
-                  </p>
-                </div>
-              </div>
-            </div>
-            
-            <div className="space-y-3">
-              {reconciliationOrder.items.map((item, idx) => {
-                const product = products.find(p => p.sku === item.sku);
-                const currentReceived = discrepancyItems[item.sku]?.received !== undefined 
-                  ? discrepancyItems[item.sku].received 
-                  : item.quantity;
-                const currentDamaged = damagedQuantities[item.sku] || 0;
-                
-                // Calculer le total reçu (sain + endommagé)
-                const totalReceived = parseInt(currentReceived || 0) + parseInt(currentDamaged || 0);
-                const hasMissing = totalReceived < item.quantity;
-                const hasDamaged = parseInt(currentDamaged) > 0;
-                const missingQuantity = item.quantity - totalReceived;
-                
-                return (
-                  <div key={idx} className="border border-[#E5E4DF] rounded-lg p-4 bg-[#FAFAF7]">
-                    <div className="mb-3">
-                      <div className="flex items-start justify-between mb-1">
-                        <div>
-                          <span className="font-medium text-[#191919]">{product?.name || item.sku}</span>
-                          <span className="text-xs text-[#666663] ml-2">({item.sku})</span>
-                        </div>
-                          <span className="text-sm text-[#666663] font-semibold">
-                            Commandé: {formatUnits(item.quantity)}
-                          </span>
-                      </div>
-                    </div>
-                    
-                    <div className="grid grid-cols-2 gap-3 mb-3">
-                      <div>
-                        <label className="text-xs font-medium text-[#666663] mb-1 block">
-                          Quantité reçue saine
-                        </label>
-                        <input
-                          type="number"
-                          min="0"
-                          max={item.quantity}
-                          value={currentReceived}
-                          onChange={(e) => updateDiscrepancyItem(item.sku, 'received', e.target.value, item.quantity)}
-                          className="w-full px-3 py-2 border-2 border-[#E5E4DF] rounded-lg text-[#191919] font-semibold focus:border-[#8B5CF6] focus:ring-1 focus:ring-[#8B5CF6] outline-none"
-                        />
-                      </div>
-                      
-                      <div>
-                        <label className="text-xs font-medium text-[#666663] mb-1 block">
-                          Quantité endommagée
-                        </label>
-                        <input
-                          type="number"
-                          min="0"
-                          value={currentDamaged}
-                          onChange={(e) => setDamagedQuantities(prev => ({
-                            ...prev,
-                            [item.sku]: parseInt(e.target.value) || 0
-                          }))}
-                          className="w-full px-3 py-2 border-2 border-[#E5E4DF] rounded-lg text-[#191919] font-semibold focus:border-[#8B5CF6] focus:ring-1 focus:ring-[#8B5CF6] outline-none"
-                        />
-                      </div>
-                    </div>
-                    
-                    {/* Indicateurs visuels automatiques */}
-                    {(hasMissing || hasDamaged) && (
-                      <div className="space-y-2">
-                        {hasMissing && (
-                          <div className="flex items-center gap-2 p-2 rounded text-xs bg-yellow-100 text-yellow-800">
-                            <AlertCircle className="w-4 h-4" />
-                            <span>⚠️ Manquant: {formatUnits(missingQuantity)} unités (total reçu: {formatUnits(totalReceived)}/{formatUnits(item.quantity)})</span>
-                          </div>
-                        )}
-                        {hasDamaged && (
-                          <div className="flex items-center gap-2 p-2 rounded text-xs bg-red-100 text-red-800">
-                            <AlertCircle className="w-4 h-4" />
-                            <span>🔴 Endommagé: {formatUnits(currentDamaged)} unités (ne seront pas ajoutées au stock)</span>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                    
-                    {(hasMissing || hasDamaged) && (
-                      <div className="border-t border-[#E5E4DF] pt-3 mt-3">
-                        <label className="text-xs font-medium text-[#666663] mb-1 block">
-                          Notes sur le problème
-                        </label>
-                        <input
-                          type="text"
-                          placeholder="Décrivez le problème (optionnel)..."
-                          value={discrepancyItems[item.sku]?.notes || ''}
-                          onChange={(e) => updateDiscrepancyItem(item.sku, 'notes', e.target.value, item.quantity)}
-                          className="w-full px-3 py-2 border-2 border-[#E5E4DF] rounded-lg text-sm text-[#191919] focus:border-[#8B5CF6] focus:ring-1 focus:ring-[#8B5CF6] outline-none"
-                        />
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-            
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <div className="flex items-start gap-3">
-                <Info className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
-                <div className="text-sm text-blue-700">
-                  <strong className="text-blue-900">Comment ça marche :</strong>
-                  <ul className="mt-2 space-y-1 list-disc list-inside">
-                    <li><strong>Quantité reçue saine</strong> : Entrez le nombre d'unités en bon état</li>
-                    <li><strong>Quantité endommagée</strong> : Entrez le nombre d'unités abîmées reçues</li>
-                    <li><strong>Exemple :</strong> Commandé 200 → Reçu 199 saines + 1 endommagée = 200 total ✅ (rien ne manque)</li>
-                    <li>Un manquant est détecté uniquement si : <strong>(saines + endommagées) &lt; commandé</strong></li>
-                    <li>Seules les <strong>quantités saines</strong> seront ajoutées au stock</li>
-                    <li>Un email de réclamation sera généré <strong>automatiquement</strong> en cas de problème</li>
-                  </ul>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-      </Modal>
-
-      {/* Modal Gestion des Écarts */}
-      <Modal
-        isOpen={discrepancyModalOpen && reconciliationOrder}
-        onClose={() => setDiscrepancyModalOpen(false)}
-        title={`Gestion des écarts - ${reconciliationOrder?.id}`}
-        footer={
-          <div className="flex justify-end gap-3">
-            <Button 
-              variant="outline" 
-              onClick={() => {
-                setDiscrepancyModalOpen(false);
-                setReconciliationModalOpen(true);
-              }}
-            >
-              Annuler
-            </Button>
-            <Button 
-              variant="primary" 
-              icon={Mail}
-              onClick={submitDiscrepancy}
-            >
-              Générer réclamation
-            </Button>
-          </div>
-        }
-      >
-        {reconciliationOrder && (
-          <>
-            <div className="mb-4">
-              <p className="text-sm text-[#666663]">
-                Saisissez les quantités réellement reçues pour chaque produit :
-              </p>
-            </div>
-            <div className="space-y-3">
-              {reconciliationOrder.items.map((item, idx) => {
-                const product = products.find(p => p.sku === item.sku);
-                return (
-                  <div key={idx} className="border border-[#E5E4DF] rounded-lg p-4 bg-[#FAFAF7]">
-                    <div className="mb-2">
-                      <span className="font-medium text-[#191919]">{product?.name || item.sku}</span>
-                      <span className="text-xs text-[#666663] ml-2">({item.sku})</span>
-                    </div>
-                    <div className="grid grid-cols-3 gap-3">
-                      <div>
-                        <label className="text-xs text-[#666663] block mb-1">Commandé</label>
-                        <input 
-                          type="number" 
-                          value={discrepancyItems[item.sku]?.ordered || item.quantity}
-                          disabled
-                          className="w-full px-3 py-2 border border-[#E5E4DF] rounded-lg bg-white text-[#666663] text-center"
-                        />
-                      </div>
-                      <div>
-                        <label className="text-xs text-[#666663] block mb-1">Reçu</label>
-                        <input 
-                          type="number" 
-                          value={discrepancyItems[item.sku]?.received || item.quantity}
-                          onChange={(e) => setDiscrepancyItems({
-                            ...discrepancyItems,
-                            [item.sku]: {
-                              ordered: item.quantity,
-                              received: parseInt(e.target.value) || 0
-                            }
-                          })}
-                          className="w-full px-3 py-2 border-2 border-black rounded-lg bg-white text-[#191919] text-center font-medium focus:outline-none focus:ring-2 focus:ring-black"
-                        />
-                      </div>
-                      <div>
-                        <label className="text-xs text-[#666663] block mb-1">Écart</label>
-                        <div className={`w-full px-3 py-2 rounded-lg text-center font-bold ${
-                          (discrepancyItems[item.sku]?.received || item.quantity) - item.quantity < 0 
-                            ? 'bg-red-50 text-[#EF1C43]' 
-                            : 'bg-green-50 text-green-600'
-                        }`}>
-                          {(discrepancyItems[item.sku]?.received || item.quantity) - item.quantity}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </>
-        )}
-      </Modal>
-
-      {/* Modal Réception Endommagée */}
-      <Modal
-        isOpen={damageModalOpen && reconciliationOrder}
-        onClose={() => setDamageModalOpen(false)}
-        title={`Marchandises endommagées - ${reconciliationOrder?.id}`}
-        footer={
-          <div className="flex justify-end gap-3">
-            <Button 
-              variant="outline" 
-              onClick={() => {
-                setDamageModalOpen(false);
-                setReconciliationModalOpen(true);
-              }}
-            >
-              Annuler
-            </Button>
-            <Button 
-              variant="danger" 
-              icon={Mail}
-              onClick={submitDamageReport}
-            >
-              Envoyer réclamation
-            </Button>
-          </div>
-        }
-      >
-        {reconciliationOrder && (
-          <>
-            <div className="mb-4">
-              <p className="text-sm text-[#666663]">
-                Indiquez les quantités endommagées pour chaque produit :
-              </p>
-            </div>
-            <div className="space-y-3">
-              {reconciliationOrder.items.map((item, idx) => {
-                const product = products.find(p => p.sku === item.sku);
-                return (
-                  <div key={idx} className="border border-[#E5E4DF] rounded-lg p-4 bg-[#FAFAF7]">
-                    <div className="mb-2">
-                      <span className="font-medium text-[#191919]">{product?.name || item.sku}</span>
-                      <span className="text-xs text-[#666663] ml-2">({item.sku})</span>
-                    </div>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <label className="text-xs text-[#666663] block mb-1">Quantité totale</label>
-                        <input 
-                          type="number" 
-                          value={item.quantity}
-                          disabled
-                          className="w-full px-3 py-2 border border-[#E5E4DF] rounded-lg bg-white text-[#666663] text-center"
-                        />
-                      </div>
-                      <div>
-                        <label className="text-xs text-[#666663] block mb-1">Quantité endommagée</label>
-                        <input 
-                          type="number" 
-                          min="0"
-                          max={item.quantity}
-                          value={damageItems[item.sku]?.damaged || 0}
-                          onChange={(e) => setDamageItems({
-                            ...damageItems,
-                            [item.sku]: {
-                              total: item.quantity,
-                              damaged: Math.min(parseInt(e.target.value) || 0, item.quantity)
-                            }
-                          })}
-                          className="w-full px-3 py-2 border-2 border-[#EF1C43] rounded-lg bg-white text-[#191919] text-center font-medium focus:outline-none focus:ring-2 focus:ring-[#EF1C43]"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-            <div className="mt-4">
-              <label className="text-sm font-medium text-[#191919] block mb-2">Notes / Commentaires (optionnel)</label>
-              <textarea
-                value={damageNotes}
-                onChange={(e) => setDamageNotes(e.target.value)}
-                rows={3}
-                placeholder="Décrivez l'état des produits endommagés..."
-                className="w-full px-3 py-2 border-2 border-[#E5E4DF] rounded-lg bg-white text-[#191919] focus:outline-none focus:ring-2 focus:ring-black resize-none"
-              />
-            </div>
-          </>
-        )}
-      </Modal>
-
-      {/* NOUVEAU: Modal Unifié de Réconciliation (Écarts + Endommagés) */}
-      <Modal
-        isOpen={unifiedReconciliationModalOpen && reconciliationOrder}
-        onClose={() => setUnifiedReconciliationModalOpen(false)}
-        title={`Réconciliation complète - ${reconciliationOrder?.id}`}
-        footer={
-          <div className="flex justify-end gap-3">
-            <Button 
-              variant="outline" 
-              onClick={() => {
-                setUnifiedReconciliationModalOpen(false);
-                setReconciliationModalOpen(true);
-              }}
-            >
-              Annuler
-            </Button>
-            <Button 
-              variant="primary" 
-              icon={Check}
-              onClick={submitUnifiedReconciliation}
-            >
-              Valider la réconciliation
-            </Button>
-          </div>
-        }
-      >
-        {reconciliationOrder && (
-          <>
-            <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-              <p className="text-sm text-blue-800 font-medium mb-2">
-                📋 Saisissez pour chaque produit :
-              </p>
-              <ul className="text-xs text-blue-700 space-y-1 ml-4">
-                <li>• <strong>Quantité reçue</strong> : nombre total d'unités livrées</li>
-                <li>• <strong>Quantité endommagée</strong> : nombre d'unités abîmées parmi celles reçues</li>
-                <li>• La <strong>quantité validée</strong> sera calculée automatiquement (Reçue - Endommagée)</li>
-              </ul>
-            </div>
-            
-            <div className="space-y-3">
-              {reconciliationOrder.items.map((item, idx) => {
-                const product = products.find(p => p.sku === item.sku);
-                const data = unifiedReconciliationItems[item.sku] || { 
-                  ordered: item.quantity, 
-                  received: item.quantity, 
-                  damaged: 0 
-                };
-                const validated = parseInt(data.received, 10) - parseInt(data.damaged, 10);
-                const discrepancy = parseInt(data.ordered, 10) - parseInt(data.received, 10);
-                
-                return (
-                  <div key={idx} className="border border-[#E5E4DF] rounded-lg p-4 bg-[#FAFAF7]">
-                    <div className="mb-3">
-                      <span className="font-medium text-[#191919]">{product?.name || item.sku}</span>
-                      <span className="text-xs text-[#666663] ml-2">({item.sku})</span>
-                    </div>
-                    
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                      {/* Quantité commandée */}
-                      <div>
-                        <label className="text-xs text-[#666663] block mb-1">📦 Commandé</label>
-                        <input 
-                          type="number" 
-                          value={data.ordered}
-                          disabled
-                          className="w-full px-3 py-2 border border-[#E5E4DF] rounded-lg bg-white text-[#666663] text-center font-medium"
-                        />
-                      </div>
-                      
-                      {/* Quantité reçue */}
-                      <div>
-                        <label className="text-xs text-[#666663] block mb-1">📥 Reçu</label>
-                        <input 
-                          type="number" 
-                          min="0"
-                          value={data.received}
-                          onChange={(e) => setUnifiedReconciliationItems({
-                            ...unifiedReconciliationItems,
-                            [item.sku]: {
-                              ...data,
-                              received: Math.max(0, parseInt(e.target.value) || 0)
-                            }
-                          })}
-                          className="w-full px-3 py-2 border-2 border-black rounded-lg bg-white text-[#191919] text-center font-medium focus:outline-none focus:ring-2 focus:ring-black"
-                        />
-                      </div>
-                      
-                      {/* Quantité endommagée */}
-                      <div>
-                        <label className="text-xs text-[#666663] block mb-1">⚠️ Endommagé</label>
-                        <input 
-                          type="number" 
-                          min="0"
-                          max={data.received}
-                          value={data.damaged}
-                          onChange={(e) => setUnifiedReconciliationItems({
-                            ...unifiedReconciliationItems,
-                            [item.sku]: {
-                              ...data,
-                              damaged: Math.min(Math.max(0, parseInt(e.target.value) || 0), parseInt(data.received, 10))
-                            }
-                          })}
-                          className="w-full px-3 py-2 border-2 border-[#EF1C43] rounded-lg bg-white text-[#191919] text-center font-medium focus:outline-none focus:ring-2 focus:ring-[#EF1C43]"
-                        />
-                      </div>
-                      
-                      {/* Quantité validée (calculée) */}
-                      <div>
-                        <label className="text-xs text-[#666663] block mb-1">✅ Validé</label>
-                        <div className={`w-full px-3 py-2 rounded-lg text-center font-bold ${
-                          validated >= data.ordered 
-                            ? 'bg-green-50 text-green-600 border border-green-200' 
-                            : 'bg-yellow-50 text-yellow-700 border border-yellow-200'
-                        }`}>
-                          {validated}
-                        </div>
-                      </div>
-                    </div>
-                    
-                    {/* Résumé des écarts */}
-                    <div className="mt-3 pt-3 border-t border-[#E5E4DF] grid grid-cols-2 gap-2 text-xs">
-                      <div className={`p-2 rounded ${
-                        discrepancy === 0 ? 'bg-green-50' : discrepancy > 0 ? 'bg-red-50' : 'bg-blue-50'
-                      }`}>
-                        <span className="text-[#666663]">Écart de quantité: </span>
-                        <span className={`font-bold ${
-                          discrepancy === 0 ? 'text-green-600' : discrepancy > 0 ? 'text-[#EF1C43]' : 'text-blue-600'
-                        }`}>
-                          {discrepancy > 0 ? `-${formatUnits(discrepancy)}` : discrepancy < 0 ? `+${formatUnits(Math.abs(discrepancy))}` : '0'} unités
-                        </span>
-                      </div>
-                      <div className="p-2 rounded bg-orange-50">
-                        <span className="text-[#666663]">Perte (endommagé): </span>
-                        <span className="font-bold text-orange-600">
-                          {formatUnits(data.damaged)} unités
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-            
-            <div className="mt-4">
-              <label className="text-sm font-medium text-[#191919] block mb-2">📝 Notes / Commentaires (optionnel)</label>
-              <textarea
-                value={reconciliationNotes}
-                onChange={(e) => setReconciliationNotes(e.target.value)}
-                rows={3}
-                placeholder="Ajoutez des notes sur les écarts ou les dommages constatés..."
-                className="w-full px-3 py-2 border-2 border-[#E5E4DF] rounded-lg bg-white text-[#191919] focus:outline-none focus:ring-2 focus:ring-black resize-none"
-              />
-            </div>
-          </>
-        )}
-      </Modal>
-
-      {/* CORRECTION 4B: Modal Email de Réclamation */}
-      <Modal
-        isOpen={reclamationEmailModalOpen && currentReclamationOrder}
-        onClose={() => setReclamationEmailModalOpen(false)}
-        title={`Réclamation - ${currentReclamationOrder?.id || ''}`}
-        footer={
-          <div className="flex justify-between items-center">
-            <Button 
-              variant="outline" 
-              onClick={() => setReclamationEmailModalOpen(false)}
-            >
-              Fermer
-            </Button>
-            <div className="flex gap-3">
-              <Button 
-                variant="secondary" 
-                icon={FileText}
-                onClick={copyReclamationToClipboard}
-              >
-                Copier dans le presse-papier
-              </Button>
-              <Button 
-                variant="primary" 
-                icon={Mail}
-                onClick={() => {
-                  const subject = `Réclamation - Commande ${currentReclamationOrder?.id || ''}`;
-                  const body = encodeURIComponent(reclamationEmailContent);
-                  window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${body}`;
-                }}
-              >
-                Envoyer email de réclamation
-              </Button>
-            </div>
-          </div>
-        }
-      >
-        {currentReclamationOrder && (
-          <>
-            <div className="mb-4 bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <div className="flex items-start gap-3">
-                <Info className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
-                <div className="text-sm text-blue-700">
-                  <p className="font-semibold text-blue-900 mb-2">Email de réclamation prêt</p>
-                  <p>Vous pouvez modifier le texte ci-dessous, puis :</p>
-                  <ul className="mt-2 space-y-1 list-disc list-inside">
-                    <li><strong>Copier</strong> pour coller dans votre client email</li>
-                    <li><strong>Envoyer</strong> pour ouvrir directement votre client email</li>
-                  </ul>
-                </div>
-              </div>
-            </div>
-            <div className="my-4">
-              <textarea
-                value={reclamationEmailContent}
-                onChange={(e) => setReclamationEmailContent(e.target.value)}
-                rows={20}
-                className="w-full p-4 border-2 border-[#E5E4DF] rounded-lg font-mono text-sm bg-[#FAFAF7] text-[#191919] focus:outline-none focus:ring-2 focus:ring-black resize-none"
-              />
-            </div>
-          </>
-        )}
-      </Modal>
-
+                </AnimatePresence>
+              </div> {/* Fin max-w-7xl mx-auto */}
             </div> {/* Fin contenu principal avec padding */}
           </div> {/* Fin Content Area relative */}
         </div> {/* Fin Main Content md:ml-64 */}
       </div> {/* Fin min-h-screen */}
+
+      {/* ============================================
+          MODALS
+      ============================================ */}
+      
+      {/* Modal de réconciliation */}
+      <ReconciliationModal
+        isOpen={reconciliationModal.isOpen}
+        onClose={reconciliationModalHandlers.close}
+        order={reconciliationModal.data.order}
+        products={products}
+        onConfirm={handleReconciliationConfirm}
+      />
+
+      {/* Modal d'email de réclamation */}
+      <ReclamationEmailModal
+        isOpen={reclamationEmailModal.isOpen}
+        onClose={reclamationEmailModalHandlers.close}
+        order={reclamationEmailModal.data.order}
+        emailContent={reclamationEmailModal.data.emailContent}
+        onCopy={emailGeneration.copyToClipboard}
+      />
+
+      {/* Modal d'email de commande - Utilise le système inline qui fonctionnait */}
+      <EmailOrderModalInline
+        isOpen={inlineModals.emailOrderModal.emailModalOpen}
+        onClose={inlineModals.emailOrderModal.closeEmailModal}
+        selectedSupplier={inlineModals.emailOrderModal.selectedSupplier}
+        toOrderBySupplier={toOrderBySupplier}
+        warehouses={warehouses}
+        selectedWarehouse={inlineModals.emailOrderModal.selectedWarehouse}
+        setSelectedWarehouse={inlineModals.emailOrderModal.setSelectedWarehouse}
+        orderQuantities={inlineModals.emailOrderModal.orderQuantities}
+        updateOrderQuantity={inlineModals.emailOrderModal.updateOrderQuantity}
+        emailGeneration={emailGeneration}
+        getUserSignature={getUserSignature}
+        handleCreateOrderWithoutEmail={handleCreateOrderWithoutEmail}
+        handleSendOrder={handleSendOrder}
+        suppliers={suppliers}
+      />
+
+      {/* Modal d'expédition */}
+      <ShipOrderModal
+        isOpen={shipOrderModal.isOpen}
+        onClose={shipOrderModal.closeModal}
+        onConfirm={handleConfirmShipOrder}
+        trackingNumber={shipOrderModal.trackingNumber}
+        setTrackingNumber={shipOrderModal.setTrackingNumber}
+        trackingUrl={shipOrderModal.trackingUrl}
+        setTrackingUrl={shipOrderModal.setTrackingUrl}
+      />
+
+      {/* Modal de gestion des fournisseurs */}
+      <SupplierModal
+        isOpen={supplierModalOpen}
+        onClose={handleCloseSupplierModal}
+        formData={supplierFormData}
+        onChange={handleSupplierFormChange}
+        onSave={handleSaveSupplier}
+        isEditing={!!editingSupplier}
+      />
+
+      {/* Modal d'assignation de fournisseur */}
+      <AssignSupplierModal
+        isOpen={assignSupplierModalOpen}
+        onClose={handleCloseAssignSupplierModal}
+        product={productToMap}
+        suppliers={suppliers}
+          selectedSupplier={selectedSupplierForMapping}
+        onSupplierChange={setSelectedSupplierForMapping}
+        onAssign={handleAssignSupplier}
+      />
+
+      {/* Modal de création de commande personnalisée */}
+      <OrderCreationModal
+        isOpen={orderCreationModal.isOpen}
+        onClose={orderCreationModalHandlers.close}
+        products={productsByStatus.to_order}
+        suppliers={suppliers}
+        warehouses={warehouses}
+        selectedWarehouse={selectedWarehouse}
+        setSelectedWarehouse={setSelectedWarehouse}
+        orderQuantities={orderQuantities}
+        updateOrderQuantity={updateOrderQuantity}
+        generatePONumber={generatePONumber}
+        orders={orders}
+        handleCreateOrder={handleCreateOrderFromTable}
+        selectedProductsFromTable={selectedProductsFromTable}
+        setSelectedProductsFromTable={setSelectedProductsFromTable}
+      />
+
+      {/* Conteneur des modales inline */}
+      <InlineModalsContainer
+        emailOrderModal={inlineModals.emailOrderModal}
+        warehouses={warehouses}
+        toOrderBySupplier={toOrderBySupplier}
+        emailGeneration={emailGeneration}
+        getUserSignature={getUserSignature}
+        handleCreateOrderWithoutEmail={handleCreateOrderWithoutEmail}
+        handleSendOrder={handleSendOrder}
+        reconciliationModal={inlineModals.reconciliationModal}
+        products={products}
+        confirmReconciliationWithQuantities={confirmReconciliationWithQuantities}
+        reclamationEmailModal={inlineModals.reclamationEmailModal}
+      />
+
     </>
   );
 };
