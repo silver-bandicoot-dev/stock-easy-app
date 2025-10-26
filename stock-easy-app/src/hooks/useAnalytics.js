@@ -394,16 +394,28 @@ export function useAnalytics(products, orders, dateRange = '30d', customRange = 
     const formatComparisonPeriod = () => {
       if (comparisonType === 'average') {
         return 'moyenne 12 mois';
-      } else if (comparisonType === 'year_ago') {
-        const yearAgo = new Date(startDate);
-        yearAgo.setFullYear(yearAgo.getFullYear() - 1);
-        return yearAgo.toLocaleDateString('fr-FR', { month: 'short', year: 'numeric' });
+      } else if (comparisonType === 'year_ago' || comparisonType === 'same_last_year') {
+        const yearAgoStart = new Date(startDate);
+        yearAgoStart.setFullYear(yearAgoStart.getFullYear() - 1);
+        const yearAgoEnd = new Date(endDate);
+        yearAgoEnd.setFullYear(yearAgoEnd.getFullYear() - 1);
+        
+        // Si la période s'étend sur plusieurs mois
+        if (yearAgoStart.getMonth() !== yearAgoEnd.getMonth() || yearAgoStart.getFullYear() !== yearAgoEnd.getFullYear()) {
+          return `${yearAgoStart.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })} - ${yearAgoEnd.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })}`;
+        }
+        return `${yearAgoStart.toLocaleDateString('fr-FR', { day: 'numeric' })}-${yearAgoEnd.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })}`;
       } else {
         // previous
         if (Array.isArray(comparisonPeriod)) return 'période précédente';
         const start = new Date(comparisonPeriod.start);
         const end = new Date(comparisonPeriod.end);
-        return `${start.getDate()}-${end.getDate()} ${end.toLocaleDateString('fr-FR', { month: 'short', year: 'numeric' })}`;
+        
+        // Si la période s'étend sur plusieurs mois
+        if (start.getMonth() !== end.getMonth() || start.getFullYear() !== end.getFullYear()) {
+          return `${start.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })} - ${end.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })}`;
+        }
+        return `${start.toLocaleDateString('fr-FR', { day: 'numeric' })}-${end.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })}`;
       }
     };
 
