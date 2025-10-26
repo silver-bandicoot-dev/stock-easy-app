@@ -434,13 +434,15 @@ export function ProductSelectionTable({ products, suppliers, onCreateOrder }) {
                             newMap.delete(product.sku);
                             setEditingQuantities(newMap);
                             
-                            // Si le produit est sélectionné ou si on vient de saisir une valeur, mettre à jour
-                            if (isSelected && value) {
-                              updateQuantity(product.sku, newQty);
-                            } else if (!isSelected && newQty > 0) {
-                              // Si le produit n'est pas sélectionné mais qu'on a saisi une quantité, le sélectionner
-                              const newSelectedMap = new Map(selectedProducts);
+                            const newSelectedMap = new Map(selectedProducts);
+                            
+                            if (newQty > 0) {
+                              // Si la quantité est > 0, ajouter/mettre à jour le produit dans la sélection
                               newSelectedMap.set(product.sku, newQty);
+                              setSelectedProducts(newSelectedMap);
+                            } else if (isSelected) {
+                              // Si la quantité est 0 et que le produit était sélectionné, le retirer
+                              newSelectedMap.delete(product.sku);
                               setSelectedProducts(newSelectedMap);
                             }
                           }}
