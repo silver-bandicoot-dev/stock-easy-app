@@ -527,7 +527,8 @@ export function ProductSelectionTable({ products, suppliers, onCreateOrder }) {
       </div>
 
       {/* Bouton sticky - Créer une commande */}
-      {selectedProducts.size > 0 && (
+      {/* Afficher le bouton seulement si onCreateOrder est fourni (usage dans modal) */}
+      {selectedProducts.size > 0 && onCreateOrder && (
         <div className="fixed bottom-6 right-6 z-50">
           <button
             onClick={handleCreateOrder}

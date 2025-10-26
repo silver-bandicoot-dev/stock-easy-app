@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Package, Plus } from 'lucide-react';
 import { Button } from '../shared/Button';
@@ -11,8 +11,6 @@ export const OrderCreationModal = ({
   products,
   suppliers,
   warehouses,
-  selectedWarehouse,
-  setSelectedWarehouse,
   orderQuantities,
   updateOrderQuantity,
   generatePONumber,
@@ -21,6 +19,7 @@ export const OrderCreationModal = ({
   selectedProductsFromTable,
   setSelectedProductsFromTable
 }) => {
+  const [selectedWarehouse, setSelectedWarehouse] = useState('');
   return (
     <Modal
       isOpen={isOpen}
@@ -78,10 +77,7 @@ export const OrderCreationModal = ({
         <ProductSelectionTable
           products={products}
           suppliers={suppliers}
-          selectedProducts={selectedProductsFromTable}
-          setSelectedProducts={setSelectedProductsFromTable}
-          orderQuantities={orderQuantities}
-          updateOrderQuantity={updateOrderQuantity}
+          // Ne pas passer onCreateOrder pour désactiver le bouton violet interne
         />
       </div>
     </Modal>
