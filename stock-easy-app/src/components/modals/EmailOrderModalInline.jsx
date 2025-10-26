@@ -178,15 +178,19 @@ export const EmailOrderModalInline = ({
                 <div className="col-span-2">
                   <div className="font-medium text-[#191919] text-xs truncate">{p.name}</div>
                   <div className="text-xs text-[#666663]">
-                    SKU: {p.sku} • Rec: {p.qtyToOrder}
+                    SKU: {p.sku} • Rec: {Math.round(p.qtyToOrder || 0)}
                   </div>
                 </div>
                 <div>
                   <input
                     type="number"
                     min="0"
-                    value={orderQuantities[p.sku] !== undefined ? orderQuantities[p.sku] : p.qtyToOrder}
-                    onChange={(e) => updateOrderQuantity(p.sku, e.target.value)}
+                    step="1"
+                    value={orderQuantities[p.sku] !== undefined ? Math.round(orderQuantities[p.sku]) : Math.round(p.qtyToOrder || 0)}
+                    onChange={(e) => {
+                      const value = parseInt(e.target.value) || 0;
+                      updateOrderQuantity(p.sku, value);
+                    }}
                     className="w-full px-2 py-1 border border-[#E5E4DF] rounded text-center text-sm font-bold"
                   />
                 </div>
