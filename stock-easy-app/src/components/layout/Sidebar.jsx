@@ -105,10 +105,10 @@ const Sidebar = ({
 
   // Menu Desktop/Tablette (sidebar fixe pleine hauteur)
   const DesktopSidebar = () => (
-    <aside className="hidden md:flex md:flex-col md:fixed md:inset-y-0 md:left-0 md:w-64 md:bg-[#191919] md:z-40">
+    <aside className="hidden md:flex md:flex-col md:fixed md:inset-y-0 md:left-0 md:w-64 md:bg-[#FAFAF7] md:border-r md:border-[#E5E4DF] md:z-40">
       {/* Logo en haut de la sidebar */}
-      <div className="px-6 py-5 border-b border-[#40403E] flex justify-center">
-        <Logo size="normal" showText={true} />
+      <div className="px-6 py-5 border-b border-[#E5E4DF] flex justify-center">
+        <Logo size="normal" showText={true} theme="light" />
       </div>
 
       {/* Navigation */}
@@ -128,8 +128,8 @@ const Sidebar = ({
                 onClick={() => handleMenuItemClick(item)}
                 className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg font-medium text-sm transition-all ${
                   isActive
-                    ? 'bg-black text-white shadow-lg'
-                    : 'text-[#FAFAF7] hover:bg-[#40403E]'
+                    ? 'bg-[#191919] text-white shadow-lg'
+                    : 'text-[#191919] hover:bg-[#E5E4DF]'
                 }`}
               >
                 <Icon className="w-5 h-5 shrink-0" />
@@ -164,8 +164,8 @@ const Sidebar = ({
                         onClick={() => handleSubMenuClick(item.id, subItem)}
                         className={`w-full flex items-center gap-3 px-4 py-2 rounded-lg text-sm transition-colors ${
                           isSubActive
-                            ? 'bg-[#40403E] text-white'
-                            : 'text-[#FAFAF7] hover:bg-[#40403E]/50'
+                            ? 'bg-[#191919] text-white'
+                            : 'text-[#191919] hover:bg-[#E5E4DF]'
                         }`}
                       >
                         <SubIcon className="w-4 h-4 shrink-0" />
@@ -181,11 +181,11 @@ const Sidebar = ({
       </nav>
 
       {/* Actions Footer */}
-      <div className="px-4 py-4 border-t border-[#40403E] space-y-2">
+      <div className="px-4 py-4 border-t border-[#E5E4DF] space-y-2">
         <button
           onClick={syncData}
           disabled={syncing}
-          className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-[#FAFAF7] hover:bg-[#40403E] transition-all text-sm font-medium"
+          className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-[#191919] hover:bg-[#E5E4DF] transition-all text-sm font-medium"
         >
           <RefreshCw className={`w-5 h-5 shrink-0 ${syncing ? 'animate-spin' : ''}`} />
           <span>Synchroniser</span>
@@ -206,7 +206,7 @@ const Sidebar = ({
   const MobileSidebar = () => (
     <>
       {/* Mobile Header - Logo, notification et hamburger */}
-      <div className="md:hidden fixed top-0 left-0 right-0 bg-[#191919] z-50 px-4 py-4 flex items-center justify-between shadow-lg">
+      <div className="md:hidden fixed top-0 left-0 right-0 bg-[#FAFAF7] z-50 px-4 py-4 flex items-center justify-between shadow-lg">
         <Logo size="normal" showText={true} />
         
         <div className="flex items-center gap-2">
@@ -247,11 +247,11 @@ const Sidebar = ({
               animate={{ x: 0 }}
               exit={{ x: '-100%' }}
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-              className="md:hidden fixed top-0 left-0 bottom-0 w-4/5 max-w-sm bg-[#191919] z-50 flex flex-col"
+              className="md:hidden fixed top-0 left-0 bottom-0 w-4/5 max-w-sm bg-[#FAFAF7] border-r border-[#E5E4DF] z-50 flex flex-col"
             >
               {/* Logo */}
-              <div className="px-6 py-6 border-b border-[#40403E] flex justify-center">
-                <Logo size="normal" showText={true} />
+              <div className="px-6 py-6 border-b border-[#E5E4DF] flex justify-center">
+                <Logo size="normal" showText={true} theme="light" />
               </div>
 
               {/* Navigation */}
@@ -266,8 +266,8 @@ const Sidebar = ({
                       onClick={() => handleMenuItemClick(item)}
                       className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg font-medium text-sm transition-all ${
                         isActive
-                          ? 'bg-black text-white shadow-lg'
-                          : 'text-[#FAFAF7] hover:bg-[#40403E]'
+                          ? 'bg-[#191919] text-white shadow-lg'
+                          : 'text-[#191919] hover:bg-[#E5E4DF]'
                       }`}
                     >
                       <Icon className="w-5 h-5 shrink-0" />
@@ -278,14 +278,14 @@ const Sidebar = ({
               </nav>
 
               {/* Actions Footer */}
-              <div className="px-4 py-4 border-t border-[#40403E] space-y-2">
+              <div className="px-4 py-4 border-t border-[#E5E4DF] space-y-2">
                 <button
                   onClick={() => {
                     syncData();
                     setMobileMenuOpen(false);
                   }}
                   disabled={syncing}
-                  className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-[#FAFAF7] hover:bg-[#40403E] transition-all text-sm font-medium"
+                  className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-[#191919] hover:bg-[#E5E4DF] transition-all text-sm font-medium"
                 >
                   <RefreshCw className={`w-5 h-5 shrink-0 ${syncing ? 'animate-spin' : ''}`} />
                   <span>Synchroniser</span>

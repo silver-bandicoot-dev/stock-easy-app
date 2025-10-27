@@ -1855,7 +1855,7 @@ ${getUserSignature()}`
       <motion.div 
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        className="min-h-screen bg-[#F0F0EB] flex items-center justify-center"
+        className="min-h-screen bg-[#FAFAF7] flex items-center justify-center"
       >
         <div className="text-center">
           <motion.div
@@ -1879,7 +1879,7 @@ ${getUserSignature()}`
         closeButton
         duration={4000}
       />
-      <div className="min-h-screen bg-[#F0F0EB]">
+      <div className="min-h-screen bg-[#FAFAF7]">
         {/* Sidebar Component */}
         <Sidebar 
           activeTab={activeTab}

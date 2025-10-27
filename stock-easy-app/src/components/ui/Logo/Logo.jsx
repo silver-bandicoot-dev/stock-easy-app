@@ -8,7 +8,7 @@ import React from 'react';
 export function Logo({ size = 'normal', showText = true, theme = 'dark' }) {
   const dimensions = {
     small: { cube: 30, text: 'text-lg' },
-    normal: { cube: 48, text: 'text-2xl' },
+    normal: { cube: 48, text: 'text-xl' },
     large: { cube: 76, text: 'text-4xl' }
   };
 
