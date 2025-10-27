@@ -207,7 +207,7 @@ const Sidebar = ({
     <>
       {/* Mobile Header - Logo, notification et hamburger */}
       <div className="md:hidden fixed top-0 left-0 right-0 bg-[#FAFAF7] z-50 px-4 py-4 flex items-center justify-between shadow-lg">
-        <Logo size="normal" showText={true} />
+        <Logo size="normal" showText={true} theme="light" />
         
         <div className="flex items-center gap-2">
           {/* Icône de notification */}
@@ -216,7 +216,7 @@ const Sidebar = ({
           {/* Bouton hamburger */}
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="p-2 rounded-lg bg-[#40403E] hover:bg-[#666663] transition-colors"
+            className="p-2 rounded-lg bg-[#191919] hover:bg-[#40403E] transition-colors"
             aria-label={mobileMenuOpen ? 'Fermer le menu' : 'Ouvrir le menu'}
           >
             {mobileMenuOpen ? (
