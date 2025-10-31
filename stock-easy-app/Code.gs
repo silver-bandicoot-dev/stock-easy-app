@@ -1,7 +1,14 @@
 // ============================================
-// STOCK EASY - GOOGLE APPS SCRIPT API v2.3
+// STOCK EASY - GOOGLE APPS SCRIPT API v2.7
 // ============================================
-// UPDATED VERSION - October 2025 - Added Warehouses
+// UPDATED VERSION - December 2025 - Fixed Action Parameter
+// - Added damagedQuantity and discrepancyQuantity support
+// - Fixed createOrder, getOrders, updateOrderItems, setupSheets
+// - Removed all duplicate functions
+// - Fixed SKU-Fournisseurs to use only 2 columns
+// - Verified all sheet names and column names match spreadsheet structure
+// - Fixed updateStock to support both data.items and data as array
+// - Fixed doPost to read action from URL parameters or body
 
 const SPREADSHEET_ID = '1U-XYEXhx5wUHpapQBSMndqkkFKdrLwBTrSSejPvTYts';
 
@@ -162,18 +169,15 @@ function doPost(e) {
     
     Logger.log('PostData: ' + (e.postData ? e.postData.contents : 'undefined'));
     
-    // Vérifier que postData existe
-    if (!e.postData || !e.postData.contents) {
-      Logger.log('❌ ERREUR: postData ou postData.contents est undefined');
-      return ContentService
-        .createTextOutput(JSON.stringify({ success: false, error: 'postData manquant' }))
-        .setMimeType(ContentService.MimeType.JSON);
-    }
+    // Try to get action from parameters first, then from data
+    const action = e.parameter && e.parameter.action ? e.parameter.action : 
+                   (e.postData && e.postData.contents ? JSON.parse(e.postData.contents).action : null);
     
-    const data = JSON.parse(e.postData.contents);
-    const action = data.action;
+    const data = e.postData && e.postData.contents ? JSON.parse(e.postData.contents) : {};
     
+    // Log for debugging
     Logger.log('Action: ' + action);
+    Logger.log('Data: ' + JSON.stringify(data));
     
     let result;
     
@@ -193,11 +197,17 @@ function doPost(e) {
       case 'getOrders':
         result = getOrders();
         break;
+      case 'createOrder':
+        result = createOrder(data);
+        break;
       case 'updateOrderStatus':
         result = updateOrderStatus(data);
         break;
       case 'updateStock':
         result = updateStock(data);
+        break;
+      case 'updateProduct':
+        result = updateProduct(data);
         break;
       case 'updateParameter':
         result = updateParameter(data);
@@ -373,7 +383,9 @@ function getOrders() {
           quantity: Number(item.quantity) || 0,
           pricePerUnit: Number(item.pricePerUnit) || 0,
           receivedQuantity: Number(item.receivedQuantity) || 0,
+          damagedQuantity: Number(item.damagedQuantity) || 0,
           discrepancyType: item.discrepancyType || '',
+          discrepancyQuantity: Number(item.discrepancyQuantity) || 0,
           discrepancyNotes: item.discrepancyNotes || ''
         }));
       
@@ -602,7 +614,7 @@ function assignSupplierToProduct(data) {
     const headers = values[0];
     
     const skuIndex = headers.indexOf('SKU');
-    const supplierIndex = headers.indexOf('Nom Fournisseur');
+    const supplierIndex = headers.indexOf('Fournisseur');
     
     for (let i = 1; i < values.length; i++) {
       if (values[i][skuIndex] === data.sku && values[i][supplierIndex] === data.supplierName) {
@@ -613,11 +625,7 @@ function assignSupplierToProduct(data) {
     
     sheet.appendRow([
       data.sku,
-      data.supplierName,
-      Number(data.buyPrice) || 0,
-      Number(data.moq) || 1,
-      Number(data.leadTimeDays) || 30,
-      data.notes || ''
+      data.supplierName
     ]);
     
     SpreadsheetApp.flush();
@@ -641,7 +649,7 @@ function removeSupplierFromProduct(data) {
     const headers = values[0];
     
     const skuIndex = headers.indexOf('SKU');
-    const supplierIndex = headers.indexOf('Nom Fournisseur');
+    const supplierIndex = headers.indexOf('Fournisseur');
     
     for (let i = 1; i < values.length; i++) {
       if (values[i][skuIndex] === data.sku && values[i][supplierIndex] === data.supplierName) {
@@ -946,6 +954,8 @@ function createOrder(data) {
           Number(item.pricePerUnit) || 0,
           0, // receivedQuantity
           '', // discrepancyType
+          0, // discrepancyQuantity
+          0, // damagedQuantity
           ''  // discrepancyNotes
         ]);
         Logger.log('✅ Item ' + index + ' ajouté');
@@ -1066,9 +1076,10 @@ function updateOrderItems(orderId, items) {
     const receivedQtyIndex = headers.indexOf('receivedQuantity');
     const damagedQtyIndex = headers.indexOf('damagedQuantity');
     const discrepancyTypeIndex = headers.indexOf('discrepancyType');
+    const discrepancyQtyIndex = headers.indexOf('discrepancyQuantity');
     const discrepancyNotesIndex = headers.indexOf('discrepancyNotes');
     
-    Logger.log('Column indices - receivedQty: ' + receivedQtyIndex + ', damagedQty: ' + damagedQtyIndex);
+    Logger.log('Column indices - receivedQty: ' + receivedQtyIndex + ', damagedQty: ' + damagedQtyIndex + ', discrepancyQty: ' + discrepancyQtyIndex);
     
     items.forEach(item => {
       for (let i = 1; i < values.length; i++) {
@@ -1088,6 +1099,11 @@ function updateOrderItems(orderId, items) {
           if (item.discrepancyType !== undefined && discrepancyTypeIndex !== -1) {
             sheet.getRange(i + 1, discrepancyTypeIndex + 1).setValue(item.discrepancyType);
             Logger.log('  discrepancyType: ' + item.discrepancyType);
+          }
+          
+          if (item.discrepancyQuantity !== undefined && discrepancyQtyIndex !== -1) {
+            sheet.getRange(i + 1, discrepancyQtyIndex + 1).setValue(Number(item.discrepancyQuantity));
+            Logger.log('  discrepancyQuantity: ' + item.discrepancyQuantity);
           }
           
           if (item.discrepancyNotes !== undefined && discrepancyNotesIndex !== -1) {
@@ -1278,7 +1294,15 @@ function updateStock(data) {
     
     let updatedCount = 0;
     
-    data.items.forEach(item => {
+    // CORRECTION: Support both data.items (from createOrder) and data as array (from updateStock)
+    const itemsArray = data.items || data;
+    
+    if (!Array.isArray(itemsArray)) {
+      Logger.log('ERROR: data.items is not an array: ' + JSON.stringify(data));
+      return { success: false, error: 'Invalid data format: items must be an array' };
+    }
+    
+    itemsArray.forEach(item => {
       const quantityToAdd = Number(item.quantityToAdd || item.quantity);
       
       if (isNaN(quantityToAdd)) {
@@ -1352,7 +1376,7 @@ function setupSheets() {
     if (itemsSheet) {
       const headers = itemsSheet.getRange(1, 1, 1, itemsSheet.getLastColumn()).getValues()[0];
       
-      const requiredCols = ['orderId', 'sku', 'quantity', 'pricePerUnit', 'receivedQuantity', 'discrepancyType', 'discrepancyNotes'];
+      const requiredCols = ['orderId', 'sku', 'quantity', 'pricePerUnit', 'receivedQuantity', 'discrepancyType', 'discrepancyQuantity', 'damagedQuantity', 'discrepancyNotes'];
       const missingCols = requiredCols.filter(col => !headers.includes(col));
       
       if (missingCols.length > 0) {
@@ -1735,1026 +1759,4 @@ function testActions() {
     actions: actions,
     timestamp: new Date().toISOString()
   };
-}
-
-// ============================================
-// FONCTION PRINCIPALE DO GET (pour CORS)
-// ============================================
-
-function doGet(e) {
-  try {
-    Logger.log('=== GET REQUEST ===');
-    Logger.log('Type de e: ' + typeof e);
-    Logger.log('e est null: ' + (e === null));
-    Logger.log('e est undefined: ' + (e === undefined));
-    
-    // Si e est undefined, créer un objet par défaut
-    if (typeof e === 'undefined' || e === null) {
-      Logger.log('⚠️ e est undefined/null, création d\'un objet par défaut');
-      e = { parameter: {} };
-    }
-    
-    Logger.log('e après correction: ' + JSON.stringify(e));
-    Logger.log('e.parameter: ' + JSON.stringify(e.parameter || {}));
-    
-    // Vérifier que e existe
-    if (!e) {
-      Logger.log('❌ ERREUR: Paramètre e est undefined');
-      return ContentService
-        .createTextOutput(JSON.stringify({ success: false, error: 'Paramètre e manquant' }))
-        .setMimeType(ContentService.MimeType.JSON);
-    }
-    
-    Logger.log('Paramètres: ' + JSON.stringify(e.parameter || {}));
-    
-    // Gérer les requêtes OPTIONS pour CORS
-    if (e.parameter && e.parameter.action === 'options') {
-      return ContentService
-        .createTextOutput('')
-        .setMimeType(ContentService.MimeType.JSON);
-    }
-    
-    // Traiter directement les requêtes GET au lieu de rediriger vers doPost
-    const action = (e.parameter && e.parameter.action) || 'getAllData';
-    Logger.log('Action extraite: "' + action + '"');
-    Logger.log('Action type: ' + typeof action);
-    Logger.log('Action length: ' + action.length);
-    
-    let result;
-    
-    // Créer un objet data avec tous les paramètres GET
-    const data = {};
-    if (e.parameter) {
-      Object.keys(e.parameter).forEach(key => {
-        data[key] = e.parameter[key];
-      });
-    }
-    
-    Logger.log('Données traitées: ' + JSON.stringify(data));
-    Logger.log('Début du switch avec action: "' + action + '"');
-    
-    switch (action) {
-      case 'test':
-        result = test();
-        break;
-      case 'testActions':
-        result = testActions();
-        break;
-      case 'getAllData':
-        result = getAllData();
-        break;
-      case 'getProducts':
-        result = getProducts();
-        break;
-      case 'getSuppliers':
-        result = getSuppliers();
-        break;
-      case 'getWarehouses':
-        result = getWarehouses();
-        break;
-      case 'getOrders':
-        result = getOrders();
-        break;
-      case 'updateOrderStatus':
-        result = updateOrderStatus(data);
-        break;
-      case 'updateStock':
-        result = updateStock(data);
-        break;
-      case 'updateParameter':
-        result = updateParameter(data);
-        break;
-      case 'createWarehouse':
-        result = createWarehouse(data);
-        break;
-      case 'updateWarehouse':
-        result = updateWarehouse(data);
-        break;
-      case 'deleteWarehouse':
-        result = deleteWarehouse(data);
-        break;
-      case 'assignSupplierToProduct':
-        result = assignSupplierToProduct(data);
-        break;
-      case 'removeSupplierFromProduct':
-        result = removeSupplierFromProduct(data);
-        break;
-      case 'createSupplier':
-        result = createSupplier(data);
-        break;
-      case 'updateSupplier':
-        result = updateSupplier(data);
-        break;
-      case 'deleteSupplier':
-        result = deleteSupplier(data);
-        break;
-      case 'processOrderReconciliation':
-        result = processOrderReconciliation(data);
-        break;
-      case 'setupOrdersColumns':
-        result = setupOrdersColumns();
-        break;
-      default:
-        result = { success: false, error: 'Action non reconnue: ' + action };
-    }
-    
-    Logger.log('Result: ' + JSON.stringify(result));
-    
-    return ContentService
-      .createTextOutput(JSON.stringify(result))
-      .setMimeType(ContentService.MimeType.JSON);
-    
-  } catch (error) {
-    Logger.log('ERROR doGet: ' + error.toString());
-    return ContentService
-      .createTextOutput(JSON.stringify({ success: false, error: error.toString() }))
-      .setMimeType(ContentService.MimeType.JSON);
-  }
-}
-
-// ============================================
-// FONCTION PRINCIPALE DO POST
-// ============================================
-
-function doPost(e) {
-  try {
-    Logger.log('=== POST REQUEST ===');
-    
-    // Vérifier que e existe
-    if (!e) {
-      Logger.log('❌ ERREUR: Paramètre e est undefined');
-      return ContentService
-        .createTextOutput(JSON.stringify({ success: false, error: 'Paramètre e manquant' }))
-        .setMimeType(ContentService.MimeType.JSON);
-    }
-    
-    Logger.log('PostData: ' + (e.postData ? e.postData.contents : 'undefined'));
-    
-    // Vérifier que postData existe
-    if (!e.postData || !e.postData.contents) {
-      Logger.log('❌ ERREUR: postData ou postData.contents est undefined');
-      return ContentService
-        .createTextOutput(JSON.stringify({ success: false, error: 'postData manquant' }))
-        .setMimeType(ContentService.MimeType.JSON);
-    }
-    
-    const data = JSON.parse(e.postData.contents);
-    const action = data.action;
-    
-    Logger.log('Action: ' + action);
-    
-    let result;
-    
-    switch (action) {
-      case 'getAllData':
-        result = getAllData();
-        break;
-      case 'getProducts':
-        result = getProducts();
-        break;
-      case 'getSuppliers':
-        result = getSuppliers();
-        break;
-      case 'getWarehouses':
-        result = getWarehouses();
-        break;
-      case 'getOrders':
-        result = getOrders();
-        break;
-      case 'updateOrderStatus':
-        result = updateOrderStatus(data);
-        break;
-      case 'updateStock':
-        result = updateStock(data);
-        break;
-      case 'updateParameter':
-        result = updateParameter(data);
-        break;
-      case 'createWarehouse':
-        result = createWarehouse(data);
-        break;
-      case 'updateWarehouse':
-        result = updateWarehouse(data);
-        break;
-      case 'deleteWarehouse':
-        result = deleteWarehouse(data);
-        break;
-      case 'assignSupplierToProduct':
-        result = assignSupplierToProduct(data);
-        break;
-      case 'removeSupplierFromProduct':
-        result = removeSupplierFromProduct(data);
-        break;
-      case 'createSupplier':
-        result = createSupplier(data);
-        break;
-      case 'updateSupplier':
-        result = updateSupplier(data);
-        break;
-      case 'deleteSupplier':
-        result = deleteSupplier(data);
-        break;
-      case 'processOrderReconciliation':
-        result = processOrderReconciliation(data);
-        break;
-      case 'setupOrdersColumns':
-        result = setupOrdersColumns();
-        break;
-      default:
-        result = { success: false, error: 'Action non reconnue: ' + action };
-    }
-    
-    Logger.log('Result: ' + JSON.stringify(result));
-    
-    return ContentService
-      .createTextOutput(JSON.stringify(result))
-      .setMimeType(ContentService.MimeType.JSON);
-      
-  } catch (error) {
-    Logger.log('ERROR doPost: ' + error.toString());
-    return ContentService
-      .createTextOutput(JSON.stringify({ success: false, error: error.toString() }))
-      .setMimeType(ContentService.MimeType.JSON);
-  }
-}
-
-// ============================================
-// FONCTION DOGET (pour les requêtes GET)
-// ============================================
-
-function doGet(e) {
-  try {
-    Logger.log('🔧 doGet démarré');
-    
-    // Gérer les cas où e est undefined
-    if (!e) {
-      Logger.log('⚠️ Paramètre e est undefined, création d\'objet par défaut');
-      e = { parameter: {} };
-    }
-    
-    if (!e.parameter) {
-      Logger.log('⚠️ e.parameter est undefined, création d\'objet par défaut');
-      e.parameter = {};
-    }
-    
-    Logger.log('🔍 Paramètres GET: ' + JSON.stringify(e.parameter));
-    
-    const action = e.parameter.action || 'getAllData';
-    Logger.log('🎯 Action demandée: ' + action);
-    
-    let result;
-    
-    switch (action) {
-      case 'getAllData':
-        result = getAllData();
-        break;
-      case 'getOrders':
-        result = getOrders();
-        break;
-      case 'updateOrderStatus':
-        result = updateOrderStatus(e.parameter);
-        break;
-      case 'updateStock':
-        result = updateStock(e.parameter);
-        break;
-      case 'updateParameter':
-        result = updateParameter(e.parameter);
-        break;
-      case 'createWarehouse':
-        result = createWarehouse(e.parameter);
-        break;
-      case 'updateWarehouse':
-        result = updateWarehouse(e.parameter);
-        break;
-      case 'deleteWarehouse':
-        result = deleteWarehouse(e.parameter);
-        break;
-      case 'assignSupplierToProduct':
-        result = assignSupplierToProduct(e.parameter);
-        break;
-      case 'removeSupplierFromProduct':
-        result = removeSupplierFromProduct(e.parameter);
-        break;
-      case 'createSupplier':
-        result = createSupplier(e.parameter);
-        break;
-      case 'updateSupplier':
-        result = updateSupplier(e.parameter);
-        break;
-      case 'deleteSupplier':
-        result = deleteSupplier(e.parameter);
-        break;
-      case 'processOrderReconciliation':
-        result = processOrderReconciliation(e.parameter);
-        break;
-      case 'setupOrdersColumns':
-        result = setupOrdersColumns();
-        break;
-      case 'test':
-        result = { success: true, message: 'Test réussi - Script fonctionnel' };
-        break;
-      case 'testActions':
-        result = { 
-          success: true, 
-          actions: [
-            'getAllData', 'getOrders', 'createOrder', 'updateOrderStatus',
-            'updateStock', 'updateParameter', 'createWarehouse', 'updateWarehouse',
-            'deleteWarehouse', 'assignSupplierToProduct', 'removeSupplierFromProduct',
-            'createSupplier', 'updateSupplier', 'deleteSupplier', 'processOrderReconciliation',
-            'setupOrdersColumns', 'test', 'testActions'
-          ]
-        };
-        break;
-      default:
-        result = { success: false, error: 'Action non reconnue: ' + action };
-    }
-    
-    Logger.log('✅ doGet résultat: ' + JSON.stringify(result));
-    
-    return ContentService
-      .createTextOutput(JSON.stringify(result))
-      .setMimeType(ContentService.MimeType.JSON);
-      
-  } catch (error) {
-    Logger.log('❌ ERREUR doGet: ' + error.toString());
-    return ContentService
-      .createTextOutput(JSON.stringify({ success: false, error: error.toString() }))
-      .setMimeType(ContentService.MimeType.JSON);
-  }
-}
-
-// ============================================
-// FONCTION UPDATE ORDER STATUS
-// ============================================
-
-function updateOrderStatus(data) {
-  try {
-    Logger.log('🔧 updateOrderStatus démarré avec data: ' + JSON.stringify(data));
-    
-    const { orderId, status, trackingNumber, trackingUrl } = data;
-    
-    if (!orderId || !status) {
-      return { success: false, error: 'orderId et status requis' };
-    }
-    
-    const ordersSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Commandes');
-    if (!ordersSheet) {
-      return { success: false, error: 'Feuille Commandes non trouvée' };
-    }
-    
-    const values = ordersSheet.getDataRange().getValues();
-    const headers = values[0];
-    
-    // Trouver les index des colonnes
-    const idIndex = headers.indexOf('id');
-    const statusIndex = headers.indexOf('status');
-    const trackingNumberIndex = headers.indexOf('trackingNumber');
-    const trackingUrlIndex = headers.indexOf('trackingUrl');
-    const etaIndex = headers.indexOf('eta');
-    const shippedAtIndex = headers.indexOf('shippedAt');
-    const confirmedAtIndex = headers.indexOf('confirmedAt');
-    
-    Logger.log('🔍 Index des colonnes: id=' + idIndex + ', status=' + statusIndex + ', trackingNumber=' + trackingNumberIndex + ', trackingUrl=' + trackingUrlIndex + ', eta=' + etaIndex);
-    
-    // Trouver la ligne de la commande
-    let orderFound = false;
-    let orderRow = -1;
-    
-    for (let i = 1; i < values.length; i++) {
-      if (values[i][idIndex] === orderId) {
-        orderFound = true;
-        orderRow = i;
-        break;
-      }
-    }
-    
-    Logger.log('🔍 Commande trouvée: ' + orderFound + ', ligne: ' + orderRow);
-    
-    if (!orderFound) {
-      return { success: false, error: 'Commande non trouvée: ' + orderId };
-    }
-    
-    // Mettre à jour le statut
-    ordersSheet.getRange(orderRow + 1, statusIndex + 1).setValue(status);
-    
-    // Mettre à jour les champs optionnels
-    if (trackingNumber !== undefined) {
-      ordersSheet.getRange(orderRow + 1, trackingNumberIndex + 1).setValue(trackingNumber);
-    }
-    
-    if (trackingUrl !== undefined) {
-      ordersSheet.getRange(orderRow + 1, trackingUrlIndex + 1).setValue(trackingUrl);
-    }
-    
-    // Calculer l'ETA selon le statut
-    let eta = null;
-    const currentDate = new Date();
-    
-    if (status === 'preparing') {
-      // Pour preparing, calculer ETA basé sur la date actuelle + leadTimeDays
-      const suppliersSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Fournisseurs');
-      if (suppliersSheet) {
-        const supplierValues = suppliersSheet.getDataRange().getValues();
-        const supplierHeaders = supplierValues[0];
-        const supplierNameIndex = supplierHeaders.indexOf('Nom Fournisseur');
-        const leadTimeIndex = supplierHeaders.indexOf('leadTimeDays');
-        
-        // Trouver le fournisseur de cette commande
-        const orderSupplier = values[orderRow][headers.indexOf('supplier')];
-        
-        for (let i = 1; i < supplierValues.length; i++) {
-          if (supplierValues[i][supplierNameIndex] === orderSupplier) {
-            const leadTimeDays = supplierValues[i][leadTimeIndex] || 30; // Default 30 days
-            eta = new Date(currentDate.getTime() + (leadTimeDays * 24 * 60 * 60 * 1000));
-            break;
-          }
-        }
-      }
-      
-      // Mettre à jour confirmedAt
-      if (confirmedAtIndex >= 0) {
-        ordersSheet.getRange(orderRow + 1, confirmedAtIndex + 1).setValue(currentDate);
-      }
-      
-    } else if (status === 'in_transit') {
-      // Pour in_transit, calculer ETA basé sur shippedAt + leadTimeDays
-      const shippedAt = values[orderRow][shippedAtIndex];
-      Logger.log('🔍 Debug in_transit - shippedAt: ' + shippedAt);
-      Logger.log('🔍 Debug in_transit - shippedAtIndex: ' + shippedAtIndex);
-      
-      if (shippedAt) {
-        const suppliersSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Fournisseurs');
-        if (suppliersSheet) {
-          const supplierValues = suppliersSheet.getDataRange().getValues();
-          const supplierHeaders = supplierValues[0];
-          const supplierNameIndex = supplierHeaders.indexOf('Nom Fournisseur');
-          const leadTimeIndex = supplierHeaders.indexOf('leadTimeDays');
-          
-          // Trouver le fournisseur de cette commande
-          const orderSupplier = values[orderRow][headers.indexOf('supplier')];
-          Logger.log('🔍 Debug in_transit - orderSupplier: ' + orderSupplier);
-          Logger.log('🔍 Debug in_transit - supplierNameIndex: ' + supplierNameIndex);
-          Logger.log('🔍 Debug in_transit - leadTimeIndex: ' + leadTimeIndex);
-          
-          for (let i = 1; i < supplierValues.length; i++) {
-            Logger.log('🔍 Debug in_transit - supplierValues[' + i + ']: ' + JSON.stringify(supplierValues[i]));
-            if (supplierValues[i][supplierNameIndex] === orderSupplier) {
-              const leadTimeDays = supplierValues[i][leadTimeIndex] || 30; // Default 30 days
-              Logger.log('🔍 Debug in_transit - leadTimeDays trouvé: ' + leadTimeDays);
-              eta = new Date(new Date(shippedAt).getTime() + (leadTimeDays * 24 * 60 * 60 * 1000));
-              Logger.log('📅 ETA calculé pour in_transit: ' + eta + ' (shippedAt: ' + shippedAt + ', leadTime: ' + leadTimeDays + ' jours)');
-              break;
-            }
-          }
-        }
-      }
-      
-      // Mettre à jour shippedAt si pas déjà défini
-      if (shippedAtIndex >= 0 && !values[orderRow][shippedAtIndex]) {
-        ordersSheet.getRange(orderRow + 1, shippedAtIndex + 1).setValue(currentDate);
-      }
-    }
-    
-    // Sauvegarder l'ETA si calculé
-    if (eta && etaIndex >= 0) {
-      ordersSheet.getRange(orderRow + 1, etaIndex + 1).setValue(eta);
-      Logger.log('💾 ETA sauvegardé: ' + eta);
-    }
-    
-    Logger.log('✅ updateOrderStatus terminé avec succès');
-    return { success: true, message: 'Statut mis à jour avec succès', eta: eta };
-    
-  } catch (error) {
-    Logger.log('❌ Erreur updateOrderStatus: ' + error.toString());
-    return { success: false, error: error.toString() };
-  }
-}
-
-/**
- * Gestionnaire pour les requêtes POST
- */
-function doPost(e) {
-  try {
-    Logger.log('🔍 doPost appelé');
-    
-    if (!e) {
-      Logger.log('⚠️ Paramètre e est undefined dans doPost');
-      return ContentService.createTextOutput(JSON.stringify({ error: 'Paramètre e undefined' }))
-        .setMimeType(ContentService.MimeType.JSON);
-    }
-    
-    if (!e.postData) {
-      Logger.log('⚠️ e.postData est undefined dans doPost');
-      return ContentService.createTextOutput(JSON.stringify({ error: 'Données POST manquantes' }))
-        .setMimeType(ContentService.MimeType.JSON);
-    }
-    
-    Logger.log('🔍 Données POST: ' + e.postData.contents);
-    
-    // Parser les données JSON
-    const data = JSON.parse(e.postData.contents);
-    
-    // Extraire l'action de l'URL ou du body
-    let action = 'getAllData';
-    if (e.parameter && e.parameter.action) {
-      action = e.parameter.action;
-    } else if (data.action) {
-      action = data.action;
-    }
-    
-    Logger.log('🎯 Action POST demandée: ' + action);
-    
-    let result;
-    
-    switch (action) {
-      case 'createOrder':
-        result = createOrder(data);
-        break;
-      case 'updateOrderStatus':
-        result = updateOrderStatus(data);
-        break;
-      case 'updateStock':
-        result = updateStock(data);
-        break;
-      case 'updateParameter':
-        result = updateParameter(data);
-        break;
-      case 'createWarehouse':
-        result = createWarehouse(data);
-        break;
-      case 'updateWarehouse':
-        result = updateWarehouse(data);
-        break;
-      case 'deleteWarehouse':
-        result = deleteWarehouse(data);
-        break;
-      case 'assignSupplierToProduct':
-        result = assignSupplierToProduct(data);
-        break;
-      case 'removeSupplierFromProduct':
-        result = removeSupplierFromProduct(data);
-        break;
-      case 'createSupplier':
-        result = createSupplier(data);
-        break;
-      case 'updateSupplier':
-        result = updateSupplier(data);
-        break;
-      case 'deleteSupplier':
-        result = deleteSupplier(data);
-        break;
-      case 'updateProduct':
-        result = updateProduct(data);
-        break;
-      case 'processOrderReconciliation':
-        result = processOrderReconciliation(data);
-        break;
-      default:
-        result = { error: 'Action non reconnue: ' + action };
-    }
-    
-    Logger.log('✅ doPost résultat: ' + JSON.stringify(result));
-    return ContentService.createTextOutput(JSON.stringify(result))
-      .setMimeType(ContentService.MimeType.JSON);
-      
-  } catch (error) {
-    Logger.log('❌ Erreur doPost: ' + error.toString());
-    return ContentService.createTextOutput(JSON.stringify({ error: error.toString() }))
-      .setMimeType(ContentService.MimeType.JSON);
-  }
-}
-
-/**
- * Met à jour le stock des produits
- */
-function updateStock(items) {
-  try {
-    Logger.log('📦 updateStock - Données reçues: ' + JSON.stringify(items));
-    
-    if (!items || !Array.isArray(items)) {
-      return { error: 'Données de stock invalides' };
-    }
-    
-    const productsSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Produits');
-    if (!productsSheet) {
-      return { error: 'Feuille Produits non trouvée' };
-    }
-    
-    const headers = productsSheet.getRange(1, 1, 1, productsSheet.getLastColumn()).getValues()[0];
-    Logger.log('🔍 En-têtes de colonnes dans Produits: ' + JSON.stringify(headers));
-    
-    const skuIndex = headers.indexOf('sku');
-    const stockIndex = headers.indexOf('stock');
-    
-    if (skuIndex === -1) {
-      return { error: 'Colonne sku non trouvée' };
-    }
-    
-    if (stockIndex === -1) {
-      return { error: 'Colonne stock non trouvée' };
-    }
-    
-    const values = productsSheet.getDataRange().getValues();
-    let updatedCount = 0;
-    
-    for (const stockUpdate of items) {
-      const { sku, quantityToAdd } = stockUpdate;
-      
-      if (!sku || quantityToAdd === undefined) {
-        Logger.log('⚠️ Données invalides pour updateStock: ' + JSON.stringify(stockUpdate));
-        continue;
-      }
-      
-      // Trouver la ligne du produit
-      for (let i = 1; i < values.length; i++) {
-        if (values[i][skuIndex] === sku) {
-          const currentStock = parseFloat(values[i][stockIndex]) || 0;
-          const newStock = currentStock + parseFloat(quantityToAdd);
-          
-          // Mettre à jour le stock
-          productsSheet.getRange(i + 1, stockIndex + 1).setValue(newStock);
-          
-          Logger.log(`✅ Stock mis à jour pour ${sku}: ${currentStock} + ${quantityToAdd} = ${newStock}`);
-          updatedCount++;
-          break;
-        }
-      }
-    }
-    
-    Logger.log(`✅ ${updatedCount} produits mis à jour`);
-    return { 
-      success: true, 
-      message: `${updatedCount} produits mis à jour`,
-      updatedCount: updatedCount
-    };
-    
-  } catch (error) {
-    Logger.log('❌ Erreur updateStock: ' + error.toString());
-    return { error: error.toString() };
-  }
-}
-
-// ============================================
-// INSTRUCTIONS D'UTILISATION
-// ============================================
-/*
-
-COMMENT UTILISER CE SCRIPT DE DIAGNOSTIC:
-
-1. Copiez tout ce code
-2. Collez-le À LA FIN de votre fichier Code.gs (après toutes les autres fonctions)
-3. Sauvegardez (Ctrl+S)
-4. Dans le menu déroulant en haut, sélectionnez: runAllDiagnostics
-5. Cliquez sur ▶ Exécuter
-6. Consultez les logs: View > Logs (ou Ctrl+Enter)
-7. Copiez TOUS les logs et envoyez-les moi
-
-Les logs vont me dire EXACTEMENT où se trouve le problème:
-- ✅ Si les tests passent: le problème est dans le frontend/déploiement
-- ❌ Si les tests échouent: le problème est dans le code Apps Script
-
-// ============================================
-// FONCTION DOPOST (pour les requêtes POST)
-// ============================================
-
-function doPost(e) {
-  try {
-    Logger.log('🔧 doPost démarré');
-    
-    // Gérer les cas où e est undefined
-    if (!e) {
-      Logger.log('⚠️ Paramètre e est undefined, création d\'objet par défaut');
-      e = { postData: { contents: '{}' } };
-    }
-    
-    if (!e.postData) {
-      Logger.log('⚠️ e.postData est undefined, création d\'objet par défaut');
-      e.postData = { contents: '{}' };
-    }
-    
-    Logger.log('🔍 Données POST: ' + e.postData.contents);
-    
-    // Parser les données JSON
-    const data = JSON.parse(e.postData.contents);
-    
-    // Extraire l'action de l'URL ou du body
-    let action = 'getAllData';
-    if (e.parameter && e.parameter.action) {
-      action = e.parameter.action;
-    } else if (data.action) {
-      action = data.action;
-    }
-    
-    Logger.log('🎯 Action demandée: ' + action);
-    
-    let result;
-    
-    switch (action) {
-      case 'createOrder':
-        result = createOrder(data);
-        break;
-      case 'updateOrderStatus':
-        result = updateOrderStatus(data);
-        break;
-      case 'updateStock':
-        result = updateStock(data);
-        break;
-      case 'updateParameter':
-        result = updateParameter(data);
-        break;
-      case 'createWarehouse':
-        result = createWarehouse(data);
-        break;
-      case 'updateWarehouse':
-        result = updateWarehouse(data);
-        break;
-      case 'deleteWarehouse':
-        result = deleteWarehouse(data);
-        break;
-      case 'assignSupplierToProduct':
-        result = assignSupplierToProduct(data);
-        break;
-      case 'removeSupplierFromProduct':
-        result = removeSupplierFromProduct(data);
-        break;
-      case 'createSupplier':
-        result = createSupplier(data);
-        break;
-      case 'updateSupplier':
-        result = updateSupplier(data);
-        break;
-      case 'deleteSupplier':
-        result = deleteSupplier(data);
-        break;
-      case 'processOrderReconciliation':
-        result = processOrderReconciliation(data);
-        break;
-      case 'updateOrderStatus':
-        result = updateOrderStatus(data);
-        break;
-      case 'updateStock':
-        result = updateStock(data);
-        break;
-      default:
-        result = { error: 'Action non reconnue: ' + action };
-    }
-    
-    Logger.log('📤 Résultat: ' + JSON.stringify(result));
-    
-    return ContentService
-      .createTextOutput(JSON.stringify(result))
-      .setMimeType(ContentService.MimeType.JSON);
-      
-  } catch (error) {
-    Logger.log('❌ ERREUR doPost: ' + error.toString());
-    return ContentService
-      .createTextOutput(JSON.stringify({ error: error.toString() }))
-      .setMimeType(ContentService.MimeType.JSON);
-  }
-}
-
-/**
- * Met à jour le statut d'une commande
- */
-function updateOrderStatus(data) {
-  try {
-    Logger.log('🔄 updateOrderStatus - Données reçues: ' + JSON.stringify(data));
-    
-    const { orderId, status, ...additionalData } = data;
-    
-    if (!orderId || !status) {
-      return { error: 'orderId et status sont requis' };
-    }
-    
-    const ordersSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Commandes');
-    if (!ordersSheet) {
-      return { error: 'Feuille Commandes non trouvée' };
-    }
-    
-    const headers = ordersSheet.getRange(1, 1, 1, ordersSheet.getLastColumn()).getValues()[0];
-    const idIndex = headers.indexOf('id');
-    
-    if (idIndex === -1) {
-      return { error: 'Colonne id non trouvée' };
-    }
-    
-    const values = ordersSheet.getDataRange().getValues();
-    let orderFound = false;
-    
-    for (let i = 1; i < values.length; i++) {
-      if (values[i][idIndex] === orderId) {
-        // Trouver l'index de la colonne status
-        const statusIndex = headers.indexOf('status');
-        if (statusIndex !== -1) {
-          ordersSheet.getRange(i + 1, statusIndex + 1).setValue(status);
-        }
-        
-        // Mettre à jour les autres champs si fournis
-        Object.keys(additionalData).forEach(key => {
-          const keyIndex = headers.indexOf(key);
-          if (keyIndex !== -1) {
-            ordersSheet.getRange(i + 1, keyIndex + 1).setValue(additionalData[key]);
-          }
-        });
-        
-        // Gestion spéciale pour les champs de réconciliation
-        if (additionalData.hasDiscrepancy !== undefined) {
-          const hasDiscrepancyIndex = headers.indexOf('hasDiscrepancy');
-          if (hasDiscrepancyIndex !== -1) {
-            ordersSheet.getRange(i + 1, hasDiscrepancyIndex + 1).setValue(additionalData.hasDiscrepancy);
-          }
-        }
-        
-        if (additionalData.damageReport !== undefined) {
-          const damageReportIndex = headers.indexOf('damageReport');
-          if (damageReportIndex !== -1) {
-            ordersSheet.getRange(i + 1, damageReportIndex + 1).setValue(additionalData.damageReport);
-          }
-        }
-        
-        orderFound = true;
-        break;
-      }
-    }
-    
-    if (!orderFound) {
-      return { error: 'Commande non trouvée: ' + orderId };
-    }
-    
-    Logger.log('✅ Statut mis à jour pour ' + orderId + ' vers ' + status);
-    return { success: true, message: 'Statut mis à jour' };
-    
-  } catch (error) {
-    Logger.log('❌ Erreur updateOrderStatus: ' + error.toString());
-    return { error: error.toString() };
-  }
-}
-
-/**
- * Traite la réconciliation d'une commande avec les quantités reçues
- */
-function processOrderReconciliation(data) {
-  try {
-    Logger.log('🔄 processOrderReconciliation - Données reçues: ' + JSON.stringify(data));
-    
-    const { orderId, receivedItems, discrepancies, damages, notes } = data;
-    
-    if (!orderId) {
-      return { error: 'orderId est requis' };
-    }
-    
-    const ordersSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Commandes');
-    if (!ordersSheet) {
-      return { error: 'Feuille Commandes non trouvée' };
-    }
-    
-    const headers = ordersSheet.getRange(1, 1, 1, ordersSheet.getLastColumn()).getValues()[0];
-    const idIndex = headers.indexOf('id');
-    
-    if (idIndex === -1) {
-      return { error: 'Colonne id non trouvée' };
-    }
-    
-    const values = ordersSheet.getDataRange().getValues();
-    let orderFound = false;
-    
-    for (let i = 1; i < values.length; i++) {
-      if (values[i][idIndex] === orderId) {
-        // Vérifier s'il y a des écarts ou des dommages
-        const hasDiscrepancy = Object.values(discrepancies || {}).some(d => d !== 0);
-        const hasDamage = Object.values(damages || {}).some(d => d > 0);
-        
-        Logger.log('🔍 Analyse des écarts pour ' + orderId + ':');
-        Logger.log('- hasDiscrepancy: ' + hasDiscrepancy);
-        Logger.log('- hasDamage: ' + hasDamage);
-        Logger.log('- discrepancies: ' + JSON.stringify(discrepancies));
-        Logger.log('- damages: ' + JSON.stringify(damages));
-        
-        // Mettre à jour le statut selon les écarts
-        const statusIndex = headers.indexOf('status');
-        if (statusIndex !== -1) {
-          if (hasDiscrepancy || hasDamage) {
-            ordersSheet.getRange(i + 1, statusIndex + 1).setValue('reconciliation');
-            Logger.log('✅ Statut mis à jour vers: reconciliation');
-          } else {
-            ordersSheet.getRange(i + 1, statusIndex + 1).setValue('completed');
-            Logger.log('✅ Statut mis à jour vers: completed');
-          }
-        }
-        
-        // Mettre à jour hasDiscrepancy
-        const hasDiscrepancyIndex = headers.indexOf('hasDiscrepancy');
-        if (hasDiscrepancyIndex !== -1) {
-          ordersSheet.getRange(i + 1, hasDiscrepancyIndex + 1).setValue(hasDiscrepancy);
-        }
-        
-        // Mettre à jour damageReport
-        const damageReportIndex = headers.indexOf('damageReport');
-        if (damageReportIndex !== -1) {
-          ordersSheet.getRange(i + 1, damageReportIndex + 1).setValue(hasDamage);
-        }
-        
-        // Mettre à jour les notes si fournies
-        if (notes) {
-          const notesIndex = headers.indexOf('notes');
-          if (notesIndex !== -1) {
-            ordersSheet.getRange(i + 1, notesIndex + 1).setValue(notes);
-          }
-        }
-        
-        // Mettre à jour la date de réception
-        const receivedAtIndex = headers.indexOf('receivedAt');
-        if (receivedAtIndex !== -1) {
-          ordersSheet.getRange(i + 1, receivedAtIndex + 1).setValue(new Date().toISOString().split('T')[0]);
-        }
-        
-        orderFound = true;
-        break;
-      }
-    }
-    
-    if (!orderFound) {
-      return { error: 'Commande non trouvée: ' + orderId };
-    }
-    
-    Logger.log('✅ Réconciliation traitée pour ' + orderId);
-    return { 
-      success: true, 
-      message: 'Réconciliation enregistrée',
-      hasDiscrepancy: hasDiscrepancy,
-      hasDamage: hasDamage
-    };
-    
-  } catch (error) {
-    Logger.log('❌ Erreur processOrderReconciliation: ' + error.toString());
-    return { error: error.toString() };
-  }
-}
-
-/**
- * Met à jour le stock des produits
- */
-function updateStock(data) {
-  try {
-    Logger.log('📦 updateStock - Données reçues: ' + JSON.stringify(data));
-    
-    if (!data || !Array.isArray(data)) {
-      return { error: 'Données de stock invalides' };
-    }
-    
-    const productsSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Produits');
-    if (!productsSheet) {
-      return { error: 'Feuille Produits non trouvée' };
-    }
-    
-    const headers = productsSheet.getRange(1, 1, 1, productsSheet.getLastColumn()).getValues()[0];
-    const skuIndex = headers.indexOf('sku');
-    const stockIndex = headers.indexOf('stock');
-    
-    if (skuIndex === -1) {
-      return { error: 'Colonne sku non trouvée' };
-    }
-    
-    if (stockIndex === -1) {
-      return { error: 'Colonne stock non trouvée' };
-    }
-    
-    const values = productsSheet.getDataRange().getValues();
-    let updatedCount = 0;
-    
-    for (const stockUpdate of data) {
-      const { sku, quantityToAdd } = stockUpdate;
-      
-      if (!sku || quantityToAdd === undefined) {
-        Logger.log('⚠️ Données invalides pour updateStock:', stockUpdate);
-        continue;
-      }
-      
-      // Trouver la ligne du produit
-      for (let i = 1; i < values.length; i++) {
-        if (values[i][skuIndex] === sku) {
-          const currentStock = parseFloat(values[i][stockIndex]) || 0;
-          const newStock = currentStock + parseFloat(quantityToAdd);
-          
-          // Mettre à jour le stock
-          productsSheet.getRange(i + 1, stockIndex + 1).setValue(newStock);
-          
-          Logger.log(`✅ Stock mis à jour pour ${sku}: ${currentStock} + ${quantityToAdd} = ${newStock}`);
-          updatedCount++;
-          break;
-        }
-      }
-    }
-    
-    Logger.log(`✅ ${updatedCount} produits mis à jour`);
-    return { 
-      success: true, 
-      message: `${updatedCount} produits mis à jour`,
-      updatedCount: updatedCount
-    };
-    
-  } catch (error) {
-    Logger.log('❌ Erreur updateStock: ' + error.toString());
-    return { error: error.toString() };
-  }
 }

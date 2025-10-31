@@ -1080,6 +1080,9 @@ ${getUserSignature()}`
         // Calculer le total reçu (sain + endommagé)
         const totalReceived = receivedQty + damagedQty;
         
+        // Calculer l'écart de quantité (commande - total reçu)
+        const discrepancyQty = item.quantity - totalReceived;
+        
         // Déterminer le type de problème
         let itemType = 'none';
         const hasMissing = totalReceived < item.quantity;
@@ -1100,6 +1103,7 @@ ${getUserSignature()}`
           receivedQuantity: receivedQty,
           damagedQuantity: damagedQty,
           discrepancyType: itemType,
+          discrepancyQuantity: discrepancyQty,
           discrepancyNotes: notes
         };
       });
@@ -1311,6 +1315,8 @@ ${getUserSignature()}`
         const receivedQty = parseInt(data.received, 10) || 0;
         const damagedQty = parseInt(data.damaged, 10) || 0;
         const validatedQty = receivedQty - damagedQty;
+        const totalReceived = receivedQty + damagedQty;
+        const discrepancyQty = item.quantity - totalReceived;
         
         return {
           sku: item.sku,
@@ -1318,8 +1324,9 @@ ${getUserSignature()}`
           pricePerUnit: item.pricePerUnit,
           receivedQuantity: receivedQty,
           damagedQuantity: damagedQty,
+          discrepancyQuantity: discrepancyQty,
           validatedQuantity: validatedQty,
-          quantityDiscrepancy: item.quantity - receivedQty
+          quantityDiscrepancy: discrepancyQty
         };
       });
 

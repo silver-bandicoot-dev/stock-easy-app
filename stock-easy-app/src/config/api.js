@@ -8,7 +8,7 @@
 
 // Utiliser la variable d'environnement ou fallback temporaire
 export const API_URL = import.meta.env.VITE_API_URL || 
-  'https://script.google.com/macros/s/AKfycbwbALeqnxjjE2rMooRQLvd_BJeJzmFbDLDMNiameT-wzWVHHwRSUdPTQAPt7NzRpgl4/exec';
+  'https://script.google.com/macros/s/AKfycbxm4ieJCennrvpbj-ZBW2foHkI9eeYr5zuuML6q_YwBCsQbT6TR7w9zzLTgFEmvqvm5/exec';
 
 // Avertissement si on utilise le fallback
 if (!import.meta.env.VITE_API_URL) {
