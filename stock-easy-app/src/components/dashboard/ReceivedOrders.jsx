@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { CheckCircle } from 'lucide-react';
-import { InfoTooltip, tooltips } from '../ui/InfoTooltip/InfoTooltip';
+import { InfoTooltip, tooltips } from '../ui/InfoTooltip';
 import { formatConfirmedDate } from '../../utils/dateUtils';
 
 export const ReceivedOrders = ({ orders, setActiveTab, setTrackTabSection }) => {

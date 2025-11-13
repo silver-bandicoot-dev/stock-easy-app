@@ -48,6 +48,32 @@ describe('calculateMetrics', () => {
     const result = calculateMetrics(product);
     expect(result.daysOfStock).toBe(999);
   });
+
+  it('should fallback lead time and keep security stock >= 1 when missing data', () => {
+    const product = {
+      stock: 50,
+      salesPerDay: 5,
+      leadTimeDays: undefined,
+      leadTime: undefined,
+      customSecurityStock: null
+    };
+    
+    const result = calculateMetrics(product);
+    expect(result.securityStock).toBeGreaterThanOrEqual(1);
+    expect(result.securityStock).toBe(6); // 20% de 30 jours par défaut
+  });
+
+  it('should flag deep overstock when autonomy exceeds the configured threshold', () => {
+    const product = {
+      stock: 600,
+      salesPerDay: 10,
+      leadTimeDays: 14,
+    };
+
+    const result = calculateMetrics(product, 60);
+    expect(result.daysOfStock).toBe(60);
+    expect(result.isDeepOverstock).toBe(true);
+  });
 });
 
 describe('calculateReorderPoint', () => {

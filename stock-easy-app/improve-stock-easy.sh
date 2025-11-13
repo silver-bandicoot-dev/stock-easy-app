@@ -96,7 +96,7 @@ if [ ! -f ".env" ]; then
     if [[ $REPLY =~ ^[Yy]$ ]]; then
         cp .env.example .env
         log_success ".env créé"
-        log_warning "⚠️  IMPORTANT: Éditez .env et ajoutez votre VITE_API_URL"
+        log_warning "⚠️  IMPORTANT: Éditez .env et ajoutez vos clés Supabase (VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY)"
         echo ""
         read -p "Appuyez sur Entrée après avoir édité .env..." 
     fi
@@ -272,13 +272,13 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
 
 ## Vue d'Ensemble
 
-Stock Easy est une application React de gestion de stock connectée à Google Apps Script.
+Stock Easy est une application React de gestion de stock connectée à Supabase (Postgres, Auth, Storage).
 
 ## Stack Technique
 
 - **Frontend**: React 18 + Vite 5
 - **Styling**: Tailwind CSS 3
-- **Backend**: Google Apps Script (API REST)
+- **Backend**: Supabase (Postgres + RPC + RLS)
 - **Hosting**: Vercel
 
 ## Structure Actuelle
@@ -295,7 +295,8 @@ stock-easy-app/
 
 ## Variables d'Environnement
 
-- `VITE_API_URL`: URL de l'API Google Apps Script
+- `VITE_SUPABASE_URL`
+- `VITE_SUPABASE_ANON_KEY`
 
 ## Déploiement
 
@@ -319,7 +320,7 @@ EOF
 ```bash
 npm install
 cp .env.example .env
-# Éditer .env avec votre VITE_API_URL
+# Renseigner VITE_SUPABASE_URL et VITE_SUPABASE_ANON_KEY
 npm run dev
 ```
 
@@ -419,7 +420,7 @@ echo "  ✅ Documentation créée"
 echo ""
 
 log_info "Prochaines étapes recommandées:"
-echo "  1. Vérifier que .env contient la bonne VITE_API_URL"
+echo "  1. Vérifier que .env contient les bonnes valeurs Supabase"
 echo "  2. Configurer les variables d'environnement dans Vercel"
 echo "  3. Tester l'application: npm run dev"
 echo "  4. Commencer le refactoring de StockEasy.jsx"

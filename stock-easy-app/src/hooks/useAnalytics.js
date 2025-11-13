@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '../contexts/SupabaseAuthContext';
+import { useCurrency } from '../contexts/CurrencyContext';
 import { getKPIHistory, calculatePeriodComparison } from '../services/kpiHistoryService';
 
 /**
@@ -71,9 +72,13 @@ function getComparisonPeriod(currentStart, currentEnd, comparisonType) {
  */
 export function useAnalytics(products, orders, dateRange = '30d', customRange = null, comparisonType = 'previous') {
   const { currentUser } = useAuth();
+  const { format: formatCurrency } = useCurrency();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [history, setHistory] = useState([]);
+
+  const formatCurrencyNoDecimals = (amount) =>
+    formatCurrency(amount, { minimumFractionDigits: 0, maximumFractionDigits: 0 });
 
   // ========================================
   // CALCUL DES KPIs ACTUELS
@@ -473,7 +478,7 @@ export function useAnalytics(products, orders, dateRange = '30d', customRange = 
         comparisonValue: comparisonKPIs?.skuAvailabilityRate.toFixed(1) || null
       },
       salesLost: {
-        value: `${periodCurrentKPIs.salesLostAmount.toFixed(0)}€`,
+        value: formatCurrencyNoDecimals(periodCurrentKPIs.salesLostAmount),
         rawValue: periodCurrentKPIs.salesLostAmount,
         change: salesLostComparison.change,
         changePercent: salesLostComparison.changePercent,
@@ -481,10 +486,12 @@ export function useAnalytics(products, orders, dateRange = '30d', customRange = 
         chartData: chartData.salesLost,
         description: `${periodCurrentKPIs.salesLostCount} SKUs en rupture`,
         comparisonPeriod: comparisonPeriodLabel,
-        comparisonValue: comparisonKPIs?.salesLostAmount.toFixed(0) || null
+        comparisonValue: comparisonKPIs?.salesLostAmount !== undefined
+          ? formatCurrencyNoDecimals(comparisonKPIs.salesLostAmount)
+          : null
       },
       overstockCost: {
-        value: `${periodCurrentKPIs.overstockCost.toFixed(0)}€`,
+        value: formatCurrencyNoDecimals(periodCurrentKPIs.overstockCost),
         rawValue: periodCurrentKPIs.overstockCost,
         change: overstockComparison.change,
         changePercent: overstockComparison.changePercent,
@@ -492,14 +499,14 @@ export function useAnalytics(products, orders, dateRange = '30d', customRange = 
         chartData: chartData.overstock,
         description: `${periodCurrentKPIs.overstockSKUs} SKUs en surstock`,
         comparisonPeriod: comparisonPeriodLabel,
-        comparisonValue: comparisonKPIs?.overstockCost.toFixed(0) || null
+        comparisonValue: comparisonKPIs?.overstockCost !== undefined
+          ? formatCurrencyNoDecimals(comparisonKPIs.overstockCost)
+          : null
       },
       inventoryValuation: {
-        value: new Intl.NumberFormat('fr-FR', {
-          style: 'currency',
-          currency: 'EUR',
+        value: formatCurrency(periodCurrentKPIs.inventoryValuation, {
           minimumFractionDigits: 0
-        }).format(periodCurrentKPIs.inventoryValuation),
+        }),
         rawValue: periodCurrentKPIs.inventoryValuation,
         change: inventoryValuationComparison.change,
         changePercent: inventoryValuationComparison.changePercent,
@@ -507,12 +514,8 @@ export function useAnalytics(products, orders, dateRange = '30d', customRange = 
         chartData: chartData.inventoryValuation,
         description: `Valeur monétaire totale de votre inventaire (stock × coût unitaire)`,
         comparisonPeriod: comparisonPeriodLabel,
-        comparisonValue: comparisonKPIs?.inventoryValuation 
-          ? new Intl.NumberFormat('fr-FR', {
-              style: 'currency',
-              currency: 'EUR',
-              minimumFractionDigits: 0
-            }).format(comparisonKPIs.inventoryValuation)
+        comparisonValue: comparisonKPIs?.inventoryValuation !== undefined
+          ? formatCurrency(comparisonKPIs.inventoryValuation, { minimumFractionDigits: 0 })
           : null
       },
       loading,

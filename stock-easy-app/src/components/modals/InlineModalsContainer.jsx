@@ -16,6 +16,7 @@ export const InlineModalsContainer = ({
   getUserSignature,
   handleCreateOrderWithoutEmail,
   handleSendOrder,
+  suppliers,
   
   // Reconciliation Modal props
   reconciliationModal,
@@ -42,6 +43,7 @@ export const InlineModalsContainer = ({
         getUserSignature={getUserSignature}
         handleCreateOrderWithoutEmail={handleCreateOrderWithoutEmail}
         handleSendOrder={handleSendOrder}
+        suppliers={suppliers}
       />
 
       {/* Modal Reconciliation */}
@@ -50,6 +52,8 @@ export const InlineModalsContainer = ({
         onClose={reconciliationModal.closeReconciliationModal}
         reconciliationOrder={reconciliationModal.reconciliationOrder}
         products={products}
+        warehouses={warehouses}
+        suppliers={suppliers}
         discrepancyItems={reconciliationModal.discrepancyItems}
         setDiscrepancyItems={reconciliationModal.setDiscrepancyItems}
         damagedQuantities={reconciliationModal.damagedQuantities}

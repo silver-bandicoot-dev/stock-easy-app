@@ -3,8 +3,10 @@ import { motion } from 'framer-motion';
 import { Package, AlertTriangle, CheckCircle, Eye } from 'lucide-react';
 import { formatUnits } from '../../utils/decimalUtils';
 import { STOCK_FILTERS } from '../../constants/stockEasyConstants';
+import { useCurrency } from '../../contexts/CurrencyContext';
 
 export const StockProductCard = ({ product, suppliers, onViewDetails }) => {
+  const { format: formatCurrency } = useCurrency();
   const getStockStatus = (stock, minStock) => {
     if (stock === 0) return { status: 'out', color: 'text-red-600', bgColor: 'bg-red-50', borderColor: 'border-red-200', icon: AlertTriangle };
     if (stock <= minStock) return { status: 'low', color: 'text-orange-600', bgColor: 'bg-orange-50', borderColor: 'border-orange-200', icon: AlertTriangle };
@@ -56,13 +58,13 @@ export const StockProductCard = ({ product, suppliers, onViewDetails }) => {
             <div>
               <p className="text-xs text-[#666663] mb-1">Prix d'achat</p>
               <p className="text-lg font-bold text-[#191919]">
-                {product.buyPrice?.toFixed(2)}€
+                {formatCurrency(product.buyPrice || 0)}
               </p>
             </div>
             <div>
               <p className="text-xs text-[#666663] mb-1">Prix de vente</p>
               <p className="text-lg font-bold text-[#191919]">
-                {product.sellPrice?.toFixed(2)}€
+                {formatCurrency(product.sellPrice || 0)}
               </p>
             </div>
           </div>

@@ -28,6 +28,34 @@ export function GestionFournisseurs({
     ),
     [suppliersList, searchTerm]
   );
+
+  const safeOpenModal = (supplier) => {
+    if (typeof onOpenModal === 'function') {
+      onOpenModal(supplier);
+    } else {
+      console.error('GestionFournisseurs: onOpenModal non fourni');
+    }
+  };
+
+  const safeDeleteSupplier = (supplier) => {
+    if (typeof onDelete === 'function') {
+      onDelete(supplier);
+    } else {
+      console.error('GestionFournisseurs: onDelete non fourni');
+    }
+  };
+
+  const getSupplierMoq = (supplier) => {
+    const moqCandidates = [
+      supplier?.moq,
+      supplier?.moqStandard,
+      supplier?.defaultMoq,
+      supplier?.minimumOrderQuantity,
+      supplier?.minOrderQuantity
+    ];
+    const value = moqCandidates.find((candidate) => candidate !== undefined && candidate !== null);
+    return value;
+  };
   
   return (
     <div className="space-y-6">
@@ -41,7 +69,7 @@ export function GestionFournisseurs({
         </div>
         
         <Button 
-          onClick={() => onOpenModal(null)}
+          onClick={() => safeOpenModal(null)}
           icon={Plus}
           variant="primary"
         >
@@ -71,6 +99,7 @@ export function GestionFournisseurs({
         ) : (
           filteredSuppliers.map(supplier => {
             const productsCount = products.filter(p => p.supplier === supplier.name).length;
+            const supplierMoq = getSupplierMoq(supplier);
             
             return (
               <div 
@@ -90,15 +119,15 @@ export function GestionFournisseurs({
                       </div>
                       
                       <div className="flex items-center gap-4">
-                        <div className="flex items-center gap-2">
-                          <Clock className="w-4 h-4 shrink-0" />
-                          <span>Délai: {supplier.leadTimeDays}j</span>
-                        </div>
-                        
-                        <div className="flex items-center gap-2">
-                          <Package className="w-4 h-4 shrink-0" />
-                          <span>MOQ: {supplier.moq || 'N/A'} unités</span>
-                        </div>
+                      <div className="flex items-center gap-2">
+                        <Clock className="w-4 h-4 shrink-0" />
+                        <span>Délai: {supplier.leadTimeDays ?? 'N/A'}j</span>
+                      </div>
+                      
+                      <div className="flex items-center gap-2">
+                        <Package className="w-4 h-4 shrink-0" />
+                        <span>MOQ: {supplierMoq ?? 'N/A'} unités</span>
+                      </div>
                       </div>
                       
                       {supplier.notes && (
@@ -119,7 +148,7 @@ export function GestionFournisseurs({
                   
                   <div className="flex gap-2 ml-4">
                     <button
-                      onClick={() => onOpenModal(supplier)}
+                      onClick={() => safeOpenModal(supplier)}
                       className="p-2 text-[#8B5CF6] hover:bg-purple-50 rounded-lg transition-all"
                       title="Modifier"
                     >
@@ -127,7 +156,7 @@ export function GestionFournisseurs({
                     </button>
                     
                     <button
-                      onClick={() => onDelete(supplier)}
+                      onClick={() => safeDeleteSupplier(supplier)}
                       className="p-2 text-[#EF1C43] hover:bg-red-50 rounded-lg transition-all"
                       title="Supprimer"
                     >

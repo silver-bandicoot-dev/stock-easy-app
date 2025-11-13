@@ -6,7 +6,8 @@
  * @param {function} setActiveTab - Fonction pour changer d'onglet
  * @returns {Array} Tableau d'insights avec messages et actions
  */
-export function generateInsights(analyticsData, products, orders, setActiveTab) {
+export function generateInsights(analyticsData, products, orders, setActiveTab, options = {}) {
+  const formatCurrencyValue = options.formatCurrency || ((value) => `${value}€`);
   const insights = [];
   
   console.log('💡 Génération des insights avec:', {
@@ -50,7 +51,7 @@ export function generateInsights(analyticsData, products, orders, setActiveTab) 
       id: 'high-sales-lost',
       type: 'danger',
       kpi: 'salesLost',
-      message: `Vous perdez ${salesLostAmount}€ de CA à cause des ruptures. ${toOrderProducts.length} produit(s) doivent être commandés maintenant.`,
+      message: `Vous perdez ${formatCurrencyValue(salesLostAmount)} de CA à cause des ruptures. ${toOrderProducts.length} produit(s) doivent être commandés maintenant.`,
       actionLabel: 'Commander maintenant',
       action: () => {
         console.log('📍 Navigation vers page de commandes');
@@ -72,7 +73,7 @@ export function generateInsights(analyticsData, products, orders, setActiveTab) 
       id: 'moderate-sales-lost',
       type: 'warning',
       kpi: 'salesLost',
-      message: `${salesLostAmount}€ de ventes perdues détectées. ${outOfStockCount} SKU(s) nécessitent une attention immédiate.`,
+      message: `${formatCurrencyValue(salesLostAmount)} de ventes perdues détectées. ${outOfStockCount} SKU(s) nécessitent une attention immédiate.`,
       actionLabel: 'Analyser',
       action: () => {
         console.log('📍 Navigation vers stock level');
@@ -93,7 +94,7 @@ export function generateInsights(analyticsData, products, orders, setActiveTab) 
       id: 'high-overstock',
       type: 'warning',
       kpi: 'overstockCost',
-      message: `${overstockAmount}€ sont immobilisés dans ${overstockedProducts.length} produit(s) en surstock profond.`,
+      message: `${formatCurrencyValue(overstockAmount)} sont immobilisés dans ${overstockedProducts.length} produit(s) en surstock profond.`,
       actionLabel: 'Optimiser',
       action: () => {
         console.log('📍 Navigation vers stock level pour surstocks');
@@ -113,7 +114,7 @@ export function generateInsights(analyticsData, products, orders, setActiveTab) 
       id: 'moderate-overstock',
       type: 'info',
       kpi: 'overstockCost',
-      message: `${overstockAmount}€ de surstock détectés. Envisagez des promotions pour libérer de la trésorerie.`,
+      message: `${formatCurrencyValue(overstockAmount)} de surstock détectés. Envisagez des promotions pour libérer de la trésorerie.`,
       actionLabel: 'Voir détails',
       action: () => {
         console.log('📍 Navigation vers stock level');
@@ -257,7 +258,7 @@ export function generateInsights(analyticsData, products, orders, setActiveTab) 
       id: 'critical-situation',
       type: 'danger',
       kpi: 'global',
-      message: `🚨 Situation critique détectée: Faible disponibilité (${Math.round(analyticsData.skuAvailability.rawValue)}%), pertes de ${Math.round(analyticsData.salesLost.rawValue)}€, et inventaire en baisse. Action immédiate requise!`,
+      message: `🚨 Situation critique détectée: Faible disponibilité (${Math.round(analyticsData.skuAvailability.rawValue)}%), pertes de ${formatCurrencyValue(Math.round(analyticsData.salesLost.rawValue))}, et inventaire en baisse. Action immédiate requise!`,
       actionLabel: 'Voir les urgences',
       action: () => {
         console.log('📍 Navigation vers actions');

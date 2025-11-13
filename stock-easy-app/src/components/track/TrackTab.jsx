@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Truck, Clock, Package, CheckCircle, AlertTriangle } from 'lucide-react';
 import { TrackSection } from './TrackSection';
 import { TRACK_TABS } from '../../constants/stockEasyConstants';
-import api from '../../services/apiService';
+import api from '../../services/apiAdapter';
 import { toast } from 'sonner';
 
 export const TrackTab = ({
@@ -12,6 +12,7 @@ export const TrackTab = ({
   orders,
   suppliers,
   products,
+  warehouses = {},
   expandedOrders,
   toggleOrderDetails,
   confirmOrder,
@@ -23,7 +24,8 @@ export const TrackTab = ({
   reclamationEmailModal,
   reclamationEmailModalHandlers,
   reconciliationLogic,
-  emailGeneration
+  emailGeneration,
+  loadData
 }) => {
   const trackSections = [
     {
@@ -69,16 +71,46 @@ export const TrackTab = ({
       const order = reconciliationModal.data.order;
       
       // Analyser les données pour déterminer s'il y a des écarts ou dommages
+      console.log('🔍 DONNÉES REÇUES:', reconciliationData);
       const hasDiscrepancies = Object.values(reconciliationData.discrepancies || {}).some(d => d !== 0);
       const hasDamages = Object.values(reconciliationData.damages || {}).some(d => d > 0);
+      console.log('🔍 ANALYSE:', { hasDiscrepancies, hasDamages, discrepancies: reconciliationData.discrepancies, damages: reconciliationData.damages });
       
       if (hasDiscrepancies || hasDamages) {
+        console.log('✅ ENTRÉE DANS LE IF - Il y a des écarts/dommages');
+        // Calculer les quantités manquantes et endommagées par SKU
+        const missingQuantitiesBySku = {};
+        const damagedQuantitiesBySku = {};
+        
+        // Le modal envoie receivedItems = quantités SAINES reçues, damages = quantités endommagées
+        order.items.forEach(item => {
+          const ordered = item.quantity || 0;
+          const receivedSaine = parseInt(reconciliationData.receivedItems?.[item.sku] || 0, 10);
+          const damaged = parseInt(reconciliationData.damages?.[item.sku] || 0, 10);
+          
+          // Missing = Commandé - (Reçu sain + Endommagé)
+          const missing = ordered - receivedSaine - damaged;
+          
+          console.log(`📦 ${item.sku}: commandé=${ordered}, reçu sain=${receivedSaine}, endommagé=${damaged}, manquant=${missing}`);
+          
+          if (missing > 0) {
+            missingQuantitiesBySku[item.sku] = missing;
+          }
+          if (damaged > 0) {
+            damagedQuantitiesBySku[item.sku] = damaged;
+          }
+        });
+        
+        console.log('📦 Résumé réconciliation:', { missingQuantitiesBySku, damagedQuantitiesBySku });
+        
         // Il y a des écarts ou dommages - passer au statut 'reconciliation'
         await api.updateOrderStatus(order.id, {
           status: 'reconciliation',
           receivedAt: new Date().toISOString().split('T')[0],
           hasDiscrepancy: hasDiscrepancies,
-          damageReport: hasDamages
+          damageReport: hasDamages,
+          missingQuantitiesBySku: missingQuantitiesBySku,
+          damagedQuantitiesBySku: damagedQuantitiesBySku
         });
         
         // Mettre à jour le stock avec les quantités reçues
@@ -99,7 +131,8 @@ export const TrackTab = ({
           order,
           reconciliationData.receivedItems,
           reconciliationData.damages,
-          reconciliationData.notes || 'L\'équipe StockEasy'
+          reconciliationData.notes || 'L\'équipe StockEasy',
+          products
         );
         
         if (emailContent) {
@@ -133,11 +166,35 @@ export const TrackTab = ({
       }
       
       // Recharger les données
-      await loadData();
+      if (typeof loadData === 'function') {
+        await loadData();
+      }
       
     } catch (error) {
       console.error('Erreur lors de la réconciliation:', error);
       toast.error('Erreur lors de la réconciliation');
+    }
+  };
+
+  // Handler pour confirmer qu'une commande en réconciliation est terminée
+  const handleConfirmReconciliation = async (orderId) => {
+    try {
+      // Appeler la fonction RPC pour confirmer la réconciliation
+      const result = await api.confirmOrderReconciliation(orderId);
+      
+      if (result.success) {
+        toast.success('Réconciliation confirmée! La commande a été archivée.');
+        
+        // Recharger les données
+        if (typeof loadData === 'function') {
+          await loadData();
+        }
+      } else {
+        toast.error(result.error || 'Erreur lors de la confirmation de la réconciliation');
+      }
+    } catch (error) {
+      console.error('Erreur lors de la confirmation de la réconciliation:', error);
+      toast.error('Erreur lors de la confirmation de la réconciliation');
     }
   };
 
@@ -156,7 +213,9 @@ export const TrackTab = ({
           <Truck className="w-8 h-8 text-[#191919]" />
           <h1 className="text-2xl font-bold text-[#191919]">Track & Manage</h1>
         </div>
-        <p className="text-[#666663] ml-11">Suivez vos commandes et gérez les réceptions</p>
+        <p className="text-xs sm:text-sm text-[#666663]">
+          Suivez vos commandes et gérez les réceptions
+        </p>
         
         {/* Onglets de navigation - Optimisés mobile */}
         <div className="flex gap-2 mt-6 overflow-x-auto pb-2 -mx-2 px-2 sm:mx-0 sm:px-0">
@@ -201,12 +260,14 @@ export const TrackTab = ({
               orders={orders}
               suppliers={suppliers}
               products={products}
+              warehouses={warehouses}
               expandedOrders={expandedOrders}
               toggleOrderDetails={toggleOrderDetails}
               confirmOrder={confirmOrder}
               shipOrder={shipOrder}
               receiveOrder={receiveOrder}
               onStartReconciliation={handleStartReconciliation}
+              onConfirmReconciliation={handleConfirmReconciliation}
             />
           )
         ))}

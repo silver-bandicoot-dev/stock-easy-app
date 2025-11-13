@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import api from '../services/apiService';
+import api from '../services/apiAdapter';
 
 /**
  * Hook pour gérer les produits

@@ -234,7 +234,7 @@ chmod +x improve-stock-easy.sh
 ```bash
 - GitHub (déjà configuré)
 - Vercel (déjà configuré)
-- Google Apps Script API (déjà en place)
+- Supabase (déjà en place)
 ```
 
 ### Extensions VS Code Recommandées
@@ -338,7 +338,7 @@ Avant de commencer, assurez-vous que:
 **Accès:**
 - [ ] Accès GitHub au repository
 - [ ] Accès Vercel dashboard
-- [ ] Variable VITE_API_URL disponible
+- [ ] Variables VITE_SUPABASE_URL & VITE_SUPABASE_ANON_KEY disponibles
 
 **Compréhension:**
 - [ ] EXECUTIVE_SUMMARY.md lu

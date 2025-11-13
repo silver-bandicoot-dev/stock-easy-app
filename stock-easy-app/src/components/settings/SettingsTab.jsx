@@ -19,41 +19,18 @@ export const SettingsTab = ({
   loadData,
   // Props pour ParametresGeneraux
   seuilSurstockProfond,
-  setSeuilSurstockProfond,
+  onUpdateSeuilSurstock,
   deviseDefaut,
-  setDeviseDefaut,
+  onUpdateDevise,
   multiplicateurDefaut,
-  setMultiplicateurDefaut,
+  onUpdateMultiplicateur,
   // Props pour GestionFournisseurs
-  supplierModalOpen,
-  setSupplierModalOpen,
-  editingSupplier,
-  setEditingSupplier,
-  supplierFormData,
-  setSupplierFormData,
   handleOpenSupplierModal,
-  handleCloseSupplierModal,
-  handleSupplierFormChange,
-  handleSaveSupplier,
   handleDeleteSupplier,
   // Props pour MappingSKUFournisseur
-  assignSupplierModalOpen,
-  setAssignSupplierModalOpen,
-  selectedProductForMapping,
-  setSelectedProductForMapping,
-  handleOpenAssignSupplierModal,
-  handleCloseAssignSupplierModal,
-  handleAssignSupplier,
+  handleSaveSupplierMapping,
+  isSavingSupplierMapping,
   // Props pour GestionWarehouses
-  warehouseModalOpen,
-  setWarehouseModalOpen,
-  editingWarehouse,
-  setEditingWarehouse,
-  warehouseFormData,
-  setWarehouseFormData,
-  handleOpenWarehouseModal,
-  handleCloseWarehouseModal,
-  handleWarehouseFormChange,
   handleSaveWarehouse,
   handleDeleteWarehouse
 }) => {
@@ -99,7 +76,9 @@ export const SettingsTab = ({
           <Settings className="w-8 h-8 text-[#191919]" />
           <h1 className="text-2xl font-bold text-[#191919]">Paramètres</h1>
         </div>
-        <p className="text-[#666663] ml-11">Configurez les paramètres de votre application</p>
+        <p className="text-xs sm:text-sm text-[#666663]">
+          Configurez les paramètres de votre application
+        </p>
         
         {/* Onglets de navigation - Optimisés mobile */}
         <div className="flex gap-2 mt-6 overflow-x-auto pb-2 -mx-2 px-2 sm:mx-0 sm:px-0">
@@ -141,11 +120,11 @@ export const SettingsTab = ({
                   setParameters={setParameters}
                   loadData={loadData}
                   seuilSurstock={seuilSurstockProfond}
-                  onUpdateSeuil={setSeuilSurstockProfond}
+                  onUpdateSeuil={onUpdateSeuilSurstock}
                   devise={deviseDefaut}
-                  onUpdateDevise={setDeviseDefaut}
+                  onUpdateDevise={onUpdateDevise}
                   multiplicateur={multiplicateurDefaut}
-                  onUpdateMultiplicateur={setMultiplicateurDefaut}
+                  onUpdateMultiplicateur={onUpdateMultiplicateur}
                 />
               )}
 
@@ -153,18 +132,8 @@ export const SettingsTab = ({
                 <GestionFournisseurs
                   suppliers={suppliers}
                   products={products}
-                  supplierModalOpen={supplierModalOpen}
-                  setSupplierModalOpen={setSupplierModalOpen}
-                  editingSupplier={editingSupplier}
-                  setEditingSupplier={setEditingSupplier}
-                  supplierFormData={supplierFormData}
-                  setSupplierFormData={setSupplierFormData}
-                  handleOpenSupplierModal={handleOpenSupplierModal}
-                  handleCloseSupplierModal={handleCloseSupplierModal}
-                  handleSupplierFormChange={handleSupplierFormChange}
-                  handleSaveSupplier={handleSaveSupplier}
-                  handleDeleteSupplier={handleDeleteSupplier}
-                  loadData={loadData}
+                  onOpenModal={handleOpenSupplierModal}
+                  onDelete={handleDeleteSupplier}
                 />
               )}
 
@@ -172,11 +141,8 @@ export const SettingsTab = ({
                 <MappingSKUFournisseur
                   products={products}
                   suppliers={suppliers}
-                  onOpenAssignModal={handleOpenAssignSupplierModal}
-                  onRemoveSupplier={(product) => {
-                    // TODO: Implémenter la logique pour retirer le fournisseur
-                    console.log('Remove supplier from', product.sku);
-                  }}
+                  onSaveSupplierMapping={handleSaveSupplierMapping}
+                  isSaving={isSavingSupplierMapping}
                 />
               )}
 

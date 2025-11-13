@@ -1,10 +1,11 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowDownRight, Truck, ExternalLink, CheckCircle } from 'lucide-react';
+import { ArrowDownRight, Truck, ExternalLink, CheckCircle, Calendar, Clock, AlertTriangle } from 'lucide-react';
 import CommentSection from '../comments/CommentSection';
-import { formatConfirmedDate } from '../../utils/dateUtils';
+import { formatConfirmedDate, calculateETA, formatETA } from '../../utils/dateUtils';
 import { roundToTwoDecimals } from '../../utils/decimalUtils';
 import { formatTrackingUrl, getTrackingLinkText, isValidUrl } from '../../utils/trackingUtils';
+import { useCurrency } from '../../contexts/CurrencyContext';
 
 export const OrderCard = ({ 
   order, 
@@ -15,17 +16,32 @@ export const OrderCard = ({
   showActions = false,
   actionButton = null,
   compactMode = false,
-  suppliers = [] // Fournisseurs pour les données de base
+  suppliers = [], // Fournisseurs pour les données de base
+  warehouses = {} // Entrepôts pour résoudre les noms
 }) => {
-  // Utiliser l'ETA du backend
-  const displayETA = order.eta;
+  const { format: formatCurrency } = useCurrency();
+  // Résoudre le nom de l'entrepôt
+  const warehouseName = order.warehouseId && warehouses[order.warehouseId]
+    ? warehouses[order.warehouseId].name
+    : (order.warehouseName || order.warehouseId);
+
+  // Calculer l'ETA si elle n'existe pas déjà
+  const calculatedETA = order.eta || calculateETA(
+    order.confirmedAt || order.createdAt,
+    null, // leadTimeDays sera récupéré depuis le fournisseur
+    suppliers,
+    order.supplier
+  );
+
+  // Formater l'ETA pour l'affichage
+  const etaInfo = formatETA(calculatedETA, true);
 
   // Utiliser les vraies données sans inventer de fallback
   const getDisplayData = () => {
     return {
       trackingNumber: order.trackingNumber,
       trackingUrl: order.trackingUrl,
-      eta: displayETA
+      eta: calculatedETA
     };
   };
 
@@ -93,10 +109,10 @@ export const OrderCard = ({
           </div>
           
           {/* Ligne 3: Entrepôt */}
-          {(order.warehouseName || order.warehouseId) && (
+          {warehouseName && (
             <div className="flex items-center gap-2">
               <span className="text-[#666663] text-xs sm:text-sm">Entrepôt de livraison:</span>
-              <span className="text-[#191919] font-medium text-xs sm:text-sm truncate">{order.warehouseName || order.warehouseId}</span>
+              <span className="text-[#191919] font-medium text-xs sm:text-sm truncate">{warehouseName}</span>
             </div>
           )}
           
@@ -108,11 +124,59 @@ export const OrderCard = ({
             </div>
             <div>
               <span className="text-[#666663]">Total: </span>
-              <span className="text-[#191919] font-bold">{roundToTwoDecimals(order.total).toFixed(2)}€</span>
+              <span className="text-[#191919] font-bold">{formatCurrency(roundToTwoDecimals(order.total))}</span>
             </div>
+            {/* ETA - Livraison estimée */}
+            {etaInfo && (
+              <div className="flex items-center gap-1">
+                <Calendar className="w-3 h-3 text-[#666663]" />
+                <span className="text-[#666663]">Livraison estimée: </span>
+                <span className={`font-medium ${
+                  etaInfo.isPast ? 'text-red-600' :
+                  etaInfo.isUrgent ? 'text-orange-600' :
+                  'text-[#191919]'
+                }`}>
+                  {etaInfo.formatted}
+                </span>
+                {etaInfo.daysRemaining !== null && (
+                  <span className={`text-xs px-1.5 py-0.5 rounded ${
+                    etaInfo.isPast ? 'bg-red-100 text-red-700' :
+                    etaInfo.isUrgent ? 'bg-orange-100 text-orange-700' :
+                    'bg-blue-50 text-blue-700'
+                  }`}>
+                    {etaInfo.isPast ? `${Math.abs(etaInfo.daysRemaining)}j de retard` :
+                     etaInfo.daysRemaining === 0 ? 'Aujourd\'hui' :
+                     etaInfo.daysRemaining === 1 ? 'Demain' :
+                     `dans ${etaInfo.daysRemaining}j`}
+                  </span>
+                )}
+              </div>
+            )}
           </div>
 
-          {/* Ligne 5: Informations de transit (numéro de suivi et URL seulement) */}
+          {/* Ligne 5: Récapitulatif de réconciliation */}
+          {order.status === 'reconciliation' && (order.missingQuantityTotal > 0 || order.damagedQuantityTotal > 0) && (
+            <div className="bg-red-50 border border-red-200 rounded-lg px-3 py-2 mt-2 space-y-1">
+              <div className="flex items-center gap-2 mb-1">
+                <AlertTriangle className="w-4 h-4 text-red-600" />
+                <span className="text-xs font-semibold text-red-700">Écarts de livraison</span>
+              </div>
+              {order.missingQuantityTotal > 0 && (
+                <div className="flex justify-between text-xs">
+                  <span className="text-red-600">Total manquant:</span>
+                  <span className="font-bold text-red-700">{order.missingQuantityTotal} unités</span>
+                </div>
+              )}
+              {order.damagedQuantityTotal > 0 && (
+                <div className="flex justify-between text-xs">
+                  <span className="text-orange-600">Total endommagé:</span>
+                  <span className="font-bold text-orange-700">{order.damagedQuantityTotal} unités</span>
+                </div>
+              )}
+            </div>
+          )}
+          
+          {/* Ligne 6: Informations de transit (numéro de suivi et URL seulement) */}
           {(displayData.trackingNumber || displayData.trackingUrl) && (
             <div className="flex items-center justify-between bg-[#FAFAF7] border border-[#E5E4DF] rounded-lg px-3 py-2 mt-2">
               <div className="flex items-center gap-2">
@@ -181,10 +245,10 @@ export const OrderCard = ({
                         </div>
                         <div className="text-right ml-2 shrink-0">
                           <span className="text-[#191919] font-bold">
-                            {item.quantity} × {roundToTwoDecimals(item.pricePerUnit).toFixed(2)}€
+                            {item.quantity} × {formatCurrency(roundToTwoDecimals(item.pricePerUnit))}
                           </span>
                           <span className="text-[#666663] ml-2">
-                            = {roundToTwoDecimals(item.quantity * item.pricePerUnit).toFixed(2)}€
+                            = {formatCurrency(roundToTwoDecimals(item.quantity * item.pricePerUnit))}
                           </span>
                         </div>
                       </div>
@@ -196,6 +260,12 @@ export const OrderCard = ({
                 <div className="space-y-2">
                   {order.items?.map((item, idx) => {
                     const product = products?.find(p => p.sku === item.sku);
+                    
+                    // Récupérer les quantités manquantes et endommagées depuis l'objet order
+                    const missingQty = order.missingQuantitiesBySku?.[item.sku] || 0;
+                    const damagedQty = order.damagedQuantitiesBySku?.[item.sku] || 0;
+                    const hasReconciliationData = order.status === 'reconciliation' && (missingQty > 0 || damagedQty > 0);
+                    
                     return (
                       <div key={idx} className="bg-[#FAFAF7] rounded border border-[#E5E4DF] p-2 sm:p-3">
                         <div className="space-y-2">
@@ -217,15 +287,40 @@ export const OrderCard = ({
                             </div>
                             <div className="text-right">
                               <div className="text-[#666663]">Prix unitaire</div>
-                              <div className="font-medium text-[#191919]">{roundToTwoDecimals(item.pricePerUnit).toFixed(2)}€</div>
+                              <div className="font-medium text-[#191919]">{formatCurrency(roundToTwoDecimals(item.pricePerUnit))}</div>
                             </div>
                             <div className="col-span-2 pt-1 border-t border-[#E5E4DF]">
                               <div className="flex justify-between items-center">
                                 <span className="text-[#666663] font-medium">Total ligne</span>
-                                <span className="font-bold text-[#191919] text-sm">{roundToTwoDecimals(item.quantity * item.pricePerUnit).toFixed(2)}€</span>
+                                <span className="font-bold text-[#191919] text-sm">{formatCurrency(roundToTwoDecimals(item.quantity * item.pricePerUnit))}</span>
                               </div>
                             </div>
                           </div>
+                          
+                          {/* Informations de réconciliation */}
+                          {hasReconciliationData && (
+                            <div className="mt-2 pt-2 border-t border-red-200 bg-red-50 rounded p-2 space-y-1">
+                              <div className="font-semibold text-red-700 text-xs mb-1">⚠️ Écarts détectés</div>
+                              {missingQty > 0 && (
+                                <div className="flex justify-between text-xs">
+                                  <span className="text-red-600">Quantité manquante:</span>
+                                  <span className="font-bold text-red-700">{missingQty} unités</span>
+                                </div>
+                              )}
+                              {damagedQty > 0 && (
+                                <div className="flex justify-between text-xs">
+                                  <span className="text-orange-600">Quantité endommagée:</span>
+                                  <span className="font-bold text-orange-700">{damagedQty} unités</span>
+                                </div>
+                              )}
+                              {item.receivedQuantity !== undefined && (
+                                <div className="flex justify-between text-xs pt-1 border-t border-red-200">
+                                  <span className="text-green-600">Quantité reçue (saine):</span>
+                                  <span className="font-bold text-green-700">{item.receivedQuantity} unités</span>
+                                </div>
+                              )}
+                            </div>
+                          )}
                         </div>
                       </div>
                     );
@@ -236,7 +331,7 @@ export const OrderCard = ({
               {/* Total de la commande */}
               <div className="mt-3 pt-3 border-t border-[#E5E4DF] flex justify-between">
                 <span className="font-semibold text-[#666663] text-sm">Total:</span>
-                <span className="font-bold text-[#191919]">{roundToTwoDecimals(order.total).toFixed(2)}€</span>
+                <span className="font-bold text-[#191919]">{formatCurrency(roundToTwoDecimals(order.total))}</span>
               </div>
               
               {/* Section Commentaires */}

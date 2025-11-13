@@ -1,205 +1,752 @@
-import React, { useState, useMemo } from 'react';
-import { Plus, Mail, Clock, Package, Truck, AlertCircle, Edit2, X } from 'lucide-react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import {
+  Users,
+  Package,
+  Save,
+  RotateCcw,
+  Search,
+  PackagePlus,
+  PackageMinus,
+  AlertCircle
+} from 'lucide-react';
 import { Button } from '../../ui/Button';
 
-/**
- * Composant de mapping entre produits et fournisseurs
- * @param {Object} props
- * @param {Array} props.products - Liste des produits
- * @param {Object} props.suppliers - Map des fournisseurs
- * @param {Function} props.onOpenAssignModal - Callback pour ouvrir le modal d'assignation
- * @param {Function} props.onRemoveSupplier - Callback pour retirer un fournisseur
- * @returns {JSX.Element}
- */
-export function MappingSKUFournisseur({ 
-  products, 
-  suppliers, 
-  onOpenAssignModal,
-  onRemoveSupplier
+const normalizeText = (value = '') =>
+  value.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+
+const cloneAssignments = (source = {}) => {
+  const cloned = {};
+  Object.entries(source).forEach(([supplierName, skus]) => {
+    cloned[supplierName] = new Set(skus);
+  });
+  return cloned;
+};
+
+const buildAssignmentsFromProducts = (products = [], suppliers = {}) => {
+  const map = {};
+  Object.keys(suppliers).forEach((supplierName) => {
+    map[supplierName] = new Set();
+  });
+
+  products.forEach((product) => {
+    if (product?.supplier && map[product.supplier]) {
+      map[product.supplier].add(product.sku);
+    }
+  });
+
+  return map;
+};
+
+const getFirstSupplierKey = (suppliers = {}) => Object.keys(suppliers)[0] ?? '';
+
+const formatDateTime = (date) => {
+  if (!date) return 'Jamais';
+  try {
+    return new Intl.DateTimeFormat('fr-FR', {
+      dateStyle: 'medium',
+      timeStyle: 'short'
+    }).format(date);
+  } catch (error) {
+    return date.toLocaleString();
+  }
+};
+
+export function MappingSKUFournisseur({
+  products = [],
+  suppliers = {},
+  onSaveSupplierMapping,
+  isSaving = false
 }) {
-  const [filter, setFilter] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
-  
-  const suppliersList = useMemo(() => Object.values(suppliers), [suppliers]);
-  
-  const filteredProducts = useMemo(() => 
-    products.filter(p => {
-      const matchesSearch = 
-        p.sku.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        p.name.toLowerCase().includes(searchTerm.toLowerCase());
-      
-      if (!matchesSearch) return false;
-      
-      if (filter === 'without_supplier') return !p.supplier;
-      if (filter === 'with_supplier') return !!p.supplier;
-      return true;
-    }),
-    [products, searchTerm, filter]
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [supplierSearch, setSupplierSearch] = useState('');
+  const [draggedSku, setDraggedSku] = useState(null);
+  const [savingSupplier, setSavingSupplier] = useState('');
+  const [lastSavedAt, setLastSavedAt] = useState(null);
+  const [initialAssignments, setInitialAssignments] = useState(() =>
+    buildAssignmentsFromProducts(products, suppliers)
   );
-  
-  const stats = {
-    total: products.length,
-    withSupplier: products.filter(p => p.supplier).length,
-    withoutSupplier: products.filter(p => !p.supplier).length
+  const [assignments, setAssignments] = useState(() =>
+    cloneAssignments(initialAssignments)
+  );
+  const [selectedSupplier, setSelectedSupplier] = useState(() =>
+    getFirstSupplierKey(suppliers)
+  );
+
+  useEffect(() => {
+    const next = buildAssignmentsFromProducts(products, suppliers);
+    setInitialAssignments(next);
+    setLastSavedAt(new Date());
+  }, [products, suppliers]);
+
+  useEffect(() => {
+    setAssignments(cloneAssignments(initialAssignments));
+  }, [initialAssignments]);
+
+  useEffect(() => {
+    if (!selectedSupplier || !suppliers[selectedSupplier]) {
+      setSelectedSupplier(getFirstSupplierKey(suppliers));
+    }
+  }, [selectedSupplier, suppliers]);
+
+  const suppliersList = useMemo(() => {
+    return Object.values(suppliers).sort((a, b) =>
+      a.name.localeCompare(b.name, 'fr', { sensitivity: 'base' })
+    );
+  }, [suppliers]);
+
+  const filteredSuppliers = useMemo(() => {
+    const normalized = normalizeText(supplierSearch);
+    if (!normalized) return suppliersList;
+    return suppliersList.filter((supplier) =>
+      normalizeText(`${supplier.name} ${supplier.email ?? ''}`).includes(normalized)
+    );
+  }, [suppliersList, supplierSearch]);
+
+  const assignmentBySku = useMemo(() => {
+    const lookup = {};
+    Object.entries(assignments).forEach(([supplierName, skuSet]) => {
+      skuSet.forEach((sku) => {
+        lookup[sku] = supplierName;
+      });
+    });
+    return lookup;
+  }, [assignments]);
+
+  const supplierDiffs = useMemo(() => {
+    const diffs = {};
+    Object.keys(assignments).forEach((supplierName) => {
+      const initialSet = initialAssignments[supplierName] ?? new Set();
+      const currentSet = assignments[supplierName] ?? new Set();
+      const added = [];
+      const removed = [];
+
+      currentSet.forEach((sku) => {
+        if (!initialSet.has(sku)) {
+          added.push(sku);
+        }
+      });
+
+      initialSet.forEach((sku) => {
+        if (!currentSet.has(sku)) {
+          removed.push(sku);
+        }
+      });
+
+      diffs[supplierName] = {
+        added,
+        removed,
+        hasChanges: added.length > 0 || removed.length > 0
+      };
+    });
+    return diffs;
+  }, [assignments, initialAssignments]);
+
+  const globalChangeSummary = useMemo(() => {
+    let added = 0;
+    let removed = 0;
+
+    Object.values(supplierDiffs).forEach((diff) => {
+      added += diff.added.length;
+      removed += diff.removed.length;
+    });
+
+    return {
+      added,
+      removed,
+      hasChanges: added > 0 || removed > 0
+    };
+  }, [supplierDiffs]);
+
+  const selectedSupplierDiff =
+    supplierDiffs[selectedSupplier] ?? { added: [], removed: [], hasChanges: false };
+  const selectedSupplierData = suppliers[selectedSupplier];
+  const hasUnsavedChangesForSupplier = selectedSupplierDiff.hasChanges;
+
+  const stats = useMemo(() => {
+    const totalProducts = products.length;
+    const assignedCount = Object.values(assignments).reduce(
+      (acc, skuSet) => acc + skuSet.size,
+      0
+    );
+    const unassignedCount = Math.max(totalProducts - assignedCount, 0);
+
+    return {
+      total: totalProducts,
+      assigned: assignedCount,
+      unassigned: unassignedCount
+    };
+  }, [products.length, assignments]);
+
+  const filterBySearch = useCallback(
+    (collection) => {
+      if (!searchTerm) return collection;
+      const normalized = normalizeText(searchTerm);
+      return collection.filter((item) => {
+        const searchable = `${item.sku} ${item.name ?? ''}`;
+        return normalizeText(searchable).includes(normalized);
+      });
+    },
+    [searchTerm]
+  );
+
+  const assignedProducts = useMemo(() => {
+    if (!selectedSupplier) return [];
+    const skus = assignments[selectedSupplier] ?? new Set();
+    const items = products.filter((product) => skus.has(product.sku));
+    return filterBySearch(items);
+  }, [assignments, selectedSupplier, products, filterBySearch]);
+
+  const availableProducts = useMemo(() => {
+    const items = products.filter((product) => !assignmentBySku[product.sku]);
+    return filterBySearch(items);
+  }, [products, assignmentBySku, filterBySearch]);
+
+  const showAssignedColumn = statusFilter !== 'unassigned';
+  const showAvailableColumn = statusFilter !== 'assigned';
+
+  const filteredAssignedProducts = showAssignedColumn ? assignedProducts : [];
+  const filteredAvailableProducts = showAvailableColumn ? availableProducts : [];
+
+  const handleAssignSku = useCallback(
+    (sku) => {
+      if (!selectedSupplier || !sku) return;
+
+      setAssignments((prev) => {
+        const next = cloneAssignments(prev);
+
+        Object.entries(next).forEach(([, skuSet]) => {
+          skuSet.delete(sku);
+        });
+
+        if (!next[selectedSupplier]) {
+          next[selectedSupplier] = new Set();
+        }
+
+        next[selectedSupplier].add(sku);
+        return next;
+      });
+    },
+    [selectedSupplier]
+  );
+
+  const handleUnassignSku = useCallback(
+    (sku) => {
+      if (!selectedSupplier || !sku) return;
+
+      setAssignments((prev) => {
+        const next = cloneAssignments(prev);
+        next[selectedSupplier]?.delete(sku);
+        return next;
+      });
+    },
+    [selectedSupplier]
+  );
+
+  const handleDragStart = (sku, origin) => (event) => {
+    event.dataTransfer.setData('text/plain', sku);
+    event.dataTransfer.effectAllowed = origin === 'available' ? 'copyMove' : 'move';
+    setDraggedSku(sku);
   };
-  
+
+  const handleDragEnd = () => {
+    setDraggedSku(null);
+  };
+
+  const handleDropToAssigned = (event) => {
+    event.preventDefault();
+    const sku = event.dataTransfer.getData('text/plain');
+    handleAssignSku(sku);
+    setDraggedSku(null);
+  };
+
+  const handleDropToAvailable = (event) => {
+    event.preventDefault();
+    const sku = event.dataTransfer.getData('text/plain');
+    handleUnassignSku(sku);
+    setDraggedSku(null);
+  };
+
+  const handleSave = async () => {
+    if (
+      !onSaveSupplierMapping ||
+      !selectedSupplier ||
+      !(assignments[selectedSupplier] instanceof Set)
+    ) {
+      return;
+    }
+
+    const payloadSkus = Array.from(assignments[selectedSupplier] ?? new Set());
+
+    try {
+      setSavingSupplier(selectedSupplier);
+      await onSaveSupplierMapping(selectedSupplier, payloadSkus);
+      setInitialAssignments((prev) => {
+        const next = cloneAssignments(prev);
+        next[selectedSupplier] = new Set(payloadSkus);
+        return next;
+      });
+      setLastSavedAt(new Date());
+    } catch (error) {
+      console.error('Erreur lors de la sauvegarde du mapping fournisseur:', error);
+    } finally {
+      setSavingSupplier('');
+    }
+  };
+
+  const handleReset = () => {
+    if (!selectedSupplier) return;
+    setAssignments((prev) => {
+      const next = cloneAssignments(prev);
+      next[selectedSupplier] = new Set(initialAssignments[selectedSupplier] ?? []);
+      return next;
+    });
+  };
+
+  const handleResetFilters = () => {
+    setSearchTerm('');
+    setStatusFilter('all');
+    setSupplierSearch('');
+  };
+
+  const hasActiveFilters =
+    Boolean(searchTerm) || statusFilter !== 'all' || Boolean(supplierSearch);
+
+  if (!Object.keys(suppliers).length) {
+    return (
+      <div className="bg-white border border-neutral-200 rounded-xl p-6 text-center space-y-4">
+        <Users className="w-8 h-8 mx-auto text-neutral-400" />
+        <div className="space-y-1">
+          <h3 className="text-lg font-semibold text-neutral-800">
+            Aucun fournisseur disponible
+          </h3>
+          <p className="text-sm text-neutral-500">
+            Ajoutez des fournisseurs dans l’onglet dédié pour commencer le mapping des
+            produits.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div>
-        <h3 className="text-lg font-semibold text-[#191919]">🔗 Mapping Produits ↔ Fournisseurs</h3>
-        <p className="text-sm text-[#666663] mt-1">
-          Associez chaque produit à son fournisseur principal
-        </p>
+      <div className="bg-white border border-neutral-200 rounded-xl shadow-sm p-6">
+        <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+          <div className="space-y-2">
+            <h3 className="text-xl font-semibold text-neutral-900">
+              🔗 Mapping Produits ↔ Fournisseurs
+            </h3>
+            <p className="text-sm text-neutral-500">
+              Organisez vos catalogues à grande échelle : recherche avancée, filtres et
+              glisser-déposer pour assister rapidement vos équipes.
+            </p>
+          </div>
+
+          <div className="flex flex-col items-start gap-3 md:items-end">
+            <div className="text-xs text-neutral-500">
+              Dernière sauvegarde :{' '}
+              <span className="font-medium text-neutral-700">{formatDateTime(lastSavedAt)}</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="grid gap-4 mt-6 sm:grid-cols-4">
+          <div className="bg-neutral-50 border border-neutral-200 rounded-lg p-4">
+            <div className="text-sm text-neutral-500">Total produits</div>
+            <div className="text-2xl font-bold text-neutral-900">{stats.total}</div>
+          </div>
+          <div className="bg-neutral-50 border border-neutral-200 rounded-lg p-4">
+            <div className="text-sm text-neutral-500">Assignés</div>
+            <div className="text-2xl font-bold text-emerald-600">{stats.assigned}</div>
+          </div>
+          <div className="bg-neutral-50 border border-neutral-200 rounded-lg p-4">
+            <div className="text-sm text-neutral-500">À assigner</div>
+            <div className="text-2xl font-bold text-amber-600">{stats.unassigned}</div>
+          </div>
+          <div className="bg-neutral-50 border border-neutral-200 rounded-lg p-4">
+            <div className="text-sm text-neutral-500">Modifs en attente</div>
+            <div
+              className={`text-2xl font-bold ${
+                globalChangeSummary.hasChanges ? 'text-amber-600' : 'text-neutral-400'
+              }`}
+            >
+              {globalChangeSummary.added + globalChangeSummary.removed}
+            </div>
+            {globalChangeSummary.hasChanges && (
+              <p className="text-xs text-neutral-500 mt-2">
+                +{globalChangeSummary.added} / -{globalChangeSummary.removed}
+              </p>
+            )}
+          </div>
+        </div>
       </div>
-      
-      {/* Stats */}
-      <div className="grid grid-cols-3 gap-4">
-        <div className="bg-white rounded-lg border border-[#E5E4DF] p-4">
-          <div className="text-sm text-[#666663]">Total produits</div>
-          <div className="text-2xl font-bold text-[#191919]">{stats.total}</div>
-        </div>
-        
-        <div className="bg-white rounded-lg border border-[#E5E4DF] p-4">
-          <div className="text-sm text-[#666663]">Avec fournisseur</div>
-          <div className="text-2xl font-bold text-green-600">{stats.withSupplier}</div>
-        </div>
-        
-        <div className="bg-white rounded-lg border border-[#E5E4DF] p-4">
-          <div className="text-sm text-[#666663]">Sans fournisseur</div>
-          <div className="text-2xl font-bold text-[#EF1C43]">{stats.withoutSupplier}</div>
-        </div>
-      </div>
-      
-      {/* Filtres */}
-      <div className="flex flex-col sm:flex-row gap-4">
-        <div className="flex-1">
+
+      <div className="bg-white border border-neutral-200 rounded-xl shadow-sm p-4 flex flex-wrap items-center gap-3">
+        <div className="relative flex-1 min-w-[240px]">
+          <Search className="w-4 h-4 text-neutral-400 absolute left-3 top-1/2 -translate-y-1/2" />
           <input
-            type="text"
-            placeholder="🔍 Rechercher un produit..."
+            type="search"
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full px-4 py-3 border-2 border-[#E5E4DF] rounded-lg focus:outline-none focus:border-[#8B5CF6]"
+            onChange={(event) => setSearchTerm(event.target.value)}
+            placeholder="Rechercher un produit par SKU ou nom…"
+            className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-neutral-200 focus:border-neutral-900 focus:outline-none focus:ring-2 focus:ring-neutral-900/10"
           />
         </div>
-        
-        <select
-          value={filter}
-          onChange={(e) => setFilter(e.target.value)}
-          className="px-4 py-3 border-2 border-[#E5E4DF] rounded-lg focus:outline-none focus:border-[#8B5CF6] bg-white"
+
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-medium uppercase tracking-wide text-neutral-500">
+            Statut
+          </span>
+          <select
+            value={statusFilter}
+            onChange={(event) => setStatusFilter(event.target.value)}
+            className="h-10 px-3 rounded-lg border border-neutral-200 bg-white text-sm text-neutral-700 focus:outline-none focus:ring-2 focus:ring-neutral-900/10 focus:border-neutral-900"
+          >
+            <option value="all">Assignés & disponibles</option>
+            <option value="assigned">Assignés uniquement</option>
+            <option value="unassigned">Disponibles uniquement</option>
+          </select>
+        </div>
+
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={handleResetFilters}
+          disabled={!hasActiveFilters}
         >
-          <option value="all">Tous les produits ({stats.total})</option>
-          <option value="with_supplier">Avec fournisseur ({stats.withSupplier})</option>
-          <option value="without_supplier">Sans fournisseur ({stats.withoutSupplier})</option>
-        </select>
+          Réinitialiser les filtres
+        </Button>
       </div>
-      
-      {/* Liste des produits */}
-      <div className="space-y-4">
-        {filteredProducts.length === 0 ? (
-          <div className="text-center py-12 bg-[#FAFAF7] rounded-xl">
-            <p className="text-[#666663]">Aucun produit trouvé</p>
+
+      <div className="grid gap-6 lg:grid-cols-[minmax(260px,320px)_1fr]">
+        <aside className="space-y-4">
+          <div className="bg-white border border-neutral-200 rounded-xl shadow-sm overflow-hidden">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-neutral-100">
+              <div className="flex items-center gap-2 text-sm font-semibold text-neutral-600 uppercase tracking-wide">
+                <Users className="w-4 h-4" />
+                Fournisseurs
+              </div>
+              <span className="text-xs text-neutral-400">
+                {filteredSuppliers.length}/{suppliersList.length}
+              </span>
+            </div>
+
+            <div className="px-4 py-3 border-b border-neutral-100">
+              <div className="relative">
+                <Search className="w-4 h-4 text-neutral-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                <input
+                  type="search"
+                  value={supplierSearch}
+                  onChange={(event) => setSupplierSearch(event.target.value)}
+                  placeholder="Filtrer les fournisseurs…"
+                  className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-neutral-200 focus:border-neutral-900 focus:outline-none focus:ring-2 focus:ring-neutral-900/10"
+                />
+              </div>
+            </div>
+
+            <ul
+              className="max-h-[460px] overflow-y-auto divide-y divide-neutral-100"
+              data-testid="supplier-list"
+            >
+              {filteredSuppliers.length === 0 ? (
+                <li className="px-4 py-10 text-sm text-neutral-400 text-center">
+                  Aucun fournisseur ne correspond à votre recherche.
+                </li>
+              ) : (
+                filteredSuppliers.map((supplier) => {
+                  const isSelected = supplier.name === selectedSupplier;
+                  const assignedCountForSupplier = assignments[supplier.name]?.size ?? 0;
+                  const diff = supplierDiffs[supplier.name] ?? {
+                    added: [],
+                    removed: [],
+                    hasChanges: false
+                  };
+
+                  return (
+                    <li key={supplier.name}>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedSupplier(supplier.name)}
+                        className={`w-full text-left px-4 py-3 transition-colors ${
+                          isSelected
+                            ? 'bg-neutral-900 text-white'
+                            : 'hover:bg-neutral-100 text-neutral-700'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="font-medium">{supplier.name}</span>
+                          <div className="flex items-center gap-2">
+                            {diff.hasChanges && (
+                              <span
+                                className={`inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide ${
+                                  isSelected ? 'text-amber-100' : 'text-amber-600'
+                                }`}
+                              >
+                                <span className="w-1.5 h-1.5 rounded-full bg-current" />
+                                À sauvegarder
+                              </span>
+                            )}
+                            <span
+                              className={`text-xs font-semibold px-2 py-1 rounded-full ${
+                                isSelected
+                                  ? 'bg-white/20 text-white'
+                                  : 'bg-neutral-200 text-neutral-600'
+                              }`}
+                            >
+                              {assignedCountForSupplier}
+                            </span>
+                          </div>
+                        </div>
+                        {supplier.email && (
+                          <p
+                            className={`text-xs mt-2 ${
+                              isSelected ? 'text-white/80' : 'text-neutral-500'
+                            }`}
+                          >
+                            {supplier.email}
+                          </p>
+                        )}
+                      </button>
+                    </li>
+                  );
+                })
+              )}
+            </ul>
           </div>
-        ) : (
-          filteredProducts.map(product => {
-            const supplier = suppliers[product.supplier];
-            const hasSupplier = !!product.supplier;
-            
-            return (
-              <div 
-                key={product.sku}
-                className={`
-                  bg-white rounded-xl shadow-sm border-2 p-6 transition-all
-                  ${hasSupplier ? 'border-[#E5E4DF]' : 'border-orange-200 bg-orange-50'}
-                `}
-              >
-                <div className="flex items-start justify-between mb-4">
-                  <div>
-                    <div className="flex items-center gap-2 mb-1">
-                      <h4 className="text-lg font-semibold text-[#191919]">
-                        {product.sku}
-                      </h4>
-                      <span className="text-sm text-[#666663]">•</span>
-                      <span className="text-sm text-[#666663]">{product.name}</span>
-                    </div>
-                    
-                    <div className="flex items-center gap-4 text-sm text-[#666663]">
-                      <span>📦 Stock: {product.stock}</span>
-                    </div>
+        </aside>
+
+        <section className="space-y-4">
+          {selectedSupplier ? (
+            <div className="bg-white border border-neutral-200 rounded-xl shadow-sm overflow-hidden">
+              <header className="px-5 py-4 border-b border-neutral-100 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Package className="w-5 h-5 text-neutral-600" />
+                    <h4 className="text-base font-semibold text-neutral-900">
+                      Produits attribués à {selectedSupplier}
+                    </h4>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-xs text-neutral-500">
+                    {selectedSupplierData?.email && (
+                      <span>Email : {selectedSupplierData.email}</span>
+                    )}
+                    {selectedSupplierData?.leadTimeDays !== undefined &&
+                      selectedSupplierData?.leadTimeDays !== null && (
+                        <span>Délai : {selectedSupplierData.leadTimeDays} j</span>
+                      )}
+                    {selectedSupplierData?.moq !== undefined &&
+                      selectedSupplierData?.moq !== null && (
+                        <span>MOQ : {selectedSupplierData.moq}</span>
+                      )}
+                    {selectedSupplierDiff.hasChanges && (
+                      <span className="inline-flex items-center gap-1 text-amber-600">
+                        <AlertCircle className="w-3.5 h-3.5" />
+                        +{selectedSupplierDiff.added.length} / -
+                        {selectedSupplierDiff.removed.length}
+                      </span>
+                    )}
                   </div>
                 </div>
-                
-                {hasSupplier ? (
-                  <div className="bg-[#FAFAF7] rounded-lg p-4 border border-[#E5E4DF]">
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-2">
-                          <Truck className="w-4 h-4 text-[#8B5CF6]" />
-                          <span className="font-semibold text-[#191919]">
-                            {supplier?.name || product.supplier}
-                          </span>
-                        </div>
-                        
-                        {supplier && (
-                          <div className="space-y-1 text-sm text-[#666663]">
-                            <div className="flex items-center gap-2">
-                              <Mail className="w-3 h-3" />
-                              <span>{supplier.email}</span>
-                            </div>
-                            <div className="flex items-center gap-4">
-                              <div className="flex items-center gap-2">
-                                <Clock className="w-3 h-3" />
-                                <span>Délai: {supplier.leadTimeDays}j</span>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <Package className="w-3 h-3" />
-                                <span>MOQ: {supplier.moq}</span>
-                              </div>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                      
-                      <div className="flex gap-2 ml-4">
-                        <button
-                          onClick={() => onOpenAssignModal(product)}
-                          className="p-2 text-[#8B5CF6] hover:bg-purple-50 rounded-lg transition-all"
-                          title="Changer de fournisseur"
-                        >
-                          <Edit2 className="w-4 h-4" />
-                        </button>
-                        
-                        <button
-                          onClick={() => onRemoveSupplier(product.sku)}
-                          className="p-2 text-[#EF1C43] hover:bg-red-50 rounded-lg transition-all"
-                          title="Retirer le fournisseur"
-                        >
-                          <X className="w-4 h-4" />
-                        </button>
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    icon={RotateCcw}
+                    onClick={handleReset}
+                    disabled={!hasUnsavedChangesForSupplier}
+                  >
+                    Réinitialiser
+                  </Button>
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    icon={Save}
+                    onClick={handleSave}
+                    loading={savingSupplier === selectedSupplier || isSaving}
+                    disabled={!hasUnsavedChangesForSupplier}
+                  >
+                    Sauvegarder
+                  </Button>
+                </div>
+              </header>
+
+              <div
+                className={`px-5 py-4 ${
+                  showAssignedColumn && showAvailableColumn
+                    ? 'grid gap-4 md:grid-cols-2'
+                    : 'space-y-4'
+                }`}
+              >
+                {showAssignedColumn && (
+                  <div
+                    className={`rounded-xl border-2 border-dashed transition-colors ${
+                      draggedSku && !assignmentBySku[draggedSku]
+                        ? 'border-neutral-900 bg-neutral-900/5'
+                        : 'border-neutral-200'
+                    }`}
+                    onDragOver={(event) => event.preventDefault()}
+                    onDrop={handleDropToAssigned}
+                  >
+                    <div className="flex items-center justify-between px-4 py-3 border-b border-neutral-200 bg-neutral-50 rounded-t-xl">
+                      <div className="flex items-center gap-2">
+                        <PackagePlus className="w-4 h-4 text-neutral-600" />
+                        <span className="text-sm font-semibold text-neutral-700">
+                          Produits assignés ({filteredAssignedProducts.length})
+                        </span>
                       </div>
                     </div>
-                  </div>
-                ) : (
-                  <div className="flex items-center justify-between bg-orange-100 rounded-lg p-4 border border-orange-200">
-                    <div className="flex items-center gap-2 text-orange-700">
-                      <AlertCircle className="w-5 h-5" />
-                      <span className="font-medium">Aucun fournisseur assigné</span>
-                    </div>
-                    
-                    <Button
-                      size="sm"
-                      onClick={() => onOpenAssignModal(product)}
-                      icon={Plus}
+                    <ul
+                      className="max-h-[440px] overflow-y-auto divide-y divide-neutral-100"
+                      data-testid="assigned-products-list"
                     >
-                      Assigner
-                    </Button>
+                      {filteredAssignedProducts.length === 0 ? (
+                        <li className="px-4 py-6 text-sm text-neutral-400 text-center">
+                          Aucun produit n’est assigné à ce fournisseur pour le moment.
+                        </li>
+                      ) : (
+                        filteredAssignedProducts.map((product) => (
+                          <li
+                            key={product.sku}
+                            draggable
+                            onDragStart={handleDragStart(product.sku, 'assigned')}
+                            onDragEnd={handleDragEnd}
+                            className="px-4 py-3 flex items-center justify-between gap-3 bg-white"
+                          >
+                            <div>
+                              <div className="text-sm font-semibold text-neutral-800">
+                                {product.sku}
+                              </div>
+                              <div className="text-xs text-neutral-500">
+                                {product.name ?? 'Produit sans nom'}
+                              </div>
+                              <div className="text-xs text-neutral-400 mt-1">
+                                Stock actuel : {product.stock ?? 0}
+                              </div>
+                            </div>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              icon={PackageMinus}
+                              onClick={() => handleUnassignSku(product.sku)}
+                              aria-label={`Retirer ${product.sku} de ${selectedSupplier}`}
+                            >
+                              Retirer
+                            </Button>
+                          </li>
+                        ))
+                      )}
+                    </ul>
+                  </div>
+                )}
+
+                {showAvailableColumn && (
+                  <div
+                    className={`rounded-xl border-2 border-dashed transition-colors ${
+                      draggedSku && assignmentBySku[draggedSku] === selectedSupplier
+                        ? 'border-amber-600 bg-amber-50/50'
+                        : 'border-neutral-200'
+                    }`}
+                    onDragOver={(event) => event.preventDefault()}
+                    onDrop={handleDropToAvailable}
+                  >
+                    <div className="flex items-center justify-between px-4 py-3 border-b border-neutral-200 bg-neutral-50 rounded-t-xl">
+                      <div className="flex items-center gap-2">
+                        <PackageMinus className="w-4 h-4 text-neutral-600" />
+                        <span className="text-sm font-semibold text-neutral-700">
+                          Produits disponibles ({filteredAvailableProducts.length})
+                        </span>
+                      </div>
+                    </div>
+                    <ul
+                      className="max-h-[440px] overflow-y-auto divide-y divide-neutral-100"
+                      data-testid="available-products-list"
+                    >
+                      {filteredAvailableProducts.length === 0 ? (
+                        <li className="px-4 py-6 text-sm text-neutral-400 text-center">
+                          Tous les produits sont assignés. Glissez un produit depuis la
+                          liste voisine pour le libérer.
+                        </li>
+                      ) : (
+                        filteredAvailableProducts.map((product) => (
+                          <li
+                            key={product.sku}
+                            draggable
+                            onDragStart={handleDragStart(product.sku, 'available')}
+                            onDragEnd={handleDragEnd}
+                            className="px-4 py-3 flex items-center justify-between gap-3 bg-white"
+                          >
+                            <div>
+                              <div className="text-sm font-semibold text-neutral-800">
+                                {product.sku}
+                              </div>
+                              <div className="text-xs text-neutral-500">
+                                {product.name ?? 'Produit sans nom'}
+                              </div>
+                              <div className="text-xs text-neutral-400 mt-1">
+                                Stock actuel : {product.stock ?? 0}
+                              </div>
+                            </div>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              icon={PackagePlus}
+                              onClick={() => handleAssignSku(product.sku)}
+                              aria-label={`Assigner ${product.sku} à ${selectedSupplier}`}
+                              disabled={!selectedSupplier}
+                            >
+                              Assigner
+                            </Button>
+                          </li>
+                        ))
+                      )}
+                    </ul>
                   </div>
                 )}
               </div>
-            );
-          })
-        )}
+            </div>
+          ) : (
+            <div className="bg-white border border-neutral-200 rounded-xl shadow-sm p-12 text-center space-y-3">
+              <Package className="w-8 h-8 text-neutral-400 mx-auto" />
+              <h4 className="text-lg font-semibold text-neutral-800">
+                Sélectionnez un fournisseur pour commencer
+              </h4>
+              <p className="text-sm text-neutral-500">
+                Utilisez la colonne de gauche pour choisir un fournisseur et gérer son
+                catalogue.
+              </p>
+            </div>
+          )}
+        </section>
       </div>
+
+      {globalChangeSummary.hasChanges && (
+        <div className="sticky bottom-4 z-10">
+          <div className="bg-white border border-neutral-200 rounded-xl shadow-lg px-5 py-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+            <div className="space-y-1">
+              <p className="text-sm font-medium text-neutral-800">
+                Modifications en attente : {globalChangeSummary.added} ajout(s) ·{' '}
+                {globalChangeSummary.removed} retrait(s)
+              </p>
+              <p className="text-xs text-neutral-500">
+              Pensez à sauvegarder chaque fournisseur modifié.
+              </p>
+            </div>
+            <div className="flex flex-col sm:flex-row gap-2">
+              <Button
+                variant="primary"
+                size="sm"
+                icon={Save}
+                onClick={handleSave}
+                loading={savingSupplier === selectedSupplier || isSaving}
+                disabled={!selectedSupplier || !hasUnsavedChangesForSupplier}
+              >
+                Sauvegarder {selectedSupplier ? `(${selectedSupplier})` : ''}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

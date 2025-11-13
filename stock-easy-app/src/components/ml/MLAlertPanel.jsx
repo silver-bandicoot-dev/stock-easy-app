@@ -15,6 +15,7 @@ import {
   ShoppingCart
 } from 'lucide-react';
 import { generateMLAlerts, generateAutoRecommendations } from '../../services/ml/alertService';
+import { useCurrency } from '../../contexts/CurrencyContext';
 
 export function MLAlertPanel({ products, forecasts, onOrderClick }) {
   // Générer les alertes
@@ -213,6 +214,7 @@ function RecommendationItem({ recommendation, index, onOrderClick }) {
     urgent: 'border-l-4 border-l-red-500',
     normal: 'border-l-4 border-l-purple-500'
   };
+  const { format: formatCurrency } = useCurrency();
 
   return (
     <div className={`bg-[#FAFAF7] border border-[#E5E4DF] rounded-lg p-4 ${urgencyColors[recommendation.urgency]}`}>
@@ -234,7 +236,7 @@ function RecommendationItem({ recommendation, index, onOrderClick }) {
               <span className="font-medium">Quantité:</span> {recommendation.quantity} unités
             </div>
             <div>
-              <span className="font-medium">Coût estimé:</span> {recommendation.estimatedCost.toFixed(2)}€
+              <span className="font-medium">Coût estimé:</span> {formatCurrency(recommendation.estimatedCost)}
             </div>
             <div>
               <span className="font-medium">Fournisseur:</span> {recommendation.supplier || 'Non assigné'}

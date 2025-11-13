@@ -6,11 +6,13 @@ import { OrderCard } from '../shared/OrderCard';
 import { toast } from 'sonner';
 import { formatConfirmedDate } from '../../utils/dateUtils';
 import { roundToTwoDecimals, formatUnits } from '../../utils/decimalUtils';
+import { useCurrency } from '../../contexts/CurrencyContext';
 
 export const HistoryTab = ({
   orders,
   products,
   suppliers, // Ajout des fournisseurs
+  warehouses = {}, // Ajout des entrepôts
   historyFilter,
   setHistoryFilter,
   historyDateStart,
@@ -20,6 +22,7 @@ export const HistoryTab = ({
   expandedOrders,
   toggleOrderDetails
 }) => {
+  const { format: formatCurrency } = useCurrency();
   // Filtrer les commandes selon les critères
   const filteredOrders = orders.filter(order => {
     // Filtre par statut
@@ -67,7 +70,7 @@ export const HistoryTab = ({
           'Fournisseur': order.supplier,
           'Statut': getStatusLabel(order.status),
           'Date': formatConfirmedDate(order.createdAt),
-          'Total': `${order.total.toFixed(2)}€`,
+          'Total': formatCurrency(order.total),
           'Produits': order.items.length,
           'Entrepôt': order.warehouseName || order.warehouseId || 'Non spécifié',
           'Suivi': order.trackingNumber || 'Non disponible'
@@ -79,7 +82,7 @@ export const HistoryTab = ({
           orderLine[`Produit ${index + 1}`] = product?.name || item.sku;
           orderLine[`SKU ${index + 1}`] = item.sku;
           orderLine[`Quantité ${index + 1}`] = item.quantity;
-          orderLine[`Prix ${index + 1}`] = `${item.pricePerUnit.toFixed(2)}€`;
+          orderLine[`Prix ${index + 1}`] = formatCurrency(item.pricePerUnit);
         });
         
         return orderLine;
@@ -210,7 +213,7 @@ export const HistoryTab = ({
           </div>
           <div className="bg-[#FAFAF7] rounded-lg p-3 sm:p-4 border border-[#E5E4DF]">
             <div className="text-xl sm:text-2xl font-bold text-[#191919]">
-              {orders.reduce((sum, o) => sum + o.total, 0).toFixed(0)}€
+              {formatCurrency(orders.reduce((sum, o) => sum + o.total, 0))}
             </div>
             <div className="text-xs sm:text-sm text-[#666663] mt-1">Montant total</div>
           </div>
@@ -231,6 +234,7 @@ export const HistoryTab = ({
                 order={order}
                 products={products}
                 suppliers={suppliers}
+                warehouses={warehouses}
                 expandedOrders={expandedOrders}
                 toggleOrderDetails={toggleOrderDetails}
                 showStatus={true}

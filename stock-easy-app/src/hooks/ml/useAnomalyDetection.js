@@ -5,7 +5,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { AnomalyDetector } from '../../services/ml/anomalyDetector';
-import { getAllData } from '../../services/apiService';
+import { getAllData } from '../../services/apiAdapter';
 import { toast } from 'sonner';
 
 /**

@@ -28,6 +28,13 @@ npm run preview
 - Lucide React
 - Sonner (notifications)
 
-## 📝 Configuration
+## 📝 Configuration backend
 
-L'application utilise l'API Google Sheets pour la gestion des données. La configuration se trouve dans `src/config/api.js`.
+L'application s'appuie sur Supabase pour l'authentification, la base de données Postgres et les fonctions RPC.
+
+Variables d'environnement indispensables :
+
+- `VITE_SUPABASE_URL`
+- `VITE_SUPABASE_ANON_KEY`
+
+Reportez-vous à `docs/VERIFICATION_SUPABASE_COMPLETE.md` pour vérifier votre configuration Supabase.

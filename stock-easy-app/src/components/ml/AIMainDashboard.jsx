@@ -29,7 +29,11 @@ export function AIMainDashboard({ products, orders, aiSubTab, setAiSubTab }) {
 
       {/* Vue d'Ensemble */}
       {aiSubTab === 'overview' && (
-        <AIOverviewDashboard products={products} orders={orders} />
+        <AIOverviewDashboard
+          products={products}
+          orders={orders}
+          setAiSubTab={setAiSubTab}
+        />
       )}
 
       {/* Prévisions Détaillées */}

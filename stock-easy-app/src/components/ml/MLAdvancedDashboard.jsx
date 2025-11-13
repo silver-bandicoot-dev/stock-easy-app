@@ -42,7 +42,7 @@ export function MLAdvancedDashboard({ products }) {
   React.useEffect(() => {
     const loadHistory = async () => {
       try {
-        const history = await collectSalesHistory();
+        const history = await collectSalesHistory(products, { days: 180 });
         setSalesHistory(history);
       } catch (err) {
         console.error('Erreur chargement historique:', err);

@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useCurrency } from '../contexts/CurrencyContext';
 
 export const useEmailGeneration = () => {
-  const [isGenerating, setIsGenerating] = useState(false);
+  const { format: formatCurrency } = useCurrency();
 
   /**
    * Génère un brouillon d'email pour une commande
@@ -37,8 +37,10 @@ export const useEmailGeneration = () => {
         const quantity = orderQuantities[product.sku];
         const unitPrice = product.buyPrice || product.price || 0;
         const totalPrice = quantity * unitPrice;
+        const formattedUnitPrice = formatCurrency(unitPrice).padStart(15);
+        const formattedTotalPrice = formatCurrency(totalPrice).padStart(15);
         
-        return `${product.name.padEnd(25)} | ${product.sku.padEnd(12)} | ${quantity.toString().padStart(8)} | ${unitPrice.toFixed(2).padStart(10)}€ | ${totalPrice.toFixed(2).padStart(10)}€`;
+        return `${product.name.padEnd(25)} | ${product.sku.padEnd(12)} | ${quantity.toString().padStart(8)} | ${formattedUnitPrice} | ${formattedTotalPrice}`;
       }).join('\n');
 
     const totalAmount = products
@@ -65,7 +67,7 @@ Produit                   | SKU         | Quantité | Prix unitaire | Total
 -------------------------|-------------|----------|---------------|----------
 ${orderItemsTable}
 -------------------------|-------------|----------|---------------|----------
-Total de la commande : ${totalAmount.toFixed(2)}€
+Total de la commande : ${formatCurrency(totalAmount)}
 
 Entrepôt de livraison : ${warehouse}
 Adresse : ${warehouseAddress}
@@ -82,33 +84,30 @@ ${userSignature}`;
   /**
    * Génère un email de réclamation
    */
-  const generateReclamationEmail = (order, receivedItems, damagedQuantities, notes) => {
-    setIsGenerating(true);
+  const generateReclamationEmail = (order, receivedItems, damagedQuantities, notes, allProducts = []) => {
+    // Traiter receivedItems comme un objet {sku: {received, ordered, notes}}
+    const discrepancyText = Object.entries(receivedItems || {})
+      .map(([sku, data]) => {
+        const product = Array.isArray(allProducts) ? allProducts.find(p => p.sku === sku) : null;
+        const productName = product?.name || sku;
+        const received = data.received || data || 0;
+        const ordered = order.items?.find(item => item.sku === sku)?.quantity || 0;
+        return `- ${productName} (SKU: ${sku}): Reçu ${received}, Commandé ${ordered}`;
+      })
+      .join('\n');
+
+    // Traiter damagedQuantities comme un objet {sku: quantity}
+    const damagedText = Object.entries(damagedQuantities || {})
+      .filter(([sku, quantity]) => quantity > 0)
+      .map(([sku, quantity]) => {
+        const product = Array.isArray(allProducts) ? allProducts.find(p => p.sku === sku) : null;
+        const productName = product?.name || sku;
+        return `- ${productName} (SKU: ${sku}): ${quantity} unités endommagées`;
+      })
+      .join('\n');
+
+    const emailContent = `Objet: Réclamation - Commande ${order.poNumber}
     
-    try {
-      // Traiter receivedItems comme un objet {sku: {received, ordered, notes}}
-      const discrepancyText = Object.entries(receivedItems || {})
-        .map(([sku, data]) => {
-          const product = products.find(p => p.sku === sku);
-          const productName = product?.name || sku;
-          const received = data.received || data || 0;
-          const ordered = order.items?.find(item => item.sku === sku)?.quantity || 0;
-          return `- ${productName} (SKU: ${sku}): Reçu ${received}, Commandé ${ordered}`;
-        })
-        .join('\n');
-
-      // Traiter damagedQuantities comme un objet {sku: quantity}
-      const damagedText = Object.entries(damagedQuantities || {})
-        .filter(([sku, quantity]) => quantity > 0)
-        .map(([sku, quantity]) => {
-          const product = products.find(p => p.sku === sku);
-          const productName = product?.name || sku;
-          return `- ${productName} (SKU: ${sku}): ${quantity} unités endommagées`;
-        })
-        .join('\n');
-
-      const emailContent = `Objet: Réclamation - Commande ${order.poNumber}
-
 Bonjour,
 
 Nous avons réceptionné la commande ${order.poNumber} avec les problèmes suivants :
@@ -122,10 +121,7 @@ Merci de nous contacter pour résoudre ces problèmes.
 Cordialement,
 L'équipe StockEasy`;
 
-      return emailContent;
-    } finally {
-      setIsGenerating(false);
-    }
+    return emailContent;
   };
 
   /**
@@ -144,7 +140,6 @@ L'équipe StockEasy`;
   return {
     generateOrderEmailDraft,
     generateReclamationEmail,
-    copyToClipboard,
-    isGenerating
+    copyToClipboard
   };
 };

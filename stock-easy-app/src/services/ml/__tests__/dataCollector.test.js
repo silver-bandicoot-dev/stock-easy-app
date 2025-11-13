@@ -28,6 +28,7 @@ describe('DataCollector', () => {
     expect(stats.avgQuantity).toBeCloseTo(7.67, 1);
     expect(stats.minQuantity).toBe(5);
     expect(stats.maxQuantity).toBe(10);
+    expect(stats.totalQuantity).toBe(23);
   });
 });
 

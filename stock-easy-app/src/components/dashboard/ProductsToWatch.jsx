@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { Eye } from 'lucide-react';
-import { InfoTooltip, tooltips } from '../ui/InfoTooltip/InfoTooltip';
+import { InfoTooltip, tooltips } from '../ui/InfoTooltip';
 import { formatUnits } from '../../utils/decimalUtils';
 
 export const ProductsToWatch = ({ products }) => {

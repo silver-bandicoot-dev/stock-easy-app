@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { useAuth } from '../../contexts/AuthContext';
+import { useAuth } from '../../contexts/SupabaseAuthContext';
 import { toast } from 'sonner';
 import { Mail, Lock, Eye, EyeOff, LogIn } from 'lucide-react';
 import { Logo } from '../ui/Logo';

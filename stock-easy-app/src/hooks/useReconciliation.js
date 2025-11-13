@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import api from '../services/apiService';
+import api from '../services/apiAdapter';
 import { toast } from 'sonner';
 
 /**

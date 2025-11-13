@@ -1,13 +1,12 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { Package, Bell, Mail, X, Check, Truck, Clock, AlertCircle, CheckCircle, Eye, Settings, Info, Edit2, Activity, TrendingUp, TrendingDown, ArrowUpRight, ArrowDownRight, Upload, FileText, Calendar, RefreshCw, Plus, User, LogOut, Warehouse, Brain, AtSign } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
-import { useAuth } from './contexts/AuthContext';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { useAuth } from './contexts/SupabaseAuthContext';
 import NotificationBell from './components/notifications/NotificationBell';
 import { Toaster, toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
 import debounce from 'lodash.debounce';
-import api from './services/apiService';
-import { InfoTooltip } from './components/ui/InfoTooltip';
+import api from './services/apiAdapter';
 import { HealthBar } from './components/ui/HealthBar';
 import { Modal } from './components/ui/Modal';
 import { KPICard } from './components/features/KPICard';
@@ -31,9 +30,12 @@ import { InlineModalsContainer } from './components/modals/InlineModalsContainer
 
 import Sidebar from './components/layout/Sidebar';
 import { useInlineModals } from './hooks/useInlineModals';
+import { useSupabaseSync } from './hooks/useSupabaseSync';
 import { checkAndSaveKPISnapshot } from './utils/kpiScheduler';
 import { calculateMetrics } from './utils/calculations';
 import { formatUnits, formatPrice, roundToTwoDecimals, roundToInteger } from './utils/decimalUtils';
+import { formatCurrency } from './utils/formatting';
+import { CurrencyProvider } from './contexts/CurrencyContext';
 
 // ============================================
 // IMPORTS DES CONSTANTES ET UTILITAIRES
@@ -89,8 +91,6 @@ import { AITab } from './components/ai/AITab';
 // ============================================
 import { ReconciliationModal } from './components/track/modals/ReconciliationModal';
 import { ReclamationEmailModal } from './components/track/modals/ReclamationEmailModal';
-import { EmailOrderModal } from './components/actions/modals/EmailOrderModal';
-import { EmailOrderModalInline } from './components/modals/EmailOrderModalInline';
 import { ShipOrderModal } from './components/modals/ShipOrderModal';
 
 // ============================================
@@ -105,9 +105,9 @@ import { useEmailGeneration } from './hooks/useEmailGeneration';
 import { useShipOrderModal } from './hooks/useShipOrderModal';
 
 // ============================================
-// FONCTIONS API - Importées depuis apiService
+// FONCTIONS API - Importées depuis apiAdapter
 // ============================================
-// L'objet 'api' est maintenant importé depuis './services/apiService'
+// L'objet 'api' est maintenant importé depuis './services/apiAdapter'
 // Toutes les fonctions API sont centralisées dans ce service pour une meilleure maintenabilité
 
 // ============================================
@@ -121,6 +121,7 @@ import { useShipOrderModal } from './hooks/useShipOrderModal';
 const StockEasy = () => {
   // Auth et Navigation
   const navigate = useNavigate();
+  const location = useLocation();
   const { currentUser, logout } = useAuth();
 
   // Helper pour générer la signature de l'utilisateur dans les emails
@@ -159,6 +160,12 @@ const StockEasy = () => {
     loadData,
     syncData
   } = useStockData();
+
+  // Hook pour la synchronisation en temps réel
+  useSupabaseSync(() => {
+    console.log('🔄 Real-time: Changement détecté, rechargement des données...');
+    loadData();
+  }, true);
   
   // Hook pour la gestion des commandes
   const {
@@ -352,6 +359,42 @@ const StockEasy = () => {
   const [deviseDefaut, setDeviseDefaut] = useState('EUR');
   const [multiplicateurDefaut, setMultiplicateurDefaut] = useState(1.2);
 
+  const updateParameterState = (key, value) => {
+    setParameters(prev => {
+      const current = prev && !Array.isArray(prev) ? prev : {};
+      return {
+        ...current,
+        [key]: value
+      };
+    });
+  };
+
+  useEffect(() => {
+    if (!parameters || Array.isArray(parameters)) {
+      return;
+    }
+
+    const { seuilSurstockProfond: seuil, deviseDefaut: devise, multiplicateurDefaut: multiplicateur } = parameters;
+
+    if (seuil !== undefined && seuil !== null) {
+      const parsedSeuil = Number(seuil);
+      if (!Number.isNaN(parsedSeuil) && parsedSeuil !== seuilSurstockProfond) {
+        setSeuilSurstockProfond(parsedSeuil);
+      }
+    }
+
+    if (devise && devise !== deviseDefaut) {
+      setDeviseDefaut(devise);
+    }
+
+    if (multiplicateur !== undefined && multiplicateur !== null) {
+      const parsedMultiplicateur = Number(multiplicateur);
+      if (!Number.isNaN(parsedMultiplicateur) && Math.abs(parsedMultiplicateur - multiplicateurDefaut) > 0.0001) {
+        setMultiplicateurDefaut(parsedMultiplicateur);
+      }
+    }
+  }, [parameters, deviseDefaut, multiplicateurDefaut, seuilSurstockProfond]);
+
   // NOUVEAUX ÉTATS pour Gestion des Entrepôts
   const [warehouseModalOpen, setWarehouseModalOpen] = useState(false);
   const [editingWarehouse, setEditingWarehouse] = useState(null);
@@ -368,6 +411,7 @@ const StockEasy = () => {
 
   // NOUVEAUX ÉTATS pour Mapping
   const [assignSupplierModalOpen, setAssignSupplierModalOpen] = useState(false);
+  const [isSavingSupplierMapping, setIsSavingSupplierMapping] = useState(false);
   const [productToMap, setProductToMap] = useState(null);
   const [selectedSupplierForMapping, setSelectedSupplierForMapping] = useState('');
   const [selectedProductForMapping, setSelectedProductForMapping] = useState(null);
@@ -378,8 +422,12 @@ const StockEasy = () => {
 
   const handleUpdateSeuilSurstock = async (newValue) => {
     try {
-      await api.updateParameter('SeuilSurstockProfond', newValue);
+      const result = await api.updateParameter('SeuilSurstockProfond', newValue);
+      if (!result?.success) {
+        throw new Error(result?.error || 'Échec de la mise à jour du seuil de surstock');
+      }
       setSeuilSurstockProfond(newValue);
+      updateParameterState('seuilSurstockProfond', newValue);
       console.log(`✅ Seuil surstock mis à jour : ${newValue}j`);
       return true;
     } catch (error) {
@@ -392,8 +440,8 @@ const StockEasy = () => {
           }
         });
       } else if (error.message?.includes('Action non reconnue') || error.message?.includes('Action inconnue')) {
-        toast.error('❌ Erreur Backend: L\'action "updateParameter" n\'est pas configurée dans Google Apps Script', {
-          description: 'Consultez le fichier GOOGLE_APPS_SCRIPT_BACKEND_V1.md pour ajouter cette fonction',
+        toast.error('❌ Erreur Backend: L\'action "updateParameter" n\'est pas disponible', {
+          description: 'Vérifiez la connexion à Supabase',
           duration: 10000
         });
       } else {
@@ -405,15 +453,19 @@ const StockEasy = () => {
 
   const handleUpdateDevise = async (newDevise) => {
     try {
-      await api.updateParameter('DeviseDefaut', newDevise);
+      const result = await api.updateParameter('DeviseDefaut', newDevise);
+      if (!result?.success) {
+        throw new Error(result?.error || 'Échec de la mise à jour de la devise');
+      }
       setDeviseDefaut(newDevise);
+      updateParameterState('deviseDefaut', newDevise);
       console.log(`✅ Devise mise à jour : ${newDevise}`);
       return true;
     } catch (error) {
       console.error('❌ Erreur mise à jour devise:', error);
       if (error.message?.includes('Action non reconnue') || error.message?.includes('Action inconnue')) {
-        toast.error('❌ Erreur Backend: L\'action "updateParameter" n\'est pas configurée dans Google Apps Script', {
-          description: 'Consultez le fichier GOOGLE_APPS_SCRIPT_BACKEND_V1.md pour ajouter cette fonction',
+        toast.error('❌ Erreur Backend: L\'action "updateParameter" n\'est pas disponible', {
+          description: 'Vérifiez la connexion à Supabase',
           duration: 10000
         });
       } else {
@@ -425,15 +477,19 @@ const StockEasy = () => {
 
   const handleUpdateMultiplicateur = async (newValue) => {
     try {
-      await api.updateParameter('MultiplicateurDefaut', newValue);
+      const result = await api.updateParameter('MultiplicateurDefaut', newValue);
+      if (!result?.success) {
+        throw new Error(result?.error || 'Échec de la mise à jour du multiplicateur');
+      }
       setMultiplicateurDefaut(newValue);
+      updateParameterState('multiplicateurDefaut', newValue);
       console.log(`✅ Multiplicateur mis à jour : ${newValue}`);
       return true;
     } catch (error) {
       console.error('❌ Erreur mise à jour multiplicateur:', error);
       if (error.message?.includes('Action non reconnue') || error.message?.includes('Action inconnue')) {
-        toast.error('❌ Erreur Backend: L\'action "updateParameter" n\'est pas configurée dans Google Apps Script', {
-          description: 'Consultez le fichier GOOGLE_APPS_SCRIPT_BACKEND_V1.md pour ajouter cette fonction',
+        toast.error('❌ Erreur Backend: L\'action "updateParameter" n\'est pas disponible', {
+          description: 'Vérifiez la connexion à Supabase',
           duration: 10000
         });
       } else {
@@ -520,6 +576,51 @@ const StockEasy = () => {
     }
   };
 
+  const handleSaveSupplierMapping = async (supplierName, assignedSkus = []) => {
+    if (!supplierName) {
+      return;
+    }
+
+    const desiredSkus = Array.from(new Set(assignedSkus.filter(Boolean)));
+    const currentSkus = products
+      .filter((product) => product.supplier === supplierName)
+      .map((product) => product.sku);
+
+    const desiredSet = new Set(desiredSkus);
+    const currentSet = new Set(currentSkus);
+
+    const skusToAssign = desiredSkus.filter((sku) => !currentSet.has(sku));
+    const skusToRemove = currentSkus.filter((sku) => !desiredSet.has(sku));
+
+    const hasDifferences =
+      skusToAssign.length > 0 ||
+      skusToRemove.length > 0 ||
+      desiredSkus.length !== currentSkus.length;
+
+    if (!hasDifferences) {
+      toast.info('Aucune modification à sauvegarder pour ce fournisseur.');
+      return;
+    }
+
+    try {
+      setIsSavingSupplierMapping(true);
+
+      await Promise.all([
+        ...desiredSkus.map((sku) => api.assignSupplierToProduct(sku, supplierName)),
+        ...skusToRemove.map((sku) => api.removeSupplierFromProduct(sku, supplierName))
+      ]);
+
+      toast.success(`Mapping fournisseur mis à jour pour ${supplierName}`);
+      await loadData();
+    } catch (error) {
+      console.error('❌ Erreur sauvegarde mapping fournisseur:', error);
+      toast.error('Erreur lors de la sauvegarde du mapping fournisseur');
+      throw error;
+    } finally {
+      setIsSavingSupplierMapping(false);
+    }
+  };
+
   const handleRemoveSupplierFromProduct = async (sku) => {
     const confirm = window.confirm(
       `⚠️ Retirer le fournisseur de ce produit ?\n\n` +
@@ -529,7 +630,9 @@ const StockEasy = () => {
     if (!confirm) return;
     
     try {
-      await api.removeSupplierFromProduct(sku);
+      const product = products.find((item) => item.sku === sku);
+      const supplierName = product?.supplier || null;
+      await api.removeSupplierFromProduct(sku, supplierName);
       console.log(`✅ Fournisseur retiré de ${sku}`);
       await loadData();
     } catch (error) {
@@ -709,9 +812,9 @@ const StockEasy = () => {
       console.log('Résultats de sauvegarde:', results);
       
       // Vérifier les erreurs
-      const errors = results.filter(r => r.error);
+      const errors = results.filter(r => !r?.success);
       if (errors.length > 0) {
-        throw new Error(`Erreurs: ${errors.map(e => e.error).join(', ')}`);
+        throw new Error(`Erreurs: ${errors.map(e => e.error || 'Erreur inconnue').join(', ')}`);
       }
       
       // Recharger les données pour obtenir les paramètres mis à jour
@@ -759,7 +862,7 @@ const StockEasy = () => {
     const supplierInfo = suppliers[supplier];
     const productList = products.map(p => {
       const qty = orderQuantities[p.sku] || p.qtyToOrder;
-      return `- ${p.name} (SKU: ${p.sku}) - Quantité: ${qty} unités - Prix unitaire: ${roundToTwoDecimals(p.buyPrice).toFixed(2)}€`;
+      return `- ${p.name} (SKU: ${p.sku}) - Quantité: ${qty} unités - Prix unitaire: ${formatWithCurrency(roundToTwoDecimals(p.buyPrice))}`;
     }).join('\n');
     
     const total = roundToTwoDecimals(products.reduce((sum, p) => {
@@ -781,7 +884,7 @@ Nous souhaitons passer la commande suivante :
 
 ${productList}
 
-TOTAL: ${total.toFixed(2)}€${warehouseInfo}
+TOTAL: ${formatWithCurrency(total)}${warehouseInfo}
 
 Merci de nous confirmer la disponibilité et la date de livraison estimée.
 
@@ -823,7 +926,7 @@ ${getUserSignature()}`
       setEmailModalOpen(false);
       setSelectedSupplier(null);
       
-      toast.success('Commande créée et sauvegardée dans Google Sheets !', {
+      toast.success('Commande créée et sauvegardée dans Supabase !', {
         action: {
           label: 'Voir',
           onClick: () => setActiveTab('track')
@@ -1019,6 +1122,45 @@ ${getUserSignature()}`
     }));
   };
 
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const orderId = params.get('order');
+
+    if (!orderId) {
+      return;
+    }
+
+    if (!orders || orders.length === 0) {
+      return;
+    }
+
+    setActiveTab(MAIN_TABS.TRACK);
+
+    const targetOrder = orders.find(order => order.id === orderId);
+    if (targetOrder) {
+      const statusToSectionMap = {
+        pending_confirmation: TRACK_TABS.EN_COURS_COMMANDE,
+        preparing: TRACK_TABS.PREPARATION,
+        in_transit: TRACK_TABS.EN_TRANSIT,
+        received: TRACK_TABS.COMMANDES_RECUES,
+        reconciliation: TRACK_TABS.RECONCILIATION
+      };
+
+      const targetSection =
+        statusToSectionMap[targetOrder.status] ?? TRACK_TABS.EN_COURS_COMMANDE;
+
+      setTrackTabSection(targetSection);
+      setExpandedOrders(prev => ({
+        ...prev,
+        [orderId]: true
+      }));
+    } else {
+      toast.error('Commande introuvable');
+    }
+
+    navigate(location.pathname, { replace: true });
+  }, [location.search, orders, navigate]);
+
 
   
   const openReconciliationModal = (order) => {
@@ -1055,8 +1197,12 @@ ${getUserSignature()}`
   };
   
   const confirmReconciliationWithQuantities = async () => {
+    console.log('🚀 FONCTION APPELÉE: confirmReconciliationWithQuantities');
     try {
-      if (!reconciliationOrder) return;
+      if (!reconciliationOrder) {
+        console.log('❌ PAS DE COMMANDE EN RÉCONCILIATION');
+        return;
+      }
       
       console.log('🔍 Début de la réconciliation:', reconciliationOrder.id);
       console.log('Quantités reçues:', inlineModals.reconciliationModal.discrepancyItems);
@@ -1118,12 +1264,28 @@ ${getUserSignature()}`
       
       console.log('A des problèmes:', hasProblems);
       
+      // Calculer les quantités manquantes et endommagées par SKU
+      const missingQuantitiesBySku = {};
+      const damagedQuantitiesBySku = {};
+      
+      updatedItems.forEach(item => {
+        const missing = item.quantity - (item.receivedQuantity + item.damagedQuantity);
+        if (missing > 0) {
+          missingQuantitiesBySku[item.sku] = missing;
+        }
+        if (item.damagedQuantity > 0) {
+          damagedQuantitiesBySku[item.sku] = item.damagedQuantity;
+        }
+      });
+      
       // Sauvegarder dans la base de données
       const updatePayload = {
         status: hasProblems ? 'reconciliation' : 'completed',
         receivedAt: new Date().toISOString().split('T')[0],
         hasDiscrepancy: hasProblems,
-        items: updatedItems
+        items: updatedItems,
+        missingQuantitiesBySku: missingQuantitiesBySku,
+        damagedQuantitiesBySku: damagedQuantitiesBySku
       };
       
       console.log('Payload de mise à jour:', updatePayload);
@@ -1595,7 +1757,10 @@ ${getUserSignature()}`
     });
 
     // Générer le CSV avec détail des produits
-    const headers = ['N° Commande', 'Fournisseur', 'Date Création', 'Date Confirmation', 'Date Expédition', 'Date Réception', 'Statut', 'SKU', 'Nom Produit', 'Quantité', 'Prix Unitaire (€)', 'Total Ligne (€)', 'Total Commande (€)', 'Suivi'];
+    const priceHeader = `Prix Unitaire (${currencySymbol})`;
+    const lineTotalHeader = `Total Ligne (${currencySymbol})`;
+    const orderTotalHeader = `Total Commande (${currencySymbol})`;
+    const headers = ['N° Commande', 'Fournisseur', 'Date Création', 'Date Confirmation', 'Date Expédition', 'Date Réception', 'Statut', 'SKU', 'Nom Produit', 'Quantité', priceHeader, lineTotalHeader, orderTotalHeader, 'Suivi'];
     const rows = [];
     
     const statusLabels = {
@@ -1624,10 +1789,10 @@ ${getUserSignature()}`
           item.sku,
           product?.name || item.sku,
           item.quantity,
-          roundToTwoDecimals(item.pricePerUnit).toFixed(2),
-          lineTotal.toFixed(2),
+          formatWithCurrency(roundToTwoDecimals(item.pricePerUnit)),
+          formatWithCurrency(lineTotal),
           // Afficher le total de la commande seulement sur la première ligne de chaque commande
-          index === 0 ? roundToTwoDecimals(order.total).toFixed(2) : '',
+          index === 0 ? formatWithCurrency(roundToTwoDecimals(order.total)) : '',
           index === 0 ? (order.trackingNumber || '-') : ''
         ]);
       });
@@ -1670,17 +1835,66 @@ ${getUserSignature()}`
     try {
       const order = reconciliationModal.data.order;
       
+      console.log('🔥 handleReconciliationConfirm APPELÉE');
+      console.log('🔥 reconciliationData:', reconciliationData);
+      console.log('🔥 order:', order);
+      
       // Analyser les données pour déterminer s'il y a des écarts ou dommages
       const hasDiscrepancies = Object.values(reconciliationData.discrepancies || {}).some(d => d !== 0);
       const hasDamages = Object.values(reconciliationData.damages || {}).some(d => d > 0);
       
+      console.log('🔥 hasDiscrepancies:', hasDiscrepancies, 'hasDamages:', hasDamages);
+      
       if (hasDiscrepancies || hasDamages) {
+        // Calculer les quantités manquantes et endommagées par SKU
+        const missingQuantitiesBySku = {};
+        const damagedQuantitiesBySku = {};
+        
+        // Le modal envoie receivedItems = quantités reçues, damages = quantités endommagées
+        order.items.forEach(item => {
+          const ordered = item.quantity || 0;
+          const receivedSaine = parseInt(reconciliationData.receivedItems?.[item.sku] || 0, 10);
+          const damaged = parseInt(reconciliationData.damages?.[item.sku] || 0, 10);
+          
+          // Missing = Commandé - (Reçu sain + Endommagé)
+          const missing = ordered - receivedSaine - damaged;
+          
+          console.log(`📦 ${item.sku}: commandé=${ordered}, reçu=${receivedSaine}, endommagé=${damaged}, manquant=${missing}`);
+          
+          if (missing > 0) {
+            missingQuantitiesBySku[item.sku] = missing;
+          }
+          if (damaged > 0) {
+            damagedQuantitiesBySku[item.sku] = damaged;
+          }
+        });
+        
+        console.log('📦 missingQuantitiesBySku:', missingQuantitiesBySku);
+        console.log('📦 damagedQuantitiesBySku:', damagedQuantitiesBySku);
+        
+        // Mettre à jour les items avec les quantités reçues et endommagées
+        const updatedItems = order.items.map(item => {
+          const receivedSaine = parseInt(reconciliationData.receivedItems?.[item.sku] || 0, 10);
+          const damaged = parseInt(reconciliationData.damages?.[item.sku] || 0, 10);
+          
+          return {
+            ...item,
+            receivedQuantity: receivedSaine,
+            damagedQuantity: damaged
+          };
+        });
+        
+        console.log('📦 updatedItems:', updatedItems);
+        
         // Il y a des écarts ou dommages - passer au statut 'reconciliation'
         await api.updateOrderStatus(order.id, {
           status: 'reconciliation',
           receivedAt: new Date().toISOString().split('T')[0],
           hasDiscrepancy: hasDiscrepancies,
-          damageReport: hasDamages
+          damageReport: hasDamages,
+          items: updatedItems,
+          missingQuantitiesBySku: missingQuantitiesBySku,
+          damagedQuantitiesBySku: damagedQuantitiesBySku
         });
         
         // Mettre à jour le stock avec les quantités reçues
@@ -1701,7 +1915,8 @@ ${getUserSignature()}`
           order,
           reconciliationData.receivedItems,
           reconciliationData.damages,
-          reconciliationData.notes || getUserSignature()
+          reconciliationData.notes || getUserSignature(),
+          products
         );
         
         if (emailContent) {
@@ -1871,14 +2086,19 @@ ${getUserSignature()}`
           >
             <RefreshCw className="w-12 h-12 text-black mx-auto mb-4" />
           </motion.div>
-          <p className="text-lg font-medium text-[#191919]">Chargement depuis Google Sheets...</p>
+          <p className="text-lg font-medium text-[#191919]">Chargement depuis Supabase...</p>
         </div>
       </motion.div>
     );
   }
 
+  const currencyCode = deviseDefaut || DEFAULT_PARAMETERS.deviseDefaut;
+  const currencySymbol = (CURRENCIES.find(currency => currency.code === currencyCode)?.symbol) || currencyCode;
+  const formatWithCurrency = (amount, options) => formatCurrency(amount, currencyCode, options);
+
   return (
-    <>
+    <CurrencyProvider code={currencyCode}>
+      <>
       <Toaster 
         position="top-right" 
         expand={true}
@@ -1901,7 +2121,7 @@ ${getUserSignature()}`
         />
 
         {/* Main Content - Pleine hauteur avec padding pour sidebar desktop */}
-        <div className="md:ml-64 min-h-screen">
+        <div className="md:ml-64 min-h-screen bg-[#FAFAF7]">
           {/* Spacer pour le header mobile uniquement */}
           <div className="md:hidden h-[72px]" />
           
@@ -1916,7 +2136,7 @@ ${getUserSignature()}`
             </div>
 
             {/* Contenu principal avec padding */}
-            <div className="p-4 sm:p-6 lg:p-8 pt-16 sm:pt-20">
+            <div className="p-4 sm:p-6 lg:p-8 pt-10 sm:pt-12 lg:pt-14">
               <div className="max-w-7xl mx-auto">
                 {/* DASHBOARD TAB */}
                 <AnimatePresence mode="wait">
@@ -1924,6 +2144,7 @@ ${getUserSignature()}`
                     <DashboardTab 
                       productsByStatus={productsByStatus}
                       orders={orders}
+                      suppliers={suppliers}
                       setActiveTab={setActiveTab}
                       setTrackTabSection={setTrackTabSection}
                       enrichedProducts={enrichedProducts}
@@ -1949,6 +2170,7 @@ ${getUserSignature()}`
                       emailModal={emailModal}
                       emailModalHandlers={emailModalHandlers}
                       emailGeneration={emailGeneration}
+                      allProducts={enrichedProducts}
                     />
                   )}
 
@@ -1965,6 +2187,7 @@ ${getUserSignature()}`
                       shipOrder={handleShipOrder}
                       receiveOrder={receiveOrder}
                       suppliers={suppliers}
+                      warehouses={warehouses}
                       loadData={loadData}
                       // Nouveaux props pour les modals
                       reconciliationModal={reconciliationModal}
@@ -1983,6 +2206,8 @@ ${getUserSignature()}`
                       suppliers={suppliers}
                       stockLevelFilter={stockLevelFilter}
                       setStockLevelFilter={setStockLevelFilter}
+                      stockLevelSupplierFilter={stockLevelSupplierFilter}
+                      setStockLevelSupplierFilter={setStockLevelSupplierFilter}
                       searchTerm={searchTerm}
                       setSearchTerm={setSearchTerm}
                       onViewDetails={onViewDetails}
@@ -1992,7 +2217,7 @@ ${getUserSignature()}`
                   {/* ANALYTICS TAB */}
                   {activeTab === MAIN_TABS.ANALYTICS && (
                     <AnalyticsTab
-                      products={products}
+                      products={enrichedProducts}
                       orders={orders}
                       suppliers={suppliers}
                       warehouses={warehouses}
@@ -2014,6 +2239,8 @@ ${getUserSignature()}`
                     <HistoryTab
                       orders={orders}
                       products={products}
+                      suppliers={suppliers}
+                      warehouses={warehouses}
                       historyFilter={historyFilter}
                       setHistoryFilter={setHistoryFilter}
                       historyDateStart={historyDateStart}
@@ -2038,11 +2265,11 @@ ${getUserSignature()}`
                       loadData={loadData}
                       // Props pour ParametresGeneraux
                       seuilSurstockProfond={seuilSurstockProfond}
-                      setSeuilSurstockProfond={setSeuilSurstockProfond}
+                      onUpdateSeuilSurstock={handleUpdateSeuilSurstock}
                       deviseDefaut={deviseDefaut}
-                      setDeviseDefaut={setDeviseDefaut}
+                      onUpdateDevise={handleUpdateDevise}
                       multiplicateurDefaut={multiplicateurDefaut}
-                      setMultiplicateurDefaut={setMultiplicateurDefaut}
+                      onUpdateMultiplicateur={handleUpdateMultiplicateur}
                       // Props pour GestionFournisseurs
                       supplierModalOpen={supplierModalOpen}
                       setSupplierModalOpen={setSupplierModalOpen}
@@ -2060,9 +2287,8 @@ ${getUserSignature()}`
                       setAssignSupplierModalOpen={setAssignSupplierModalOpen}
                       selectedProductForMapping={selectedProductForMapping}
                       setSelectedProductForMapping={setSelectedProductForMapping}
-                      handleOpenAssignSupplierModal={handleOpenAssignSupplierModal}
-                      handleCloseAssignSupplierModal={handleCloseAssignSupplierModal}
-                      handleAssignSupplier={handleAssignSupplier}
+                      handleSaveSupplierMapping={handleSaveSupplierMapping}
+                      isSavingSupplierMapping={isSavingSupplierMapping}
                       // Props pour GestionWarehouses
                       warehouseModalOpen={warehouseModalOpen}
                       setWarehouseModalOpen={setWarehouseModalOpen}
@@ -2107,24 +2333,6 @@ ${getUserSignature()}`
         onCopy={emailGeneration.copyToClipboard}
       />
 
-      {/* Modal d'email de commande - Utilise le système inline qui fonctionnait */}
-      <EmailOrderModalInline
-        isOpen={inlineModals.emailOrderModal.emailModalOpen}
-        onClose={inlineModals.emailOrderModal.closeEmailModal}
-        selectedSupplier={inlineModals.emailOrderModal.selectedSupplier}
-        toOrderBySupplier={toOrderBySupplier}
-        warehouses={warehouses}
-        selectedWarehouse={inlineModals.emailOrderModal.selectedWarehouse}
-        setSelectedWarehouse={inlineModals.emailOrderModal.setSelectedWarehouse}
-        orderQuantities={inlineModals.emailOrderModal.orderQuantities}
-        updateOrderQuantity={inlineModals.emailOrderModal.updateOrderQuantity}
-        emailGeneration={emailGeneration}
-        getUserSignature={getUserSignature}
-        handleCreateOrderWithoutEmail={handleCreateOrderWithoutEmail}
-        handleSendOrder={handleSendOrder}
-        suppliers={suppliers}
-      />
-
       {/* Modal d'expédition */}
       <ShipOrderModal
         isOpen={shipOrderModal.isOpen}
@@ -2166,13 +2374,15 @@ ${getUserSignature()}`
         getUserSignature={getUserSignature}
         handleCreateOrderWithoutEmail={handleCreateOrderWithoutEmail}
         handleSendOrder={handleSendOrder}
+        suppliers={suppliers}
         reconciliationModal={inlineModals.reconciliationModal}
         products={products}
         confirmReconciliationWithQuantities={confirmReconciliationWithQuantities}
         reclamationEmailModal={inlineModals.reclamationEmailModal}
       />
 
-    </>
+      </>
+    </CurrencyProvider>
   );
 };
 

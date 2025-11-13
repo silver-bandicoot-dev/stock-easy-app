@@ -4,29 +4,7 @@
  * @module services/ml/optimizer/performanceAnalyzer
  */
 
-import { getAllData } from '../../apiService';
-
-/**
- * Événement de performance du stock
- * @typedef {Object} StockEvent
- * @property {string} date - Date de l'événement
- * @property {string} type - 'stockout' | 'overstock' | 'optimal'
- * @property {number} stockLevel - Niveau de stock à ce moment
- * @property {number} demandLevel - Demande à ce moment
- * @property {number} daysOfStock - Jours de couverture
- */
-
-/**
- * Performance d'un produit
- * @typedef {Object} ProductPerformance
- * @property {string} sku
- * @property {number} stockoutRate - Taux de rupture (0-1)
- * @property {number} overstockRate - Taux de surstock (0-1)
- * @property {number} avgCoverageTime - Temps de couverture moyen (jours)
- * @property {number} stockoutCost - Coût estimé des ruptures
- * @property {number} overstockCost - Coût estimé du surstock
- * @property {StockEvent[]} events - Historique des événements
- */
+import { getAllData, getSalesHistory } from '../../apiAdapter';
 
 export class PerformanceAnalyzer {
   constructor() {
@@ -39,51 +17,53 @@ export class PerformanceAnalyzer {
    */
   async collectPerformanceHistory() {
     try {
-      console.log('📊 Collecte de l\'historique de performance...');
-      
+      console.log("📊 Collecte de l'historique de performance...");
+
       const allData = await getAllData();
+      const products = allData.products || [];
+      const salesHistory = await getSalesHistory();
+
+      const historyBySku = new Map();
+      (salesHistory || []).forEach((row) => {
+        if (!row?.sku) return;
+        if (!historyBySku.has(row.sku)) {
+          historyBySku.set(row.sku, []);
+        }
+        historyBySku.get(row.sku).push(row);
+      });
+
       const performanceMap = new Map();
-      
-      // Analyser chaque produit
-      for (const product of allData.products) {
-        const performance = await this.analyzeProductPerformance(product, allData.orders);
+
+      for (const product of products) {
+        const productHistory = historyBySku.get(product.sku) || [];
+        const performance = this.analyzeProductPerformance(product, productHistory);
         performanceMap.set(product.sku, performance);
       }
-      
+
       console.log(`✅ Performance analysée pour ${performanceMap.size} produits`);
       return performanceMap;
-      
     } catch (error) {
       console.error('❌ Erreur lors de la collecte de performance:', error);
       throw error;
     }
   }
 
-  /**
-   * Analyse la performance d'un produit spécifique
-   * @param {Object} product - Données du produit
-   * @param {Array} orders - Historique des commandes
-   * @returns {ProductPerformance}
-   */
-  async analyzeProductPerformance(product, orders = []) {
-    // Simuler l'historique sur 90 jours
-    const events = this.generateHistoricalEvents(product, orders);
-    
-    // Calculer les métriques
-    const stockouts = events.filter(e => e.type === 'stockout');
-    const overstocks = events.filter(e => e.type === 'overstock');
-    const optimal = events.filter(e => e.type === 'optimal');
-    
-    const stockoutRate = stockouts.length / events.length;
-    const overstockRate = overstocks.length / events.length;
-    
-    // Temps de couverture moyen
-    const avgCoverageTime = events.reduce((sum, e) => sum + e.daysOfStock, 0) / events.length;
-    
-    // Coûts estimés
-    const stockoutCost = this.calculateStockoutCost(stockouts, product);
+  analyzeProductPerformance(product, history) {
+    const { events, avgDemand } = this.createEventsFromHistory(product, history);
+    const stockouts = events.filter((event) => event.type === 'stockout');
+    const overstocks = events.filter((event) => event.type === 'overstock');
+    const eventCount = events.length || 1;
+
+    const stockoutRate = stockouts.length / eventCount;
+    const overstockRate = overstocks.length / eventCount;
+    const avgCoverageTime =
+      events.length > 0
+        ? events.reduce((sum, event) => sum + event.daysOfStock, 0) / eventCount
+        : (product.daysOfStock ?? 0);
+
+    const stockoutCost = this.calculateStockoutCost(stockouts, product, avgDemand);
     const overstockCost = this.calculateOverstockCost(overstocks, product);
-    
+
     return {
       sku: product.sku,
       stockoutRate,
@@ -91,134 +71,120 @@ export class PerformanceAnalyzer {
       avgCoverageTime,
       stockoutCost,
       overstockCost,
-      optimalRate: optimal.length / events.length,
+      optimalRate: events.length > 0 ? 1 - stockoutRate - overstockRate : 0,
       events,
-      product // Garder référence au produit
+      product
     };
   }
 
-  /**
-   * Génère l'historique simulé des événements de stock
-   * @private
-   */
-  generateHistoricalEvents(product, orders) {
-    const events = [];
+  createEventsFromHistory(product, history) {
+    const normalizedHistory =
+      history && history.length > 0
+        ? this.normalizeHistory(history)
+        : this.buildFallbackHistory(product);
+
+    const demandLevels = normalizedHistory.map((row) => Number(row.quantity) || 0);
+    const stats = this.calculateDemandStats(demandLevels, product);
+    const highThreshold = stats.avg + stats.std;
+    const lowThreshold = Math.max(0, stats.avg - stats.std);
+
+    const events = normalizedHistory.map((row) => {
+      const demand = Number(row.quantity) || 0;
+      let type = 'optimal';
+      if (demand >= highThreshold && highThreshold > 0) {
+        type = 'stockout';
+      } else if (demand <= lowThreshold) {
+        type = 'overstock';
+      }
+
+      return {
+        date: row.saleDate,
+        type,
+        stockLevel: Number(product.stock ?? 0),
+        demandLevel: demand,
+        daysOfStock: stats.avg > 0 ? Number(product.stock ?? 0) / stats.avg : Number(product.stock ?? 0)
+      };
+    });
+
+    return { events, avgDemand: stats.avg };
+  }
+
+  normalizeHistory(history) {
+    return [...history]
+      .map((row) => ({
+        saleDate: row.saleDate,
+        quantity: Number(row.quantity) || 0
+      }))
+      .sort((a, b) => new Date(a.saleDate) - new Date(b.saleDate));
+  }
+
+  buildFallbackHistory(product) {
+    const avg =
+      Number(product.salesPerDay ?? 0) ||
+      (Number(product.sales30d ?? 0) / 30) ||
+      0;
+    const days = Math.max(30, Number(product.leadTimeDays ?? 0) || 30);
     const today = new Date();
-    
-    // Paramètres de simulation
-    let currentStock = product.stock || 0;
-    const dailySales = product.salesPerDay || 1;
-    const salesVariance = dailySales * 0.3; // 30% de variation
-    
-    // Générer 90 jours d'historique
-    for (let daysAgo = 90; daysAgo >= 0; daysAgo--) {
+    const history = [];
+
+    for (let i = days - 1; i >= 0; i--) {
       const date = new Date(today);
-      date.setDate(today.getDate() - daysAgo);
-      
-      // Ventes quotidiennes avec variation aléatoire
-      const daySales = Math.max(0, Math.round(
-        dailySales + (Math.random() - 0.5) * salesVariance
-      ));
-      
-      // Mettre à jour le stock
-      currentStock -= daySales;
-      
-      // Vérifier si une commande arrive ce jour
-      const orderArriving = this.checkOrderArrival(date, orders, product.sku);
-      if (orderArriving) {
-        currentStock += orderArriving.quantity;
-      }
-      
-      // Calculer jours de stock restants
-      const daysOfStock = currentStock / (dailySales || 1);
-      
-      // Déterminer le type d'événement
-      let eventType = 'optimal';
-      if (currentStock <= 0) {
-        eventType = 'stockout';
-        currentStock = 0; // Pas de stock négatif
-      } else if (daysOfStock > this.overstockThreshold) {
-        eventType = 'overstock';
-      }
-      
-      events.push({
-        date: date.toISOString().split('T')[0],
-        type: eventType,
-        stockLevel: currentStock,
-        demandLevel: daySales,
-        daysOfStock: daysOfStock,
-        orderReceived: orderArriving ? orderArriving.quantity : 0
+      date.setDate(today.getDate() - i);
+      history.push({
+        saleDate: date.toISOString().split('T')[0],
+        quantity: avg
       });
     }
-    
-    return events;
+
+    return history;
   }
 
-  /**
-   * Vérifie si une commande arrive à cette date
-   * @private
-   */
-  checkOrderArrival(date, orders, sku) {
-    // Simplification : on suppose que les commandes arrivent régulièrement
-    // Dans une vraie app, on utiliserait l'historique réel des commandes
-    
-    // Simuler une commande tous les leadTimeDays
-    const dayOfYear = Math.floor((date - new Date(date.getFullYear(), 0, 0)) / (1000 * 60 * 60 * 24));
-    
-    // Ordre arrive environ tous les 30 jours (simplifié)
-    if (dayOfYear % 30 === 0) {
-      return {
-        quantity: Math.round(Math.random() * 50 + 20), // 20-70 unités
-        sku
-      };
+  calculateDemandStats(demandLevels, product) {
+    if (!demandLevels || demandLevels.length === 0) {
+      const fallback =
+        Number(product.salesPerDay ?? 0) ||
+        (Number(product.sales30d ?? 0) / 30) ||
+        0;
+      return { avg: fallback, std: 0 };
     }
-    
-    return null;
+
+    const avg = demandLevels.reduce((sum, value) => sum + value, 0) / demandLevels.length;
+    const variance =
+      demandLevels.reduce((sum, value) => sum + Math.pow(value - avg, 2), 0) / demandLevels.length;
+    const std = Math.sqrt(variance);
+    return { avg, std };
   }
 
-  /**
-   * Calcule le coût des ruptures de stock
-   * @private
-   */
-  calculateStockoutCost(stockouts, product) {
-    // Coût = ventes perdues * marge
-    const lostSalesPerDay = product.salesPerDay || 0;
-    const margin = (product.sellPrice - product.buyPrice) || 0;
-    
-    return stockouts.reduce((total, event) => {
-      // Supposer 1 jour de rupture par événement
-      return total + (lostSalesPerDay * margin);
-    }, 0);
+  calculateStockoutCost(stockouts, product, avgDemand) {
+    if (!stockouts.length) return 0;
+    const margin =
+      Number(product.sellPrice ?? 0) - Number(product.buyPrice ?? 0);
+    const effectiveMargin = Number.isFinite(margin) ? Math.max(margin, 0) : 0;
+    const dailyDemand = avgDemand || Number(product.salesPerDay ?? 0) || 0;
+    return stockouts.length * dailyDemand * effectiveMargin;
   }
 
-  /**
-   * Calcule le coût du surstock
-   * @private
-   */
   calculateOverstockCost(overstocks, product) {
-    // Coût = capital immobilisé * taux de holding (25% annuel)
-    const holdingCostRate = 0.25 / 365; // Par jour
-    
-    return overstocks.reduce((total, event) => {
-      const excessStock = event.stockLevel - (product.salesPerDay * this.overstockThreshold);
-      const holdingCost = excessStock * product.buyPrice * holdingCostRate;
-      return total + holdingCost;
-    }, 0);
+    if (!overstocks.length) return 0;
+    const holdingRate = Number(product.storageCostPerUnit ?? 0.01);
+    const avgStock = Number(product.stock ?? 0);
+    return overstocks.length * avgStock * holdingRate;
   }
 
-  /**
-   * Obtient un résumé des performances
-   * @param {Map<string, ProductPerformance>} performanceMap
-   * @returns {Object}
-   */
   getPerformanceSummary(performanceMap) {
     const performances = Array.from(performanceMap.values());
-    
+
     const totalStockoutCost = performances.reduce((sum, p) => sum + p.stockoutCost, 0);
     const totalOverstockCost = performances.reduce((sum, p) => sum + p.overstockCost, 0);
-    const avgStockoutRate = performances.reduce((sum, p) => sum + p.stockoutRate, 0) / performances.length;
-    const avgOverstockRate = performances.reduce((sum, p) => sum + p.overstockRate, 0) / performances.length;
-    
+    const avgStockoutRate =
+      performances.length > 0
+        ? performances.reduce((sum, p) => sum + p.stockoutRate, 0) / performances.length
+        : 0;
+    const avgOverstockRate =
+      performances.length > 0
+        ? performances.reduce((sum, p) => sum + p.overstockRate, 0) / performances.length
+        : 0;
+
     return {
       totalProducts: performances.length,
       totalStockoutCost: Math.round(totalStockoutCost),
@@ -226,48 +192,37 @@ export class PerformanceAnalyzer {
       totalCost: Math.round(totalStockoutCost + totalOverstockCost),
       avgStockoutRate: (avgStockoutRate * 100).toFixed(1),
       avgOverstockRate: (avgOverstockRate * 100).toFixed(1),
-      productsWithStockouts: performances.filter(p => p.stockoutRate > 0.05).length,
-      productsWithOverstock: performances.filter(p => p.overstockRate > 0.3).length
+      productsWithStockouts: performances.filter((p) => p.stockoutRate > 0.05).length,
+      productsWithOverstock: performances.filter((p) => p.overstockRate > 0.3).length
     };
   }
 
-  /**
-   * Identifie les produits les plus problématiques
-   * @param {Map<string, ProductPerformance>} performanceMap
-   * @param {number} topN - Nombre de produits à retourner
-   * @returns {Array}
-   */
   getProblematicProducts(performanceMap, topN = 5) {
     const performances = Array.from(performanceMap.values());
-    
-    // Calculer un score de problème (plus élevé = plus problématique)
-    const scored = performances.map(p => ({
+
+    const scored = performances.map((p) => ({
       ...p,
-      problemScore: (p.stockoutRate * 100) + (p.overstockRate * 50) + 
-                    (p.stockoutCost + p.overstockCost) / 100
+      problemScore:
+        p.stockoutRate * 100 +
+        p.overstockRate * 50 +
+        (p.stockoutCost + p.overstockCost) / 100
     }));
-    
-    // Trier par score décroissant
+
     scored.sort((a, b) => b.problemScore - a.problemScore);
-    
+
     return scored.slice(0, topN);
   }
 }
 
-/**
- * Fonction helper pour obtenir la performance d'un produit
- * @param {string} sku
- * @returns {Promise<ProductPerformance>}
- */
 export async function getProductPerformance(sku) {
   const analyzer = new PerformanceAnalyzer();
   const allData = await getAllData();
-  const product = allData.products.find(p => p.sku === sku);
-  
+  const product = allData.products.find((p) => p.sku === sku);
+
   if (!product) {
     throw new Error(`Produit ${sku} introuvable`);
   }
-  
-  return analyzer.analyzeProductPerformance(product, allData.orders);
-}
 
+  const salesHistory = await getSalesHistory({ sku });
+  return analyzer.analyzeProductPerformance(product, salesHistory);
+}

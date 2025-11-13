@@ -3,6 +3,7 @@ import { Mail, AlertCircle } from 'lucide-react';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
 import { roundToTwoDecimals } from '../../utils/decimalUtils';
+import { useCurrency } from '../../contexts/CurrencyContext';
 
 export const EmailOrderModalInline = ({
   isOpen,
@@ -23,6 +24,7 @@ export const EmailOrderModalInline = ({
   const [editableEmail, setEditableEmail] = useState('');
   const [editableSubject, setEditableSubject] = useState('');
   const [editableBody, setEditableBody] = useState('');
+  const { format: formatCurrency } = useCurrency();
 
   // Initialiser les valeurs éditables quand le modal s'ouvre
   useEffect(() => {
@@ -195,7 +197,7 @@ export const EmailOrderModalInline = ({
                   />
                 </div>
                 <div className="text-xs text-right text-[#666663]">
-                  {roundToTwoDecimals((orderQuantities[p.sku] || p.qtyToOrder) * p.buyPrice).toFixed(2)}€
+                  {formatCurrency(roundToTwoDecimals((orderQuantities[p.sku] || p.qtyToOrder) * p.buyPrice))}
                 </div>
               </div>
             </div>
@@ -203,7 +205,7 @@ export const EmailOrderModalInline = ({
         </div>
         <div className="mt-2 pt-2 border-t border-blue-200 flex justify-between items-center">
           <span className="text-sm text-[#666663]">Total:</span>
-          <span className="text-lg font-bold text-[#191919]">{totalAmount.toFixed(2)}€</span>
+          <span className="text-lg font-bold text-[#191919]">{formatCurrency(totalAmount)}</span>
         </div>
       </div>
       

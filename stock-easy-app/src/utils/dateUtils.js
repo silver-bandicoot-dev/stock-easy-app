@@ -82,3 +82,101 @@ export const isToday = (date) => {
 export const formatDateForAPI = (date) => {
   return date.toISOString().split('T')[0];
 };
+
+/**
+ * Calcule l'ETA (Estimated Time of Arrival) d'une commande
+ * À partir de la date de confirmation + leadTimeDays du fournisseur
+ * @param {string|null} confirmedAt - Date de confirmation de la commande (format ISO ou YYYY-MM-DD)
+ * @param {number} leadTimeDays - Délai de livraison en jours
+ * @param {Object} suppliers - Objet des fournisseurs (pour récupérer le leadTimeDays si nécessaire)
+ * @param {string} supplierName - Nom du fournisseur
+ * @returns {string|null} - Date ETA au format YYYY-MM-DD ou null
+ */
+export const calculateETA = (confirmedAt, leadTimeDays, suppliers = {}, supplierName = '') => {
+  // Si pas de date de confirmation, impossible de calculer l'ETA
+  if (!confirmedAt) return null;
+  
+  try {
+    // Parser la date de confirmation
+    const confirmDate = new Date(confirmedAt);
+    
+    // Vérifier que la date est valide
+    if (isNaN(confirmDate.getTime())) {
+      console.warn('calculateETA: date de confirmation invalide:', confirmedAt);
+      return null;
+    }
+    
+    // Récupérer le leadTime - d'abord depuis le paramètre, sinon depuis le fournisseur
+    let leadTime = leadTimeDays;
+    
+    if (!leadTime && supplierName && suppliers[supplierName]) {
+      leadTime = suppliers[supplierName].leadTimeDays;
+    }
+    
+    // Si toujours pas de leadTime, retourner null
+    if (!leadTime || leadTime <= 0) {
+      console.warn('calculateETA: leadTimeDays invalide:', leadTime);
+      return null;
+    }
+    
+    // Calculer l'ETA en ajoutant le leadTime à la date de confirmation
+    const etaDate = new Date(confirmDate);
+    etaDate.setDate(etaDate.getDate() + leadTime);
+    
+    // Retourner au format YYYY-MM-DD
+    return formatDateForAPI(etaDate);
+  } catch (error) {
+    console.error('Erreur calcul ETA:', error);
+    return null;
+  }
+};
+
+/**
+ * Formate une date ETA pour l'affichage (avec indicateur d'urgence)
+ * @param {string|null} eta - Date ETA au format ISO ou YYYY-MM-DD
+ * @param {boolean} includeUrgency - Inclure l'indicateur d'urgence (jours restants)
+ * @returns {Object|null} - { formatted: string, daysRemaining: number, isUrgent: boolean, isPast: boolean }
+ */
+export const formatETA = (eta, includeUrgency = true) => {
+  if (!eta) return null;
+  
+  try {
+    const etaDate = new Date(eta);
+    
+    // Vérifier que la date est valide
+    if (isNaN(etaDate.getTime())) {
+      return null;
+    }
+    
+    const formatted = etaDate.toLocaleDateString('fr-FR', {
+      day: '2-digit',
+      month: 'long',
+      year: 'numeric'
+    });
+    
+    if (!includeUrgency) {
+      return { formatted, daysRemaining: null, isUrgent: false, isPast: false };
+    }
+    
+    // Calculer les jours restants
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    etaDate.setHours(0, 0, 0, 0);
+    
+    const daysRemaining = Math.ceil((etaDate - today) / (1000 * 60 * 60 * 24));
+    
+    // Déterminer l'urgence
+    const isUrgent = daysRemaining <= 3 && daysRemaining >= 0;
+    const isPast = daysRemaining < 0;
+    
+    return {
+      formatted,
+      daysRemaining,
+      isUrgent,
+      isPast
+    };
+  } catch (error) {
+    console.error('Erreur formatage ETA:', error);
+    return null;
+  }
+};

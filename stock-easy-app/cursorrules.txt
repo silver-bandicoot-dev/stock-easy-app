@@ -668,7 +668,7 @@ export const useStockData = () => {
         setParameters(data.parameters);
       }
       
-      console.log('✅ Données chargées depuis Google Sheets');
+      console.log('✅ Données chargées depuis Supabase');
     } catch (error) {
       console.error('❌ Erreur lors du chargement:', error);
       toast.error('Erreur lors du chargement des données');

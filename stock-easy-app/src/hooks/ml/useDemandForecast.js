@@ -95,7 +95,7 @@ export function useDemandForecast(products) {
       console.log('📊 Collecte des données d\'entraînement...');
       
       // Collecter l'historique
-      const salesHistory = await collectSalesHistory();
+      const salesHistory = await collectSalesHistory(products, { days: 180 });
       
       if (salesHistory.length < 50) {
         throw new Error('Pas assez de données pour entraîner (minimum 50 enregistrements)');

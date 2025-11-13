@@ -2,8 +2,10 @@ import React, { useState, useMemo } from 'react';
 import { Filter, Search, Check, X, Package, AlertCircle, ArrowUpDown, ArrowUp, ArrowDown, ChevronLeft, ChevronRight, Hash } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '../../shared/Button';
+import { useCurrency } from '../../../contexts/CurrencyContext';
 
 export function ProductSelectionTable({ products, suppliers, onCreateOrder }) {
+  const { format: formatCurrency } = useCurrency();
   const [selectedProducts, setSelectedProducts] = useState(new Map());
   const [searchTerm, setSearchTerm] = useState('');
   const [supplierFilter, setSupplierFilter] = useState('all');
@@ -120,7 +122,12 @@ export function ProductSelectionTable({ products, suppliers, onCreateOrder }) {
     if (newMap.has(product.sku)) {
       newMap.delete(product.sku);
     } else {
-      newMap.set(product.sku, Math.round(product.qtyToOrder || 0));
+      const baseQty = product.qtyToOrder && product.qtyToOrder > 0
+        ? Math.round(product.qtyToOrder)
+        : product.moq && product.moq > 0
+          ? Math.round(product.moq)
+          : 1;
+      newMap.set(product.sku, baseQty);
     }
     setSelectedProducts(newMap);
   };
@@ -138,7 +145,12 @@ export function ProductSelectionTable({ products, suppliers, onCreateOrder }) {
     } else {
       // Sélectionner tous les produits de la page
       pageProducts.forEach(product => {
-        newMap.set(product.sku, Math.round(product.qtyToOrder || 0));
+        const baseQty = product.qtyToOrder && product.qtyToOrder > 0
+          ? Math.round(product.qtyToOrder)
+          : product.moq && product.moq > 0
+            ? Math.round(product.moq)
+            : 1;
+        newMap.set(product.sku, baseQty);
       });
     }
     setSelectedProducts(newMap);
@@ -409,7 +421,7 @@ export function ProductSelectionTable({ products, suppliers, onCreateOrder }) {
                       {/* Prix */}
                       <td className="px-4 py-3 text-right">
                         <span className="text-sm font-semibold text-[#191919]">
-                          {product.buyPrice?.toFixed(2) || '0.00'}€
+                          {formatCurrency(product.buyPrice || 0)}
                         </span>
                       </td>
 

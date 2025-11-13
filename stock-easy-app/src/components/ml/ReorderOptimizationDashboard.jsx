@@ -16,163 +16,38 @@ import {
   Package,
   Loader,
   ArrowRight,
-  Info,
   Sparkles,
   ChevronDown,
   ChevronUp
 } from 'lucide-react';
-import api from '../../services/apiService';
-import { toast } from 'sonner';
-
-// Hook temporaire pour l'optimisation des points de commande
-const useReorderOptimization = (products) => {
-  const [isAnalyzing, setIsAnalyzing] = React.useState(false);
-  const [progress, setProgress] = React.useState(0);
-  const [error, setError] = React.useState(null);
-  const [optimizations, setOptimizations] = React.useState([]);
-
-  const [optimizationsList, setOptimizationsList] = React.useState(
-    products ? products.map(product => ({
-      sku: product.sku,
-      name: product.name || product.sku,
-      currentSettings: {
-        stock: product.stock || product.currentStock || Math.floor(Math.random() * 100) + 10,
-        reorderPoint: product.reorderPoint || Math.floor(Math.random() * 50) + 20,
-        currentStock: product.stock || product.currentStock || Math.floor(Math.random() * 100) + 10,
-        leadTime: product.leadTime || Math.floor(Math.random() * 10) + 5
-      },
-      reorderPoint: Math.floor(Math.random() * 30) + 15, // Point de commande optimisé
-      savings: Math.floor(Math.random() * 1000) + 500,
-      confidence: 0.9,
-      costAnalysis: {
-        current: {
-          stockoutCost: Math.floor(Math.random() * 2000) + 500,
-          overstockCost: Math.floor(Math.random() * 1000) + 200,
-          totalCost: Math.floor(Math.random() * 3000) + 700
-        },
-        optimized: {
-          totalCost: Math.floor(Math.random() * 2000) + 300
-        },
-        savings: {
-          perYear: Math.floor(Math.random() * 5000) + 1000,
-          percent: Math.floor(Math.random() * 30) + 10
-        }
-      },
-      reasoning: [
-        {
-          type: 'decrease',
-          change: 'Réduire de 5 unités',
-          reason: 'Consommation plus faible que prévue'
-        }
-      ]
-    })) : []
-  );
-
-  const summary = {
-    totalSavings: products ? products.length * (Math.floor(Math.random() * 1000) + 500) : 0,
-    totalCost: products ? products.length * (Math.floor(Math.random() * 2000) + 1000) : 0,
-    totalProducts: products ? products.length : 0,
-    optimizedProducts: products ? Math.floor(products.length * 0.8) : 0,
-    averageSavings: products ? Math.floor(Math.random() * 1000) + 500 : 0
-  };
-
-  const handleAnalyze = async () => {
-    try {
-      setIsAnalyzing(true);
-      setProgress(0);
-      setError(null);
-
-      // Simulation d'une analyse en cours
-      for (let i = 0; i <= 100; i += 10) {
-        await new Promise(resolve => setTimeout(resolve, 200));
-        setProgress(i);
-      }
-
-      // Régénérer les optimisations
-      setOptimizationsList(products ? products.map(product => ({
-        sku: product.sku,
-        name: product.name || product.sku,
-        currentSettings: {
-          stock: product.stock || product.currentStock || Math.floor(Math.random() * 100) + 10,
-          reorderPoint: product.reorderPoint || Math.floor(Math.random() * 50) + 20,
-          currentStock: product.stock || product.currentStock || Math.floor(Math.random() * 100) + 10,
-          leadTime: product.leadTime || Math.floor(Math.random() * 10) + 5
-        },
-        reorderPoint: Math.floor(Math.random() * 30) + 15,
-        savings: Math.floor(Math.random() * 1000) + 500,
-        confidence: Math.floor(Math.random() * 30) + 70,
-        costAnalysis: {
-          current: {
-            stockoutCost: Math.floor(Math.random() * 2000) + 500,
-            overstockCost: Math.floor(Math.random() * 1000) + 200,
-            totalCost: Math.floor(Math.random() * 3000) + 700
-          },
-          optimized: {
-            totalCost: Math.floor(Math.random() * 2000) + 300
-          },
-          savings: {
-            perYear: Math.floor(Math.random() * 5000) + 1000,
-            percent: Math.floor(Math.random() * 30) + 10
-          }
-        },
-        reasoning: [
-          {
-            type: Math.random() > 0.5 ? 'increase' : 'decrease',
-            change: `${Math.random() > 0.5 ? 'Augmenter' : 'Réduire'} de ${Math.floor(Math.random() * 10) + 1} unités`,
-            reason: 'Optimisation basée sur l\'analyse des tendances'
-          }
-        ]
-      })) : []);
-
-      toast.success('Analyse terminée avec succès');
-    } catch (err) {
-      setError('Erreur lors de l\'analyse');
-      toast.error('Erreur lors de l\'analyse');
-      console.error(err);
-    } finally {
-      setIsAnalyzing(false);
-      setProgress(100);
-    }
-  };
-
-  return {
-    optimizations: optimizationsList,
-    summary,
-    isAnalyzing,
-    error,
-    progress,
-    onAnalyze: handleAnalyze,
-    onApplyOptimization: () => toast.success('Optimisation appliquée'),
-    onApplyAll: () => toast.success('Toutes les optimisations ont été appliquées'),
-    onRejectOptimization: () => toast.info('Optimisation rejetée'),
-    getTotalSavings: () => summary.totalSavings,
-    getTopProblems: () => []
-  };
-};
+import { useReorderOptimization } from '../../hooks/ml/useReorderOptimization';
+import { useCurrency } from '../../contexts/CurrencyContext';
 
 export function ReorderOptimizationDashboard({ products }) {
   const {
     optimizations,
     summary,
     isAnalyzing,
+    isReady,
     error,
     progress,
-    onAnalyze,
-    onApplyOptimization,
-    onApplyAll,
-    onRejectOptimization,
+    analyze,
+    applyOptimization,
+    applyAll,
+    rejectOptimization,
     getTotalSavings,
     getTopProblems
   } = useReorderOptimization(products);
-  const isReady = optimizations.length > 0 || summary !== null;
 
-  const [selectedSKU, setSelectedSKU] = useState(null);
-
-  // Les optimizations sont déjà un array
-  const optimizationList = optimizations;
+  const optimizationList = Array.isArray(optimizations)
+    ? optimizations
+    : Array.from(optimizations?.values ? optimizations.values() : []);
 
   const totalSavings = getTotalSavings();
   const topProblems = getTopProblems(5);
+  const ready = isReady || optimizationList.length > 0 || summary !== null;
+
+  const [selectedSKU, setSelectedSKU] = useState(null);
 
   return (
     <div className="space-y-6">
@@ -195,7 +70,7 @@ export function ReorderOptimizationDashboard({ products }) {
 
           {/* Bouton Analyser */}
           <button
-            onClick={onAnalyze}
+            onClick={analyze}
             disabled={isAnalyzing}
             className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
@@ -231,17 +106,17 @@ export function ReorderOptimizationDashboard({ products }) {
       </div>
 
       {/* Résumé de performance */}
-      {isReady && summary && (
+      {ready && summary && (
         <PerformanceSummary summary={summary} totalSavings={totalSavings} />
       )}
 
       {/* Top problèmes */}
-      {isReady && topProblems.length > 0 && (
+      {ready && topProblems.length > 0 && (
         <TopProblemsSection problems={topProblems} />
       )}
 
       {/* Liste des optimisations */}
-      {isReady && optimizationList.length > 0 && (
+      {ready && optimizationList.length > 0 && (
         <div className="bg-white rounded-xl shadow-sm border border-[#E5E4DF] p-6">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-semibold text-[#191919]">
@@ -250,7 +125,7 @@ export function ReorderOptimizationDashboard({ products }) {
             
             {optimizationList.length > 0 && (
               <button
-                onClick={onApplyAll}
+                onClick={applyAll}
                 className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
               >
                 <CheckCircle className="w-4 h-4" />
@@ -264,8 +139,8 @@ export function ReorderOptimizationDashboard({ products }) {
               <OptimizationCard
                 key={opt.sku}
                 optimization={opt}
-                onApply={() => onApplyOptimization(opt.sku)}
-                onReject={() => onRejectOptimization(opt.sku)}
+                onApply={() => applyOptimization(opt.sku)}
+                onReject={() => rejectOptimization(opt.sku)}
                 isSelected={selectedSKU === opt.sku}
                 onSelect={() => setSelectedSKU(opt.sku === selectedSKU ? null : opt.sku)}
               />
@@ -275,7 +150,7 @@ export function ReorderOptimizationDashboard({ products }) {
       )}
 
       {/* Message si pas de données */}
-      {isReady && optimizationList.length === 0 && (
+      {ready && optimizationList.length === 0 && (
         <div className="bg-white rounded-xl shadow-sm border border-[#E5E4DF] p-12 text-center">
           <CheckCircle className="w-16 h-16 mx-auto mb-4 text-green-600" />
           <h3 className="text-xl font-semibold text-[#191919] mb-2">
@@ -288,7 +163,7 @@ export function ReorderOptimizationDashboard({ products }) {
       )}
 
       {/* Message initial */}
-      {!isReady && !isAnalyzing && !error && (
+      {!ready && !isAnalyzing && !error && (
         <div className="bg-white rounded-xl shadow-sm border border-[#E5E4DF] p-12 text-center">
           <Target className="w-16 h-16 mx-auto mb-4 text-blue-600 opacity-50" />
           <h3 className="text-xl font-semibold text-[#191919] mb-2">
@@ -298,7 +173,7 @@ export function ReorderOptimizationDashboard({ products }) {
             Cliquez sur "Analyser" pour identifier les opportunités d'optimisation
           </p>
           <button
-            onClick={onAnalyze}
+            onClick={analyze}
             className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
           >
             <Sparkles className="w-5 h-5" />
@@ -314,6 +189,10 @@ export function ReorderOptimizationDashboard({ products }) {
  * Résumé de performance
  */
 function PerformanceSummary({ summary, totalSavings }) {
+  const { format: formatCurrency } = useCurrency();
+  const formatNoDecimals = (value) =>
+    formatCurrency(value, { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+
   return (
     <div className="bg-white rounded-xl shadow-sm border border-[#E5E4DF] p-6">
       <h3 className="text-lg font-semibold text-[#191919] mb-4">
@@ -328,10 +207,10 @@ function PerformanceSummary({ summary, totalSavings }) {
             <span className="text-sm text-[#666663]">Coûts Actuels</span>
           </div>
           <div className="text-2xl font-bold text-[#191919]">
-            {summary.totalCost.toLocaleString()}€
+            {formatNoDecimals(summary.totalCost)}
           </div>
           <div className="text-xs text-[#666663] mt-1">
-            Ruptures: {summary.totalStockoutCost}€ | Surstock: {summary.totalOverstockCost}€
+            Ruptures: {formatNoDecimals(summary.totalStockoutCost)} | Surstock: {formatNoDecimals(summary.totalOverstockCost)}
           </div>
         </div>
 
@@ -342,7 +221,7 @@ function PerformanceSummary({ summary, totalSavings }) {
             <span className="text-sm text-green-700">Économies Potentielles</span>
           </div>
           <div className="text-2xl font-bold text-green-700">
-            {Math.round(totalSavings).toLocaleString()}€/an
+            {`${formatNoDecimals(Math.round(totalSavings))}/an`}
           </div>
           <div className="text-xs text-green-600 mt-1">
             En appliquant les optimisations
@@ -385,6 +264,10 @@ function PerformanceSummary({ summary, totalSavings }) {
  * Section des produits les plus problématiques
  */
 function TopProblemsSection({ problems }) {
+  const { format: formatCurrency } = useCurrency();
+  const formatNoDecimals = (value) =>
+    formatCurrency(value, { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+
   return (
     <div className="bg-white rounded-xl shadow-sm border border-[#E5E4DF] p-6">
       <h3 className="text-lg font-semibold text-[#191919] mb-4">
@@ -426,7 +309,7 @@ function TopProblemsSection({ problems }) {
                   <div>
                     <p className="text-xs text-[#666663]">Coût total</p>
                     <p className="text-sm font-semibold text-[#191919]">
-                      {Math.round(problem.stockoutCost + problem.overstockCost)}€
+                      {formatNoDecimals(problem.stockoutCost + problem.overstockCost)}
                     </p>
                   </div>
                 </div>
@@ -450,6 +333,9 @@ function OptimizationCard({ optimization, onApply, onReject, isSelected, onSelec
   const changeType = optimization.reorderPoint > product.reorderPoint ? 'increase' : 'decrease';
   const changeColor = changeType === 'increase' ? 'text-orange-600' : 'text-green-600';
   const changeBg = changeType === 'increase' ? 'bg-orange-50' : 'bg-green-50';
+  const { format: formatCurrency } = useCurrency();
+  const formatNoDecimals = (value) =>
+    formatCurrency(value, { minimumFractionDigits: 0, maximumFractionDigits: 0 });
 
   return (
     <div className={`border-2 rounded-lg transition-all ${
@@ -493,7 +379,7 @@ function OptimizationCard({ optimization, onApply, onReject, isSelected, onSelec
           <div className="text-right">
             <p className="text-xs text-[#666663]">Économies/an</p>
             <p className="text-lg font-bold text-green-600">
-              {optimization.costAnalysis.savings.perYear}€
+              {formatNoDecimals(optimization.costAnalysis.savings.perYear)}
             </p>
           </div>
 
@@ -513,31 +399,31 @@ function OptimizationCard({ optimization, onApply, onReject, isSelected, onSelec
                   <div className="flex justify-between text-sm">
                     <span className="text-[#666663]">Coût ruptures (actuel):</span>
                     <span className="font-semibold text-red-600">
-                      {optimization.costAnalysis.current.stockoutCost || 0}€
+                      {formatNoDecimals(optimization.costAnalysis.current.stockoutCost || 0)}
                     </span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-[#666663]">Coût surstock (actuel):</span>
                     <span className="font-semibold text-blue-600">
-                      {optimization.costAnalysis.current.overstockCost || 0}€
+                      {formatNoDecimals(optimization.costAnalysis.current.overstockCost || 0)}
                     </span>
                   </div>
                   <div className="flex justify-between text-sm pt-2 border-t border-[#E5E4DF]">
                     <span className="text-[#666663] font-medium">Total actuel:</span>
                     <span className="font-bold text-[#191919]">
-                      {optimization.costAnalysis.current.totalCost || 0}€/an
+                      {`${formatNoDecimals(optimization.costAnalysis.current.totalCost || 0)}/an`}
                     </span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-[#666663] font-medium">Total optimisé:</span>
                     <span className="font-bold text-green-600">
-                      {optimization.costAnalysis.optimized?.totalCost || 0}€/an
+                      {`${formatNoDecimals(optimization.costAnalysis.optimized?.totalCost || 0)}/an`}
                     </span>
                   </div>
                   <div className="flex justify-between text-sm pt-2 border-t border-[#E5E4DF]">
                     <span className="text-green-700 font-medium">Économies:</span>
                     <span className="font-bold text-green-700">
-                      {optimization.costAnalysis.savings?.perYear || 0}€/an (-{optimization.costAnalysis.savings?.percent || 0}%)
+                      {`${formatNoDecimals(optimization.costAnalysis.savings?.perYear || 0)}/an`} (-{optimization.costAnalysis.savings?.percent || 0}%)
                     </span>
                   </div>
                 </div>

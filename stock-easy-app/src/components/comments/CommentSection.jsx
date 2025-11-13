@@ -1,28 +1,21 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useAuth } from '../../contexts/AuthContext';
-import { db } from '../../config/firebase';
-import { 
-  collection, 
-  addDoc, 
-  query, 
-  where, 
-  orderBy, 
-  onSnapshot,
-  serverTimestamp,
-  getDocs,
-  deleteDoc,
-  doc,
-  updateDoc
-} from 'firebase/firestore';
+import { useAuth } from '../../contexts/SupabaseAuthContext';
 import { Send, User as UserIcon, Trash2, Edit2, Check, X, AtSign } from 'lucide-react';
 import { toast } from 'sonner';
+import {
+  getOrderComments,
+  addComment,
+  updateComment,
+  deleteComment,
+  subscribeToOrderComments
+} from '../../services/commentsService';
+import { getTeamMembers } from '../../services/profileService';
 
 export default function CommentSection({ purchaseOrderId, purchaseOrderNumber }) {
   const { currentUser } = useAuth();
   const [comments, setComments] = useState([]);
   const [newComment, setNewComment] = useState('');
   const [teamMembers, setTeamMembers] = useState([]);
-  const [userData, setUserData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [editingCommentId, setEditingCommentId] = useState(null);
   const [editContent, setEditContent] = useState('');
@@ -36,547 +29,372 @@ export default function CommentSection({ purchaseOrderId, purchaseOrderNumber })
   useEffect(() => {
     if (!currentUser) return;
     
-    // Pour l'instant, utilisons des données de test pour que les mentions fonctionnent
-    const mockTeamMembers = [
-      {
-        id: '1',
-        firstName: 'Jory',
-        lastName: 'Cherief',
-        email: 'jory@example.com',
-        profilePhoto: null
-      },
-      {
-        id: '2',
-        firstName: 'Marie',
-        lastName: 'Dupont',
-        email: 'marie@example.com',
-        profilePhoto: null
-      },
-      {
-        id: '3',
-        firstName: 'Pierre',
-        lastName: 'Martin',
-        email: 'pierre@example.com',
-        profilePhoto: null
-      }
-    ];
-    
-    setTeamMembers(mockTeamMembers);
-    
-    // Essayer de charger les vraies données en arrière-plan
-    let isMounted = true;
-    
-    const loadData = async () => {
-      try {
-        // Charger les données utilisateur
-        const userDoc = await getDocs(
-          query(collection(db, 'users'), where('email', '==', currentUser.email))
-        );
-        
-        if (!userDoc.empty && isMounted) {
-          const user = { id: userDoc.docs[0].id, ...userDoc.docs[0].data() };
-          setUserData(user);
-          
-          // Charger les membres de l'équipe
-          if (user.companyId) {
-            const usersQuery = query(
-              collection(db, 'users'),
-              where('companyId', '==', user.companyId)
-            );
-            const snapshot = await getDocs(usersQuery);
-            if (isMounted) {
-              const members = snapshot.docs.map(doc => ({
-                id: doc.id,
-                display: `${doc.data().firstName || ''} ${doc.data().lastName || ''}`.trim() || doc.data().email,
-                ...doc.data()
-              }));
-              // Remplacer les données mockées par les vraies données
-              setTeamMembers(members);
-            }
-          }
-        }
-      } catch (error) {
-        if (error.name !== 'AbortError' && isMounted) {
-          console.error('Erreur chargement données:', error);
-        }
-      }
-    };
-
-    loadData();
-    
-    return () => {
-      isMounted = false;
-    };
+    loadTeamMembers();
   }, [currentUser]);
 
-  // Écouter les commentaires en temps réel
+  // Charger les commentaires et s'abonner au real-time
   useEffect(() => {
     if (!purchaseOrderId) return;
 
-    const q = query(
-      collection(db, 'purchaseOrderComments'),
-      where('purchaseOrderId', '==', purchaseOrderId),
-      orderBy('createdAt', 'asc')
-    );
+    loadComments();
 
-    const unsubscribe = onSnapshot(
-      q,
-      (snapshot) => {
-        const commentsData = snapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        }));
-        setComments(commentsData);
-      },
-      (error) => {
-        console.error('Erreur commentaires:', error);
-        toast.error('Erreur de chargement des commentaires');
-      }
-    );
+    // S'abonner aux changements en temps réel
+    const unsubscribe = subscribeToOrderComments(purchaseOrderId, (updatedComments) => {
+      setComments(updatedComments);
+    });
 
     return () => unsubscribe();
   }, [purchaseOrderId]);
 
-  // Ajouter un commentaire
-  const handleAddComment = async () => {
-    if (!newComment.trim()) {
-      toast.error('Veuillez écrire un commentaire');
-      return;
-    }
+  const loadComments = async () => {
+    try {
+      const { data, error } = await getOrderComments(purchaseOrderId);
+      
+      if (error) {
+        throw error;
+      }
 
-    if (!currentUser) {
-      toast.error('Vous devez être connecté');
+      setComments(Array.isArray(data) ? data : []);
+    } catch (error) {
+      console.error('Erreur chargement commentaires:', error);
+      toast.error('Erreur lors du chargement des commentaires');
+    }
+  };
+
+  const loadTeamMembers = async () => {
+    try {
+      const { data, error } = await getTeamMembers();
+
+      if (error) {
+        throw error;
+      }
+
+      setTeamMembers(Array.isArray(data) ? data : []);
+    } catch (error) {
+      console.error('Erreur chargement team members:', error);
+      setTeamMembers([]);
+    }
+  };
+
+  // Détection des mentions (@)
+  const handleInputChange = (e) => {
+    const value = e.target.value;
+    const cursorPos = e.target.selectionStart;
+    
+    setNewComment(value);
+    setCursorPosition(cursorPos);
+
+    // Chercher un @ avant le curseur
+    const textBeforeCursor = value.substring(0, cursorPos);
+    const lastAtIndex = textBeforeCursor.lastIndexOf('@');
+    
+    if (lastAtIndex !== -1) {
+      const textAfterAt = textBeforeCursor.substring(lastAtIndex + 1);
+      if (!textAfterAt.includes(' ')) {
+        setMentionSearch(textAfterAt.toLowerCase());
+        setShowMentions(true);
+        return;
+      }
+    }
+    
+    setShowMentions(false);
+  };
+
+  const insertMention = (member) => {
+    const textBeforeCursor = newComment.substring(0, cursorPosition);
+    const textAfterCursor = newComment.substring(cursorPosition);
+    const lastAtIndex = textBeforeCursor.lastIndexOf('@');
+    
+    const newText = 
+      newComment.substring(0, lastAtIndex) +
+      `@${member.firstName} ${member.lastName} ` +
+      textAfterCursor;
+    
+    setNewComment(newText);
+    setShowMentions(false);
+    textareaRef.current?.focus();
+  };
+
+  const filteredMembers = Array.isArray(teamMembers) ? teamMembers.filter(member => {
+    const fullName = `${member.firstName} ${member.lastName}`.toLowerCase();
+    return fullName.includes(mentionSearch);
+  }) : [];
+
+  // Extraire les mentions du texte
+  const extractMentions = (text) => {
+    const mentionRegex = /@([A-Za-zÀ-ÿ]+)\s+([A-Za-zÀ-ÿ]+)/g;
+    const mentions = [];
+    let match;
+    
+    while ((match = mentionRegex.exec(text)) !== null) {
+      const firstName = match[1];
+      const lastName = match[2];
+      const member = teamMembers.find(
+        m => m.firstName?.toLowerCase() === firstName.toLowerCase() &&
+             m.lastName?.toLowerCase() === lastName.toLowerCase()
+      );
+      if (member) {
+        mentions.push(member.id);
+      }
+    }
+    
+    return mentions;
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    
+    if (!newComment.trim()) {
+      toast.error('Le commentaire ne peut pas être vide');
       return;
     }
 
     setLoading(true);
-
+    
     try {
-      // Charger userData si nécessaire
-      let user = userData;
-      if (!user) {
-        try {
-          const userDoc = await getDocs(
-            query(collection(db, 'users'), where('email', '==', currentUser.email))
-          );
-          if (!userDoc.empty) {
-            user = { id: userDoc.docs[0].id, ...userDoc.docs[0].data() };
-            setUserData(user);
-          }
-        } catch (userError) {
-          if (userError.name !== 'AbortError') {
-            console.error('Erreur chargement user dans handleAddComment:', userError);
-          }
-          toast.error('Erreur lors du chargement des données utilisateur');
-          setLoading(false);
-          return;
-        }
-      }
-
-      // Extraire les utilisateurs mentionnés à partir du contenu
-      const mentionedUserIds = [];
-      const mentionMatches = newComment.match(/@(\w+)/g);
-      if (mentionMatches) {
-        mentionMatches.forEach(mention => {
-          const username = mention.substring(1); // Enlever le @
-          const user = teamMembers.find(member => 
-            `${member.firstName} ${member.lastName}`.toLowerCase().includes(username.toLowerCase()) ||
-            member.email.toLowerCase().includes(username.toLowerCase())
-          );
-          if (user && !mentionedUserIds.includes(user.id)) {
-            mentionedUserIds.push(user.id);
-          }
-        });
-      }
-
-      await addDoc(collection(db, 'purchaseOrderComments'), {
-        purchaseOrderId,
-        purchaseOrderNumber,
-        content: newComment,
-        authorId: user?.id || currentUser.uid,
-        authorName: user ? `${user.firstName} ${user.lastName}` : (currentUser.displayName || currentUser.email),
-        authorEmail: currentUser.email,
-        authorPhoto: user?.profilePhoto || currentUser.photoURL || null,
-        mentions: mentionedUserIds,
-        companyId: user?.companyId || null,
-        createdAt: serverTimestamp(),
-        isEdited: false
-      });
-
-      // Créer des notifications pour les utilisateurs mentionnés
-      if (mentionedUserIds.length > 0) {
-        for (const userId of mentionedUserIds) {
-          if (userId !== user.id) { // Ne pas se notifier soi-même
-            try {
-              await addDoc(collection(db, 'notifications'), {
-                recipientId: userId,
-                type: 'mention',
-                content: `${user.firstName} ${user.lastName} vous a mentionné dans ${purchaseOrderNumber}`,
-                link: `/purchase-orders/${purchaseOrderId}`,
-                relatedPOId: purchaseOrderId,
-                relatedCommentId: null,
-                isRead: false,
-                createdAt: serverTimestamp()
-              });
-            } catch (notifError) {
-              console.error('❌ Erreur création notification:', notifError);
-            }
-          }
-        }
-      }
-
+      const mentionedUserIds = extractMentions(newComment);
+      
+      await addComment(purchaseOrderId, newComment.trim(), mentionedUserIds);
+      
       setNewComment('');
       toast.success('Commentaire ajouté !');
     } catch (error) {
-      if (error.name !== 'AbortError') {
-        console.error('Erreur ajout commentaire:', error);
-        toast.error('Erreur lors de l\'ajout du commentaire');
-      }
+      console.error('Erreur ajout commentaire:', error);
+      toast.error('Erreur lors de l\'ajout du commentaire');
     } finally {
       setLoading(false);
     }
   };
 
-  // Supprimer un commentaire
-  const handleDeleteComment = async (commentId) => {
-    if (!window.confirm('Voulez-vous vraiment supprimer ce commentaire ?')) {
-      return;
-    }
-
-    try {
-      await deleteDoc(doc(db, 'purchaseOrderComments', commentId));
-      toast.success('Commentaire supprimé');
-    } catch (error) {
-      if (error.name !== 'AbortError') {
-        console.error('Erreur suppression:', error);
-        toast.error('Erreur lors de la suppression');
-      }
-    }
-  };
-
-  // Démarrer l'édition d'un commentaire
-  const startEditComment = (comment) => {
-    setEditingCommentId(comment.id);
-    setEditContent(comment.content);
-  };
-
-  // Annuler l'édition
-  const cancelEdit = () => {
-    setEditingCommentId(null);
-    setEditContent('');
-  };
-
-  // Sauvegarder les modifications
-  const saveEditComment = async (commentId) => {
+  const handleEdit = async (commentId) => {
     if (!editContent.trim()) {
       toast.error('Le commentaire ne peut pas être vide');
       return;
     }
 
     try {
-      await updateDoc(doc(db, 'purchaseOrderComments', commentId), {
-        content: editContent,
-        isEdited: true,
-        editedAt: serverTimestamp()
-      });
+      await updateComment(commentId, editContent.trim());
       
       setEditingCommentId(null);
       setEditContent('');
       toast.success('Commentaire modifié !');
     } catch (error) {
-      if (error.name !== 'AbortError') {
-        console.error('Erreur édition:', error);
-        toast.error('Erreur lors de la modification');
-      }
+      console.error('Erreur modification commentaire:', error);
+      toast.error('Erreur lors de la modification');
     }
   };
 
-  // Formater le timestamp en temps relatif
-  const formatTimestamp = (timestamp) => {
-    if (!timestamp) return 'À l\'instant';
-    
-    const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
-    const now = new Date();
-    const diffInSeconds = Math.floor((now - date) / 1000);
+  const handleDelete = async (commentId) => {
+    if (!window.confirm('Êtes-vous sûr de vouloir supprimer ce commentaire ?')) {
+      return;
+    }
 
-    if (diffInSeconds < 60) return 'À l\'instant';
-    if (diffInSeconds < 3600) return `Il y a ${Math.floor(diffInSeconds / 60)} min`;
-    if (diffInSeconds < 86400) return `Il y a ${Math.floor(diffInSeconds / 3600)} h`;
-    if (diffInSeconds < 604800) return `Il y a ${Math.floor(diffInSeconds / 86400)} j`;
-    
-    return date.toLocaleDateString('fr-FR', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  };
-
-  // Rendre le contenu du commentaire avec les mentions stylisées
-  const renderCommentContent = (content) => {
-    if (!content) return '';
-    
-    // Remplacer les mentions @Nom Prénom par des spans stylisés
-    const mentionRegex = /@([^@\s]+(?:\s+[^@\s]+)*)/g;
-    const parts = content.split(mentionRegex);
-    
-    return parts.map((part, index) => {
-      if (index % 2 === 1) {
-        // C'est une mention (les parties impaires sont les noms d'utilisateur)
-        return (
-          <span
-            key={index}
-            className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800 border border-blue-200 mr-1"
-          >
-            @{part}
-          </span>
-        );
-      } else if (part) {
-        // Texte normal
-        return <span key={index}>{part}</span>;
-      }
-      return null;
-    }).filter(Boolean);
-  };
-
-  // Gérer les mentions dans le textarea
-  const handleTextareaChange = (e) => {
-    const value = e.target.value;
-    const cursorPos = e.target.selectionStart;
-    setCursorPosition(cursorPos);
-    setNewComment(value);
-    
-    // Vérifier si on tape @
-    const beforeCursor = value.substring(0, cursorPos);
-    const atMatch = beforeCursor.match(/@([^@\s]*)$/);
-    
-    
-    
-    if (atMatch) {
-      setMentionSearch(atMatch[1]);
-      setShowMentions(true);
-    } else {
-      setShowMentions(false);
+    try {
+      await deleteComment(commentId);
+      toast.success('Commentaire supprimé !');
+    } catch (error) {
+      console.error('Erreur suppression commentaire:', error);
+      toast.error('Erreur lors de la suppression');
     }
   };
 
-  // Insérer une mention
-  const insertMention = (user) => {
-    const beforeCursor = newComment.substring(0, cursorPosition);
-    const afterCursor = newComment.substring(cursorPosition);
-    const beforeMention = beforeCursor.replace(/@([^@\s]*)$/, '');
-    const newValue = beforeMention + `@${user.firstName} ${user.lastName}` + ' ' + afterCursor;
-    
-    setNewComment(newValue);
-    setShowMentions(false);
-    
-    // Repositionner le curseur
-    setTimeout(() => {
-      if (textareaRef.current) {
-        const newCursorPos = beforeMention.length + `@${user.firstName} ${user.lastName}`.length + 1;
-        textareaRef.current.setSelectionRange(newCursorPos, newCursorPos);
-        textareaRef.current.focus();
-      }
-    }, 0);
+  const startEditing = (comment) => {
+    setEditingCommentId(comment.id);
+    setEditContent(comment.content);
   };
 
-  // Filtrer les membres de l'équipe pour les mentions
-  const filteredMembers = teamMembers.filter(member => 
-    member.firstName.toLowerCase().includes(mentionSearch.toLowerCase()) ||
-    member.lastName.toLowerCase().includes(mentionSearch.toLowerCase()) ||
-    member.email.toLowerCase().includes(mentionSearch.toLowerCase())
-  );
+  const cancelEditing = () => {
+    setEditingCommentId(null);
+    setEditContent('');
+  };
 
-  // Fermer les mentions quand on clique ailleurs
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (mentionsListRef.current && !mentionsListRef.current.contains(event.target) && 
-          textareaRef.current && !textareaRef.current.contains(event.target)) {
-        setShowMentions(false);
+  // Formater le contenu avec les mentions en surbrillance
+  const formatCommentContent = (content) => {
+    const mentionRegex = /@([A-Za-zÀ-ÿ]+)\s+([A-Za-zÀ-ÿ]+)/g;
+    const parts = [];
+    let lastIndex = 0;
+    let match;
+
+    while ((match = mentionRegex.exec(content)) !== null) {
+      // Texte avant la mention
+      if (match.index > lastIndex) {
+        parts.push(content.substring(lastIndex, match.index));
       }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, []);
+      
+      // La mention
+      parts.push(
+        <span key={match.index} className="bg-blue-100 text-blue-800 px-1 rounded font-medium">
+          @{match[1]} {match[2]}
+        </span>
+      );
+      
+      lastIndex = match.index + match[0].length;
+    }
+    
+    // Texte après la dernière mention
+    if (lastIndex < content.length) {
+      parts.push(content.substring(lastIndex));
+    }
+    
+    return parts.length > 0 ? parts : content;
+  };
 
   return (
-    <div className="space-y-4">
-      <h3 className="text-lg font-bold text-[#191919] flex items-center gap-2">
-        💬 Commentaires ({comments.length})
+    <div className="bg-white rounded-lg border border-[#E5E4DF] p-6">
+      <h3 className="text-lg font-bold text-[#191919] mb-4">
+        Commentaires {purchaseOrderNumber && `- ${purchaseOrderNumber}`}
       </h3>
 
       {/* Liste des commentaires */}
-      <div className="space-y-3 mb-6 max-h-96 overflow-y-auto">
+      <div className="space-y-4 mb-6 max-h-96 overflow-y-auto">
         {comments.length === 0 ? (
-          <div className="text-center py-8 text-[#666663] text-sm bg-[#FAFAF7] rounded-lg border border-[#E5E4DF]">
+          <p className="text-sm text-gray-500 text-center py-8">
             Aucun commentaire pour le moment
-          </div>
+          </p>
         ) : (
-          comments.map(comment => {
-            const isAuthor = currentUser && (comment.authorEmail === currentUser.email || comment.authorId === currentUser.uid);
-            const isEditing = editingCommentId === comment.id;
-
-            return (
-              <div key={comment.id} className="bg-[#FAFAF7] border border-[#E5E4DF] rounded-lg p-4 hover:shadow-md transition-shadow">
-                <div className="flex gap-3">
-                  {/* Avatar */}
-                  <div className="flex-shrink-0">
-                    {comment.authorPhoto ? (
-                      <img 
-                        src={comment.authorPhoto} 
-                        alt={comment.authorName}
-                        className="w-10 h-10 rounded-full object-cover"
-                      />
-                    ) : (
-                      <div className="w-10 h-10 rounded-full bg-[#666663] flex items-center justify-center">
-                        <UserIcon className="w-5 h-5 text-white" />
-                      </div>
+          comments.map((comment) => (
+            <div key={comment.id} className="flex gap-3 p-3 bg-gray-50 rounded-lg">
+              <div className="w-8 h-8 rounded-full shrink-0 overflow-hidden bg-gradient-to-br from-blue-500 to-purple-600 text-white text-sm font-bold flex items-center justify-center">
+                {comment.user?.photoUrl ? (
+                  <img
+                    src={comment.user.photoUrl}
+                    alt={`${(comment.user?.firstName || '').trim()} ${(comment.user?.lastName || '').trim()}`.trim() || 'Avatar'}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  comment.user?.firstName?.charAt(0) || <UserIcon className="w-4 h-4" />
+                )}
+              </div>
+              
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between gap-2 mb-1">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium text-[#191919]">
+                      {comment.user?.firstName} {comment.user?.lastName}
+                    </span>
+                    <span className="text-xs text-gray-500">
+                      {new Date(comment.createdAt).toLocaleString('fr-FR')}
+                    </span>
+                    {comment.isEdited && (
+                      <span className="text-xs text-gray-400 italic">(modifié)</span>
                     )}
                   </div>
                   
-                  {/* Contenu */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between mb-1">
-                      <div className="flex items-center gap-2">
-                        <span className="font-semibold text-[#191919] text-sm">
-                          {comment.authorName}
-                        </span>
-                        <span className="text-xs text-[#666663]">
-                          {formatTimestamp(comment.createdAt)}
-                          {comment.isEdited && ' (modifié)'}
-                        </span>
-                      </div>
-                      
-                      {/* Actions (seulement pour l'auteur) */}
-                      {isAuthor && !isEditing && (
-                        <div className="flex gap-1">
-                          <button
-                            onClick={() => startEditComment(comment)}
-                            className="p-1 text-[#666663] hover:text-black transition-colors"
-                            title="Modifier"
-                          >
-                            <Edit2 className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={() => handleDeleteComment(comment.id)}
-                            className="p-1 text-[#EF1C43] hover:text-red-700 transition-colors"
-                            title="Supprimer"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
-                      )}
+                  {comment.userId === currentUser?.id && (
+                    <div className="flex gap-1">
+                      <button
+                        onClick={() => startEditing(comment)}
+                        className="p-1 hover:bg-gray-200 rounded transition-colors"
+                        title="Modifier"
+                      >
+                        <Edit2 className="w-3 h-3 text-gray-600" />
+                      </button>
+                      <button
+                        onClick={() => handleDelete(comment.id)}
+                        className="p-1 hover:bg-red-100 rounded transition-colors"
+                        title="Supprimer"
+                      >
+                        <Trash2 className="w-3 h-3 text-red-600" />
+                      </button>
                     </div>
-                    
-                    {/* Contenu ou mode édition */}
-                    {isEditing ? (
-                      <div className="space-y-2">
-                        <textarea
-                          value={editContent}
-                          onChange={(e) => setEditContent(e.target.value)}
-                          className="w-full px-3 py-2 border border-[#E5E4DF] rounded-lg focus:outline-none focus:ring-2 focus:ring-black resize-none text-sm"
-                          rows="3"
-                        />
-                        <div className="flex gap-2 justify-end">
-                          <button
-                            onClick={cancelEdit}
-                            className="inline-flex items-center gap-1 px-3 py-1 text-xs bg-gray-200 text-gray-700 rounded hover:bg-gray-300 transition-colors"
-                          >
-                            <X className="w-3 h-3" />
-                            Annuler
-                          </button>
-                          <button
-                            onClick={() => saveEditComment(comment.id)}
-                            className="inline-flex items-center gap-1 px-3 py-1 text-xs bg-black text-white rounded hover:bg-[#333333] transition-colors"
-                          >
-                            <Check className="w-3 h-3" />
-                            Sauvegarder
-                          </button>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="text-[#666663] text-sm mt-1 whitespace-pre-wrap break-words">
-                        {renderCommentContent(comment.content)}
-                      </div>
-                    )}
-                  </div>
+                  )}
                 </div>
+                
+                {editingCommentId === comment.id ? (
+                  <div className="space-y-2">
+                    <textarea
+                      value={editContent}
+                      onChange={(e) => setEditContent(e.target.value)}
+                      className="w-full px-3 py-2 border border-[#E5E4DF] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-black resize-none"
+                      rows={3}
+                    />
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => handleEdit(comment.id)}
+                        className="px-3 py-1 bg-black text-white rounded text-xs hover:bg-gray-800 flex items-center gap-1"
+                      >
+                        <Check className="w-3 h-3" />
+                        Enregistrer
+                      </button>
+                      <button
+                        onClick={cancelEditing}
+                        className="px-3 py-1 bg-gray-200 text-gray-700 rounded text-xs hover:bg-gray-300 flex items-center gap-1"
+                      >
+                        <X className="w-3 h-3" />
+                        Annuler
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-sm text-gray-700 whitespace-pre-wrap break-words">
+                    {formatCommentContent(comment.content)}
+                  </p>
+                )}
               </div>
-            );
-          })
+            </div>
+          ))
         )}
       </div>
 
-      {/* Formulaire d'ajout avec mentions */}
-      <div className="space-y-3">
-        {/* Liste des mentions - Positionnée AVANT le textarea comme Slack */}
+      {/* Formulaire de nouveau commentaire */}
+      <form onSubmit={handleSubmit} className="relative">
+        <div className="relative">
+          <textarea
+            ref={textareaRef}
+            value={newComment}
+            onChange={handleInputChange}
+            placeholder="Ajouter un commentaire... (utilisez @ pour mentionner quelqu'un)"
+            className="w-full px-4 py-3 pr-12 border border-[#E5E4DF] rounded-lg focus:outline-none focus:ring-2 focus:ring-black resize-none text-sm"
+            rows={3}
+            disabled={loading}
+          />
+          
+          <button
+            type="submit"
+            disabled={loading || !newComment.trim()}
+            className="absolute right-2 bottom-2 p-2 bg-black text-white rounded-lg hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            <Send className="w-4 h-4" />
+          </button>
+        </div>
+
+        {/* Liste des suggestions de mentions */}
         {showMentions && filteredMembers.length > 0 && (
           <div
             ref={mentionsListRef}
-            className="bg-white border border-[#E5E4DF] rounded-lg shadow-lg max-h-48 overflow-y-auto mb-2"
-            style={{
-              minWidth: '250px',
-              maxWidth: '400px'
-            }}
+            className="absolute bottom-full left-0 right-0 mb-2 bg-white border border-[#E5E4DF] rounded-lg shadow-lg max-h-48 overflow-y-auto z-10"
           >
-            {filteredMembers.map(member => (
+            {filteredMembers.map((member) => (
               <button
                 key={member.id}
+                type="button"
                 onClick={() => insertMention(member)}
-                className="w-full flex items-center gap-3 px-4 py-3 hover:bg-blue-50 border-b border-[#F3F4F6] last:border-b-0 transition-all duration-150 text-left group"
+                className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center gap-2 transition-colors"
               >
-                {member.profilePhoto ? (
-                  <img 
-                    src={member.profilePhoto} 
-                    alt={`${member.firstName} ${member.lastName}`}
-                    className="w-10 h-10 rounded-full object-cover ring-2 ring-white group-hover:ring-blue-200 transition-all"
-                  />
-                ) : (
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center ring-2 ring-white group-hover:ring-blue-200 transition-all">
-                    <UserIcon className="w-5 h-5 text-white" />
-                  </div>
-                )}
-                <div className="flex-1 min-w-0">
-                  <div className="font-semibold text-sm text-[#191919] truncate group-hover:text-blue-700 transition-colors">
-                    {member.firstName} {member.lastName}
-                  </div>
-                  <div className="text-xs text-[#666663] truncate">
-                    {member.email}
-                  </div>
+                <div className="w-6 h-6 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 text-white text-xs font-bold flex items-center justify-center overflow-hidden">
+                  {member.photoUrl ? (
+                    <img
+                      src={member.photoUrl}
+                      alt={`${(member.firstName || '').trim()} ${(member.lastName || '').trim()}`.trim() || 'Avatar'}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    member.firstName?.charAt(0) || <UserIcon className="w-3 h-3" />
+                  )}
                 </div>
-                <div className="flex items-center justify-center w-6 h-6 rounded-full bg-blue-100 group-hover:bg-blue-200 transition-colors">
-                  <AtSign className="w-3 h-3 text-blue-600" />
-                </div>
+                <span className="text-sm">
+                  {member.firstName} {member.lastName}
+                </span>
               </button>
             ))}
           </div>
         )}
 
-        <textarea
-          ref={textareaRef}
-          value={newComment}
-          onChange={handleTextareaChange}
-          placeholder="Ajouter un commentaire... Utilisez @ pour mentionner un collègue"
-          className="w-full px-4 py-3 border border-[#E5E4DF] rounded-lg focus:outline-none focus:ring-2 focus:ring-black resize-none text-sm"
-          rows="3"
-          disabled={loading}
-        />
-
-        <div className="flex justify-end">
-          <button
-            onClick={handleAddComment}
-            disabled={loading || !newComment.trim()}
-            className="inline-flex items-center gap-2 px-6 py-2 bg-black text-white rounded-lg hover:bg-[#333333] disabled:opacity-50 disabled:cursor-not-allowed transition-all font-semibold text-sm"
-          >
-            <Send className="w-4 h-4" />
-            {loading ? 'Envoi...' : 'Envoyer'}
-          </button>
-        </div>
-      </div>
+        <p className="text-xs text-gray-500 mt-2 flex items-center gap-1">
+          <AtSign className="w-3 h-3" />
+          Tapez @ pour mentionner un membre de l'équipe
+        </p>
+      </form>
     </div>
   );
 }

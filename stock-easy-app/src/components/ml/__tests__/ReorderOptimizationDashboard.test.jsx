@@ -36,7 +36,8 @@ describe('ReorderOptimizationDashboard', () => {
     render(<ReorderOptimizationDashboard products={mockProducts} />);
     
     expect(screen.getByText(/Optimisation des Points de Commande/i)).toBeInTheDocument();
-    expect(screen.getByText(/Analyser/i)).toBeInTheDocument();
+    const analyzeButtons = screen.getAllByRole('button', { name: /Analyser/i });
+    expect(analyzeButtons.length).toBeGreaterThan(0);
   });
 
   it('devrait afficher le message initial', () => {

@@ -55,7 +55,9 @@ export const AITab = ({
           <Brain className="w-8 h-8 text-[#191919]" />
           <h1 className="text-2xl font-bold text-[#191919]">Intelligence Artificielle</h1>
         </div>
-        <p className="text-[#666663] ml-11">Prédictions et optimisations pilotées par l'IA</p>
+        <p className="text-xs sm:text-sm text-[#666663]">
+          Prédictions et optimisations pilotées par l'IA
+        </p>
         
         {/* Onglets de navigation - Optimisés mobile */}
         <div className="flex gap-2 mt-6 overflow-x-auto pb-2 -mx-2 px-2 sm:mx-0 sm:px-0">

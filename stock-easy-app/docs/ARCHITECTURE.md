@@ -2,13 +2,13 @@
 
 ## Vue d'Ensemble
 
-Stock Easy est une application React de gestion de stock connectée à Google Apps Script.
+Stock Easy est une application React de gestion de stock adossée à Supabase (Postgres, Auth, Storage, Edge Functions).
 
 ## Stack Technique
 
 - **Frontend**: React 18 + Vite 5
 - **Styling**: Tailwind CSS 3
-- **Backend**: Google Apps Script (API REST)
+- **Backend**: Supabase (Postgres + RPC + Row Level Security)
 - **Hosting**: Vercel
 
 ## Structure Actuelle
@@ -25,7 +25,8 @@ stock-easy-app/
 
 ## Variables d'Environnement
 
-- `VITE_API_URL`: URL de l'API Google Apps Script
+- `VITE_SUPABASE_URL`: URL de votre projet Supabase
+- `VITE_SUPABASE_ANON_KEY`: clé anonyme pour le client web
 
 ## Déploiement
 

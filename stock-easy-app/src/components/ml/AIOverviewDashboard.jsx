@@ -3,7 +3,7 @@
  * @module components/ml/AIOverviewDashboard
  */
 
-import React from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Brain,
   TrendingUp,
@@ -11,133 +11,236 @@ import {
   AlertTriangle,
   Target,
   CheckCircle,
-  DollarSign,
-  Package,
   Sparkles,
   ArrowRight
 } from 'lucide-react';
 import { AI_TABS } from '../../constants/stockEasyConstants';
-// Hooks ML temporaires (à remplacer par les vrais hooks)
-const useDemandForecast = (products) => ({
-  forecasts: products ? products.reduce((acc, product) => {
-    acc[product.sku] = {
-      predicted: Math.floor(Math.random() * 100) + 50,
-      confidence: 0.85,
-      trend: Math.random() > 0.5 ? 'up' : 'down'
-    };
-    return acc;
-  }, {}) : {},
-  isReady: true,
-  isTraining: false,
-  getForecastForProduct: (sku) => ({
-    predicted: Math.floor(Math.random() * 100) + 50,
-    confidence: 0.85,
-    trend: Math.random() > 0.5 ? 'up' : 'down'
-  })
-});
+import { useCurrency } from '../../contexts/CurrencyContext';
+import { useDemandForecast } from '../../hooks/ml/useDemandForecast';
+import { useReorderOptimization } from '../../hooks/ml/useReorderOptimization';
+import { useAnomalyDetection } from '../../hooks/ml/useAnomalyDetection';
+import { toast } from 'sonner';
 
-const useReorderOptimization = (products) => ({
-  optimizations: new Map(products ? products.map(product => [
-    product.sku,
-    {
-      currentReorderPoint: Math.floor(Math.random() * 50) + 20,
-      optimizedReorderPoint: Math.floor(Math.random() * 30) + 15,
-      savings: Math.floor(Math.random() * 1000) + 500,
-      confidence: 0.9,
-      costAnalysis: {
-        savings: {
-          perYear: Math.floor(Math.random() * 5000) + 1000,
-          perMonth: Math.floor(Math.random() * 400) + 100
+export function AIOverviewDashboard({ products = [], orders = [], setAiSubTab }) {
+  const { format: formatCurrency } = useCurrency();
+  const formatNoDecimals = useCallback(
+    (value) =>
+      formatCurrency(value ?? 0, { minimumFractionDigits: 0, maximumFractionDigits: 0 }),
+    [formatCurrency]
+  );
+
+  const {
+    forecasts,
+    isTraining: forecastTraining,
+    isReady: forecastReady,
+    error: forecastError,
+    retrain,
+    getForecastForProduct
+  } = useDemandForecast(products);
+
+  const {
+    optimizations,
+    summary,
+    isAnalyzing: optimizationAnalyzing,
+    isReady: optimizationReady,
+    error: optimizationError,
+    progress: optimizationProgress,
+    analyze,
+    getTotalSavings,
+    getOptimizationForProduct
+  } = useReorderOptimization(products);
+
+  const {
+    stats,
+    anomalies,
+    isDetecting,
+    isReady: anomaliesReady,
+    error: anomaliesError,
+    lastCheck,
+    detectAnomalies,
+    getAnomaliesForProduct
+  } = useAnomalyDetection(products, orders);
+
+  const [launchingAll, setLaunchingAll] = useState(false);
+  const [lastLaunchAt, setLastLaunchAt] = useState(null);
+
+  const handleLaunchAllAnalyses = useCallback(async () => {
+    if (launchingAll || !products || products.length === 0) {
+      return;
+    }
+
+    setLaunchingAll(true);
+    try {
+      await retrain();
+      await analyze();
+      await detectAnomalies();
+      setLastLaunchAt(new Date());
+      toast.success('Analyses ML terminées');
+    } catch (error) {
+      console.error('❌ Erreur lors du lancement des analyses:', error);
+      toast.error('Erreur lors du lancement des analyses', {
+        description: error.message
+      });
+    } finally {
+      setLaunchingAll(false);
+    }
+  }, [launchingAll, products, retrain, analyze, detectAnomalies]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const triggerInitialAnalysis = async () => {
+      try {
+        await analyze();
+        if (!cancelled) {
+          setLastLaunchAt(new Date());
         }
+      } catch (error) {
+        console.error("❌ Erreur lors de l'analyse initiale:", error);
       }
+    };
+
+    if (products && products.length > 0 && !optimizationReady && !optimizationAnalyzing) {
+      triggerInitialAnalysis();
     }
-  ]) : []),
-  isReady: true,
-  getTotalSavings: () => products ? products.length * (Math.floor(Math.random() * 1000) + 500) : 0,
-  getOptimizationForProduct: (sku) => ({
-    currentReorderPoint: Math.floor(Math.random() * 50) + 20,
-    optimizedReorderPoint: Math.floor(Math.random() * 30) + 15,
-    savings: Math.floor(Math.random() * 1000) + 500,
-    confidence: 0.9,
-    costAnalysis: {
-      savings: {
-        perYear: Math.floor(Math.random() * 5000) + 1000,
-        perMonth: Math.floor(Math.random() * 400) + 100
+
+    return () => {
+      cancelled = true;
+    };
+  }, [products, optimizationReady, optimizationAnalyzing, analyze]);
+
+  const optimizationItems = useMemo(
+    () => (optimizations instanceof Map ? Array.from(optimizations.values()) : []),
+    [optimizations]
+  );
+  const totalOptimizations = optimizationItems.length;
+  const totalSavings = useMemo(() => {
+    const value = typeof getTotalSavings === 'function' ? getTotalSavings() : 0;
+    return Number.isFinite(value) ? value : 0;
+  }, [getTotalSavings, optimizationItems]);
+  const totalForecastedProducts = useMemo(
+    () => (forecasts ? Object.keys(forecasts).length : 0),
+    [forecasts]
+  );
+  const averageConfidence = useMemo(() => {
+    if (!forecasts) return null;
+    const values = Object.values(forecasts);
+    if (!values.length) return null;
+    const sum = values.reduce((acc, item) => acc + (item?.confidence ?? 0), 0);
+    return sum / values.length;
+  }, [forecasts]);
+  const criticalAnomalies = stats?.critical ?? 0;
+  const highAnomalies = stats?.high ?? 0;
+  const totalAnomalies = stats?.total ?? (anomalies?.length ?? 0);
+  const lastUpdate = useMemo(() => {
+    const source = lastLaunchAt || lastCheck || null;
+    return source ? new Date(source) : null;
+  }, [lastLaunchAt, lastCheck]);
+  const isAnyAnalysisRunning =
+    launchingAll || forecastTraining || optimizationAnalyzing || isDetecting;
+  const topProducts = useMemo(() => {
+    if (!products) return [];
+    return [...products]
+      .sort((a, b) => (b.salesPerDay || 0) - (a.salesPerDay || 0))
+      .slice(0, 5);
+  }, [products]);
+  const handleNavigateTo = useCallback(
+    (tab) => {
+      if (setAiSubTab) {
+        setAiSubTab(tab);
       }
+    },
+    [setAiSubTab]
+  );
+  const errors = useMemo(
+    () => [forecastError, optimizationError, anomaliesError].filter(Boolean),
+    [forecastError, optimizationError, anomaliesError]
+  );
+
+  const optimizationStats = useMemo(() => {
+    const stats = [
+      { label: 'Optimisations', value: totalOptimizations },
+      {
+        label: 'Économies/an',
+        value:
+          totalSavings > 0 ? `${formatNoDecimals(Math.round(totalSavings))}/an` : '—'
+      },
+      {
+        label: 'État',
+        value: optimizationAnalyzing
+          ? 'En cours...'
+          : optimizationReady
+            ? '✅ Analysé'
+            : '⏳ En attente'
+      }
+    ];
+
+    if (optimizationAnalyzing) {
+      stats.push({
+        label: 'Progression',
+        value: `${optimizationProgress ?? 0}%`
+      });
     }
-  })
-});
 
-const useAnomalyDetection = (products, orders) => ({
-  stats: { 
-    total: products ? Math.floor(products.length * 0.1) : 0, 
-    critical: products ? Math.floor(products.length * 0.02) : 0, 
-    high: products ? Math.floor(products.length * 0.05) : 0 
-  },
-  isReady: true,
-  getAnomaliesForProduct: (sku) => [
-    {
-      type: 'demand_spike',
-      severity: 'high',
-      description: 'Pic de demande inattendu',
-      date: new Date().toISOString()
-    }
-  ]
-});
+    return stats;
+  }, [totalOptimizations, totalSavings, optimizationAnalyzing, optimizationReady, optimizationProgress, formatNoDecimals]);
 
-export function AIOverviewDashboard({ 
-  products, 
-  orders, 
-  aiSubTab, 
-  setAiSubTab,
-  onLaunchAllAnalyses,
-  lastUpdateDate,
-  isAnalyzing
-}) {
-  // Hooks pour toutes les fonctionnalités ML
-  const forecast = useDemandForecast(products);
-  const optimization = useReorderOptimization(products);
-  const anomalies = useAnomalyDetection(products, orders);
+  const anomaliesStats = useMemo(() => (
+    [
+      { label: 'Total anomalies', value: totalAnomalies },
+      { label: 'Critiques', value: criticalAnomalies },
+      {
+        label: 'État',
+        value: isDetecting ? '⏳ Analyse' : anomaliesReady ? '🔴 Actif' : '⏳ En attente'
+      }
+    ]
+  ), [totalAnomalies, criticalAnomalies, isDetecting, anomaliesReady]);
 
-  // Calculer les métriques globales
-  const totalForecastedProducts = Object.keys(forecast.forecasts).length;
-  const totalOptimizations = optimization.optimizations.size;
-  const totalSavings = optimization.getTotalSavings();
-  const criticalAnomalies = anomalies.stats?.critical || 0;
-  const highAnomalies = anomalies.stats?.high || 0;
+  const forecastsStats = useMemo(() => (
+    [
+      { label: 'Produits analysés', value: totalForecastedProducts },
+      {
+        label: 'État',
+        value: forecastTraining
+          ? 'Entraînement...'
+          : forecastReady
+            ? '✅ Prêt'
+            : '⏳ À lancer'
+      },
+      {
+        label: 'Modèle',
+        value: forecastReady ? 'Actif' : 'Inactif'
+      }
+    ]
+  ), [totalForecastedProducts, forecastTraining, forecastReady]);
 
   return (
     <div className="space-y-6">
       {/* Header avec KPIs globaux */}
       <div className="bg-gradient-to-r from-purple-600 to-blue-600 rounded-xl shadow-lg text-white p-8">
         <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-3">
-            <Brain className="w-10 h-10" />
-            <div>
-              <h2 className="text-3xl font-bold">Vue d'Ensemble IA</h2>
-              <p className="text-purple-100">Tableau de bord récapitulatif des systèmes intelligents</p>
-              {lastUpdateDate && (
-                <p className="text-purple-200 text-sm mt-1">
-                  Dernière mise à jour : {new Date(lastUpdateDate).toLocaleString('fr-FR', {
-                    day: '2-digit',
-                    month: '2-digit',
-                    year: 'numeric',
-                    hour: '2-digit',
-                    minute: '2-digit'
-                  })}
-                </p>
-              )}
-            </div>
+          <div>
+            <h2 className="text-3xl font-bold">Vue d'Ensemble IA</h2>
+            <p className="text-purple-100">Tableau de bord récapitulatif des systèmes intelligents</p>
+            {lastUpdate && (
+              <p className="text-purple-200 text-sm mt-1">
+                Dernière mise à jour : {lastUpdate.toLocaleString('fr-FR', {
+                  day: '2-digit',
+                  month: '2-digit',
+                  year: 'numeric',
+                  hour: '2-digit',
+                  minute: '2-digit'
+                })}
+              </p>
+            )}
           </div>
-          
-          {/* Bouton centralisé pour lancer toutes les analyses */}
           <button
-            onClick={onLaunchAllAnalyses}
-            disabled={isAnalyzing}
+            onClick={handleLaunchAllAnalyses}
+            disabled={isAnyAnalysisRunning || !products.length}
             className="flex items-center gap-2 px-6 py-3 bg-white/20 hover:bg-white/30 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg transition-colors font-medium"
           >
-            <Sparkles className={`w-5 h-5 ${isAnalyzing ? 'animate-spin' : ''}`} />
-            {isAnalyzing ? 'Analyses en cours...' : 'Lancer toutes les analyses'}
+            <Sparkles className={`w-5 h-5 ${isAnyAnalysisRunning ? 'animate-spin' : ''}`} />
+            {isAnyAnalysisRunning ? 'Analyses en cours...' : 'Lancer toutes les analyses'}
           </button>
         </div>
 
@@ -145,33 +248,55 @@ export function AIOverviewDashboard({
           <KPICard
             icon={Brain}
             label="Modèle ML"
-            value={forecast.isReady ? "Actif" : "Inactif"}
-            sublabel={forecast.isReady ? `${totalForecastedProducts} produits` : "En attente"}
+            value={forecastTraining ? 'Entraînement...' : forecastReady ? 'Actif' : 'En attente'}
+            sublabel={forecastReady ? `${totalForecastedProducts} produits` : 'Cliquez sur "Réentraîner"'}
             color="bg-white/20"
           />
           <KPICard
             icon={Target}
             label="Optimisations"
-            value={totalOptimizations}
-            sublabel={`${Math.round(totalSavings)}€ économies/an`}
+            value={optimizationReady ? totalOptimizations : '—'}
+            sublabel={
+              totalSavings > 0
+                ? `${formatNoDecimals(Math.round(totalSavings))} économies/an`
+                : 'Analyse requise'
+            }
             color="bg-white/20"
           />
           <KPICard
             icon={AlertTriangle}
             label="Anomalies"
             value={criticalAnomalies + highAnomalies}
-            sublabel={criticalAnomalies > 0 ? `${criticalAnomalies} critiques` : "Aucune critique"}
-            color={criticalAnomalies > 0 ? "bg-red-500/30" : "bg-white/20"}
+            sublabel={
+              criticalAnomalies > 0 ? `${criticalAnomalies} critiques` : anomaliesReady ? 'Aucune critique' : 'Analyse en attente'
+            }
+            color={criticalAnomalies > 0 ? 'bg-red-500/30' : 'bg-white/20'}
           />
           <KPICard
             icon={CheckCircle}
             label="Précision"
-            value={forecast.isReady ? "85%" : "-"}
-            sublabel="Fiabilité globale"
+            value={
+              averageConfidence != null
+                ? `${Math.round(averageConfidence)}%`
+                : forecastReady
+                  ? '—'
+                  : 'En attente'
+            }
+            sublabel="Confiance moyenne"
             color="bg-white/20"
           />
         </div>
       </div>
+
+      {errors.length > 0 && (
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+          <ul className="list-disc list-inside space-y-1 text-sm">
+            {errors.map((error, idx) => (
+              <li key={idx}>{typeof error === 'string' ? error : error?.message ?? 'Erreur inconnue'}</li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       {/* Alertes Critiques */}
       {(criticalAnomalies > 0 || totalOptimizations > 0) && (
@@ -189,8 +314,7 @@ export function AIOverviewDashboard({
                 description="Nécessite une action immédiate"
                 action="Voir les anomalies"
                 color="red"
-                link="anomalies"
-                onClick={() => setAiSubTab && setAiSubTab(AI_TABS.ANOMALIES)}
+                onClick={() => handleNavigateTo(AI_TABS.ANOMALIES)}
               />
             )}
 
@@ -198,11 +322,10 @@ export function AIOverviewDashboard({
               <ActionCard
                 icon={Target}
                 title={`${totalOptimizations} optimisation${totalOptimizations > 1 ? 's' : ''} disponible${totalOptimizations > 1 ? 's' : ''}`}
-                description={`Économies potentielles : ${Math.round(totalSavings)}€/an`}
+                description={`Économies potentielles : ${formatNoDecimals(Math.round(totalSavings))}/an`}
                 action="Optimiser maintenant"
                 color="blue"
-                link="optimization"
-                onClick={() => setAiSubTab && setAiSubTab(AI_TABS.OPTIMIZATION)}
+                onClick={() => handleNavigateTo(AI_TABS.OPTIMIZATION)}
               />
             )}
           </div>
@@ -211,100 +334,78 @@ export function AIOverviewDashboard({
 
       {/* Grid des modules */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Module Prévisions */}
         <ModuleCard
           icon={TrendingUp}
           title="Prévisions de Demande"
           description="Prévisions ML sur 7/30/60/90 jours"
-          stats={[
-            { label: 'Produits analysés', value: totalForecastedProducts },
-            { label: 'État', value: forecast.isReady ? '✅ Prêt' : '⏳ En attente' },
-            { label: 'Précision moyenne', value: '85%' }
-          ]}
+          stats={forecastsStats}
           link="forecasts"
           color="purple"
-          onClick={() => setAiSubTab && setAiSubTab(AI_TABS.FORECASTS)}
+          onClick={() => handleNavigateTo(AI_TABS.FORECASTS)}
         />
 
-        {/* Module Optimisation */}
         <ModuleCard
           icon={Target}
           title="Optimisation Points de Commande"
           description="Réduction des ruptures et surstocks"
-          stats={[
-            { label: 'Optimisations', value: totalOptimizations },
-            { label: 'Économies/an', value: `${Math.round(totalSavings)}€` },
-            { label: 'État', value: optimization.isReady ? '✅ Analysé' : '⏳ À analyser' }
-          ]}
+          stats={optimizationStats}
           link="optimization"
           color="blue"
-          onClick={() => setAiSubTab && setAiSubTab(AI_TABS.OPTIMIZATION)}
+          onClick={() => handleNavigateTo(AI_TABS.OPTIMIZATION)}
         />
 
-        {/* Module Anomalies */}
         <ModuleCard
           icon={AlertTriangle}
           title="Détection d'Anomalies"
           description="Surveillance temps réel des comportements"
-          stats={[
-            { label: 'Total anomalies', value: anomalies.stats?.total || 0 },
-            { label: 'Critiques', value: criticalAnomalies },
-            { label: 'État', value: anomalies.isReady ? '🔴 Actif' : '⏳ Initialisation' }
-          ]}
+          stats={anomaliesStats}
           link="anomalies"
           color="red"
-          onClick={() => setAiSubTab && setAiSubTab(AI_TABS.ANOMALIES)}
+          onClick={() => handleNavigateTo(AI_TABS.ANOMALIES)}
         />
 
-        {/* Module Performance */}
         <ModuleCard
           icon={Sparkles}
           title="Performance Globale"
           description="Métriques et analytics du système"
           stats={[
-            { label: 'Uptime', value: '100%' },
-            { label: 'Prédictions/jour', value: totalForecastedProducts * 4 },
-            { label: 'Dernier entraînement', value: 'Aujourd\'hui' }
+            { label: 'Produits suivis', value: products.length },
+            { label: 'Analyses actives', value: totalOptimizations + totalAnomalies },
+            {
+              label: 'Dernier lancement',
+              value: lastUpdate ? lastUpdate.toLocaleDateString('fr-FR') : '—'
+            }
           ]}
           link="forecasts"
           color="green"
-          onClick={() => setAiSubTab && setAiSubTab(AI_TABS.FORECASTS)}
+          onClick={() => handleNavigateTo(AI_TABS.FORECASTS)}
         />
       </div>
 
       {/* Top 5 produits à surveiller */}
-      {forecast.isReady && products.length > 0 && (
+      {forecastReady && topProducts.length > 0 && (
         <div className="bg-white rounded-xl shadow-sm border border-[#E5E4DF] p-6">
           <h3 className="text-xl font-semibold text-[#191919] mb-4">
             Top 5 Produits à Surveiller
           </h3>
 
           <div className="space-y-3">
-            {products
-              .sort((a, b) => (b.salesPerDay || 0) - (a.salesPerDay || 0))
-              .slice(0, 5)
-              .map((product, index) => {
-                const productForecast = forecast.getForecastForProduct(product.sku);
-                const productOptimization = optimization.getOptimizationForProduct(product.sku);
-                const productAnomalies = anomalies.getAnomaliesForProduct(product.sku);
-
-                return (
-                  <ProductSummaryCard
-                    key={product.sku}
-                    rank={index + 1}
-                    product={product}
-                    forecast={productForecast}
-                    optimization={productOptimization}
-                    anomalies={productAnomalies}
-                  />
-                );
-              })}
+            {topProducts.map((product, index) => (
+              <ProductSummaryCard
+                key={product.sku}
+                rank={index + 1}
+                product={product}
+                forecast={getForecastForProduct(product.sku)}
+                optimization={getOptimizationForProduct(product.sku)}
+                anomalies={getAnomaliesForProduct(product.sku)}
+                formatNoDecimals={formatNoDecimals}
+              />
+            ))}
           </div>
         </div>
       )}
 
-      {/* Message de bienvenue si pas encore lancé */}
-      {!forecast.isReady && !forecast.isTraining && (
+      {!forecastReady && !forecastTraining && (
         <div className="bg-white rounded-xl shadow-sm border border-[#E5E4DF] p-12 text-center">
           <Brain className="w-16 h-16 mx-auto mb-4 text-purple-600 opacity-50" />
           <h3 className="text-2xl font-semibold text-[#191919] mb-2">
@@ -319,9 +420,6 @@ export function AIOverviewDashboard({
   );
 }
 
-/**
- * Carte KPI pour le header
- */
 function KPICard({ icon: Icon, label, value, sublabel, color }) {
   return (
     <div className={`${color} rounded-lg p-4`}>
@@ -335,10 +433,7 @@ function KPICard({ icon: Icon, label, value, sublabel, color }) {
   );
 }
 
-/**
- * Carte de module
- */
-function ModuleCard({ icon: Icon, title, description, stats, link, color, onClick }) {
+function ModuleCard({ icon: Icon, title, description, stats, color, onClick }) {
   const colorClasses = {
     purple: 'border-purple-200 bg-purple-50',
     blue: 'border-blue-200 bg-blue-50',
@@ -371,7 +466,7 @@ function ModuleCard({ icon: Icon, title, description, stats, link, color, onClic
         ))}
       </div>
 
-      <button 
+      <button
         className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-white text-[#191919] border border-[#E5E4DF] rounded-lg hover:bg-[#FAFAF7] transition-colors font-medium"
         onClick={onClick}
       >
@@ -382,12 +477,19 @@ function ModuleCard({ icon: Icon, title, description, stats, link, color, onClic
   );
 }
 
-/**
- * Carte résumé pour un produit
- */
-function ProductSummaryCard({ rank, product, forecast, optimization, anomalies }) {
-  const hasIssues = (anomalies && anomalies.length > 0) || (optimization && optimization.confidence > 70);
-  
+function ProductSummaryCard({ rank, product, forecast, optimization, anomalies, formatNoDecimals }) {
+  const anomalyCount = anomalies?.length ?? 0;
+  const savingsPerYear = optimization?.costAnalysis?.savings?.perYear ?? null;
+  const savingsLabel = savingsPerYear != null ? `${formatNoDecimals(Math.round(savingsPerYear))}/an` : '—';
+  const forecastValue = forecast?.averagePredicted != null ? forecast.averagePredicted.toFixed(1) : '-';
+  const trendIcon =
+    forecast?.trend === 'down' ? (
+      <TrendingDown className="w-3 h-3 text-red-600" />
+    ) : (
+      <TrendingUp className="w-3 h-3 text-green-600" />
+    );
+  const hasIssues = anomalyCount > 0 || (optimization && optimization.confidence < 80);
+
   return (
     <div className={`flex items-center justify-between p-4 rounded-lg border-2 ${
       hasIssues ? 'border-orange-200 bg-orange-50' : 'border-[#E5E4DF] bg-[#FAFAF7]'
@@ -405,48 +507,34 @@ function ProductSummaryCard({ rank, product, forecast, optimization, anomalies }
         </div>
 
         <div className="flex items-center gap-4">
-          {/* Prévision */}
           {forecast && (
             <div className="text-center">
               <p className="text-xs text-[#666663]">Prévision 7j</p>
               <div className="flex items-center gap-1">
-                <p className="text-sm font-bold text-purple-600">
-                  {forecast.averagePredicted?.toFixed(1) || '-'}
-                </p>
-                {forecast.trend === 'up' ? (
-                  <TrendingUp className="w-3 h-3 text-green-600" />
-                ) : (
-                  <TrendingDown className="w-3 h-3 text-red-600" />
-                )}
+                <p className="text-sm font-bold text-purple-600">{forecastValue}</p>
+                {trendIcon}
               </div>
             </div>
           )}
 
-          {/* Optimisation */}
           {optimization && (
             <div className="text-center">
               <p className="text-xs text-[#666663]">Optimisation</p>
-              <p className="text-sm font-bold text-blue-600">
-                {optimization.costAnalysis.savings.perYear}€/an
-              </p>
+              <p className="text-sm font-bold text-blue-600">{savingsLabel}</p>
             </div>
           )}
 
-          {/* Anomalies */}
           <div className="text-center">
             <p className="text-xs text-[#666663]">Anomalies</p>
-            <p className={`text-sm font-bold ${
-              anomalies && anomalies.length > 0 ? 'text-red-600' : 'text-green-600'
-            }`}>
-              {anomalies ? anomalies.length : 0}
+            <p className={`text-sm font-bold ${anomalyCount > 0 ? 'text-red-600' : 'text-green-600'}`}>
+              {anomalyCount}
             </p>
           </div>
 
-          {/* Stock actuel */}
           <div className="text-center">
             <p className="text-xs text-[#666663]">Stock</p>
             <p className="text-sm font-bold text-[#191919]">
-              {product.stock}
+              {product.stock ?? '—'}
             </p>
           </div>
         </div>
@@ -455,10 +543,7 @@ function ProductSummaryCard({ rank, product, forecast, optimization, anomalies }
   );
 }
 
-/**
- * Carte d'action prioritaire
- */
-function ActionCard({ icon: Icon, title, description, action, color, link, onClick }) {
+function ActionCard({ icon: Icon, title, description, action, color, onClick }) {
   const colorClasses = {
     red: 'bg-red-50 border-red-200 text-red-700',
     blue: 'bg-blue-50 border-blue-200 text-blue-700',
@@ -472,7 +557,7 @@ function ActionCard({ icon: Icon, title, description, action, color, link, onCli
         <div className="flex-1">
           <p className="font-semibold mb-1">{title}</p>
           <p className="text-sm opacity-90 mb-3">{description}</p>
-          <button 
+          <button
             className="text-sm font-medium hover:underline flex items-center gap-1"
             onClick={onClick}
           >
@@ -484,4 +569,3 @@ function ActionCard({ icon: Icon, title, description, action, color, link, onCli
     </div>
   );
 }
-

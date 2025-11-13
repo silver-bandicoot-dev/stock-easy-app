@@ -152,33 +152,29 @@ export async function apiCall(url, options, retries = 3) {
 }
 ```
 
-### 3️⃣ **Configuration API (config/api.js)**
+### 3️⃣ **Configuration Supabase (`src/lib/supabaseClient.js`)**
 
-**⚠️ Problème de Sécurité:**
+**Points de contrôle:**
 ```javascript
-export const API_URL = import.meta.env.VITE_API_URL || 
-  'https://script.google.com/macros/s/AKfycbz...';
-```
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-**Risques:**
-- URL API Google Apps Script exposée dans le code source
-- Rotation difficile en cas de compromission
-- Pas de distinction environnement dev/staging/prod
-
-**Solution Recommandée:**
-```javascript
-// 1. Utiliser uniquement les variables d'environnement
-export const API_URL = import.meta.env.VITE_API_URL;
-
-if (!API_URL) {
-  throw new Error('VITE_API_URL must be defined in environment variables');
+if (!supabaseUrl || !supabaseAnonKey) {
+  throw new Error(
+    'Missing Supabase environment variables. Please check your .env.local file.'
+  );
 }
-
-// 2. Dans Vercel, configurer les variables d'environnement:
-// - VITE_API_URL (Production)
-// - VITE_API_URL (Preview)
-// - VITE_API_URL (Development)
 ```
+
+**Risques en cas de mauvaise configuration :**
+- Clés exposées ou manquantes → échec de connexion Supabase.
+- Sessions non persistées si `persistSession` est désactivé.
+- Incohérence des environnements (dev/staging/prod) si les variables diffèrent.
+
+**Actions recommandées :**
+1. Définir les variables `VITE_SUPABASE_URL` et `VITE_SUPABASE_ANON_KEY` dans chaque environnement Vercel.
+2. Conserver `SUPABASE_SERVICE_ROLE_KEY` uniquement côté Edge Functions / scripts d'administration.
+3. Mettre en place un test automatisé qui vérifie la présence des variables avant build (`node scripts/check-env.js`).
 
 ### 4️⃣ **Hooks Personnalisés**
 
@@ -316,12 +312,12 @@ const AnimatedChart = lazy(() => import('./components/AnimatedChart'));
 
 | Aspect | Status | Notes |
 |--------|--------|-------|
-| Variables d'environnement | ⚠️ Partiel | URL API en dur comme fallback |
+| Variables d'environnement | ✅ OK | `VITE_SUPABASE_URL` et `VITE_SUPABASE_ANON_KEY` uniquement |
 | HTTPS | ✅ OK | Vercel force HTTPS |
-| Secrets dans le code | ⚠️ Exposé | API URL Google Apps Script visible |
+| Secrets dans le code | ✅ Nettoyé | Aucun fallback sensible dans le repo |
 | Validation des inputs | ❌ Absente | Pas de validation côté client |
 | XSS Protection | ✅ React | React échappe automatiquement |
-| CORS | ⚠️ Non configuré | Dépend de Google Apps Script |
+| CORS | ✅ Géré | Supabase PostgREST gère les headers nécessaires |
 | Rate Limiting | ❌ Absent | Aucune protection côté client |
 
 ### Recommandations de Sécurité
@@ -329,8 +325,9 @@ const AnimatedChart = lazy(() => import('./components/AnimatedChart'));
 **1. Gérer les Secrets Correctement**
 ```bash
 # Dans Vercel Dashboard > Settings > Environment Variables
-VITE_API_URL=https://script.google.com/macros/s/.../exec
-VITE_API_KEY=<secret_key_if_needed>
+VITE_SUPABASE_URL=https://<project>.supabase.co
+VITE_SUPABASE_ANON_KEY=<anon_key>
+SUPABASE_SERVICE_ROLE_KEY=<service_role_key> # Usage server-side uniquement
 ```
 
 **2. Ajouter Validation des Inputs**
@@ -847,9 +844,9 @@ StockEasy.jsx: 🔴 TRÈS ÉLEVÉE (5,057 lignes)
    git commit -m "chore: Update dependencies and fix security issues"
    ```
 
-2. ✅ **Sécuriser l'API URL**
-   - Configurer `VITE_API_URL` dans Vercel Environment Variables
-   - Retirer le fallback hardcodé de `config/api.js`
+2. ✅ **Sécuriser la configuration Supabase**
+   - Configurer `VITE_SUPABASE_URL` et `VITE_SUPABASE_ANON_KEY` dans Vercel Environment Variables
+   - Vérifier qu'aucun fallback sensible n'existe dans le code (utiliser `src/lib/supabaseClient.js`)
 
 ### Actions Court Terme (Cette Semaine)
 

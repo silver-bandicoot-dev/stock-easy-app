@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import api from '../services/apiService';
+import api from '../services/apiAdapter';
 import { toast } from 'sonner';
 import { formatDateForAPI } from '../utils/dateUtils';
 import { calculateETA } from '../utils/etaUtils';
@@ -51,13 +51,18 @@ export const useOrderManagement = (loadData) => {
     try {
       const shippedAt = formatDateForAPI(new Date());
       
+      // Normaliser la structure des fournisseurs (peut être un tableau ou un objet map)
+      const supplierList = Array.isArray(suppliers)
+        ? suppliers
+        : Object.values(suppliers || {});
+      
       // Trouver la commande pour connaître le fournisseur
       const order = orders.find(o => o.id === orderId);
       let eta = null;
       
-      if (order && suppliers && suppliers.length > 0) {
+      if (order && supplierList.length > 0) {
         // Trouver le fournisseur pour calculer l'ETA
-        const supplier = suppliers.find(s => s.name === order.supplier);
+        const supplier = supplierList.find(s => s.name === order.supplier);
         if (supplier && supplier.leadTimeDays) {
           eta = calculateETA(shippedAt, supplier.leadTimeDays);
           console.log('🚀 ETA calculé côté frontend:', eta, 'pour', supplier.name, 'avec', supplier.leadTimeDays, 'jours');

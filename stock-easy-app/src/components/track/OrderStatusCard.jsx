@@ -7,12 +7,14 @@ export const OrderStatusCard = ({
   order, 
   suppliers, 
   products,
+  warehouses = {},
   expandedOrders, 
   toggleOrderDetails, 
   confirmOrder, 
   shipOrder, 
   receiveOrder,
-  onStartReconciliation
+  onStartReconciliation,
+  onConfirmReconciliation
 }) => {
   const getActionButton = (status) => {
     switch (status) {
@@ -74,9 +76,17 @@ export const OrderStatusCard = ({
         );
       case 'reconciliation':
         return (
-          <div className="text-sm text-red-600 font-medium">
-            À réconcilier
-          </div>
+          <Button
+            variant="success"
+            size="sm"
+            onClick={(e) => {
+              e.stopPropagation();
+              onConfirmReconciliation(order.id);
+            }}
+            className="shrink-0"
+          >
+            Réconciliation confirmée
+          </Button>
         );
       default:
         return null;
@@ -88,12 +98,13 @@ export const OrderStatusCard = ({
       order={order}
       products={products}
       suppliers={suppliers}
+      warehouses={warehouses}
       expandedOrders={expandedOrders}
       toggleOrderDetails={toggleOrderDetails}
       showStatus={false}
       showActions={true}
       actionButton={getActionButton(order.status)}
-      compactMode={true}
+      compactMode={false}
     />
   );
 };

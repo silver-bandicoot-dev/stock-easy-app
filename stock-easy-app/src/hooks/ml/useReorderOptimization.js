@@ -6,8 +6,9 @@
 import { useState, useCallback } from 'react';
 import { PerformanceAnalyzer } from '../../services/ml/optimizer/performanceAnalyzer';
 import { ReorderOptimizer } from '../../services/ml/optimizer/reorderOptimizer';
-import * as api from '../../services/apiService';
+import api from '../../services/apiAdapter';
 import { toast } from 'sonner';
+import { useCurrency } from '../../contexts/CurrencyContext';
 
 /**
  * Hook pour gérer l'optimisation des points de commande
@@ -15,6 +16,7 @@ import { toast } from 'sonner';
  * @returns {Object}
  */
 export function useReorderOptimization(products) {
+  const { format: formatCurrency } = useCurrency();
   const [optimizations, setOptimizations] = useState(new Map());
   const [performanceData, setPerformanceData] = useState(new Map());
   const [summary, setSummary] = useState(null);
@@ -79,7 +81,7 @@ export function useReorderOptimization(products) {
       toast.success(
         `Analyse terminée! ${optimizationMap.size} produits optimisés.`,
         {
-          description: `Économies potentielles : ${Math.round(totalSavings)}€/an`
+          description: `Économies potentielles : ${formatCurrency(Math.round(totalSavings))}/an`
         }
       );
       
@@ -153,7 +155,7 @@ export function useReorderOptimization(products) {
     const confirm = window.confirm(
       `Appliquer ${optimizationList.length} optimisations?\n\n` +
       `Cela mettra à jour les points de commande pour tous les produits sélectionnés.\n\n` +
-      `Économies totales estimées : ${Math.round(totalSavings)}€/an`
+      `Économies totales estimées : ${formatCurrency(Math.round(totalSavings))}/an`
     );
 
     if (!confirm) return;

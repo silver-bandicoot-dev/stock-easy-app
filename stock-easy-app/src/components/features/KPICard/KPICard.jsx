@@ -23,6 +23,17 @@ export function KPICard({ title, value, change, changePercent, trend, descriptio
                  (title.includes('Surstocks') && !isPositive);
   
   const isClickable = !!onClick;
+  const safeChartData = Array.isArray(chartData)
+    ? (chartData.length > 1 ? chartData : chartData.length === 1 ? [chartData[0], chartData[0]] : [0, 0])
+    : [0, 0];
+  const points = safeChartData
+    .map((val, i) => {
+      const x = safeChartData.length > 1 ? (i / (safeChartData.length - 1)) * 300 : 0;
+      const y = 80 - (Math.min(Math.max(val, 0), 100) / 100) * 80;
+      return `${x},${y}`;
+    })
+    .join(' ');
+  const tooltipDescription = description || 'Indicateur clé';
   
   return (
     <div 
@@ -65,7 +76,7 @@ export function KPICard({ title, value, change, changePercent, trend, descriptio
             fill="none"
             stroke="#8B5CF6"
             strokeWidth="2"
-            points={chartData.map((val, i) => `${(i / (chartData.length - 1)) * 300},${80 - (val / 100) * 80}`).join(' ')}
+            points={points}
           />
         </svg>
       </div>

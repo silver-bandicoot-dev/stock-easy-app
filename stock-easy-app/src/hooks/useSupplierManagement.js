@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import api from '../services/apiService';
+import api from '../services/apiAdapter';
 import { toast } from 'sonner';
 
 /**
@@ -24,7 +24,7 @@ export const useSupplierManagement = (suppliers, loadData) => {
         name: supplier.name,
         email: supplier.email,
         leadTimeDays: supplier.leadTimeDays,
-        moq: supplier.moq || 50,
+        moq: supplier.moq ?? supplier.moqStandard ?? supplier.defaultMoq ?? supplier.minimumOrderQuantity ?? supplier.minOrderQuantity ?? 50,
         notes: supplier.notes || ''
       });
     } else {
@@ -102,7 +102,7 @@ export const useSupplierManagement = (suppliers, loadData) => {
     
     try {
       if (editingSupplier) {
-        await api.updateSupplier(editingSupplier.name, supplierFormData);
+        await api.updateSupplier(editingSupplier.id ?? editingSupplier.name, supplierFormData);
         toast.success('Fournisseur mis à jour !');
       } else {
         await api.createSupplier(supplierFormData);
@@ -119,7 +119,7 @@ export const useSupplierManagement = (suppliers, loadData) => {
 
   const handleDeleteSupplier = async (supplier) => {
     try {
-      await api.deleteSupplier(supplier.name);
+      await api.deleteSupplier(supplier.id ?? supplier.name);
       toast.success('Fournisseur supprimé !');
       await loadData();
     } catch (error) {

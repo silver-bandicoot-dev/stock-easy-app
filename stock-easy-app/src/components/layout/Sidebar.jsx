@@ -19,7 +19,7 @@ import {
   AlertTriangle
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import NotificationBell from '../notifications/NotificationBell';
 import { Logo } from '../ui/Logo';
 
@@ -38,6 +38,7 @@ const Sidebar = ({
   const [analyticsExpanded, setAnalyticsExpanded] = useState(false);
   const [aiExpanded, setAiExpanded] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
 
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: Package, type: 'tab' },
@@ -115,7 +116,8 @@ const Sidebar = ({
       <nav className="flex-1 px-4 py-6 space-y-2 overflow-y-auto">
         {menuItems.map((item) => {
           const Icon = item.icon;
-          const isActive = item.type === 'tab' && activeTab === item.id;
+          const routeActive = item.type === 'route' && location.pathname === item.path;
+          const isActive = item.type === 'tab' ? activeTab === item.id : routeActive;
           const showSubMenu = item.hasSubMenu && (
             (item.id === 'analytics' && analyticsExpanded) ||
             (item.id === 'ai' && aiExpanded)
@@ -258,7 +260,8 @@ const Sidebar = ({
               <nav className="flex-1 px-4 py-6 space-y-2 overflow-y-auto">
                 {menuItems.map((item) => {
                   const Icon = item.icon;
-                  const isActive = item.type === 'tab' && activeTab === item.id;
+                  const routeActive = item.type === 'route' && location.pathname === item.path;
+                  const isActive = item.type === 'tab' ? activeTab === item.id : routeActive;
                   
                   return (
                     <button

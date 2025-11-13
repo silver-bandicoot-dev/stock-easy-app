@@ -27,11 +27,12 @@ export const formatDate = (isoDate, options = {}) => {
 /**
  * Formate un montant en devise
  */
-export const formatCurrency = (amount, currency = 'EUR') => {
+export const formatCurrency = (amount, currency = 'EUR', options = {}) => {
   return new Intl.NumberFormat('fr-FR', {
     style: 'currency',
-    currency: currency,
-  }).format(amount);
+    currency,
+    ...options
+  }).format(amount ?? 0);
 };
 
 /**

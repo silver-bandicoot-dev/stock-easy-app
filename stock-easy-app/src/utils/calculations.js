@@ -11,13 +11,16 @@ import {
  * Calcul des métriques de santé d'un produit
  */
 export const calculateMetrics = (product, seuil = 90) => {
-  const daysOfStock = product.salesPerDay > 0 
-    ? Math.floor(divideWithPrecision(product.stock, product.salesPerDay, 0))
+  const daysOfStock = product?.salesPerDay > 0 
+    ? roundToOneDecimal(divideWithPrecision(product.stock ?? 0, product.salesPerDay, 1))
     : 999;
   
-  const securityStock = product.customSecurityStock !== undefined && product.customSecurityStock !== null 
-    ? roundToInteger(product.customSecurityStock) 
-    : roundToInteger(multiplyWithPrecision(product.leadTimeDays, 0.2, 0));
+  const leadTime = product?.leadTimeDays ?? product?.leadTime ?? 30;
+  const hasCustomSecurityStock = product?.customSecurityStock !== undefined && product.customSecurityStock !== null && product.customSecurityStock > 0;
+  const computedSecurityStock = hasCustomSecurityStock
+    ? product.customSecurityStock
+    : multiplyWithPrecision(leadTime, 0.2, 0);
+  const securityStock = Math.max(1, roundToInteger(computedSecurityStock));
   
   let healthStatus = 'healthy';
   let healthPercentage = 100;
@@ -44,7 +47,7 @@ export const calculateMetrics = (product, seuil = 90) => {
     healthPercentage = Math.min(100, roundToInteger(50 + multiplyWithPrecision(ratio, 50, 2)));
   }
   
-  const isDeepOverstock = daysOfStock > multiplyWithPrecision(seuil, 2, 0);
+  const isDeepOverstock = daysOfStock >= roundToOneDecimal(seuil);
   
   return {
     ...product,

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { CheckCircle, AlertCircle, Check, RefreshCw } from 'lucide-react';
+import { toast } from 'sonner';
 import { Button } from '../../ui/Button';
 
 /**
@@ -19,7 +20,8 @@ export function ParametresGeneraux({
   devise, 
   onUpdateDevise,
   multiplicateur,
-  onUpdateMultiplicateur
+  onUpdateMultiplicateur,
+  loadData
 }) {
   const [tempSeuil, setTempSeuil] = useState(seuilSurstock);
   const [tempDevise, setTempDevise] = useState(devise);
@@ -43,18 +45,28 @@ export function ParametresGeneraux({
   }, [tempSeuil, tempDevise, tempMultiplicateur, seuilSurstock, devise, multiplicateur]);
 
   const handleSave = async () => {
+    if (!hasChanges) {
+      return;
+    }
+
     setIsSaving(true);
     try {
       const promises = [];
       if (tempSeuil !== seuilSurstock) promises.push(onUpdateSeuil(tempSeuil));
       if (tempDevise !== devise) promises.push(onUpdateDevise(tempDevise));
       if (tempMultiplicateur !== multiplicateur) promises.push(onUpdateMultiplicateur(tempMultiplicateur));
-      
+
       await Promise.all(promises);
+
+      if (typeof loadData === 'function') {
+        await loadData();
+      }
+
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 3000);
     } catch (error) {
       console.error('Erreur sauvegarde:', error);
+      toast.error(error.message || 'Erreur lors de la sauvegarde des paramètres');
     } finally {
       setIsSaving(false);
     }

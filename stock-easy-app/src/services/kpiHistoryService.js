@@ -1,9 +1,8 @@
-import { db } from '../config/firebase';
-import { collection, doc, setDoc, query, where, orderBy, getDocs, Timestamp } from 'firebase/firestore';
+import { supabase } from '../lib/supabaseClient';
 
 /**
- * Sauvegarde un snapshot quotidien des KPIs dans Firestore
- * @param {string} companyId - ID de l'entreprise
+ * Sauvegarde un snapshot quotidien des KPIs dans Supabase
+ * @param {string} companyId - ID de l'entreprise (optionnel, récupéré depuis l'utilisateur si non fourni)
  * @param {object} kpiData - Données KPI à sauvegarder
  * @returns {Promise<void>}
  */
@@ -11,37 +10,61 @@ export async function saveKPISnapshot(companyId, kpiData) {
   try {
     console.log('📊 saveKPISnapshot - Début de sauvegarde pour companyId:', companyId);
     
+    // Récupérer l'utilisateur actuel si companyId n'est pas fourni
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      throw new Error('Utilisateur non authentifié');
+    }
+
+    // Si companyId n'est pas fourni, essayer de le récupérer depuis le profil utilisateur
+    if (!companyId) {
+      const { data: profile } = await supabase
+        .from('user_profiles')
+        .select('company_id')
+        .eq('id', user.id)
+        .single();
+      
+      if (profile && profile.company_id) {
+        companyId = profile.company_id;
+      }
+    }
+
     // Créer la date du jour au format YYYY-MM-DD
     const today = new Date();
     const dateString = today.toISOString().split('T')[0];
     
     console.log('📅 Date du snapshot:', dateString);
     
-    // Structure du snapshot
+    // Structure du snapshot pour Supabase
     const snapshot = {
-      date: Timestamp.fromDate(today),
-      skuAvailabilityRate: kpiData.skuAvailabilityRate || 0,
-      availableSKUs: kpiData.availableSKUs || 0,
-      totalSKUs: kpiData.totalSKUs || 0,
-      salesLostAmount: kpiData.salesLostAmount || 0,
-      salesLostCount: kpiData.salesLostCount || 0,
-      overstockCost: kpiData.overstockCost || 0,
-      overstockSKUs: kpiData.overstockSKUs || 0,
-      inventoryValuation: kpiData.inventoryValuation || 0,
-      createdAt: Timestamp.now()
+      user_id: user.id,
+      company_id: companyId || null,
+      snapshot_date: dateString,
+      sku_availability_rate: kpiData.skuAvailabilityRate || 0,
+      available_skus: kpiData.availableSKUs || 0,
+      total_skus: kpiData.totalSKUs || 0,
+      sales_lost_amount: kpiData.salesLostAmount || 0,
+      sales_lost_count: kpiData.salesLostCount || 0,
+      overstock_cost: kpiData.overstockCost || 0,
+      overstock_skus: kpiData.overstockSKUs || 0,
+      inventory_valuation: kpiData.inventoryValuation || 0
     };
     
     console.log('📦 Données du snapshot:', snapshot);
     
-    // Référence du document
-    const snapshotRef = doc(db, 'companies', companyId, 'kpi_history', dateString);
+    // Utiliser la fonction RPC pour sauvegarder
+    const { data, error } = await supabase.rpc('save_kpi_snapshot', {
+      p_kpi_data: snapshot
+    });
     
-    // Sauvegarder dans Firestore
-    await setDoc(snapshotRef, snapshot, { merge: true });
+    if (error) {
+      console.error('❌ Erreur RPC save_kpi_snapshot:', error);
+      throw error;
+    }
     
     console.log('✅ Snapshot sauvegardé avec succès:', dateString);
     
-    return { success: true, date: dateString };
+    return { success: true, date: dateString, data };
   } catch (error) {
     console.error('❌ Erreur lors de la sauvegarde du snapshot KPI:', error);
     throw error;
@@ -50,7 +73,7 @@ export async function saveKPISnapshot(companyId, kpiData) {
 
 /**
  * Récupère l'historique des KPIs pour une période donnée
- * @param {string} companyId - ID de l'entreprise
+ * @param {string} companyId - ID de l'entreprise (optionnel)
  * @param {Date} startDate - Date de début
  * @param {Date} endDate - Date de fin
  * @returns {Promise<Array>} Tableau d'objets KPI triés par date
@@ -60,45 +83,52 @@ export async function getKPIHistory(companyId, startDate, endDate) {
     console.log('📊 getKPIHistory - Récupération historique pour companyId:', companyId);
     console.log('📅 Période:', startDate, 'à', endDate);
     
-    // Référence de la collection
-    const historyRef = collection(db, 'companies', companyId, 'kpi_history');
+    // Récupérer l'utilisateur actuel
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      throw new Error('Utilisateur non authentifié');
+    }
+
+    // Construire la requête
+    let query = supabase
+      .from('kpi_history')
+      .select('*')
+      .eq('user_id', user.id)
+      .gte('snapshot_date', startDate.toISOString().split('T')[0])
+      .lte('snapshot_date', endDate.toISOString().split('T')[0])
+      .order('snapshot_date', { ascending: true });
+
+    // Filtrer par company_id si fourni
+    if (companyId) {
+      query = query.eq('company_id', companyId);
+    }
     
-    // Créer la query avec filtres de dates
-    const startTimestamp = Timestamp.fromDate(startDate);
-    const endTimestamp = Timestamp.fromDate(endDate);
-    
-    const q = query(
-      historyRef,
-      where('date', '>=', startTimestamp),
-      where('date', '<=', endTimestamp),
-      orderBy('date', 'asc')
-    );
-    
-    console.log('🔍 Exécution de la requête Firestore...');
+    console.log('🔍 Exécution de la requête Supabase...');
     
     // Exécuter la requête
-    const querySnapshot = await getDocs(q);
+    const { data, error } = await query;
     
-    console.log('📈 Nombre de snapshots récupérés:', querySnapshot.size);
+    if (error) {
+      console.error('❌ Erreur Supabase:', error);
+      throw error;
+    }
     
-    // Transformer les documents en objets
-    const history = [];
-    querySnapshot.forEach((doc) => {
-      const data = doc.data();
-      history.push({
-        id: doc.id,
-        date: data.date.toDate(),
-        dateString: doc.id, // Le document ID est déjà au format YYYY-MM-DD
-        skuAvailabilityRate: data.skuAvailabilityRate || 0,
-        availableSKUs: data.availableSKUs || 0,
-        totalSKUs: data.totalSKUs || 0,
-        salesLostAmount: data.salesLostAmount || 0,
-        salesLostCount: data.salesLostCount || 0,
-        overstockCost: data.overstockCost || 0,
-        overstockSKUs: data.overstockSKUs || 0,
-        inventoryValuation: data.inventoryValuation || 0
-      });
-    });
+    console.log('📈 Nombre de snapshots récupérés:', data?.length || 0);
+    
+    // Transformer les données pour correspondre au format attendu
+    const history = (data || []).map((row) => ({
+      id: row.id,
+      date: new Date(row.snapshot_date),
+      dateString: row.snapshot_date,
+      skuAvailabilityRate: row.sku_availability_rate || 0,
+      availableSKUs: row.available_skus || 0,
+      totalSKUs: row.total_skus || 0,
+      salesLostAmount: row.sales_lost_amount || 0,
+      salesLostCount: row.sales_lost_count || 0,
+      overstockCost: row.overstock_cost || 0,
+      overstockSKUs: row.overstock_skus || 0,
+      inventoryValuation: row.inventory_valuation || 0
+    }));
     
     console.log('✅ Historique récupéré:', history.length, 'entrées');
     if (history.length > 0) {
@@ -169,4 +199,3 @@ export function calculatePeriodComparison(currentData, previousData) {
     };
   }
 }
-

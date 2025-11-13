@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../../contexts/AuthContext';
+import { useAuth } from '../../contexts/SupabaseAuthContext';
 import Sidebar from './Sidebar';
 import NotificationBell from '../notifications/NotificationBell';
 import { RefreshCw } from 'lucide-react';
@@ -19,7 +19,7 @@ const DashboardLayout = ({ children, activeTab, setActiveTab, syncData, syncing 
   };
 
   return (
-    <div className="min-h-screen bg-[#F0F0EB]">
+    <div className="min-h-screen bg-[#FAFAF7]">
       {/* Sidebar Component */}
       <Sidebar 
         activeTab={activeTab}

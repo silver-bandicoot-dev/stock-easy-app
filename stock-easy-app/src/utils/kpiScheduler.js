@@ -138,15 +138,15 @@ export function setupKPIScheduler() {
   console.log('⚙️ setupKPIScheduler - Configuration du scheduler');
   
   // Pour l'instant, cette fonction sert de placeholder
-  // Plus tard, nous migrerons vers Firebase Cloud Functions avec un cron job
+  // Plus tard, nous migrerons vers Supabase Edge Functions avec un cron job
   
   console.log('ℹ️ Le scheduler utilise actuellement localStorage pour éviter les doublons');
-  console.log('ℹ️ Migration vers Cloud Functions recommandée pour production');
+  console.log('ℹ️ Migration vers Supabase Edge Functions recommandée pour production');
   
   return {
     status: 'configured',
     method: 'client-side-check',
-    recommendation: 'Migrate to Cloud Functions for production'
+    recommendation: 'Migrate to Supabase Edge Functions for production'
   };
 }
 

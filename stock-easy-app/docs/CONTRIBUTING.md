@@ -5,7 +5,7 @@
 ```bash
 npm install
 cp .env.example .env
-# Éditer .env avec votre VITE_API_URL
+# Renseigner VITE_SUPABASE_URL et VITE_SUPABASE_ANON_KEY
 npm run dev
 ```
 

@@ -1,8 +1,12 @@
 import React, { useState } from 'react';
 import { TrendingUp, TrendingDown, Minus } from 'lucide-react';
+import { useCurrency } from '../../contexts/CurrencyContext';
 
 export const KPITabs = ({ analyticsData, comparisonType }) => {
   const [selectedKPI, setSelectedKPI] = useState('skuAvailability');
+  const { format: formatCurrency } = useCurrency();
+  const formatNoDecimals = (value) =>
+    formatCurrency(value, { minimumFractionDigits: 0, maximumFractionDigits: 0 });
 
   // Vérifications de sécurité
   if (!analyticsData) {
@@ -31,22 +35,22 @@ export const KPITabs = ({ analyticsData, comparisonType }) => {
       title: 'Valeur de l\'Inventaire',
       icon: TrendingUp,
       color: '#10B981',
-      format: (kpiData) => kpiData?.value || '€0',
-      unit: '€'
+      format: (kpiData) => kpiData?.value || formatNoDecimals(0),
+      unit: ''
     },
     salesLost: {
       title: 'Ventes Perdues - Rupture de Stock',
       icon: TrendingDown,
       color: '#EF4444',
-      format: (kpiData) => kpiData?.value || '€0',
-      unit: '€'
+      format: (kpiData) => kpiData?.value || formatNoDecimals(0),
+      unit: ''
     },
     overstockCost: {
       title: 'Valeur Surstocks Profonds',
       icon: TrendingDown,
       color: '#F59E0B',
-      format: (kpiData) => kpiData?.value || '€0',
-      unit: '€'
+      format: (kpiData) => kpiData?.value || formatNoDecimals(0),
+      unit: ''
     }
   };
 

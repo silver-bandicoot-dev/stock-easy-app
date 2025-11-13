@@ -112,5 +112,28 @@ describe('GestionFournisseurs', () => {
     fireEvent.click(deleteButtons[0]);
     expect(defaultProps.onDelete).toHaveBeenCalledWith(mockSuppliers.Supplier1);
   });
+
+  it('should log an error when callbacks are missing instead of throwing', () => {
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    render(
+      <GestionFournisseurs
+        suppliers={mockSuppliers}
+        products={mockProducts}
+      />
+    );
+
+    fireEvent.click(screen.getByText('Nouveau fournisseur'));
+    expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('onOpenModal'));
+
+    const editButtons = screen.getAllByTitle('Modifier');
+    fireEvent.click(editButtons[0]);
+    expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('onOpenModal'));
+
+    const deleteButtons = screen.getAllByTitle('Supprimer');
+    fireEvent.click(deleteButtons[0]);
+    expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('onDelete'));
+
+    consoleSpy.mockRestore();
+  });
 });
 

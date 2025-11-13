@@ -1,271 +1,73 @@
-# 🧪 TEST STOCKEASY - LOG D'ERREURS
-**Date** : $(date)
-**URL Testée** : https://stock-easy-app.vercel.app/
-**Version** : Production
+# ❗ Journal des Erreurs - Stock Easy (Supabase)
+
+**Dernière mise à jour** : Novembre 2025
 
 ---
 
-## 📋 CHECKLIST DE TESTS
+## 1. Erreur critique : RPC indisponible
 
-### ✅ Tests à effectuer
-- [ ] TEST 1 : Authentification
-- [ ] TEST 2 : Dashboard principal
-- [ ] TEST 3 : Onglet Actions
-- [ ] TEST 4 : Onglet Track & Manage (CRITIQUE)
-- [ ] TEST 5 : Onglet Stock
-- [ ] TEST 6 : Onglet Analytics
-- [ ] TEST 7 : Onglet Settings
-- [ ] TEST 8 : Notifications
-- [ ] TEST 9 : Responsive Design
+- **Symptôme** : toast `Erreur lors de la sauvegarde` lors d'un appel `updateParameter`.
+- **Diagnostique** :
+  - Vérifier dans Supabase Studio > SQL que la fonction `update_parameter` est bien présente.
+  - Contrôler que la policy RLS autorise `auth.uid()` à exécuter l'appel.
+  - Inspecter les logs : `supabase functions logs --project <ref>`.
+- **Résolution** :
+  - Redéployer la migration associée (`supabase/migrations/...update_parameter.sql`).
+  - Ajouter une trace dans `supabaseApiService.updateParameter`.
 
 ---
 
-## 🔴 ERREURS CRITIQUES (P0)
+## 2. Échec d'authentification Supabase
 
-### ❌ ERREUR CRITIQUE #1 : Logique de réconciliation incorrecte pour produits endommagés
-**Date** : $(date)
-**Page** : Track & Manage → Réconciliation
-**Gravité** : 🔴 Critique
-
-**Description** :
-Dans la fonction `confirmReconciliationWithQuantities`, le code ajoute `item.receivedQuantity` au stock, mais cette valeur inclut les produits endommagés. Les produits endommagés ne devraient PAS être ajoutés au stock.
-
-**Code problématique** :
-```javascript
-// Ligne 953 dans StockEasy.jsx
-quantityToAdd: item.receivedQuantity // BUG: inclut les endommagés
-```
-
-**Impact** :
-- Stock incorrect (surévalué)
-- Inventaire faux
-- Risque de vente sur stock inexistant
-- Problèmes de réconciliation financière
-
-**Solution proposée** :
-```javascript
-// CORRECT
-quantityToAdd: item.receivedQuantity - item.damagedQuantity
-```
-
-### ❌ ERREUR CRITIQUE #2 : API Google Apps Script inaccessible (403 Forbidden)
-**Date** : $(date)
-**Page** : Toutes les pages nécessitant des données
-**Gravité** : 🔴 Critique
-
-**Description** :
-L'API Google Apps Script retourne une erreur 403 Forbidden, ce qui empêche l'application de charger les données (produits, commandes, fournisseurs).
-
-**Message d'erreur exact** :
-```
-HTTP/2 403 
-cache-control: no-cache, no-store, max-age=0, must-revalidate
-```
-
-**URL concernée** : https://script.google.com/macros/s/AKfycbyIEmHz0dKRlDek_EA95dRBjzHh6HOT_7EykRpaXP-I7Krqvx6bNCmlX5qyUrIx247C/exec
-
-**Impact** :
-- Application complètement non fonctionnelle
-- Impossible de charger les données
-- Toutes les fonctionnalités métier bloquées
-- Dashboard vide
-- Impossible de créer des commandes
-- Impossible de gérer le stock
-
-**Cause probable** :
-- Script Google Apps Script non déployé correctement
-- Permissions insuffisantes
-- Script désactivé ou supprimé
-- Problème de configuration CORS
-
-**Solution proposée** :
-1. Vérifier le déploiement du script Google Apps Script
-2. Configurer les permissions "Anyone" pour l'exécution
-3. Vérifier la configuration CORS
-4. Tester l'API avec des outils comme Postman
-
-### ❌ ERREUR CRITIQUE #3 : Logique de réconciliation incorrecte dans validateWithoutReclamation
-**Date** : $(date)
-**Page** : Track & Manage → Réconciliation
-**Gravité** : 🔴 Critique
-
-**Description** :
-Dans la fonction `validateWithoutReclamation`, le code ajoute `quantityReceived` au stock sans soustraire les produits endommagés.
-
-**Code problématique** :
-```javascript
-// Ligne 1368 dans StockEasy.jsx
-quantityToAdd: quantityReceived // BUG: inclut les endommagés
-```
-
-**Impact** :
-- Même problème que l'erreur #1
-- Stock incorrect lors de validation sans réclamation
-- Produits endommagés ajoutés au stock
-
-**Solution proposée** :
-```javascript
-// CORRECT
-quantityToAdd: quantityReceived - (item.damagedQuantity || 0)
-```
-
-**Priorité de correction** : P0 (Urgent)
+- **Symptôme** : `Missing Supabase environment variables`.
+- **Diagnostique** :
+  - Vérifier `VITE_SUPABASE_URL` et `VITE_SUPABASE_ANON_KEY` dans `.env.local`.
+  - Sur Vercel, vérifier les variables d'environnement dans Project Settings.
+- **Résolution** :
+  - Regénérer la clé anonyme si besoin (`Project Settings > API`).
+  - Redémarrer le serveur Vite après modification du `.env`.
 
 ---
 
-### ❌ ERREUR CRITIQUE #4 : Logique de réconciliation incorrecte dans submitDiscrepancy
-**Date** : $(date)
-**Page** : Track & Manage → Réconciliation
-**Gravité** : 🔴 Critique
+## 3. Problème de RLS / données manquantes
 
-**Description** :
-Dans la fonction `submitDiscrepancy`, le code ajoute `quantityReceived` au stock sans soustraire les produits endommagés.
+- **Symptôme** : les listes (produits/commandes) sont vides pour un utilisateur pourtant actif.
+- **Diagnostique** :
+  - Vérifier la table `user_profiles` : le `company_id` correspond-il ?
+  - Exécuter la requête suivante dans Supabase SQL :
 
-**Code problématique** :
-```javascript
-// Ligne 1092 dans StockEasy.jsx
-quantityToAdd: quantityReceived // BUG: inclut les endommagés
+```sql
+select company_id, role, permissions
+from user_profiles
+where id = auth.uid();
 ```
 
-**Impact** :
-- Même problème que les erreurs précédentes
-- Stock incorrect lors de soumission d'écarts
-- Produits endommagés ajoutés au stock
-
-**Solution proposée** :
-```javascript
-// CORRECT
-quantityToAdd: quantityReceived - (data.damaged || 0)
-```
-
-**Priorité de correction** : P0 (Urgent)
+- **Résolution** :
+  - Mettre à jour `user_profiles` avec le bon `company_id`.
+  - Rafraîchir le JWT (`supabase.auth.refreshSession()`).
 
 ---
 
-### ✅ CORRECTION CORRECTE TROUVÉE : submitUnifiedReconciliation
-**Date** : $(date)
-**Page** : Track & Manage → Réconciliation
-**Gravité** : ✅ Correct
+## 4. Webhook Shopify non traité (prévision)
 
-**Description** :
-Dans la fonction `submitUnifiedReconciliation`, le code calcule correctement la quantité à ajouter en soustrayant les produits endommagés.
-
-**Code correct** :
-```javascript
-// Ligne 1204 dans StockEasy.jsx
-quantityToAdd: validatedQty // où validatedQty = received - damaged
-```
-
-**Note** : Cette fonction montre la bonne pratique à suivre pour les autres fonctions.
+- **Symptôme** : pas de mise à jour de stock après réception d'un webhook.
+- **Diagnostique** :
+  - Vérifier la présence de la fonction Edge (à implémenter).
+  - Contrôler les logs `supabase functions logs` ou `vercel logs`.
+  - Valider la signature HMAC dans les headers.
+- **Résolution (prévue)** :
+  - Implémenter la vérification HMAC.
+  - Écrire un test unitaire pour la fonction de parsing.
 
 ---
 
-## 🟡 ERREURS IMPORTANTES (P1)
+## 5. Actions recommandées
 
-### ❌ ERREUR IMPORTANTE #1 : Gestion des données vides/nulles dans le dashboard
-**Date** : $(date)
-**Page** : Dashboard principal
-**Gravité** : 🟡 Importante
-
-**Description** :
-Le dashboard dépend entièrement de l'API Google Apps Script pour charger les données. Si l'API est inaccessible (erreur 403), le dashboard sera complètement vide et non fonctionnel.
-
-**Problèmes identifiés** :
-1. Pas de gestion d'état de chargement visible pour l'utilisateur
-2. Pas de message d'erreur explicite quand les données ne se chargent pas
-3. Les composants du dashboard (ProductsToOrder, ProductsToWatch, etc.) s'affichent même avec des données vides
-4. Pas de fallback ou de données de démonstration
-
-**Impact** :
-- Expérience utilisateur dégradée
-- Confusion pour les utilisateurs
-- Pas de feedback sur l'état de l'application
-
-**Solution proposée** :
-```javascript
-// Ajouter un état de chargement et de gestion d'erreur
-if (loading) {
-  return <LoadingSpinner />;
-}
-
-if (error) {
-  return <ErrorMessage message="Impossible de charger les données" />;
-}
-
-if (products.length === 0) {
-  return <EmptyState message="Aucun produit trouvé" />;
-}
-```
-
-### ❌ ERREUR IMPORTANTE #2 : Gestion des erreurs dans les actions de commandes
-**Date** : $(date)
-**Page** : Track & Manage → Actions sur commandes
-**Gravité** : 🟡 Importante
-
-**Description** :
-Les fonctions `confirmOrder`, `shipOrder`, et `receiveOrder` dans le hook `useOrderManagement` ne gèrent pas correctement les erreurs d'API. Si l'API Google Apps Script est inaccessible, ces actions échoueront silencieusement.
-
-**Problèmes identifiés** :
-1. Pas de vérification de la disponibilité de l'API avant l'action
-2. Messages d'erreur génériques qui n'aident pas l'utilisateur
-3. Pas de retry automatique en cas d'échec temporaire
-4. Pas de validation des données avant envoi
-
-**Impact** :
-- Actions sur les commandes peuvent échouer sans feedback clair
-- Utilisateurs confus sur l'état de leurs commandes
-- Pas de récupération automatique des erreurs
-
-**Solution proposée** :
-```javascript
-const confirmOrder = async (orderId) => {
-  try {
-    // Vérifier la disponibilité de l'API
-    if (!await checkApiAvailability()) {
-      throw new Error('Service temporairement indisponible');
-    }
-    
-    const confirmedAt = new Date().toISOString();
-    await api.updateOrderStatus(orderId, {
-      status: 'preparing',
-      confirmedAt: confirmedAt
-    });
-    await loadData();
-    toast.success('Commande confirmée !');
-  } catch (error) {
-    console.error('❌ Erreur confirmation:', error);
-    if (error.message.includes('403')) {
-      toast.error('Service temporairement indisponible. Réessayez dans quelques minutes.');
-    } else {
-      toast.error('Erreur lors de la confirmation: ' + error.message);
-    }
-  }
-};
-```
-
-**Priorité de correction** : P1 (Haute)
+- Ajouter Sentry ou Logflare pour centraliser les erreurs runtime.
+- Surveiller les quotas Supabase (Project Settings > Observability).
+- Documenter chaque nouvelle erreur avec la date, le contexte et la résolution appliquée.
 
 ---
 
-## 🟢 ERREURS MOYENNES (P2)
+Ce journal remplace les anciens scénarios liés au backend historique. Toute anomalie doit désormais être investiguée via Supabase Studio, les logs Vercel ou les outils d'observabilité associés.
 
----
-
-## ⚪ ERREURS MINEURES (P3)
-
----
-
-## 📊 MÉTRIQUES DE PERFORMANCE
-
-### Temps de chargement
-- **Page d'accueil** : [À mesurer]
-- **Dashboard** : [À mesurer]
-- **Track** : [À mesurer]
-
-### Requêtes API
-- **Succès** : [À compter]
-- **Échecs** : [À compter]
-
----
-
-## 📝 NOTES DE TEST

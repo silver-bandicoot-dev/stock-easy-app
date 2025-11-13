@@ -47,7 +47,7 @@ export class AnomalyDetector {
     
     try {
       // Collecter l'historique des ventes
-      const salesHistory = await collectSalesHistory();
+      const salesHistory = await collectSalesHistory(products);
       
       // Pour chaque produit, détecter les anomalies
       for (const product of products) {

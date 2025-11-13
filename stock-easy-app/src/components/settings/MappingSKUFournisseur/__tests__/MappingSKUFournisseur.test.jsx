@@ -1,130 +1,155 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, within } from '@testing-library/react';
+import { act } from 'react';
 import { MappingSKUFournisseur } from '../MappingSKUFournisseur';
 
 describe('MappingSKUFournisseur', () => {
-  const mockSuppliers = {
-    'Supplier1': {
+  const suppliers = {
+    Supplier1: {
       name: 'Supplier1',
       email: 'supplier1@example.com',
-      leadTimeDays: 10,
-      moq: 50
+      leadTimeDays: 7,
+      moq: 25
+    },
+    Supplier2: {
+      name: 'Supplier2',
+      email: 'supplier2@example.com',
+      leadTimeDays: 5,
+      moq: 10
     }
   };
 
-  const mockProducts = [
-    { sku: 'SKU1', name: 'Product 1', stock: 100, supplier: 'Supplier1' },
-    { sku: 'SKU2', name: 'Product 2', stock: 50, supplier: null },
-    { sku: 'SKU3', name: 'Product 3', stock: 75, supplier: 'Supplier1' }
+  const products = [
+    { sku: 'SKU1', name: 'Produit 1', stock: 100, supplier: 'Supplier1' },
+    { sku: 'SKU2', name: 'Produit 2', stock: 50, supplier: null },
+    { sku: 'SKU3', name: 'Produit 3', stock: 75, supplier: 'Supplier1' }
   ];
 
-  const defaultProps = {
-    products: mockProducts,
-    suppliers: mockSuppliers,
-    onOpenAssignModal: vi.fn(),
-    onRemoveSupplier: vi.fn()
+  const setup = (overrideProps = {}) => {
+    const onSaveSupplierMapping = vi.fn().mockResolvedValue({});
+    const utils = render(
+      <MappingSKUFournisseur
+        products={products}
+        suppliers={suppliers}
+        onSaveSupplierMapping={onSaveSupplierMapping}
+        {...overrideProps}
+      />
+    );
+
+    return {
+      ...utils,
+      onSaveSupplierMapping
+    };
   };
 
-  it('should render title and description', () => {
-    render(<MappingSKUFournisseur {...defaultProps} />);
-    expect(screen.getByText('🔗 Mapping Produits ↔ Fournisseurs')).toBeInTheDocument();
-    expect(screen.getByText('Associez chaque produit à son fournisseur principal')).toBeInTheDocument();
+  it('affiche le titre, la description et les statistiques', () => {
+    setup();
+
+    expect(
+      screen.getByText('🔗 Mapping Produits ↔ Fournisseurs')
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/Organisez vos catalogues à grande échelle/i)
+    ).toBeInTheDocument();
+
+    const totalCard = screen.getByText('Total produits').parentElement;
+    const assignedCard = screen.getByText('Assignés').parentElement;
+    const pendingCard = screen.getByText('À assigner').parentElement;
+
+    expect(totalCard).toHaveTextContent('3');
+    expect(assignedCard).toHaveTextContent('2');
+    expect(pendingCard).toHaveTextContent('1');
   });
 
-  it('should display correct statistics', () => {
-    render(<MappingSKUFournisseur {...defaultProps} />);
-    expect(screen.getByText('3')).toBeInTheDocument(); // Total
-    expect(screen.getByText('2')).toBeInTheDocument(); // With supplier
-    expect(screen.getByText('1')).toBeInTheDocument(); // Without supplier
+  it('liste les fournisseurs et sélectionne le premier par défaut', () => {
+    setup();
+
+    const selectedSupplier = screen.getByText('supplier1@example.com').closest('button');
+    expect(selectedSupplier).toHaveClass('bg-neutral-900 text-white');
+    expect(
+      screen.getByText(/Produits attribués à Supplier1/i)
+    ).toBeInTheDocument();
   });
 
-  it('should render search input', () => {
-    render(<MappingSKUFournisseur {...defaultProps} />);
-    expect(screen.getByPlaceholderText('🔍 Rechercher un produit...')).toBeInTheDocument();
+  it('affiche les produits assignés et disponibles de manière distincte', () => {
+    setup();
+
+    const assignedList = screen.getByTestId('assigned-products-list');
+    const availableList = screen.getByTestId('available-products-list');
+
+    expect(within(assignedList).getByText(/SKU1/)).toBeInTheDocument();
+    expect(within(assignedList).getByText(/SKU3/)).toBeInTheDocument();
+    expect(within(availableList).getByText(/SKU2/)).toBeInTheDocument();
   });
 
-  it('should render filter dropdown', () => {
-    render(<MappingSKUFournisseur {...defaultProps} />);
-    expect(screen.getByRole('combobox')).toBeInTheDocument();
+  it('permet d’assigner un produit via le bouton d’action', () => {
+    setup();
+
+    const availableList = screen.getByTestId('available-products-list');
+    const availableItem = within(availableList).getByText(/SKU2/).closest('li');
+    const assignButton = within(availableItem).getByRole('button', { name: /Assigner/i });
+    fireEvent.click(assignButton);
+
+    const assignedList = screen.getByTestId('assigned-products-list');
+    expect(within(assignedList).getByText(/SKU2/)).toBeInTheDocument();
   });
 
-  it('should render all products by default', () => {
-    render(<MappingSKUFournisseur {...defaultProps} />);
-    expect(screen.getByText('SKU1')).toBeInTheDocument();
-    expect(screen.getByText('SKU2')).toBeInTheDocument();
-    expect(screen.getByText('SKU3')).toBeInTheDocument();
+  it('permet de retirer un produit via le bouton d’action', () => {
+    setup();
+
+    const [, assignedList] = screen.getAllByRole('list');
+    const assignedItem = within(assignedList).getByText(/SKU1/).closest('li');
+    const removeButton = within(assignedItem).getByRole('button', { name: /Retirer/i });
+    fireEvent.click(removeButton);
+
+    const refreshedAvailableList = screen.getByTestId('available-products-list');
+    expect(within(refreshedAvailableList).getByText(/SKU1/)).toBeInTheDocument();
   });
 
-  it('should filter products by search term', () => {
-    render(<MappingSKUFournisseur {...defaultProps} />);
-    const searchInput = screen.getByPlaceholderText('🔍 Rechercher un produit...');
-    
-    fireEvent.change(searchInput, { target: { value: 'SKU1' } });
-    
-    expect(screen.getByText('SKU1')).toBeInTheDocument();
-    expect(screen.queryByText('SKU2')).not.toBeInTheDocument();
+  it('appelle la sauvegarde avec la liste des SKU assignés', async () => {
+    const { onSaveSupplierMapping } = setup();
+
+    const availableList = screen.getByTestId('available-products-list');
+    const availableItem = within(availableList).getByText(/SKU2/).closest('li');
+    const assignButton = within(availableItem).getByRole('button', { name: /Assigner/i });
+    await act(async () => {
+      fireEvent.click(assignButton);
+    });
+
+    const saveButton = screen.getByRole('button', { name: /^Sauvegarder$/i });
+    await act(async () => {
+      fireEvent.click(saveButton);
+    });
+
+    expect(onSaveSupplierMapping).toHaveBeenCalledTimes(1);
+    const [supplierName, assignedSkus] = onSaveSupplierMapping.mock.calls[0];
+    expect(supplierName).toBe('Supplier1');
+    expect(new Set(assignedSkus)).toEqual(new Set(['SKU1', 'SKU2', 'SKU3']));
   });
 
-  it('should filter products without supplier', () => {
-    render(<MappingSKUFournisseur {...defaultProps} />);
-    const filterSelect = screen.getByRole('combobox');
-    
-    fireEvent.change(filterSelect, { target: { value: 'without_supplier' } });
-    
+  it('réinitialise les modifications via le bouton réinitialiser', () => {
+    setup();
+
+    const assignedList = screen.getByTestId('assigned-products-list');
+    const assignedItem = within(assignedList).getByText(/SKU1/).closest('li');
+    const removeButton = within(assignedItem).getByRole('button', { name: /Retirer/i });
+    fireEvent.click(removeButton);
+
+    const resetButton = screen.getByRole('button', { name: /^Réinitialiser$/i });
+    fireEvent.click(resetButton);
+
+    const refreshedAssignedList = screen.getByTestId('assigned-products-list');
+    expect(within(refreshedAssignedList).getByText(/SKU1/)).toBeInTheDocument();
+  });
+
+  it('filtre les produits des deux listes avec la recherche', () => {
+    setup();
+
+    const searchInput = screen.getByPlaceholderText(/Rechercher un produit/i);
+    fireEvent.change(searchInput, { target: { value: 'SKU2' } });
+
     expect(screen.queryByText('SKU1')).not.toBeInTheDocument();
     expect(screen.getByText('SKU2')).toBeInTheDocument();
-    expect(screen.queryByText('SKU3')).not.toBeInTheDocument();
-  });
-
-  it('should filter products with supplier', () => {
-    render(<MappingSKUFournisseur {...defaultProps} />);
-    const filterSelect = screen.getByRole('combobox');
-    
-    fireEvent.change(filterSelect, { target: { value: 'with_supplier' } });
-    
-    expect(screen.getByText('SKU1')).toBeInTheDocument();
-    expect(screen.queryByText('SKU2')).not.toBeInTheDocument();
-    expect(screen.getByText('SKU3')).toBeInTheDocument();
-  });
-
-  it('should show "no supplier" message for products without supplier', () => {
-    render(<MappingSKUFournisseur {...defaultProps} />);
-    expect(screen.getByText('Aucun fournisseur assigné')).toBeInTheDocument();
-  });
-
-  it('should display supplier details for assigned products', () => {
-    render(<MappingSKUFournisseur {...defaultProps} />);
-    // Use getAllByText because 2 products have the same supplier
-    const emails = screen.getAllByText('supplier1@example.com');
-    expect(emails.length).toBeGreaterThan(0);
-    expect(screen.getAllByText('Délai: 10j').length).toBeGreaterThan(0);
-    expect(screen.getAllByText('MOQ: 50').length).toBeGreaterThan(0);
-  });
-
-  it('should call onOpenAssignModal when assign button clicked', () => {
-    render(<MappingSKUFournisseur {...defaultProps} />);
-    const assignButton = screen.getByText('Assigner');
-    fireEvent.click(assignButton);
-    expect(defaultProps.onOpenAssignModal).toHaveBeenCalledWith(mockProducts[1]);
-  });
-
-  it('should call onRemoveSupplier when remove button clicked', () => {
-    render(<MappingSKUFournisseur {...defaultProps} />);
-    const removeButtons = screen.getAllByTitle('Retirer le fournisseur');
-    fireEvent.click(removeButtons[0]);
-    expect(defaultProps.onRemoveSupplier).toHaveBeenCalledWith('SKU1');
-  });
-
-  it('should call onOpenAssignModal when change supplier button clicked', () => {
-    render(<MappingSKUFournisseur {...defaultProps} />);
-    const changeButtons = screen.getAllByTitle('Changer de fournisseur');
-    fireEvent.click(changeButtons[0]);
-    expect(defaultProps.onOpenAssignModal).toHaveBeenCalledWith(mockProducts[0]);
-  });
-
-  it('should show empty state when no products match', () => {
-    render(<MappingSKUFournisseur {...defaultProps} products={[]} />);
-    expect(screen.getByText('Aucun produit trouvé')).toBeInTheDocument();
   });
 });
 

@@ -3,6 +3,7 @@ import { Mail, Package, AlertCircle } from 'lucide-react';
 import { Modal } from '../../ui/Modal';
 import { Button } from '../../ui/Button';
 import { roundToTwoDecimals } from '../../../utils/decimalUtils';
+import { useCurrency } from '../../../contexts/CurrencyContext';
 
 export const CustomOrderModal = ({
   isOpen,
@@ -14,6 +15,7 @@ export const CustomOrderModal = ({
   suppliers,
   onConfirm
 }) => {
+  const { format: formatCurrency } = useCurrency();
   const [selectedWarehouse, setSelectedWarehouse] = useState('');
   const [orderQuantities, setOrderQuantities] = useState({});
   const [editableEmail, setEditableEmail] = useState('');
@@ -214,7 +216,7 @@ export const CustomOrderModal = ({
                   />
                 </div>
                 <div className="text-xs text-right text-[#666663]">
-                  {roundToTwoDecimals((orderQuantities[p.sku] || 0) * (p.buyPrice || 0)).toFixed(2)}€
+                  {formatCurrency(roundToTwoDecimals((orderQuantities[p.sku] || 0) * (p.buyPrice || 0)))}
                 </div>
               </div>
             </div>
@@ -222,7 +224,7 @@ export const CustomOrderModal = ({
         </div>
         <div className="mt-2 pt-2 border-t border-blue-200 flex justify-between items-center">
           <span className="text-sm text-[#666663]">Total:</span>
-          <span className="text-lg font-bold text-[#191919]">{totalAmount.toFixed(2)}€</span>
+          <span className="text-lg font-bold text-[#191919]">{formatCurrency(totalAmount)}</span>
         </div>
       </div>
       

@@ -1,30 +1,43 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider } from './contexts/AuthContext';
+import { SupabaseAuthProvider } from './contexts/SupabaseAuthContext';
 import { Toaster } from 'sonner';
 import ProtectedRoute from './components/auth/ProtectedRoute';
-import Login from './components/auth/Login';
-import Signup from './components/auth/Signup';
-import ForgotPassword from './components/auth/ForgotPassword';
+import SupabaseLogin from './components/auth/SupabaseLogin';
+import SupabaseSignup from './components/auth/SupabaseSignup';
+import SupabaseResetPassword from './components/auth/SupabaseResetPassword';
+import AcceptInvitation from './components/auth/AcceptInvitation';
 import ProfileWithSidebar from './components/profile/ProfileWithSidebar';
+import NotificationsPage from './components/notifications/NotificationsPage';
 import StockEasy from './StockEasy';
+import SupabaseConnectionTest from './components/debug/SupabaseConnectionTest';
 import './config/i18n';
 
 const App = () => {
   return (
     <Router>
-      <AuthProvider>
-        <Toaster 
-          position="top-right" 
-          richColors 
-          expand={false} 
-          duration={3000}
-        />
+      <Toaster
+        position="top-right"
+        richColors
+        expand={false}
+        duration={3000}
+      />
+      <SupabaseAuthProvider>
         <Routes>
           {/* Public Routes */}
-          <Route path="/login" element={<Login />} />
-          <Route path="/signup" element={<Signup />} />
-          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/login" element={<SupabaseLogin />} />
+          <Route path="/signup" element={<SupabaseSignup />} />
+          <Route path="/forgot-password" element={<SupabaseResetPassword />} />
+          
+          {/* Invitation Route - Protected */}
+          <Route
+            path="/accept-invitation"
+            element={
+              <ProtectedRoute>
+                <AcceptInvitation />
+              </ProtectedRoute>
+            }
+          />
 
           {/* Protected Routes */}
           <Route
@@ -43,11 +56,27 @@ const App = () => {
               </ProtectedRoute>
             }
           />
+          <Route
+            path="/notifications"
+            element={
+              <ProtectedRoute>
+                <NotificationsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/test-supabase"
+            element={
+              <ProtectedRoute>
+                <SupabaseConnectionTest />
+              </ProtectedRoute>
+            }
+          />
 
           {/* Catch all - redirect to home */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
-      </AuthProvider>
+      </SupabaseAuthProvider>
     </Router>
   );
 };

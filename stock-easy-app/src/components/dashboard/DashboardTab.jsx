@@ -7,7 +7,7 @@ import { InTransit } from './InTransit';
 import { ReceivedOrders } from './ReceivedOrders';
 import { StockHealthDashboard } from '../features/StockHealthDashboard';
 
-export const DashboardTab = ({ productsByStatus, orders, setActiveTab, setTrackTabSection, enrichedProducts }) => {
+export const DashboardTab = ({ productsByStatus, orders, suppliers, setActiveTab, setTrackTabSection, enrichedProducts }) => {
   // Calculer les statistiques de santé
   const urgentCount = enrichedProducts ? enrichedProducts.filter(p => p.healthStatus === 'urgent').length : 0;
   const warningCount = enrichedProducts ? enrichedProducts.filter(p => p.healthStatus === 'warning').length : 0;
@@ -50,7 +50,12 @@ export const DashboardTab = ({ productsByStatus, orders, setActiveTab, setTrackT
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <ProductsToOrder products={productsByStatus.to_order} />
         <ProductsToWatch products={productsByStatus.watch} />
-        <InTransit orders={orders} setActiveTab={setActiveTab} setTrackTabSection={setTrackTabSection} />
+        <InTransit 
+          orders={orders} 
+          suppliers={suppliers}
+          setActiveTab={setActiveTab} 
+          setTrackTabSection={setTrackTabSection} 
+        />
         <ReceivedOrders orders={orders} setActiveTab={setActiveTab} setTrackTabSection={setTrackTabSection} />
       </div>
     </motion.div>
