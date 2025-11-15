@@ -20,12 +20,12 @@ BEGIN
   -- Vérifier si le paramètre existe
   SELECT EXISTS(
     SELECT 1 FROM public.parametres 
-    WHERE nom_parametre = p_param_name
+    WHERE param_name = p_param_name
   ) INTO v_param_exists;
   
   IF NOT v_param_exists THEN
     -- Si le paramètre n'existe pas, le créer
-    INSERT INTO public.parametres (nom_parametre, valeur, updated_at)
+    INSERT INTO public.parametres (param_name, value, updated_at)
     VALUES (p_param_name, p_value, NOW())
     RETURNING 1 INTO v_updated_count;
     
@@ -40,9 +40,9 @@ BEGIN
     -- Sinon, mettre à jour
     UPDATE public.parametres 
     SET 
-      valeur = p_value,
+      value = p_value,
       updated_at = NOW()
-    WHERE nom_parametre = p_param_name;
+    WHERE param_name = p_param_name;
     
     GET DIAGNOSTICS v_updated_count = ROW_COUNT;
     
@@ -95,15 +95,16 @@ END $$;
 DO $$
 DECLARE
   param_count INTEGER;
+  param_record RECORD;
 BEGIN
   SELECT COUNT(*) INTO param_count FROM public.parametres;
   RAISE NOTICE '📊 Nombre de paramètres dans la table: %', param_count;
   
   -- Afficher tous les paramètres
-  FOR param_count IN 
-    SELECT nom_parametre, valeur FROM public.parametres
+  FOR param_record IN 
+    SELECT param_name, value FROM public.parametres
   LOOP
-    RAISE NOTICE '  - % = %', param_count;
+    RAISE NOTICE '  - % = %', param_record.param_name, param_record.value;
   END LOOP;
 END $$;
 

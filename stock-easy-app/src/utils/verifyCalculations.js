@@ -73,7 +73,13 @@ export const calculateQtyToOrder = (product) => {
   }
   
   // Calculer la quantité brute nécessaire
-  let qtyToOrder = reorderPoint - currentStock + (securityStock * salesPerDay);
+  // IMPORTANT: securityStock est en UNITÉS, pas en jours (cohérent avec le backend)
+  // Backend: qty_to_order = reorder_point - current_stock + CEIL(sales_per_day * buffer_days)
+  // Pour l'instant, on utilise securityStock directement (en unités) comme buffer
+  // TODO: Ajouter buffer_days comme paramètre configurable
+  const bufferDays = 7; // Jours de buffer par défaut (à configurer)
+  const bufferUnits = salesPerDay > 0 ? Math.ceil(salesPerDay * bufferDays) : 0;
+  let qtyToOrder = reorderPoint - currentStock + bufferUnits;
   
   // S'assurer que la quantité est positive
   qtyToOrder = Math.max(0, qtyToOrder);

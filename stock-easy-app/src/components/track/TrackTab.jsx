@@ -83,13 +83,25 @@ export const TrackTab = ({
         const damagedQuantitiesBySku = {};
         
         // Le modal envoie receivedItems = quantités SAINES reçues, damages = quantités endommagées
-        order.items.forEach(item => {
+        // Construire les items avec toutes les données de réconciliation
+        const updatedItems = order.items.map(item => {
           const ordered = item.quantity || 0;
-          const receivedSaine = parseInt(reconciliationData.receivedItems?.[item.sku] || 0, 10);
+          const receivedSaine = parseInt(reconciliationData.receivedItems?.[item.sku]?.received || reconciliationData.receivedItems?.[item.sku] || 0, 10);
           const damaged = parseInt(reconciliationData.damages?.[item.sku] || 0, 10);
           
           // Missing = Commandé - (Reçu sain + Endommagé)
           const missing = ordered - receivedSaine - damaged;
+          const totalReceived = receivedSaine + damaged;
+          
+          // Déterminer le type de problème
+          let discrepancyType = 'none';
+          if (missing > 0 && damaged > 0) {
+            discrepancyType = 'missing_and_damaged';
+          } else if (missing > 0) {
+            discrepancyType = 'missing';
+          } else if (damaged > 0) {
+            discrepancyType = 'damaged';
+          }
           
           console.log(`📦 ${item.sku}: commandé=${ordered}, reçu sain=${receivedSaine}, endommagé=${damaged}, manquant=${missing}`);
           
@@ -99,9 +111,21 @@ export const TrackTab = ({
           if (damaged > 0) {
             damagedQuantitiesBySku[item.sku] = damaged;
           }
+          
+          return {
+            sku: item.sku,
+            quantity: ordered,
+            pricePerUnit: item.pricePerUnit,
+            receivedQuantity: receivedSaine,
+            damagedQuantity: damaged,
+            discrepancyType: discrepancyType,
+            discrepancyQuantity: missing,
+            discrepancyNotes: reconciliationData.notes || null
+          };
         });
         
         console.log('📦 Résumé réconciliation:', { missingQuantitiesBySku, damagedQuantitiesBySku });
+        console.log('📦 Items mis à jour:', updatedItems);
         
         // Il y a des écarts ou dommages - passer au statut 'reconciliation'
         await api.updateOrderStatus(order.id, {
@@ -110,7 +134,8 @@ export const TrackTab = ({
           hasDiscrepancy: hasDiscrepancies,
           damageReport: hasDamages,
           missingQuantitiesBySku: missingQuantitiesBySku,
-          damagedQuantitiesBySku: damagedQuantitiesBySku
+          damagedQuantitiesBySku: damagedQuantitiesBySku,
+          items: updatedItems
         });
         
         // Mettre à jour le stock avec les quantités reçues
@@ -142,12 +167,29 @@ export const TrackTab = ({
         toast.success('Commande mise en réconciliation avec réclamation générée');
       } else {
         // Pas d'écarts - marquer comme complétée
+        // Construire les items avec les quantités reçues (sans écarts)
+        const completedItems = order.items.map(item => {
+          const receivedSaine = parseInt(reconciliationData.receivedItems?.[item.sku]?.received || reconciliationData.receivedItems?.[item.sku] || item.quantity || 0, 10);
+          
+          return {
+            sku: item.sku,
+            quantity: item.quantity,
+            pricePerUnit: item.pricePerUnit,
+            receivedQuantity: receivedSaine,
+            damagedQuantity: 0,
+            discrepancyType: 'none',
+            discrepancyQuantity: 0,
+            discrepancyNotes: null
+          };
+        });
+        
         await api.updateOrderStatus(order.id, {
           status: 'completed',
           receivedAt: new Date().toISOString().split('T')[0],
           completedAt: new Date().toISOString().split('T')[0],
           hasDiscrepancy: false,
-          damageReport: false
+          damageReport: false,
+          items: completedItems
         });
         
         // Mettre à jour le stock

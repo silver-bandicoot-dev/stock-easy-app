@@ -7,9 +7,9 @@
 **Problème**: La photo de profil ne se sauvegardait pas correctement.
 
 **Solution**:
-- ✅ Changé `updates.photoURL` en `updates.profilePhoto` pour correspondre au champ Firestore
+- ✅ Upload correct vers Supabase Storage avec URL retournée
 - ✅ Ajout de la réinitialisation du `photoFile` après sauvegarde
-- ✅ Upload correct vers Firebase Storage avec URL retournée
+- ✅ Sauvegarde dans la table `user_profiles` de Supabase
 
 ```javascript
 // Avant
@@ -62,7 +62,7 @@ const hasChanges = () => {
 **Solution**:
 - ✅ Ajout d'un bouton "Inviter" dans la section Équipe (visible uniquement pour les admins)
 - ✅ Modal d'invitation avec formulaire complet
-- ✅ Création d'une invitation dans Firestore
+- ✅ Création d'une invitation dans Supabase (table `invitations`)
 - ✅ Email automatique envoyé au collaborateur (à configurer)
 
 #### 📋 Formulaire d'invitation
@@ -156,7 +156,7 @@ Pour activer l'envoi d'emails d'invitation, consultez:
 
 ### Options disponibles:
 
-1. **Firebase Extensions** - Trigger Email
+1. **Supabase Edge Functions** - Trigger Email (ou service externe)
 2. **Cloud Functions** - avec Nodemailer
 3. **Services externes** - SendGrid, Mailgun, etc.
 
@@ -210,7 +210,7 @@ Pour activer l'envoi d'emails d'invitation, consultez:
 4. ✅ Cliquer sur "Inviter"
 5. ✅ Remplir le formulaire
 6. ✅ Cliquer sur "Envoyer l'invitation"
-7. ✅ Vérifier que l'invitation est créée dans Firestore
+7. ✅ Vérifier que l'invitation est créée dans Supabase (table `invitations`)
 8. ✅ Vérifier le toast de succès
 
 ### Test 4: Invitation (Non-admin)
@@ -232,7 +232,7 @@ Toutes les modifications respectent la palette de couleurs de StockEasy:
 
 ---
 
-## 📊 Structure Firestore
+## 📊 Structure Supabase
 
 ### Collection: `invitations`
 - `firstName`: string

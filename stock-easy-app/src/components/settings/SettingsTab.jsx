@@ -1,11 +1,12 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Settings, Users, Package, MapPin, Cog } from 'lucide-react';
+import { Settings, Users, Package, MapPin, Cog, TrendingUp } from 'lucide-react';
 import { SubTabsNavigation } from '../features/SubTabsNavigation';
 import { ParametresGeneraux } from '../settings/ParametresGeneraux';
 import { GestionFournisseurs } from '../settings/GestionFournisseurs';
 import { MappingSKUFournisseur } from '../settings/MappingSKUFournisseur';
 import { GestionWarehouses } from '../settings/GestionWarehouses';
+import { GestionMultiplicateurs } from '../settings/GestionMultiplicateurs';
 import { SETTINGS_TABS } from '../../constants/stockEasyConstants';
 
 export const SettingsTab = ({
@@ -40,6 +41,12 @@ export const SettingsTab = ({
       title: 'Paramètres Généraux',
       icon: Cog,
       shortTitle: 'Généraux'
+    },
+    {
+      key: SETTINGS_TABS.MULTIPLIERS,
+      title: 'Multiplicateurs de Prévision',
+      icon: TrendingUp,
+      shortTitle: 'Multiplicateurs'
     },
     {
       key: SETTINGS_TABS.SUPPLIERS,
@@ -152,6 +159,14 @@ export const SettingsTab = ({
                   onCreateWarehouse={handleSaveWarehouse}
                   onUpdateWarehouse={handleSaveWarehouse}
                   onDeleteWarehouse={handleDeleteWarehouse}
+                />
+              )}
+
+              {parametersSubTab === SETTINGS_TABS.MULTIPLIERS && (
+                <GestionMultiplicateurs
+                  products={products}
+                  loadData={loadData}
+                  multiplicateurDefaut={multiplicateurDefaut}
                 />
               )}
             </motion.div>

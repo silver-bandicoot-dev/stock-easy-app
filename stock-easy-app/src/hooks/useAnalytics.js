@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../contexts/SupabaseAuthContext';
 import { useCurrency } from '../contexts/CurrencyContext';
 import { getKPIHistory, calculatePeriodComparison } from '../services/kpiHistoryService';
+import { calculateOverstockExcessValue } from '../utils/calculations';
 
 /**
  * Calcule la période de comparaison selon le type choisi
@@ -68,9 +69,10 @@ function getComparisonPeriod(currentStart, currentEnd, comparisonType) {
  * @param {string} dateRange - Période sélectionnée ('7d', '30d', '90d', 'custom')
  * @param {object} customRange - { startDate, endDate } pour mode custom
  * @param {string} comparisonType - Type de comparaison ('previous' | 'year_ago' | 'average')
+ * @param {number} seuilSurstockProfond - Seuil de surstock profond en jours (défaut: 90)
  * @returns {object} Données analytics avec KPIs, tendances et graphiques
  */
-export function useAnalytics(products, orders, dateRange = '30d', customRange = null, comparisonType = 'previous') {
+export function useAnalytics(products, orders, dateRange = '30d', customRange = null, comparisonType = 'previous', seuilSurstockProfond = 90) {
   const { currentUser } = useAuth();
   const { format: formatCurrency } = useCurrency();
   const [loading, setLoading] = useState(true);
@@ -108,24 +110,28 @@ export function useAnalytics(products, orders, dateRange = '30d', customRange = 
     const skuAvailabilityRate = totalSKUs > 0 ? (availableSKUs / totalSKUs) * 100 : 0;
 
     // Calcul des ventes perdues
-    const outOfStockProducts = products.filter(p => (p.stock || 0) === 0);
+    // Logique unifiée avec le Dashboard : produits urgents (y compris ceux en rupture)
+    // mais on se concentre sur les produits en rupture totale pour Analytics
+    const outOfStockProducts = products.filter(p => (p.stock || 0) === 0 && (p.salesPerDay || 0) > 0);
     const salesLostCount = outOfStockProducts.length;
     const salesLostAmount = outOfStockProducts.reduce((sum, p) => {
-      // Estimation basée sur les ventes moyennes * prix
+      // Estimation basée sur les ventes moyennes * prix de vente (pas d'achat)
+      // Utiliser sellPrice pour être cohérent avec le Dashboard et refléter les revenus perdus
       const avgDailySales = p.salesPerDay || p.avgDailySales || 0;
-      const daysOutOfStock = 7; // Estimation moyenne
-      const price = p.buyPrice || p.price || 0;
-      return sum + (avgDailySales * daysOutOfStock * price);
+      const daysOutOfStock = 7; // Estimation moyenne de rupture
+      const sellPrice = p.sellPrice || p.buyPrice || 0; // Utiliser prix de vente pour ventes perdues
+      return sum + (avgDailySales * daysOutOfStock * sellPrice);
     }, 0);
 
-    // Calcul du surstock
+    // Calcul du surstock profond (approche 2 : valeur de l'excédent uniquement)
+    // Un produit est en surstock profond si son autonomie (daysOfStock) >= seuil configuré
+    // La valeur du surstock profond = valeur de l'excédent (excédent en jours × ventes/jour × prix)
+    // Utiliser la fonction utilitaire pour garantir la cohérence du calcul
     const overstockProducts = products.filter(p => p.isDeepOverstock === true);
     const overstockSKUs = overstockProducts.length;
     const overstockCost = overstockProducts.reduce((sum, p) => {
-      const currentStock = p.stock || 0;
-      const excessStock = Math.max(0, currentStock - (p.securityStock || 0) * 2);
-      const price = p.buyPrice || p.price || 0;
-      return sum + (excessStock * price);
+      const excessValue = calculateOverstockExcessValue(p, seuilSurstockProfond);
+      return sum + excessValue;
     }, 0);
 
     // Calcul de la valeur de l'inventaire (Inventory Valuation)
@@ -133,6 +139,33 @@ export function useAnalytics(products, orders, dateRange = '30d', customRange = 
       const productValue = (p.stock || 0) * (p.buyPrice || 0);
       return sum + productValue;
     }, 0);
+
+    // Calcul des ventes annuelles projetées (basées sur salesPerDay)
+    const annualSalesValue = products.reduce((sum, p) => {
+      const dailySales = p.salesPerDay || p.avgDailySales || 0;
+      const sellPrice = p.sellPrice || p.buyPrice || 0;
+      return sum + (dailySales * 365 * sellPrice);
+    }, 0);
+
+    // Calcul du taux de rotation moyen (coverage ratio)
+    const avgStockCoverageDays = products
+      .filter(p => (p.salesPerDay || p.avgDailySales || 0) > 0)
+      .reduce((sum, p) => {
+        const dailySales = p.salesPerDay || p.avgDailySales || 0;
+        const coverageDays = (p.stock || 0) / dailySales;
+        return sum + coverageDays;
+      }, 0);
+    const avgCoverageDays = products.filter(p => (p.salesPerDay || p.avgDailySales || 0) > 0).length > 0
+      ? avgStockCoverageDays / products.filter(p => (p.salesPerDay || p.avgDailySales || 0) > 0).length
+      : 0;
+
+    // Ratio inventaire / ventes annuelles (indicateur de santé)
+    const inventoryToSalesRatio = annualSalesValue > 0
+      ? (inventoryValuation / annualSalesValue) * 100
+      : 0;
+
+    // Taux de rupture (pourcentage de SKUs en rupture)
+    const outOfStockRate = totalSKUs > 0 ? (salesLostCount / totalSKUs) * 100 : 0;
 
     const kpis = {
       skuAvailabilityRate: Math.round(skuAvailabilityRate * 100) / 100,
@@ -142,12 +175,16 @@ export function useAnalytics(products, orders, dateRange = '30d', customRange = 
       salesLostCount,
       overstockCost: Math.round(overstockCost * 100) / 100,
       overstockSKUs,
-      inventoryValuation: Math.round(inventoryValuation * 100) / 100
+      inventoryValuation: Math.round(inventoryValuation * 100) / 100,
+      annualSalesValue: Math.round(annualSalesValue * 100) / 100,
+      avgCoverageDays: Math.round(avgCoverageDays * 100) / 100,
+      inventoryToSalesRatio: Math.round(inventoryToSalesRatio * 100) / 100,
+      outOfStockRate: Math.round(outOfStockRate * 100) / 100
     };
 
     console.log('✅ KPIs calculés:', kpis);
     return kpis;
-  }, [products, orders]);
+  }, [products, orders, seuilSurstockProfond]);
 
   // ========================================
   // CALCUL DES DATES DE PÉRIODE
@@ -297,11 +334,16 @@ export function useAnalytics(products, orders, dateRange = '30d', customRange = 
       salesLostAmount: periodData.reduce((sum, d) => sum + d.salesLostAmount, 0) / periodData.length,
       overstockCost: periodData.reduce((sum, d) => sum + d.overstockCost, 0) / periodData.length,
       inventoryValuation: periodData.reduce((sum, d) => sum + (d.inventoryValuation || 0), 0) / periodData.length,
-      // Ajouter les données supplémentaires
+      // Ajouter les données supplémentaires (utiliser les valeurs actuelles pour les métriques en temps réel)
       availableSKUs: currentKPIs.availableSKUs,
       totalSKUs: currentKPIs.totalSKUs,
       salesLostCount: currentKPIs.salesLostCount,
-      overstockSKUs: currentKPIs.overstockSKUs
+      overstockSKUs: currentKPIs.overstockSKUs,
+      // Nouvelles métriques (calculées en temps réel uniquement)
+      annualSalesValue: currentKPIs.annualSalesValue || 0,
+      avgCoverageDays: currentKPIs.avgCoverageDays || 0,
+      inventoryToSalesRatio: currentKPIs.inventoryToSalesRatio || 0,
+      outOfStockRate: currentKPIs.outOfStockRate || 0
     };
 
     console.log('📊 KPIs période actuelle:', avgKPIs);
@@ -409,6 +451,95 @@ export function useAnalytics(products, orders, dateRange = '30d', customRange = 
   }, [history, startDate, endDate]);
 
   // ========================================
+  // FONCTION D'ANALYSE INTELLIGENTE DE LA VALEUR D'INVENTAIRE
+  // ========================================
+  /**
+   * Analyse intelligente de la valeur de l'inventaire en tenant compte du contexte métier
+   * @param {object} metrics - Métriques actuelles et de comparaison
+   * @returns {string} Message d'analyse contextualisé
+   */
+  const analyzeInventoryValuation = (metrics) => {
+    const {
+      inventoryValuation,
+      annualSalesValue,
+      avgCoverageDays,
+      inventoryToSalesRatio,
+      outOfStockRate,
+      salesLostAmount,
+      trend,
+      changePercent
+    } = metrics;
+
+    // Cas 1: Inventaire très faible ET ruptures importantes
+    if (inventoryValuation < 20000 && outOfStockRate > 15 && salesLostAmount > 3000) {
+      return "Inventaire très insuffisant avec ruptures fréquentes. Augmenter les stocks est urgent pour éviter les pertes de ventes.";
+    }
+
+    // Cas 2: Inventaire faible mais rotation rapide (bon signe) + ruptures
+    if (inventoryValuation < 50000 && avgCoverageDays < 30 && outOfStockRate > 10) {
+      return "Rotation rapide mais stock insuffisant. Augmentez légèrement les niveaux pour réduire les ruptures sans surstock.";
+    }
+
+    // Cas 3: Inventaire faible avec bonne rotation et peu de ruptures (normal pour petite entreprise)
+    if (inventoryValuation < 50000 && avgCoverageDays < 60 && outOfStockRate < 5) {
+      return "Inventaire optimisé avec bonne rotation. Votre niveau actuel semble adapté à votre activité.";
+    }
+
+    // Cas 4: Inventaire moyen avec rotation lente
+    if (inventoryValuation >= 50000 && inventoryValuation < 100000 && avgCoverageDays > 90) {
+      return "Inventaire modéré avec rotation lente. Surveillez les produits à faible rotation et envisagez des promotions.";
+    }
+
+    // Cas 5: Inventaire élevé avec rotation lente (surstock)
+    if (inventoryValuation >= 100000 && avgCoverageDays > 120) {
+      return "Inventaire élevé avec rotation lente. Optimisez les niveaux de stock pour libérer du capital et réduire les coûts de stockage.";
+    }
+
+    // Cas 6: Inventaire élevé mais rotation normale + tendance à la hausse
+    if (inventoryValuation >= 100000 && avgCoverageDays < 90 && trend === 'up' && changePercent > 10) {
+      return "Inventaire en hausse avec rotation saine. Surveillez l'évolution pour éviter le surstock progressif.";
+    }
+
+    // Cas 7: Inventaire élevé avec excellente rotation
+    if (inventoryValuation >= 100000 && avgCoverageDays < 60 && outOfStockRate < 5) {
+      return "Inventaire bien dimensionné avec excellente rotation. Maintenez ce niveau pour garantir la disponibilité.";
+    }
+
+    // Cas 8: Ratio inventaire/ventes anormalement élevé (>40%)
+    if (inventoryToSalesRatio > 40 && inventoryValuation > 50000) {
+      return "Ratio inventaire/ventes élevé. Réduisez les niveaux de stock pour améliorer votre trésorerie.";
+    }
+
+    // Cas 9: Ratio inventaire/ventes très faible (<10%) avec ruptures
+    if (inventoryToSalesRatio < 10 && outOfStockRate > 10) {
+      return "Ratio inventaire/ventes très faible avec ruptures. Augmentez progressivement les stocks pour stabiliser les ventes.";
+    }
+
+    // Cas 10: Tendance à la baisse avec ruptures croissantes
+    if (trend === 'down' && changePercent < -15 && outOfStockRate > 5) {
+      return "Inventaire en baisse avec augmentation des ruptures. Revoyez votre stratégie de réapprovisionnement.";
+    }
+
+    // Cas par défaut: Inventaire modéré avec situation équilibrée
+    if (inventoryValuation >= 50000 && inventoryValuation < 100000 && avgCoverageDays >= 60 && avgCoverageDays <= 90) {
+      return "Inventaire de valeur modérée bien équilibré. Maintenez un suivi régulier pour optimiser continuellement.";
+    }
+
+    // Fallback: Message générique basé uniquement sur la valeur
+    if (inventoryValuation > 100000) {
+      return "Inventaire de grande valeur. Surveillez attentivement les rotations pour optimiser votre capital investi.";
+    } else if (inventoryValuation > 50000) {
+      return "Inventaire de valeur modérée. Maintenez un bon équilibre entre disponibilité et coûts.";
+    } else {
+      // Pour les petites valeurs, vérifier si c'est vraiment un problème
+      if (outOfStockRate > 5 || salesLostAmount > 2000) {
+        return "Inventaire de faible valeur avec signes de sous-stockage. Envisagez d'augmenter les niveaux progressivement.";
+      }
+      return "Inventaire de faible valeur adapté à votre activité actuelle. Surveillez les ruptures pour ajuster si nécessaire.";
+    }
+  };
+
+  // ========================================
   // CONSTRUCTION DES OBJETS KPI FINAUX
   // ========================================
   const analytics = useMemo(() => {
@@ -484,7 +615,7 @@ export function useAnalytics(products, orders, dateRange = '30d', customRange = 
         changePercent: salesLostComparison.changePercent,
         trend: salesLostComparison.trend,
         chartData: chartData.salesLost,
-        description: `${periodCurrentKPIs.salesLostCount} SKUs en rupture`,
+        description: `Forecast sur 7 jours : ${periodCurrentKPIs.salesLostCount} SKU(s) en rupture ou à risque (autonomie < stock de sécurité). Inclut produits avec stock = 0 et produits urgents.`,
         comparisonPeriod: comparisonPeriodLabel,
         comparisonValue: comparisonKPIs?.salesLostAmount !== undefined
           ? formatCurrencyNoDecimals(comparisonKPIs.salesLostAmount)
@@ -516,7 +647,18 @@ export function useAnalytics(products, orders, dateRange = '30d', customRange = 
         comparisonPeriod: comparisonPeriodLabel,
         comparisonValue: comparisonKPIs?.inventoryValuation !== undefined
           ? formatCurrency(comparisonKPIs.inventoryValuation, { minimumFractionDigits: 0 })
-          : null
+          : null,
+        // Analyse intelligente avec toutes les métriques contextuelles
+        analysis: analyzeInventoryValuation({
+          inventoryValuation: periodCurrentKPIs.inventoryValuation,
+          annualSalesValue: periodCurrentKPIs.annualSalesValue || 0,
+          avgCoverageDays: periodCurrentKPIs.avgCoverageDays || 0,
+          inventoryToSalesRatio: periodCurrentKPIs.inventoryToSalesRatio || 0,
+          outOfStockRate: periodCurrentKPIs.outOfStockRate || 0,
+          salesLostAmount: periodCurrentKPIs.salesLostAmount,
+          trend: inventoryValuationComparison.trend,
+          changePercent: inventoryValuationComparison.changePercent
+        })
       },
       loading,
       error,

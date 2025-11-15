@@ -13,23 +13,39 @@ export const InTransit = ({ orders, suppliers = {}, setActiveTab, setTrackTabSec
   };
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-[#E5E4DF] p-6">
-      <div className="flex items-center gap-2 mb-4">
-        <div className="w-10 h-10 bg-purple-50 rounded-lg flex items-center justify-center border border-purple-200 shrink-0">
-          <Truck className="w-6 h-6 text-purple-600 shrink-0" />
-        </div>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-1">
-            <h2 className="text-lg font-bold text-[#191919]">En transit</h2>
-            <InfoTooltip content={tooltips.inTransit} />
+    <div className="bg-white rounded-xl shadow-sm border border-[#E5E4DF] overflow-hidden">
+      {/* Header amélioré */}
+      <div className="bg-gradient-to-r from-purple-50 to-purple-100/50 border-b border-[#E5E4DF] p-6">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 bg-purple-500 rounded-xl flex items-center justify-center shadow-md">
+              <Truck className="w-6 h-6 text-white shrink-0" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h2 className="text-xl font-bold text-[#191919]">En transit</h2>
+                <InfoTooltip content={tooltips.inTransit} />
+              </div>
+              <div className="flex items-center gap-2 mt-1">
+                <span className="text-sm font-semibold text-purple-600">{inTransitOrders.length}</span>
+                <span className="text-sm text-[#666663]">commande(s) en cours de livraison</span>
+              </div>
+            </div>
           </div>
-          <p className="text-sm text-[#666663]">{inTransitOrders.length} commande(s)</p>
         </div>
       </div>
-      <div className="space-y-2 max-h-96 overflow-y-auto">
-        {inTransitOrders.length === 0 ? (
-          <p className="text-[#666663] text-center py-8 text-sm">Aucune commande en transit</p>
-        ) : (
+      
+      <div className="p-4">
+        <div className="space-y-3 max-h-96 overflow-y-auto custom-scrollbar">
+          {inTransitOrders.length === 0 ? (
+            <div className="text-center py-12">
+              <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Truck className="w-8 h-8 text-purple-600" />
+              </div>
+              <p className="text-[#666663] font-medium">Aucune commande en transit</p>
+              <p className="text-xs text-[#666663] mt-1">Toutes vos commandes sont livrées ou en attente</p>
+            </div>
+          ) : (
           inTransitOrders.map((order, index) => {
             const leadTime = order.leadTimeDays ?? order.leadTime ?? null;
             const leadTimeNumeric =
@@ -94,43 +110,53 @@ export const InTransit = ({ orders, suppliers = {}, setActiveTab, setTrackTabSec
             return (
               <motion.div
                 key={order.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: index * 0.03, duration: 0.3 }}
-                className="flex justify-between items-center p-3 bg-[#FAFAF7] rounded-lg hover:bg-[#F0F0EB] transition-colors border border-[#E5E4DF]">
-                <div className="min-w-0">
-                  <p className="font-medium text-[#191919] text-sm truncate">{order.id}</p>
-                  <p className="text-xs text-[#666663] truncate">
-                    {formatConfirmedDate(order.shippedAt)}
-                  </p>
-                </div>
-                <div className="text-right shrink-0 ml-4">
-                  <div className="flex items-center justify-end gap-1 text-xs text-[#666663]">
-                    <Calendar className="w-3 h-3" />
-                    <span>Livraison estimée :</span>
-                  </div>
-                  <p className={`text-sm ${etaColorClass}`}>{etaLabel}</p>
-                  {badgeText && (
-                    <span className={`inline-block mt-1 px-2 py-0.5 rounded text-xs font-medium ${badgeClass}`}>
+                whileHover={{ scale: 1.02, x: 4 }}
+                className="group relative bg-gradient-to-r from-purple-50/50 to-transparent rounded-xl p-4 hover:shadow-md transition-all duration-300 border border-purple-100 hover:border-purple-300"
+              >
+                {badgeText && (
+                  <div className="absolute top-2 right-2">
+                    <span className={`px-2 py-1 rounded-full text-[10px] font-bold ${badgeClass}`}>
                       {badgeText}
                     </span>
-                  )}
-                  <p className="text-xs text-[#666663] mt-1">{order.items?.length || 0} produits</p>
+                  </div>
+                )}
+                
+                <div className="flex items-start justify-between gap-4 pr-16">
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-bold text-[#191919] text-sm mb-2">{order.id}</h3>
+                    <div className="flex items-center gap-2 text-xs text-[#666663] mb-3">
+                      <Calendar className="w-3 h-3" />
+                      <span>Expédié le {formatConfirmedDate(order.shippedAt)}</span>
+                    </div>
+                    <p className="text-xs text-[#666663]">
+                      {order.items?.length || 0} produit(s) • {order.supplier || 'Fournisseur inconnu'}
+                    </p>
+                  </div>
+                  <div className="flex flex-col items-end gap-2 shrink-0">
+                    <div className="text-right">
+                      <p className={`text-lg font-bold ${etaColorClass}`}>{etaLabel}</p>
+                      <p className="text-[10px] text-[#666663] uppercase font-medium mt-1">Livraison</p>
+                    </div>
+                  </div>
                 </div>
               </motion.div>
             );
           })
         )}
-      </div>
-      {inTransitOrders.length > 0 && (
-        <div className="mt-4 pt-4 border-t border-[#E5E4DF]">
-          <button
-            onClick={handleViewDetails}
-            className="w-full text-sm text-purple-600 hover:text-purple-700 font-medium">
-            Voir tous les détails →
-          </button>
         </div>
-      )}
+        {inTransitOrders.length > 0 && (
+          <div className="mt-4 pt-4 border-t border-[#E5E4DF]">
+            <button
+              onClick={handleViewDetails}
+              className="w-full px-4 py-2 text-sm text-purple-600 hover:text-purple-700 font-semibold hover:bg-purple-50 rounded-lg transition-colors">
+              Voir tous les détails →
+            </button>
+          </div>
+        )}
+      </div>
     </div>
   );
 };

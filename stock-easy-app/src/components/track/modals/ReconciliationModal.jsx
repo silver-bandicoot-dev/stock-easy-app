@@ -26,9 +26,15 @@ export const ReconciliationModal = ({
       const initialDamages = {};
 
       order.items?.forEach(item => {
-        initialReceivedItems[item.sku] = item.quantity;
-        initialDiscrepancies[item.sku] = 0;
-        initialDamages[item.sku] = 0;
+        // Utiliser les valeurs existantes si disponibles, sinon les quantités commandées
+        const existingReceived = item.receivedQuantity !== undefined ? item.receivedQuantity : item.quantity;
+        const existingDamaged = item.damagedQuantity || 0;
+        const totalReceived = existingReceived + existingDamaged;
+        const discrepancy = totalReceived - item.quantity;
+
+        initialReceivedItems[item.sku] = existingReceived;
+        initialDiscrepancies[item.sku] = discrepancy;
+        initialDamages[item.sku] = existingDamaged;
       });
 
       setReceivedItems(initialReceivedItems);
@@ -41,7 +47,10 @@ export const ReconciliationModal = ({
   const handleReceivedQuantityChange = (sku, quantity) => {
     const orderedQuantity = order.items?.find(item => item.sku === sku)?.quantity || 0;
     const receivedQty = parseInt(quantity) || 0;
-    const discrepancy = receivedQty - orderedQuantity;
+    const damageQty = damages[sku] || 0;
+    // L'écart doit prendre en compte le total reçu (sain + endommagé)
+    const totalReceived = receivedQty + damageQty;
+    const discrepancy = totalReceived - orderedQuantity;
 
     setReceivedItems(prev => ({
       ...prev,
@@ -55,9 +64,22 @@ export const ReconciliationModal = ({
   };
 
   const handleDamageQuantityChange = (sku, quantity) => {
+    const damageQty = parseInt(quantity) || 0;
+    const orderedQuantity = order.items?.find(item => item.sku === sku)?.quantity || 0;
+    const receivedQty = receivedItems[sku] || 0;
+    // Recalculer l'écart quand la quantité endommagée change
+    const totalReceived = receivedQty + damageQty;
+    const discrepancy = totalReceived - orderedQuantity;
+
     setDamages(prev => ({
       ...prev,
-      [sku]: parseInt(quantity) || 0
+      [sku]: damageQty
+    }));
+
+    // Mettre à jour l'écart aussi
+    setDiscrepancies(prev => ({
+      ...prev,
+      [sku]: discrepancy
     }));
   };
 

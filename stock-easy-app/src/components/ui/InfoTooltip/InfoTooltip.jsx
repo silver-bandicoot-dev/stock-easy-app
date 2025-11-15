@@ -1,33 +1,99 @@
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Info } from 'lucide-react';
 
 /**
- * Composant InfoTooltip - Affiche une info-bulle au survol
+ * Composant InfoTooltip - Affiche une info-bulle au survol avec positionnement intelligent
  * @param {Object} props
  * @param {string} props.content - Contenu du tooltip
  * @returns {JSX.Element}
  */
 export function InfoTooltip({ content }) {
   const [show, setShow] = useState(false);
+  const [position, setPosition] = useState({ x: 0, y: 0, placement: 'bottom' });
+  const buttonRef = React.useRef(null);
+  
+  const handleMouseEnter = (e) => {
+    if (buttonRef.current) {
+      const rect = buttonRef.current.getBoundingClientRect();
+      const viewportWidth = window.innerWidth;
+      const viewportHeight = window.innerHeight;
+      
+      // Estimer la taille du tooltip
+      const estimatedWidth = 320;
+      const estimatedHeight = 100;
+      
+      // Calculer la position
+      let x = rect.left;
+      let y = rect.bottom + 8;
+      let placement = 'bottom';
+      
+      // Vérifier si on dépasse en bas
+      if (y + estimatedHeight > viewportHeight - 12) {
+        y = rect.top - estimatedHeight - 8;
+        placement = 'top';
+      }
+      
+      // Vérifier si on dépasse à droite
+      if (x + estimatedWidth > viewportWidth - 12) {
+        x = viewportWidth - estimatedWidth - 12;
+      }
+      
+      // Vérifier si on dépasse à gauche
+      if (x < 12) {
+        x = 12;
+      }
+      
+      setPosition({ x, y, placement });
+      setShow(true);
+    }
+  };
+  
+  const handleMouseLeave = () => {
+    setShow(false);
+  };
   
   return (
-    <div className="relative inline-block group">
+    <>
       <button
+        ref={buttonRef}
         type="button"
-        onMouseEnter={() => setShow(true)}
-        onMouseLeave={() => setShow(false)}
-        className="ml-1 text-[#666663] hover:text-black transition-colors focus:outline-none focus:ring-2 focus:ring-black rounded"
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
+        className="ml-1 text-[#666663] hover:text-black transition-colors focus:outline-none focus:ring-2 focus:ring-black rounded shrink-0"
         aria-label="Plus d'informations"
       >
         <Info className="w-4 h-4 shrink-0" />
       </button>
-      {show && (
-        <div className="absolute left-0 top-full mt-2 bg-black text-white text-xs rounded-lg p-3 shadow-2xl border-2 border-black z-[100] min-w-80 max-w-md whitespace-normal break-words">
-          <div className="absolute -top-2 left-4 w-0 h-0 border-l-4 border-r-4 border-b-8 border-transparent border-b-black"></div>
+      {show && typeof document !== 'undefined' && createPortal(
+        <div
+          className="fixed bg-black text-white text-xs rounded-lg p-3 shadow-2xl border-2 border-black z-[9999] min-w-[200px] max-w-md whitespace-normal break-words pointer-events-none"
+          style={{
+            left: `${position.x}px`,
+            top: `${position.y}px`,
+          }}
+        >
+          <div 
+            className="absolute w-0 h-0 border-l-4 border-r-4 border-transparent"
+            style={{
+              ...(position.placement === 'top'
+                ? { 
+                    bottom: '-8px', 
+                    left: '16px',
+                    borderTop: '8px solid black'
+                  }
+                : { 
+                    top: '-8px', 
+                    left: '16px',
+                    borderBottom: '8px solid black'
+                  })
+            }}
+          ></div>
           {content}
-        </div>
+        </div>,
+        document.body
       )}
-    </div>
+    </>
   );
 }
 
@@ -44,7 +110,7 @@ export const tooltips = {
   reorderPoint: "Niveau de stock critique qui déclenche une alerte de commande. Calculé pour couvrir les ventes pendant le délai de réapprovisionnement + stock de sécurité.",
   stockHealth: "Indicateur visuel de la santé du stock. Vert = bon niveau, Orange = surveillance nécessaire, Rouge = urgent à commander.",
   skuAvailability: "Pourcentage de produits disponibles en stock par rapport au total des SKU actifs.",
-  salesLost: "Montant estimé des ventes manquées en raison d'une indisponibilité produit.",
+  salesLost: "Forecast des ventes perdues sur 7 jours incluant : (1) produits en rupture totale (stock = 0) et (2) produits à risque de rupture (autonomie < stock de sécurité). Calcul : jours en rupture × ventes/jour × prix de vente.",
   deepOverstock: "Valeur financière des produits dont le stock dépasse largement la demande prévue.",
   
   // Métriques ML

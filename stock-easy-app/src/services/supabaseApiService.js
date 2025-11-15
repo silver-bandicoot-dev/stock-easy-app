@@ -131,19 +131,36 @@ export async function updateOrderStatus(orderId, updates = {}) {
     if (updates.missingQuantitiesBySku || updates.damagedQuantitiesBySku || updates.items) {
       const reconciliationUpdate = {};
       
+      // Calculer explicitement les totaux pour garantir qu'ils sont toujours corrects
+      let missingQuantityTotal = 0;
+      let damagedQuantityTotal = 0;
+      
       if (updates.missingQuantitiesBySku) {
         reconciliationUpdate.missing_quantities_by_sku = updates.missingQuantitiesBySku;
+        // Calculer le total des quantités manquantes
+        Object.values(updates.missingQuantitiesBySku).forEach(qty => {
+          missingQuantityTotal += Number(qty) || 0;
+        });
       }
       
       if (updates.damagedQuantitiesBySku) {
         reconciliationUpdate.damaged_quantities_by_sku = updates.damagedQuantitiesBySku;
+        // Calculer le total des quantités endommagées
+        Object.values(updates.damagedQuantitiesBySku).forEach(qty => {
+          damagedQuantityTotal += Number(qty) || 0;
+        });
       }
+      
+      // Inclure les totaux calculés dans la mise à jour
+      reconciliationUpdate.missing_quantity_total = missingQuantityTotal;
+      reconciliationUpdate.damaged_quantity_total = damagedQuantityTotal;
       
       if (updates.items) {
         reconciliationUpdate.items = updates.items;
       }
       
       console.log('📤 Envoi mise à jour réconciliation:', reconciliationUpdate);
+      console.log('📊 Totaux calculés:', { missingQuantityTotal, damagedQuantityTotal });
       
       // Mettre à jour directement dans la table commandes
       const { data: updateData, error: updateError } = await supabase
@@ -156,6 +173,58 @@ export async function updateOrderStatus(orderId, updates = {}) {
         console.error('❌ Erreur mise à jour données réconciliation:', updateError);
       } else {
         console.log('✅ Données de réconciliation mises à jour:', updateData);
+      }
+      
+      // Mettre à jour les articles_commande avec les données de réconciliation
+      if (updates.items && Array.isArray(updates.items) && updates.items.length > 0) {
+        console.log('📦 Mise à jour des articles_commande avec les données de réconciliation');
+        
+        // Convertir les items en format JSONB pour la fonction SQL
+        const itemsJsonb = updates.items.map(item => {
+          // Calculer discrepancyQuantity si non fourni
+          const receivedQty = item.receivedQuantity !== undefined ? item.receivedQuantity : 0;
+          const damagedQty = item.damagedQuantity !== undefined ? item.damagedQuantity : 0;
+          const orderedQty = item.quantity || 0;
+          const totalReceived = receivedQty + damagedQty;
+          const calculatedDiscrepancyQty = orderedQty - totalReceived;
+          
+          // Déterminer discrepancyType si non fourni
+          let discrepancyType = item.discrepancyType;
+          if (!discrepancyType) {
+            if (calculatedDiscrepancyQty > 0 && damagedQty > 0) {
+              discrepancyType = 'missing_and_damaged';
+            } else if (calculatedDiscrepancyQty > 0) {
+              discrepancyType = 'missing';
+            } else if (damagedQty > 0) {
+              discrepancyType = 'damaged';
+            } else {
+              discrepancyType = 'none';
+            }
+          }
+          
+          return {
+            sku: item.sku,
+            receivedQuantity: receivedQty,
+            damagedQuantity: damagedQty,
+            discrepancyType: discrepancyType,
+            discrepancyQuantity: item.discrepancyQuantity !== undefined ? item.discrepancyQuantity : calculatedDiscrepancyQty,
+            discrepancyNotes: item.discrepancyNotes || null
+          };
+        });
+        
+        const { data: itemsUpdateData, error: itemsUpdateError } = await supabase.rpc(
+          'update_order_items_reconciliation',
+          {
+            p_order_id: orderId,
+            p_items: itemsJsonb
+          }
+        );
+        
+        if (itemsUpdateError) {
+          console.error('❌ Erreur mise à jour articles_commande:', itemsUpdateError);
+        } else {
+          console.log('✅ Articles_commande mis à jour:', itemsUpdateData);
+        }
       }
     } else {
       console.log('⚠️ Aucune donnée de réconciliation à enregistrer');
@@ -311,8 +380,13 @@ export async function createWarehouse(warehouseData) {
   try {
     const { data, error } = await supabase.rpc('create_warehouse', {
       p_name: warehouseData.name,
-      p_location: warehouseData.location,
-      p_capacity: warehouseData.capacity
+      p_location: warehouseData.location || null,
+      p_capacity: warehouseData.capacity || null,
+      p_address: warehouseData.address || null,
+      p_city: warehouseData.city || null,
+      p_postal_code: warehouseData.postalCode || null,
+      p_country: warehouseData.country || 'France',
+      p_notes: warehouseData.notes || null
     });
 
     if (error) throw error;
@@ -327,9 +401,14 @@ export async function updateWarehouse(warehouseId, updates) {
   try {
     const { data, error } = await supabase.rpc('update_warehouse', {
       p_warehouse_id: warehouseId,
-      p_name: updates.name,
-      p_location: updates.location,
-      p_capacity: updates.capacity
+      p_name: updates.name || null,
+      p_location: updates.location || null,
+      p_capacity: updates.capacity || null,
+      p_address: updates.address || null,
+      p_city: updates.city || null,
+      p_postal_code: updates.postalCode || null,
+      p_country: updates.country || null,
+      p_notes: updates.notes || null
     });
 
     if (error) throw error;
@@ -454,6 +533,26 @@ export async function confirmOrderReconciliation(orderId) {
   }
 }
 
+// Recalculer l'investissement pour tous les produits
+export async function recalculateAllInvestments() {
+  try {
+    console.log('🔄 Recalcul de l\'investissement pour tous les produits...');
+
+    const { data, error } = await supabase.rpc('recalculate_all_investments');
+
+    if (error) {
+      console.error('❌ Erreur Supabase recalculateAllInvestments:', error);
+      throw error;
+    }
+    
+    console.log('✅ Investissements recalculés:', data);
+    return { success: true, data };
+  } catch (error) {
+    console.error('❌ Erreur recalcul investissement:', error);
+    return { success: false, error: error.message };
+  }
+}
+
 export async function assignSupplierToProduct(sku, supplierName) {
   try {
     const { data, error } = await supabase.rpc('assign_supplier_to_product', {
@@ -462,10 +561,21 @@ export async function assignSupplierToProduct(sku, supplierName) {
     });
 
     if (error) throw error;
+    
+    // Vérifier si la fonction RPC a retourné une erreur dans le JSON
+    if (data && !data.success) {
+      const errorMessage = data.error || 'Erreur lors de l\'assignation du fournisseur';
+      throw new Error(errorMessage);
+    }
+    
     return { success: true, data };
   } catch (error) {
     console.error('❌ Erreur assignation fournisseur:', error);
-    throw error;
+    // S'assurer qu'on lance toujours une Error avec un message
+    if (error instanceof Error) {
+      throw error;
+    }
+    throw new Error(error?.message || 'Erreur lors de l\'assignation du fournisseur');
   }
 }
 
@@ -477,10 +587,21 @@ export async function removeSupplierFromProduct(sku, supplierName) {
     });
 
     if (error) throw error;
+    
+    // Vérifier si la fonction RPC a retourné une erreur dans le JSON
+    if (data && !data.success) {
+      const errorMessage = data.error || 'Erreur lors du retrait du fournisseur';
+      throw new Error(errorMessage);
+    }
+    
     return { success: true, data };
   } catch (error) {
     console.error('❌ Erreur retrait fournisseur du produit:', error);
-    throw error;
+    // S'assurer qu'on lance toujours une Error avec un message
+    if (error instanceof Error) {
+      throw error;
+    }
+    throw new Error(error?.message || 'Erreur lors du retrait du fournisseur');
   }
 }
 

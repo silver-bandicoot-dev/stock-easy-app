@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Warehouse, Plus, Edit2, Trash2, MapPin } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -139,7 +139,22 @@ export const GestionWarehouses = ({
     }
   };
 
-  const warehousesList = Object.values(warehouses);
+  // Filtrer les doublons et utiliser l'ID comme clé unique
+  const warehousesList = useMemo(() => {
+    const seen = new Set();
+    const unique = [];
+    
+    for (const warehouse of Object.values(warehouses)) {
+      // Utiliser l'ID si disponible, sinon le nom
+      const key = warehouse.id || warehouse.name;
+      if (!seen.has(key)) {
+        seen.add(key);
+        unique.push(warehouse);
+      }
+    }
+    
+    return unique;
+  }, [warehouses]);
 
   return (
     <div className="space-y-6">
@@ -175,7 +190,7 @@ export const GestionWarehouses = ({
         ) : (
           <div className="divide-y divide-[#E5E4DF]">
             {warehousesList.map((warehouse) => (
-              <div key={warehouse.name} className="p-6 hover:bg-[#FAFAF7] transition-colors">
+              <div key={warehouse.id || warehouse.name} className="p-6 hover:bg-[#FAFAF7] transition-colors">
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex-1">
                     <div className="flex items-center gap-3 mb-2">

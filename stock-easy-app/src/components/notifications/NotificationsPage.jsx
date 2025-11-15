@@ -62,6 +62,20 @@ const NotificationsPage = () => {
         return '📦';
       case 'alert':
         return '⚠️';
+      case 'stock_alert':
+        return '🚨';
+      case 'unmapped_product':
+        return '📦';
+      case 'weekly_report':
+        return '📊';
+      case 'order_delayed':
+        return '⏰';
+      case 'order_discrepancy':
+        return '⚠️';
+      case 'surstock_alert':
+        return '📦';
+      case 'missing_supplier_info':
+        return '⚠️';
       default:
         return '🔔';
     }

@@ -26,7 +26,7 @@ src/components/profile/UserProfile.jsx
 ### 2. ✅ Formulaire de modification
 - Input Prénom (éditable)
 - Input Nom (éditable)
-- Sauvegarde automatique dans Firestore
+- Sauvegarde automatique dans Supabase (table `user_profiles`)
 
 ### 3. ✅ Sélecteur de langue
 - 🇫🇷 Français
@@ -38,7 +38,7 @@ src/components/profile/UserProfile.jsx
 ### 4. ✅ Upload de photo de profil
 - Bouton avec icône caméra sur la photo
 - Preview instantanée avant sauvegarde
-- Upload vers Firebase Storage
+- Upload vers Supabase Storage (bucket `avatars`)
 - Formats acceptés : image/*
 
 ### 5. ✅ Affichage entreprise
@@ -119,7 +119,7 @@ src/components/profile/UserProfile.jsx
 ### Fonctions principales
 
 #### `loadUserData()`
-- Charge les données utilisateur depuis Firestore
+- Charge les données utilisateur depuis Supabase (table `user_profiles`)
 - Charge les données entreprise si `companyId` existe
 - Charge les membres de l'équipe
 - Initialise les champs du formulaire
@@ -127,7 +127,7 @@ src/components/profile/UserProfile.jsx
 #### `handleSaveChanges()`
 - Validation des données
 - Upload de la photo si nouvelle photo
-- Mise à jour Firestore avec `updateDoc`
+- Mise à jour Supabase avec `update()` depuis `supabaseClient`
 - Changement de langue avec `i18n.changeLanguage()`
 - Rechargement des données
 - Toast de confirmation
@@ -159,7 +159,7 @@ src/components/profile/UserProfile.jsx
 
 ### Configuration
 3. ✅ `src/config/i18n.js` - Configuration multilingue
-4. ✅ `src/config/firebase.js` - Ajout Firebase Storage
+4. ✅ `src/lib/supabaseClient.js` - Configuration Supabase Storage
 
 ### Mises à jour
 5. ✅ `src/App.jsx` - Import du nouveau UserProfile + i18n
@@ -208,41 +208,32 @@ Serveur actif sur : http://localhost:5173
 
 ---
 
-## 🗃️ Configuration Firestore requise
+## 🗃️ Configuration Supabase requise
 
-### 1. Activer Firestore
-Dans Firebase Console :
-- Firestore Database → Créer une base de données
+### 1. Activer Storage
+Dans Supabase Dashboard :
+- Allez dans **Storage** → **Buckets**
+- Créez un bucket nommé `avatars`
+- Configurez les policies RLS pour permettre l'upload et la lecture
 
-### 2. Activer Storage
-Dans Firebase Console :
-- Storage → Commencer
+### 2. Table user_profiles
+La table `user_profiles` doit être créée avec les colonnes nécessaires (voir migrations Supabase)
 
 ### 3. Configurer les règles de sécurité
-Voir le fichier `FIRESTORE_STRUCTURE.md` pour les règles complètes.
+Voir le fichier `STORAGE_SETUP.md` pour la configuration complète du Storage.
 
-### 4. Créer les collections (optionnel pour test)
+### 4. Tables Supabase requises
 
-#### Collection `companies` (optionnel)
-Créer un document avec ID `company123` :
-```javascript
-{
-  name: "Ma Super Entreprise",
-  description: "Une entreprise de test",
-  createdAt: "2024-01-20T00:00:00.000Z",
-  updatedAt: "2024-01-20T00:00:00.000Z"
-}
-```
+#### Table `companies`
+La table `companies` doit être créée avec les colonnes nécessaires. Voir les migrations Supabase pour la structure complète.
 
-#### Mettre à jour votre user
-Dans `users/{votre-uid}`, ajouter :
-```javascript
-{
-  companyId: "company123",  // Pour voir la section entreprise
-  role: "admin",            // Pour voir le bouton "Inviter"
-  firstName: "Jean",
-  lastName: "Dupont"
-}
+#### Mettre à jour votre profil utilisateur
+Dans la table `user_profiles` de Supabase, mettre à jour :
+```sql
+UPDATE user_profiles 
+SET company_id = 'votre-company-id', 
+    role = 'admin'
+WHERE id = 'votre-user-id';
 ```
 
 ---

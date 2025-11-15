@@ -75,7 +75,7 @@ const ProfilePage = () => {
       try {
         setLoading(true);
         
-        // Charger le profil utilisateur
+        // Charger le profil utilisateur (nécessaire pour connaître le rôle)
         const { data: profileData, error: profileError } = await getCurrentUserProfile();
         
         if (profileError) {
@@ -102,9 +102,10 @@ const ProfilePage = () => {
           setEmail(currentUser.email || '');
         }
         
-        // Charger les données de l'entreprise
-        const { data: company, error: companyError } = await getCurrentUserCompany();
-        if (!companyError && company) {
+        // Utiliser les données de l'entreprise déjà chargées via la jointure dans getCurrentUserProfile
+        // pour éviter un appel supplémentaire
+        const company = profileData?.company;
+        if (company) {
           setCompanyData(company);
           setCompanyName(company.name || '');
           setCompanyIndustry(company.description || '');
@@ -114,20 +115,48 @@ const ProfilePage = () => {
             companyName: company.name || '',
             companyIndustry: company.description || ''
           }));
+        } else if (profileData?.company_id) {
+          // Si la jointure n'a pas fonctionné, charger l'entreprise séparément
+          const { data: companyData, error: companyError } = await getCurrentUserCompany();
+          if (!companyError && companyData) {
+            setCompanyData(companyData);
+            setCompanyName(companyData.name || '');
+            setCompanyIndustry(companyData.description || '');
+            
+            setOriginalValues(prev => ({
+              ...prev,
+              companyName: companyData.name || '',
+              companyIndustry: companyData.description || ''
+            }));
+          }
         }
         
-        // Charger les membres de l'équipe
-        const { data: members, error: membersError } = await getTeamMembers();
-        if (!membersError) {
-          setTeamMembers(Array.isArray(members) ? members : []);
+        // Charger les données en parallèle pour améliorer les performances
+        const isAdmin = profileData?.role === 'owner' || profileData?.role === 'admin';
+        
+        const [membersResult, invitationsResult] = await Promise.allSettled([
+          getTeamMembers(),
+          isAdmin ? getPendingInvitations() : Promise.resolve({ data: [], error: null })
+        ]);
+        
+        // Traiter les résultats des membres de l'équipe
+        if (membersResult.status === 'fulfilled') {
+          const { data: members, error: membersError } = membersResult.value;
+          if (!membersError) {
+            setTeamMembers(Array.isArray(members) ? members : []);
+          }
+        } else if (membersResult.status === 'rejected') {
+          console.error('Erreur lors du chargement des membres:', membersResult.reason);
         }
         
-        // Charger les invitations en attente (si admin/owner)
-        if (profileData?.role === 'owner' || profileData?.role === 'admin') {
-          const { data: invitations, error: invError } = await getPendingInvitations();
+        // Traiter les résultats des invitations (si admin/owner)
+        if (invitationsResult.status === 'fulfilled' && isAdmin) {
+          const { data: invitations, error: invError } = invitationsResult.value;
           if (!invError) {
             setPendingInvitations(Array.isArray(invitations) ? invitations : []);
           }
+        } else if (invitationsResult.status === 'rejected' && isAdmin) {
+          console.error('Erreur lors du chargement des invitations:', invitationsResult.reason);
         }
         
       } catch (error) {

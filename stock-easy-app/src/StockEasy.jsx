@@ -103,6 +103,7 @@ import { useModals } from './hooks/useModals';
 import { useReconciliation } from './hooks/useReconciliation';
 import { useEmailGeneration } from './hooks/useEmailGeneration';
 import { useShipOrderModal } from './hooks/useShipOrderModal';
+import { useAutoNotifications } from './hooks/useAutoNotifications';
 
 // ============================================
 // FONCTIONS API - Importées depuis apiAdapter
@@ -166,6 +167,28 @@ const StockEasy = () => {
     console.log('🔄 Real-time: Changement détecté, rechargement des données...');
     loadData();
   }, true);
+
+  // NOUVEAUX ÉTATS pour Paramètres Généraux (déclaré tôt car utilisé dans useAutoNotifications)
+  const [seuilSurstockProfond, setSeuilSurstockProfond] = useState(90);
+  const [deviseDefaut, setDeviseDefaut] = useState('EUR');
+  const [multiplicateurDefaut, setMultiplicateurDefaut] = useState(1.2);
+
+  // Hook pour les notifications automatiques
+  useAutoNotifications(
+    { products, orders, suppliers },
+    {
+      enabled: true,
+      stockCheckInterval: 60 * 60 * 1000, // 1 heure
+      unmappedCheckInterval: 6 * 60 * 60 * 1000, // 6 heures
+      weeklyReportDay: 1, // Lundi
+      weeklyReportHour: 9, // 9h du matin
+      orderDelayedInterval: 12 * 60 * 60 * 1000, // 12 heures
+      orderDiscrepancyInterval: 6 * 60 * 60 * 1000, // 6 heures
+      surstockCheckHour: 8, // 8h du matin
+      supplierInfoInterval: 12 * 60 * 60 * 1000, // 12 heures
+      surstockThresholdDays: seuilSurstockProfond || 90 // Utiliser le seuil configuré
+    }
+  );
   
   // Hook pour la gestion des commandes
   const {
@@ -286,7 +309,29 @@ const StockEasy = () => {
   // Fonction pour voir les détails d'un produit
   const onViewDetails = (product) => {
     console.log('Voir détails du produit:', product);
-    // TODO: Implémenter la logique pour afficher les détails du produit
+    // Rediriger vers l'onglet Actions (Recommandations de commande)
+    setActiveTab(MAIN_TABS.ACTIONS);
+  };
+
+  // Fonction pour naviguer vers un onglet spécifique avec sous-onglet optionnel
+  const onNavigateToTab = (tabName, subTabName = null) => {
+    // Mapper les noms d'onglets aux constantes MAIN_TABS
+    const tabMap = {
+      'settings': MAIN_TABS.SETTINGS,
+      'track': MAIN_TABS.TRACK,
+      'actions': MAIN_TABS.ACTIONS,
+      'stock': MAIN_TABS.STOCK,
+      'analytics': MAIN_TABS.ANALYTICS
+    };
+    
+    const mappedTab = tabMap[tabName] || tabName;
+    setActiveTab(mappedTab);
+    
+    // Gérer les sous-onglets si nécessaire
+    if (subTabName === 'mapping') {
+      setParametersSubTab(SETTINGS_TABS.MAPPING);
+    }
+    // Autres sous-onglets peuvent être ajoutés ici
   };
 
   // Fonctions pour la gestion des entrepôts
@@ -353,11 +398,6 @@ const StockEasy = () => {
       throw error;
     }
   };
-
-  // NOUVEAUX ÉTATS pour Paramètres Généraux
-  const [seuilSurstockProfond, setSeuilSurstockProfond] = useState(90);
-  const [deviseDefaut, setDeviseDefaut] = useState('EUR');
-  const [multiplicateurDefaut, setMultiplicateurDefaut] = useState(1.2);
 
   const updateParameterState = (key, value) => {
     setParameters(prev => {
@@ -532,7 +572,9 @@ const StockEasy = () => {
   const handleDeleteWarehouse = async (warehouse) => {
     try {
       console.log('🗑️ Suppression warehouse:', warehouse.name);
-      await api.deleteWarehouse(warehouse.name);
+      // Utiliser l'ID si disponible, sinon utiliser le nom comme identifiant
+      const warehouseId = warehouse.id || warehouse.name;
+      await api.deleteWarehouse(warehouseId);
       await loadData();
       toast.success('Entrepôt supprimé avec succès !');
     } catch (error) {
@@ -570,9 +612,11 @@ const StockEasy = () => {
       console.log(`✅ Fournisseur assigné à ${productToMap.sku}`);
       await loadData();
       handleCloseAssignSupplierModal();
+      toast.success('Fournisseur assigné avec succès');
     } catch (error) {
       console.error('❌ Erreur assignation fournisseur:', error);
-      toast.error('Erreur lors de l\'assignation');
+      const errorMessage = error?.message || 'Erreur lors de l\'assignation du fournisseur';
+      toast.error(errorMessage);
     }
   };
 
@@ -614,7 +658,8 @@ const StockEasy = () => {
       await loadData();
     } catch (error) {
       console.error('❌ Erreur sauvegarde mapping fournisseur:', error);
-      toast.error('Erreur lors de la sauvegarde du mapping fournisseur');
+      const errorMessage = error?.message || 'Erreur lors de la sauvegarde du mapping fournisseur';
+      toast.error(errorMessage);
       throw error;
     } finally {
       setIsSavingSupplierMapping(false);
@@ -644,16 +689,63 @@ const StockEasy = () => {
   const enrichedProducts = useMemo(() => products.map(p => calculateMetrics(p, seuilSurstockProfond)), [products, seuilSurstockProfond]);
 
   const productsByStatus = useMemo(() => {
+    // Calculer les quantités déjà en commande pour chaque produit
+    // (commandes avec statut pending_confirmation, preparing, ou in_transit)
+    const quantitiesInOrder = {};
+    // Calculer les quantités en transit spécifiquement
+    const quantitiesInTransit = {};
+    
+    orders
+      .filter(o => ['pending_confirmation', 'preparing', 'in_transit'].includes(o.status))
+      .forEach(order => {
+        order.items?.forEach(item => {
+          if (!quantitiesInOrder[item.sku]) {
+            quantitiesInOrder[item.sku] = 0;
+          }
+          quantitiesInOrder[item.sku] += item.quantity || 0;
+          
+          // Quantités en transit spécifiquement
+          if (order.status === 'in_transit') {
+            if (!quantitiesInTransit[item.sku]) {
+              quantitiesInTransit[item.sku] = 0;
+            }
+            quantitiesInTransit[item.sku] += item.quantity || 0;
+          }
+        });
+      });
+
+    // Enrichir les produits avec les quantités en commande et en transit
+    const enrichedWithOrderInfo = enrichedProducts.map(p => ({
+      ...p,
+      qtyInOrder: quantitiesInOrder[p.sku] || 0,
+      qtyInTransit: quantitiesInTransit[p.sku] || 0,
+      // Quantité résiduelle à commander (quantité nécessaire - quantité déjà commandée)
+      qtyToOrderRemaining: Math.max(0, (p.qtyToOrder || 0) - (quantitiesInOrder[p.sku] || 0))
+    }));
+
     return {
-      to_order: enrichedProducts.filter(p => p.qtyToOrder > 0),
-      watch: enrichedProducts.filter(p => p.qtyToOrder === 0 && p.stock < p.reorderPoint * 1.2),
-      in_transit: enrichedProducts.filter(p => {
+      // Un produit doit apparaître dans "Produits à commander" seulement si
+      // la quantité à commander dépasse ce qui est déjà commandé
+      // Et on affiche la quantité résiduelle
+      to_order: enrichedWithOrderInfo.filter(p => {
+        const qtyToOrder = p.qtyToOrder || 0;
+        const qtyInOrder = p.qtyInOrder || 0;
+        // Afficher seulement si la quantité nécessaire dépasse ce qui est déjà en commande
+        return qtyToOrder > qtyInOrder;
+      }),
+      watch: enrichedWithOrderInfo.filter(p => {
+        const qtyToOrder = p.qtyToOrder || 0;
+        const qtyInOrder = p.qtyInOrder || 0;
+        // Ne pas afficher dans "watch" si c'est déjà dans "to_order"
+        return qtyToOrder <= qtyInOrder && p.stock < p.reorderPoint * 1.2;
+      }),
+      in_transit: enrichedWithOrderInfo.filter(p => {
         return orders.some(o => 
           o.status === 'in_transit' && 
           o.items.some(item => item.sku === p.sku)
         );
       }),
-      received: enrichedProducts.filter(p => {
+      received: enrichedWithOrderInfo.filter(p => {
         return orders.some(o => 
           o.status === 'received' && 
           o.items.some(item => item.sku === p.sku)
@@ -730,7 +822,7 @@ const StockEasy = () => {
   useEffect(() => {
     if (currentUser?.uid && enrichedProducts.length > 0 && orders.length > 0) {
       console.log('🔄 Vérification et sauvegarde du snapshot KPI quotidien...');
-      checkAndSaveKPISnapshot(currentUser.uid, enrichedProducts, orders)
+      checkAndSaveKPISnapshot(currentUser.uid, enrichedProducts, orders, seuilSurstockProfond)
         .then(result => {
           if (result.success) {
             console.log('✅ Snapshot KPI:', result.message);
@@ -862,12 +954,13 @@ const StockEasy = () => {
     const supplierInfo = suppliers[supplier];
     const productList = products.map(p => {
       const qty = orderQuantities[p.sku] || p.qtyToOrder;
-      return `- ${p.name} (SKU: ${p.sku}) - Quantité: ${qty} unités - Prix unitaire: ${formatWithCurrency(roundToTwoDecimals(p.buyPrice))}`;
+      return `- ${p.name} (SKU: ${p.sku}) - Quantité: ${qty} unités - Prix unitaire: ${formatCurrency(roundToTwoDecimals(p.buyPrice), deviseDefaut)}`;
     }).join('\n');
     
     const total = roundToTwoDecimals(products.reduce((sum, p) => {
       const qty = orderQuantities[p.sku] || p.qtyToOrder;
-      return sum + (qty * p.buyPrice);
+      // Utiliser l'investissement si disponible, sinon calculer qty * buyPrice
+      return sum + (p.investment || (qty * p.buyPrice) || 0);
     }, 0));
     
     // Informations d'entrepôt
@@ -884,7 +977,7 @@ Nous souhaitons passer la commande suivante :
 
 ${productList}
 
-TOTAL: ${formatWithCurrency(total)}${warehouseInfo}
+TOTAL: ${formatCurrency(total, deviseDefaut)}${warehouseInfo}
 
 Merci de nous confirmer la disponibilité et la date de livraison estimée.
 
@@ -901,7 +994,12 @@ ${getUserSignature()}`
       const productsToOrder = toOrderBySupplier[inlineModals.emailOrderModal.selectedSupplier];
       const total = roundToTwoDecimals(productsToOrder.reduce((sum, p) => {
         const qty = orderQuantities[p.sku] || p.qtyToOrder;
-        return sum + (qty * p.buyPrice);
+        // Utiliser l'investissement si disponible, sinon calculer qty * buyPrice
+        // Si la quantité modifiée diffère de qtyToOrder, recalculer
+        if (orderQuantities[p.sku] && orderQuantities[p.sku] !== p.qtyToOrder) {
+          return sum + (orderQuantities[p.sku] * p.buyPrice);
+        }
+        return sum + (p.investment || (qty * p.buyPrice) || 0);
       }, 0));
       
       const orderData = {
@@ -952,7 +1050,11 @@ ${getUserSignature()}`
       
       const total = roundToTwoDecimals(productsToOrder.reduce((sum, p) => {
         const qty = inlineModals.emailOrderModal.orderQuantities[p.sku] || p.qtyToOrder;
-        return sum + (qty * p.buyPrice);
+        // Utiliser l'investissement si disponible et quantité non modifiée, sinon calculer qty * buyPrice
+        if (inlineModals.emailOrderModal.orderQuantities[p.sku] && inlineModals.emailOrderModal.orderQuantities[p.sku] !== p.qtyToOrder) {
+          return sum + (inlineModals.emailOrderModal.orderQuantities[p.sku] * p.buyPrice);
+        }
+        return sum + (p.investment || (qty * p.buyPrice) || 0);
       }, 0));
       
       const orderData = {
@@ -1057,7 +1159,14 @@ ${getUserSignature()}`
       // Option : créer automatiquement une commande par fournisseur
       for (const [supplier, products] of Object.entries(productsBySupplier)) {
         // Créer la commande sans email pour chaque fournisseur
-        const total = roundToTwoDecimals(products.reduce((sum, p) => sum + (p.orderQuantity * p.buyPrice), 0));
+        // Utiliser l'investissement si disponible, sinon calculer orderQuantity * buyPrice
+        const total = roundToTwoDecimals(products.reduce((sum, p) => {
+          // Si orderQuantity diffère de qtyToOrder, recalculer
+          if (p.orderQuantity && p.orderQuantity !== p.qtyToOrder) {
+            return sum + (p.orderQuantity * p.buyPrice);
+          }
+          return sum + (p.investment || (p.orderQuantity * p.buyPrice) || 0);
+        }, 0));
         
         const orderData = {
           id: generatePONumber(orders),
@@ -1492,8 +1601,24 @@ ${getUserSignature()}`
         };
       });
 
+      // Calculer les quantités manquantes et endommagées par SKU
+      const missingQuantitiesBySku = {};
+      const damagedQuantitiesBySku = {};
+      
+      updatedItems.forEach(item => {
+        const missing = item.quantity - (item.receivedQuantity + item.damagedQuantity);
+        if (missing > 0) {
+          missingQuantitiesBySku[item.sku] = missing;
+        }
+        if (item.damagedQuantity > 0) {
+          damagedQuantitiesBySku[item.sku] = item.damagedQuantity;
+        }
+      });
+
       console.log('=== DEBUG RÉCONCILIATION UNIFIÉE ===');
       console.log('Items mis à jour:', updatedItems);
+      console.log('Quantités manquantes par SKU:', missingQuantitiesBySku);
+      console.log('Quantités endommagées par SKU:', damagedQuantitiesBySku);
       
       // Générer les emails de réclamation si nécessaire
       if (hasQuantityDiscrepancy || hasDamage) {
@@ -1542,7 +1667,9 @@ ${getUserSignature()}`
         receivedAt: new Date().toISOString().split('T')[0],
         hasDiscrepancy: hasQuantityDiscrepancy,
         hasDamage: hasDamage,
-        items: updatedItems
+        items: updatedItems,
+        missingQuantitiesBySku: missingQuantitiesBySku,
+        damagedQuantitiesBySku: damagedQuantitiesBySku
       });
       
       // Mettre à jour le stock avec les quantités validées (reçues - endommagées)
@@ -2128,11 +2255,9 @@ ${getUserSignature()}`
           
           {/* Content Area avec NotificationBell intégré */}
           <div className="relative min-h-screen">
-            {/* NotificationBell flottant en haut à droite avec fond - Masqué sur mobile */}
+            {/* NotificationBell flottant en haut à droite - Masqué sur mobile */}
             <div className="hidden md:block absolute top-4 right-4 sm:top-6 sm:right-6 z-30">
-              <div className="bg-white rounded-lg shadow-md p-2">
-                <NotificationBell />
-              </div>
+              <NotificationBell />
             </div>
 
             {/* Contenu principal avec padding */}
@@ -2144,10 +2269,8 @@ ${getUserSignature()}`
                     <DashboardTab 
                       productsByStatus={productsByStatus}
                       orders={orders}
-                      suppliers={suppliers}
-                      setActiveTab={setActiveTab}
-                      setTrackTabSection={setTrackTabSection}
                       enrichedProducts={enrichedProducts}
+                      onViewDetails={onViewDetails}
                     />
                   )}
 
@@ -2204,6 +2327,7 @@ ${getUserSignature()}`
                     <StockTab
                       products={enrichedProducts}
                       suppliers={suppliers}
+                      orders={orders}
                       stockLevelFilter={stockLevelFilter}
                       setStockLevelFilter={setStockLevelFilter}
                       stockLevelSupplierFilter={stockLevelSupplierFilter}
@@ -2221,6 +2345,7 @@ ${getUserSignature()}`
                       orders={orders}
                       suppliers={suppliers}
                       warehouses={warehouses}
+                      seuilSurstockProfond={seuilSurstockProfond}
                     />
                   )}
 

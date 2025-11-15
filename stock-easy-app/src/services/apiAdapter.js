@@ -109,8 +109,12 @@ const getAllData = async () => {
       
       // Autres champs
       moq: p.moq !== undefined ? p.moq : 1,
-      multiplier: p.multiplicateur !== undefined ? p.multiplicateur : 
-                  (p.multiplier !== undefined ? p.multiplier : 1),
+      multiplier: p.multiplicateurPrevision !== undefined ? p.multiplicateurPrevision :
+                  (p.multiplicateur !== undefined ? p.multiplicateur : 
+                  (p.multiplier !== undefined ? p.multiplier : 1)),
+      multiplicateurPrevision: p.multiplicateurPrevision !== undefined ? p.multiplicateurPrevision :
+                                (p.multiplicateur_prevision !== undefined ? p.multiplicateur_prevision :
+                                (p.multiplicateur !== undefined ? p.multiplicateur : null)),
       customSecurityStock: p.stockSecuritePersonnalise !== undefined ? p.stockSecuritePersonnalise : 
                           (p.customSecurityStock !== undefined ? p.customSecurityStock : null),
       
@@ -129,6 +133,10 @@ const getAllData = async () => {
                     (p.lastSaleDate !== undefined ? p.lastSaleDate : null),
       lastOrderDate: p.derniereCommande !== undefined ? p.derniereCommande :
                      (p.lastOrderDate !== undefined ? p.lastOrderDate : null),
+      
+      // Health status et health percentage (calculés par le backend)
+      healthStatus: p.healthStatus !== undefined && p.healthStatus !== null ? p.healthStatus : 'healthy',
+      healthPercentage: p.healthPercentage !== undefined && p.healthPercentage !== null ? p.healthPercentage : 100,
       
       // Risques et alertes
       stockoutRisk: p.risqueRupture !== undefined ? p.risqueRupture :
@@ -212,6 +220,36 @@ const api = {
   confirmOrderReconciliation: supabaseApi.confirmOrderReconciliation,
   assignSupplierToProduct: supabaseApi.assignSupplierToProduct,
   removeSupplierFromProduct: supabaseApi.removeSupplierFromProduct,
+  recalculateAllInvestments: supabaseApi.recalculateAllInvestments,
+  updateProductMultiplier: async (sku, multiplier) => {
+    const { supabase } = await import('../lib/supabaseClient');
+    try {
+      const { data, error } = await supabase.rpc('update_product_multiplier', {
+        p_sku: sku,
+        p_multiplicateur_prevision: multiplier
+      });
+      
+      if (error) throw error;
+      return { success: true, data };
+    } catch (error) {
+      console.error('❌ Erreur mise à jour multiplicateur:', error);
+      return { success: false, error: error.message };
+    }
+  },
+  resetProductMultiplier: async (sku) => {
+    const { supabase } = await import('../lib/supabaseClient');
+    try {
+      const { data, error } = await supabase.rpc('reset_product_multiplier_to_default', {
+        p_sku: sku
+      });
+      
+      if (error) throw error;
+      return { success: true, data };
+    } catch (error) {
+      console.error('❌ Erreur réinitialisation multiplicateur:', error);
+      return { success: false, error: error.message };
+    }
+  },
 };
 
 // Exports nommés pour compatibilité
@@ -233,6 +271,9 @@ export const {
   confirmOrderReconciliation,
   assignSupplierToProduct,
   removeSupplierFromProduct,
+  recalculateAllInvestments,
+  updateProductMultiplier,
+  resetProductMultiplier,
 } = api;
 
 export { getAllData };

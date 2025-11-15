@@ -1,18 +1,12 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Package } from 'lucide-react';
+import { BarChart3, Package } from 'lucide-react';
 import { ProductsToOrder } from './ProductsToOrder';
 import { ProductsToWatch } from './ProductsToWatch';
-import { InTransit } from './InTransit';
-import { ReceivedOrders } from './ReceivedOrders';
-import { StockHealthDashboard } from '../features/StockHealthDashboard';
+import { DashboardKPIs } from './DashboardKPIs';
+import { DashboardCharts } from './DashboardCharts';
 
-export const DashboardTab = ({ productsByStatus, orders, suppliers, setActiveTab, setTrackTabSection, enrichedProducts }) => {
-  // Calculer les statistiques de santé
-  const urgentCount = enrichedProducts ? enrichedProducts.filter(p => p.healthStatus === 'urgent').length : 0;
-  const warningCount = enrichedProducts ? enrichedProducts.filter(p => p.healthStatus === 'warning').length : 0;
-  const healthyCount = enrichedProducts ? enrichedProducts.filter(p => p.healthStatus === 'healthy').length : 0;
-  const totalProducts = enrichedProducts ? enrichedProducts.length : 0;
+export const DashboardTab = ({ productsByStatus, orders, enrichedProducts, onViewDetails }) => {
 
   return (
     <motion.div
@@ -21,42 +15,66 @@ export const DashboardTab = ({ productsByStatus, orders, suppliers, setActiveTab
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: -20 }}
       transition={{ duration: 0.25 }}
-      className="space-y-6"
+      className="space-y-8"
     >
-      {/* Section Santé de l'Inventaire */}
-      {enrichedProducts && enrichedProducts.length > 0 && (
-        <div className="bg-white rounded-xl shadow-sm border border-[#E5E4DF] p-6">
-          <div className="mb-4">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 bg-purple-50 rounded-lg flex items-center justify-center border border-purple-200 shrink-0">
-                <Package className="w-6 h-6 text-purple-600 shrink-0" />
-              </div>
-              <div>
-                <h2 className="text-2xl font-bold text-[#191919]">Santé de l'Inventaire</h2>
-                <p className="text-sm text-[#666663]">Vue d'ensemble de l'état de vos stocks</p>
-              </div>
-            </div>
+      {/* Header de section principal */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <div className="w-14 h-14 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-2xl flex items-center justify-center shadow-lg">
+            <Package className="w-7 h-7 text-white" />
           </div>
-          <StockHealthDashboard 
-            totalUrgent={urgentCount}
-            totalWarning={warningCount}
-            totalHealthy={healthyCount}
-            totalProducts={totalProducts}
-          />
+          <div>
+            <h1 className="text-3xl font-bold text-[#191919] mb-1">Dashboard</h1>
+            <p className="text-sm text-[#666663]">Vue d'ensemble de votre inventaire et commandes</p>
+          </div>
         </div>
-      )}
+        <div className="hidden md:flex items-center gap-2 text-sm text-[#666663]">
+          <BarChart3 className="w-4 h-4" />
+          <span>Mis à jour il y a quelques instants</span>
+        </div>
+      </div>
+
+      {/* KPIs Principaux */}
+      <div>
+        <h2 className="text-lg font-bold text-[#191919] mb-4 flex items-center gap-2">
+          <div className="w-1 h-5 bg-purple-500 rounded-full" />
+          Indicateurs clés
+        </h2>
+        <DashboardKPIs 
+          enrichedProducts={enrichedProducts || []}
+          orders={orders || []}
+          productsByStatus={productsByStatus || {}}
+        />
+      </div>
+
+      {/* Graphiques */}
+      <div>
+        <h2 className="text-lg font-bold text-[#191919] mb-4 flex items-center gap-2">
+          <div className="w-1 h-5 bg-indigo-500 rounded-full" />
+          Analyses visuelles
+        </h2>
+        <DashboardCharts 
+          enrichedProducts={enrichedProducts || []}
+          orders={orders || []}
+        />
+      </div>
 
       {/* Sections Actions */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <ProductsToOrder products={productsByStatus.to_order} />
-        <ProductsToWatch products={productsByStatus.watch} />
-        <InTransit 
-          orders={orders} 
-          suppliers={suppliers}
-          setActiveTab={setActiveTab} 
-          setTrackTabSection={setTrackTabSection} 
-        />
-        <ReceivedOrders orders={orders} setActiveTab={setActiveTab} setTrackTabSection={setTrackTabSection} />
+      <div>
+        <h2 className="text-lg font-bold text-[#191919] mb-4 flex items-center gap-2">
+          <div className="w-1 h-5 bg-blue-500 rounded-full" />
+          Actions rapides
+        </h2>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <ProductsToOrder 
+            products={productsByStatus?.to_order || []} 
+            onViewDetails={onViewDetails}
+          />
+          <ProductsToWatch 
+            products={productsByStatus?.watch || []} 
+            onViewDetails={onViewDetails}
+          />
+        </div>
       </div>
     </motion.div>
   );

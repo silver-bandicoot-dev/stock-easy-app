@@ -49,10 +49,10 @@ export const TOOLTIPS = {
   inTransit: "Commandes déjà passées auprès des fournisseurs et en cours d'acheminement. Le délai estimé est calculé selon les délais habituels du fournisseur.",
   received: "Commandes arrivées à l'entrepôt et en attente de validation. Vérifiez les quantités reçues avant de valider pour mettre à jour le stock.",
   multiplier: "Coefficient pour ajuster les prévisions selon la saisonnalité ou les événements (BFCM, soldes). 1 = normal, 0.5 = hors saison, 5 = pic majeur.",
-  securityStock: "Nombre de jours de ventes supplémentaires à garder en stock pour absorber les imprévus (retards fournisseur, pics de ventes). Calculé automatiquement à 20% du délai fournisseur.",
+  securityStock: "Nombre de jours de ventes supplémentaires à garder en stock pour absorber les imprévus (retards fournisseur, pics de ventes). Calculé automatiquement à 20% du délai fournisseur. La valeur stockée est en unités, mais peut être convertie en jours pour l'affichage.",
   reorderPoint: "Niveau de stock critique qui déclenche une alerte de commande. Calculé pour couvrir les ventes pendant le délai de réapprovisionnement + stock de sécurité.",
   stockHealth: "Indicateur visuel de la santé du stock. Vert = bon niveau, Orange = surveillance nécessaire, Rouge = urgent à commander.",
   skuAvailability: "Pourcentage de produits disponibles en stock par rapport au total des SKU actifs.",
-  salesLost: "Montant estimé des ventes manquées en raison d'une indisponibilité produit.",
+  salesLost: "Forecast des ventes perdues sur 7 jours incluant : (1) produits en rupture totale (stock = 0) et (2) produits à risque de rupture (autonomie < stock de sécurité). Calcul : jours en rupture × ventes/jour × prix de vente.",
   deepOverstock: "Valeur financière des produits dont le stock dépasse largement la demande prévue."
 };

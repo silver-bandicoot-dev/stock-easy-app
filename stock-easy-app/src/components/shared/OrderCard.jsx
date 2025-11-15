@@ -154,23 +154,76 @@ export const OrderCard = ({
             )}
           </div>
 
-          {/* Ligne 5: Récapitulatif de réconciliation */}
-          {order.status === 'reconciliation' && (order.missingQuantityTotal > 0 || order.damagedQuantityTotal > 0) && (
-            <div className="bg-red-50 border border-red-200 rounded-lg px-3 py-2 mt-2 space-y-1">
+          {/* Ligne 5: Récapitulatif de réconciliation - Toujours affiché pour les PO en réconciliation */}
+          {order.status === 'reconciliation' && (
+            <div className={`border rounded-lg px-3 py-2 mt-2 space-y-1 ${
+              (order.missingQuantityTotal > 0 || order.damagedQuantityTotal > 0) 
+                ? 'bg-red-50 border-red-200' 
+                : 'bg-yellow-50 border-yellow-200'
+            }`}>
               <div className="flex items-center gap-2 mb-1">
-                <AlertTriangle className="w-4 h-4 text-red-600" />
-                <span className="text-xs font-semibold text-red-700">Écarts de livraison</span>
+                <AlertTriangle className={`w-4 h-4 ${
+                  (order.missingQuantityTotal > 0 || order.damagedQuantityTotal > 0) 
+                    ? 'text-red-600' 
+                    : 'text-yellow-600'
+                }`} />
+                <span className={`text-xs font-semibold ${
+                  (order.missingQuantityTotal > 0 || order.damagedQuantityTotal > 0) 
+                    ? 'text-red-700' 
+                    : 'text-yellow-700'
+                }`}>
+                  {order.missingQuantityTotal > 0 || order.damagedQuantityTotal > 0 
+                    ? '⚠️ Écarts de livraison détectés' 
+                    : '📋 En attente de réconciliation'}
+                </span>
               </div>
-              {order.missingQuantityTotal > 0 && (
-                <div className="flex justify-between text-xs">
-                  <span className="text-red-600">Total manquant:</span>
-                  <span className="font-bold text-red-700">{order.missingQuantityTotal} unités</span>
-                </div>
-              )}
-              {order.damagedQuantityTotal > 0 && (
-                <div className="flex justify-between text-xs">
-                  <span className="text-orange-600">Total endommagé:</span>
-                  <span className="font-bold text-orange-700">{order.damagedQuantityTotal} unités</span>
+              
+              {/* Afficher les totaux s'il y a des écarts */}
+              {(order.missingQuantityTotal > 0 || order.damagedQuantityTotal > 0) && (
+                <div className="space-y-1">
+                  {order.missingQuantityTotal > 0 && (
+                    <div className="flex justify-between items-center text-xs">
+                      <span className="text-red-600">❌ Total manquant:</span>
+                      <span className="font-bold text-red-700">{order.missingQuantityTotal} unités</span>
+                    </div>
+                  )}
+                  {order.damagedQuantityTotal > 0 && (
+                    <div className="flex justify-between items-center text-xs">
+                      <span className="text-orange-600">🔴 Total endommagé:</span>
+                      <span className="font-bold text-orange-700">{order.damagedQuantityTotal} unités</span>
+                    </div>
+                  )}
+                  
+                  {/* Afficher un résumé par SKU si disponible */}
+                  {((order.missingQuantitiesBySku && Object.keys(order.missingQuantitiesBySku).length > 0) ||
+                    (order.damagedQuantitiesBySku && Object.keys(order.damagedQuantitiesBySku).length > 0)) && (
+                    <div className="pt-1 mt-1 border-t border-red-200">
+                      <div className="text-xs font-medium text-red-700 mb-1">Détails par produit:</div>
+                      {(() => {
+                        // Combiner tous les SKU avec des écarts (manquants ou endommagés)
+                        const allSkuWithIssues = new Set([
+                          ...(order.missingQuantitiesBySku ? Object.keys(order.missingQuantitiesBySku) : []),
+                          ...(order.damagedQuantitiesBySku ? Object.keys(order.damagedQuantitiesBySku) : [])
+                        ]);
+                        
+                        return Array.from(allSkuWithIssues).map(sku => {
+                          const missingQty = order.missingQuantitiesBySku?.[sku] || 0;
+                          const damagedQty = order.damagedQuantitiesBySku?.[sku] || 0;
+                          const product = products?.find(p => p.sku === sku);
+                          
+                          if (missingQty === 0 && damagedQty === 0) return null;
+                          
+                          return (
+                            <div key={sku} className="text-xs text-red-600 pl-2">
+                              • {product?.name || sku}: 
+                              {missingQty > 0 && <span className="font-bold ml-1">-{missingQty} manquant{missingQty > 1 ? 's' : ''}</span>}
+                              {damagedQty > 0 && <span className="font-bold ml-1 text-orange-600">, {damagedQty} endommagé{damagedQty > 1 ? 's' : ''}</span>}
+                            </div>
+                          );
+                        }).filter(Boolean);
+                      })()}
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -297,28 +350,52 @@ export const OrderCard = ({
                             </div>
                           </div>
                           
-                          {/* Informations de réconciliation */}
-                          {hasReconciliationData && (
-                            <div className="mt-2 pt-2 border-t border-red-200 bg-red-50 rounded p-2 space-y-1">
-                              <div className="font-semibold text-red-700 text-xs mb-1">⚠️ Écarts détectés</div>
-                              {missingQty > 0 && (
-                                <div className="flex justify-between text-xs">
-                                  <span className="text-red-600">Quantité manquante:</span>
-                                  <span className="font-bold text-red-700">{missingQty} unités</span>
+                          {/* Informations de réconciliation - Affichage amélioré */}
+                          {(order.status === 'reconciliation' || hasReconciliationData) && (
+                            <div className={`mt-2 pt-2 border-t rounded p-2 space-y-1 ${
+                              hasReconciliationData 
+                                ? 'border-red-200 bg-red-50' 
+                                : 'border-gray-200 bg-gray-50'
+                            }`}>
+                              {hasReconciliationData ? (
+                                <>
+                                  <div className="font-semibold text-red-700 text-xs mb-1">⚠️ Écarts détectés</div>
+                                  <div className="grid grid-cols-2 gap-2 text-xs">
+                                    <div>
+                                      <span className="text-[#666663]">Commandé:</span>
+                                      <span className="font-bold text-[#191919] ml-1">{item.quantity}</span>
+                                    </div>
+                                    {item.receivedQuantity !== undefined && (
+                                      <div>
+                                        <span className="text-green-600">Reçu sain:</span>
+                                        <span className="font-bold text-green-700 ml-1">{item.receivedQuantity}</span>
+                                      </div>
+                                    )}
+                                  </div>
+                                  {missingQty > 0 && (
+                                    <div className="flex justify-between text-xs bg-red-100 rounded px-2 py-1">
+                                      <span className="text-red-600">❌ Manquant:</span>
+                                      <span className="font-bold text-red-700">{missingQty} unités</span>
+                                    </div>
+                                  )}
+                                  {damagedQty > 0 && (
+                                    <div className="flex justify-between text-xs bg-orange-100 rounded px-2 py-1">
+                                      <span className="text-orange-600">🔴 Endommagé:</span>
+                                      <span className="font-bold text-orange-700">{damagedQty} unités</span>
+                                    </div>
+                                  )}
+                                  {item.discrepancyNotes && (
+                                    <div className="text-xs pt-1 border-t border-red-200">
+                                      <span className="text-red-600 font-medium">Notes: </span>
+                                      <span className="text-red-700 italic">{item.discrepancyNotes}</span>
+                                    </div>
+                                  )}
+                                </>
+                              ) : order.status === 'reconciliation' ? (
+                                <div className="text-xs text-yellow-700">
+                                  📋 Données de réconciliation en cours de traitement
                                 </div>
-                              )}
-                              {damagedQty > 0 && (
-                                <div className="flex justify-between text-xs">
-                                  <span className="text-orange-600">Quantité endommagée:</span>
-                                  <span className="font-bold text-orange-700">{damagedQty} unités</span>
-                                </div>
-                              )}
-                              {item.receivedQuantity !== undefined && (
-                                <div className="flex justify-between text-xs pt-1 border-t border-red-200">
-                                  <span className="text-green-600">Quantité reçue (saine):</span>
-                                  <span className="font-bold text-green-700">{item.receivedQuantity} unités</span>
-                                </div>
-                              )}
+                              ) : null}
                             </div>
                           )}
                         </div>

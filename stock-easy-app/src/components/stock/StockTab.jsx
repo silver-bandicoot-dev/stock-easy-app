@@ -1,12 +1,16 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
+import { Package } from 'lucide-react';
 import { HealthBar } from '../ui/HealthBar';
 import { InfoTooltip } from '../ui/InfoTooltip';
+import { StockHealthDashboard } from '../features/StockHealthDashboard';
 import { formatUnits, formatSalesPerDay } from '../../utils/decimalUtils';
+import { formatETA } from '../../utils/dateUtils';
 
 export const StockTab = ({
   products,
   suppliers,
+  orders,
   stockLevelFilter,
   setStockLevelFilter,
   stockLevelSupplierFilter,
@@ -15,6 +19,11 @@ export const StockTab = ({
   setSearchTerm,
   onViewDetails
 }) => {
+  // Calculer les statistiques de santé
+  const urgentCount = products ? products.filter(p => p.healthStatus === 'urgent').length : 0;
+  const warningCount = products ? products.filter(p => p.healthStatus === 'warning').length : 0;
+  const healthyCount = products ? products.filter(p => p.healthStatus === 'healthy').length : 0;
+  const totalProducts = products ? products.length : 0;
   const supplierOptions = useMemo(() => {
     const uniqueSuppliers = new Set();
     
@@ -39,6 +48,70 @@ export const StockTab = ({
     () => products.some(product => !product?.supplier),
     [products]
   );
+
+  // État pour forcer le recalcul dynamique des jours restants
+  const [currentTime, setCurrentTime] = useState(new Date());
+
+  // Mise à jour périodique pour recalculer les jours restants dynamiquement
+  useEffect(() => {
+    // Mise à jour toutes les heures pour recalculer les jours restants
+    // Cela permet de voir les changements au fil du temps (passage de +1j à "Aujourd'hui", etc.)
+    const interval = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 60 * 60 * 1000); // 1 heure
+
+    return () => clearInterval(interval);
+  }, []);
+
+  // Calculer les quantités en transit et commandées pour chaque produit
+  const productOrderQuantities = useMemo(() => {
+    const quantities = {};
+    
+    if (!orders || orders.length === 0) {
+      return quantities;
+    }
+
+    products.forEach(product => {
+      let inTransitQty = 0;
+      let orderedQty = 0;
+      let earliestETA = null; // ETA la plus proche pour les commandes en transit
+
+      orders.forEach(order => {
+        // Vérifier si cette commande contient ce produit
+        const orderItem = order.items?.find(item => item.sku === product.sku);
+        if (orderItem) {
+          const qty = orderItem.quantity || 0;
+          
+          // Statuts considérés comme "en transit"
+          if (order.status === 'in_transit') {
+            inTransitQty += qty;
+            // Récupérer l'ETA de cette commande si disponible
+            if (order.eta) {
+              const etaDate = new Date(order.eta);
+              // Garder l'ETA la plus proche
+              if (!earliestETA || etaDate < new Date(earliestETA)) {
+                earliestETA = order.eta;
+              }
+            }
+          }
+          // Statuts considérés comme "commandé" (en attente de confirmation, en préparation, etc.)
+          else if (order.status === 'pending_confirmation' || order.status === 'preparing') {
+            orderedQty += qty;
+          }
+        }
+      });
+
+      if (inTransitQty > 0 || orderedQty > 0) {
+        quantities[product.sku] = {
+          inTransit: inTransitQty,
+          ordered: orderedQty,
+          eta: earliestETA
+        };
+      }
+    });
+
+    return quantities;
+  }, [products, orders, currentTime]);
   
   return (
     <motion.div
@@ -49,6 +122,29 @@ export const StockTab = ({
       transition={{ duration: 0.25 }}
       className="space-y-6"
     >
+      {/* Section Santé de l'Inventaire */}
+      {products && products.length > 0 && (
+        <div className="bg-white rounded-xl shadow-sm border border-[#E5E4DF] p-6">
+          <div className="mb-4">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 bg-purple-50 rounded-lg flex items-center justify-center border border-purple-200 shrink-0">
+                <Package className="w-6 h-6 text-purple-600 shrink-0" />
+              </div>
+              <div>
+                <h2 className="text-2xl font-bold text-[#191919]">Santé de l'Inventaire</h2>
+                <p className="text-sm text-[#666663]">Vue d'ensemble de l'état de vos stocks</p>
+              </div>
+            </div>
+          </div>
+          <StockHealthDashboard 
+            totalUrgent={urgentCount}
+            totalWarning={warningCount}
+            totalHealthy={healthyCount}
+            totalProducts={totalProducts}
+          />
+        </div>
+      )}
+
       {/* Table des produits */}
       <div className="bg-white rounded-xl shadow-sm border border-[#E5E4DF] overflow-hidden">
         {/* Header de la table avec filtres */}
@@ -118,6 +214,22 @@ export const StockTab = ({
                 </th>
                 <th className="px-4 py-3 text-left text-xs font-semibold text-[#666663] uppercase tracking-wider">
                   Autonomie
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-[#666663] uppercase tracking-wider">
+                  <div className="flex items-center gap-1.5">
+                    <span>En transit / Commandé</span>
+                    <InfoTooltip 
+                      content="Quantités en cours de réapprovisionnement. 'En transit' indique les quantités expédiées par le fournisseur. 'Commandé' indique les quantités en attente de confirmation ou en préparation." 
+                    />
+                  </div>
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-[#666663] uppercase tracking-wider">
+                  <div className="flex items-center gap-1.5">
+                    <span>Rotation</span>
+                    <InfoTooltip 
+                      content="Nombre de fois que le stock se renouvelle en une année (rotations/an). Calculé : (Ventes/jour × 365) / Stock. Une rotation élevée (>6 rot/an) indique une bonne dynamique commerciale. Une rotation faible (<2 rot/an) peut indiquer un risque de surstock ou d'obsolescence." 
+                    />
+                  </div>
                 </th>
                 <th className="px-4 py-3 text-left text-xs font-semibold text-[#666663] uppercase tracking-wider">
                   Santé
@@ -197,6 +309,81 @@ export const StockTab = ({
                           <div className="text-xs text-red-600 font-medium">
                             Commander {formatUnits(product.qtyToOrder)}
                           </div>
+                        )}
+                      </div>
+                    </td>
+                    
+                    {/* En transit / Commandé */}
+                    <td className="px-4 py-4">
+                      <div className="flex flex-col gap-1">
+                        {productOrderQuantities[product.sku] ? (
+                          <>
+                            {productOrderQuantities[product.sku].inTransit > 0 && (
+                              <div className="flex flex-col">
+                                <div className="text-sm font-medium text-purple-600">
+                                  En transit: {formatUnits(productOrderQuantities[product.sku].inTransit)}
+                                </div>
+                                {(() => {
+                                  const etaInfo = productOrderQuantities[product.sku].eta 
+                                    ? formatETA(productOrderQuantities[product.sku].eta)
+                                    : null;
+                                  
+                                  if (etaInfo) {
+                                    const daysText = etaInfo.daysRemaining !== null
+                                      ? etaInfo.daysRemaining > 0 
+                                        ? `+${etaInfo.daysRemaining}j` 
+                                        : etaInfo.daysRemaining === 0 
+                                          ? 'Aujourd\'hui' 
+                                          : `${etaInfo.daysRemaining}j`
+                                      : '';
+                                    
+                                    return (
+                                      <div className={`text-xs ${
+                                        etaInfo.isPast ? 'text-red-600 font-semibold' :
+                                        etaInfo.isUrgent ? 'text-orange-600 font-medium' :
+                                        'text-[#666663]'
+                                      }`}>
+                                        ETA: {etaInfo.formatted}
+                                        {daysText && <span className="ml-1">({daysText})</span>}
+                                      </div>
+                                    );
+                                  }
+                                  return null;
+                                })()}
+                              </div>
+                            )}
+                            {productOrderQuantities[product.sku].ordered > 0 && (
+                              <div className="text-sm font-medium text-yellow-600">
+                                Commandé: {formatUnits(productOrderQuantities[product.sku].ordered)}
+                              </div>
+                            )}
+                          </>
+                        ) : (
+                          <div className="text-sm text-[#666663]">-</div>
+                        )}
+                      </div>
+                    </td>
+                    
+                    {/* Rotation */}
+                    <td className="px-4 py-4">
+                      <div className="flex flex-col">
+                        {product.rotationRate !== undefined && product.rotationRate !== null && product.rotationRate > 0 ? (
+                          <>
+                            <div className={`font-bold text-sm ${
+                              product.rotationRate > 6 ? 'text-green-600' : // > 6 rotations/an = rapide
+                              product.rotationRate > 2 ? 'text-blue-600' :   // 2-6 rotations/an = modérée
+                              'text-orange-600'                              // < 2 rotations/an = lente
+                            }`}>
+                              {Math.round(product.rotationRate * 100) / 100} rot/an
+                            </div>
+                            <div className="text-xs text-[#666663]">
+                              {product.rotationRate > 6 ? 'Rapide' :
+                               product.rotationRate > 2 ? 'Modérée' :
+                               'Lente'}
+                            </div>
+                          </>
+                        ) : (
+                          <div className="text-sm text-[#666663]">N/A</div>
                         )}
                       </div>
                     </td>

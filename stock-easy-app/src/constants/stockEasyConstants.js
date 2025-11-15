@@ -104,7 +104,8 @@ export const SETTINGS_TABS = {
   PRODUCTS: 'products',
   SUPPLIERS: 'suppliers',
   MAPPING: 'mapping',
-  WAREHOUSES: 'warehouses'
+  WAREHOUSES: 'warehouses',
+  MULTIPLIERS: 'multipliers'
 };
 
 // Sous-onglets Analytics

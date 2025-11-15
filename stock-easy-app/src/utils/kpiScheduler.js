@@ -1,4 +1,5 @@
 import { saveKPISnapshot } from '../services/kpiHistoryService';
+import { calculateOverstockExcessValue } from './calculations';
 
 /**
  * Vérifie si un snapshot KPI a déjà été créé aujourd'hui
@@ -29,9 +30,10 @@ function markSnapshotCreated(companyId) {
  * Calcule les KPIs à partir des produits et commandes
  * @param {Array} products - Liste des produits
  * @param {Array} orders - Liste des commandes
+ * @param {number} seuilSurstockProfond - Seuil de surstock profond en jours (défaut: 90)
  * @returns {object} Objet KPI
  */
-function calculateKPIsFromData(products, orders) {
+function calculateKPIsFromData(products, orders, seuilSurstockProfond = 90) {
   console.log('🧮 Calcul des KPIs à partir de', products.length, 'produits et', orders.length, 'commandes');
   
   if (!products || products.length === 0) {
@@ -53,24 +55,27 @@ function calculateKPIsFromData(products, orders) {
   const skuAvailabilityRate = totalSKUs > 0 ? (availableSKUs / totalSKUs) * 100 : 0;
 
   // Calcul des ventes perdues (SKUs en rupture)
-  const outOfStockProducts = products.filter(p => (p.stock || 0) === 0);
+  // Utiliser le prix de vente (sellPrice) pour refléter les revenus perdus, pas le coût
+  const outOfStockProducts = products.filter(p => (p.stock || 0) === 0 && (p.salesPerDay || 0) > 0);
   const salesLostCount = outOfStockProducts.length;
   const salesLostAmount = outOfStockProducts.reduce((sum, p) => {
-    // Estimation basée sur les ventes moyennes * prix
+    // Estimation basée sur les ventes moyennes * prix de vente
+    // Utiliser sellPrice pour être cohérent avec useAnalytics et refléter les revenus perdus
     const avgDailySales = p.salesPerDay || p.avgDailySales || 0;
     const daysOutOfStock = 7; // Estimation moyenne
-    const price = p.buyPrice || p.price || 0;
-    return sum + (avgDailySales * daysOutOfStock * price);
+    const sellPrice = p.sellPrice || p.buyPrice || 0; // Utiliser prix de vente pour ventes perdues
+    return sum + (avgDailySales * daysOutOfStock * sellPrice);
   }, 0);
 
-  // Calcul du surstock
+  // Calcul du surstock profond (approche 2 : valeur de l'excédent uniquement)
+  // Un produit est en surstock profond si son autonomie (daysOfStock) >= seuil configuré
+  // La valeur du surstock profond = valeur de l'excédent (excédent en jours × ventes/jour × prix)
+  // Utiliser la fonction utilitaire pour garantir la cohérence du calcul
   const overstockProducts = products.filter(p => p.isDeepOverstock === true);
   const overstockSKUs = overstockProducts.length;
   const overstockCost = overstockProducts.reduce((sum, p) => {
-    const currentStock = p.stock || 0;
-    const excessStock = Math.max(0, currentStock - (p.securityStock || 0) * 2);
-    const price = p.buyPrice || p.price || 0;
-    return sum + (excessStock * price);
+    const excessValue = calculateOverstockExcessValue(p, seuilSurstockProfond);
+    return sum + excessValue;
   }, 0);
 
   // Calcul de la valeur de l'inventaire
@@ -99,9 +104,10 @@ function calculateKPIsFromData(products, orders) {
  * @param {string} companyId - ID de l'entreprise
  * @param {Array} products - Liste des produits
  * @param {Array} orders - Liste des commandes
+ * @param {number} seuilSurstockProfond - Seuil de surstock profond en jours (défaut: 90)
  * @returns {Promise<void>}
  */
-export async function checkAndSaveKPISnapshot(companyId, products, orders) {
+export async function checkAndSaveKPISnapshot(companyId, products, orders, seuilSurstockProfond = 90) {
   try {
     console.log('🔍 checkAndSaveKPISnapshot - Vérification pour companyId:', companyId);
     
@@ -114,7 +120,7 @@ export async function checkAndSaveKPISnapshot(companyId, products, orders) {
     console.log('📊 Aucun snapshot trouvé pour aujourd\'hui, création en cours...');
 
     // Calculer les KPIs actuels
-    const kpiData = calculateKPIsFromData(products, orders);
+    const kpiData = calculateKPIsFromData(products, orders, seuilSurstockProfond);
 
     // Sauvegarder le snapshot
     await saveKPISnapshot(companyId, kpiData);
