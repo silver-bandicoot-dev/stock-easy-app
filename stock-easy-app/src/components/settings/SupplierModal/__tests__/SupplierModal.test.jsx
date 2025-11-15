@@ -73,7 +73,7 @@ describe('SupplierModal', () => {
 
   it('should call onSave when save button is clicked', () => {
     render(<SupplierModal {...defaultProps} />);
-    const saveButton = screen.getByText('💾 Enregistrer');
+    const saveButton = screen.getByText('💾 Sauvegarder');
     fireEvent.click(saveButton);
     expect(defaultProps.onSave).toHaveBeenCalled();
   });

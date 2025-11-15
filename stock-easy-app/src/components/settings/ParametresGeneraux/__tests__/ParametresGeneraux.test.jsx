@@ -48,14 +48,14 @@ describe('ParametresGeneraux', () => {
     render(<ParametresGeneraux {...defaultProps} />);
     
     // Initially, no save button
-    expect(screen.queryByText('Enregistrer les paramètres')).not.toBeInTheDocument();
+    expect(screen.queryByText('Sauvegarder les paramètres')).not.toBeInTheDocument();
     
     // Change currency
     const usdButton = screen.getByText('USD');
     fireEvent.click(usdButton);
     
     // Save button should appear
-    expect(screen.getByText('Enregistrer les paramètres')).toBeInTheDocument();
+    expect(screen.getByText('Sauvegarder les paramètres')).toBeInTheDocument();
     expect(screen.getByText('Vous avez des modifications non sauvegardées')).toBeInTheDocument();
   });
 
@@ -127,7 +127,7 @@ describe('ParametresGeneraux', () => {
     fireEvent.click(usdButton);
     
     // Click save
-    const saveButton = screen.getByText('Enregistrer les paramètres');
+    const saveButton = screen.getByText('Sauvegarder les paramètres');
     fireEvent.click(saveButton);
     
     await waitFor(() => {
@@ -143,7 +143,7 @@ describe('ParametresGeneraux', () => {
     fireEvent.click(usdButton);
     
     // Click save
-    const saveButton = screen.getByText('Enregistrer les paramètres');
+    const saveButton = screen.getByText('Sauvegarder les paramètres');
     fireEvent.click(saveButton);
     
     await waitFor(() => {
@@ -180,11 +180,11 @@ describe('ParametresGeneraux', () => {
     const usdButton = screen.getByText('USD');
     fireEvent.click(usdButton);
     
-    const saveButton = screen.getByText('Enregistrer les paramètres');
+    const saveButton = screen.getByText('Sauvegarder les paramètres');
     fireEvent.click(saveButton);
     
     // Button should be disabled and show loading text
-    expect(screen.getByText('Enregistrement...')).toBeInTheDocument();
+    expect(screen.getByText('Sauvegarde...')).toBeInTheDocument();
   });
 });
 

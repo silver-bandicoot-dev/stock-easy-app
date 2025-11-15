@@ -32,7 +32,7 @@ export function SupplierModal({
             Annuler
           </Button>
           <Button variant="primary" onClick={onSave}>
-            💾 Enregistrer
+            💾 Sauvegarder
           </Button>
         </div>
       }

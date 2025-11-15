@@ -314,7 +314,7 @@ export default function CommentSection({ purchaseOrderId, purchaseOrderNumber })
                         className="px-3 py-1 bg-black text-white rounded text-xs hover:bg-gray-800 flex items-center gap-1"
                       >
                         <Check className="w-3 h-3" />
-                        Enregistrer
+                        Sauvegarder
                       </button>
                       <button
                         onClick={cancelEditing}

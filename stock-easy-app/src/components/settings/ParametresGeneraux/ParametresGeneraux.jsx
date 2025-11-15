@@ -186,7 +186,7 @@ export function ParametresGeneraux({
               disabled={isSaving}
               className={isSaving ? 'opacity-75' : ''}
             >
-              {isSaving ? 'Enregistrement...' : 'Enregistrer les paramètres'}
+              {isSaving ? 'Sauvegarde...' : 'Sauvegarder les paramètres'}
             </Button>
           </div>
         </div>

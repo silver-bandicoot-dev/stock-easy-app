@@ -225,7 +225,7 @@ const UserProfile = () => {
             }`}
           >
             <Save className="w-5 h-5" />
-            {uploadingPhoto ? 'Upload photo...' : saving ? 'Enregistrement...' : 'Enregistrer'}
+            {uploadingPhoto ? 'Upload photo...' : saving ? 'Sauvegarde...' : 'Sauvegarder'}
           </button>
         </div>
 

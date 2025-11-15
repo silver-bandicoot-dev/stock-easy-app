@@ -436,7 +436,7 @@ const ProfilePage = () => {
                     className="inline-flex items-center gap-2 px-3 py-1.5 text-sm rounded-md bg-[#191919] text-white hover:bg-[#2A2A2A] transition-all"
                   >
                     <Save className="w-4 h-4" />
-                    <span>{uploadingPhoto ? 'Upload...' : saving ? 'Enregistrement...' : 'Enregistrer'}</span>
+                    <span>{uploadingPhoto ? 'Upload...' : saving ? 'Sauvegarde...' : 'Sauvegarder'}</span>
                   </button>
                 )}
               </div>
