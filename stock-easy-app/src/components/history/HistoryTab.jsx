@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { History, Download, Filter, Calendar, Eye, ChevronDown, ChevronRight } from 'lucide-react';
 import { Button } from '../shared/Button';
@@ -23,6 +23,8 @@ export const HistoryTab = ({
   toggleOrderDetails
 }) => {
   const { format: formatCurrency } = useCurrency();
+  const [sortBy, setSortBy] = useState('date_desc');
+
   // Filtrer les commandes selon les critères
   const filteredOrders = orders.filter(order => {
     // Filtre par statut
@@ -37,6 +39,32 @@ export const HistoryTab = ({
     
     return true;
   });
+
+  // Tri configurable (date / montant)
+  const sortedOrders = useMemo(() => {
+    const ordersCopy = [...filteredOrders];
+    return ordersCopy.sort((a, b) => {
+      const dateA = a.createdAt ? new Date(a.createdAt) : null;
+      const dateB = b.createdAt ? new Date(b.createdAt) : null;
+      const totalA = typeof a.total === 'number' ? a.total : parseFloat(a.total || 0);
+      const totalB = typeof b.total === 'number' ? b.total : parseFloat(b.total || 0);
+
+      switch (sortBy) {
+        case 'date_asc':
+          if (!dateA || !dateB) return 0;
+          return dateA - dateB;
+        case 'date_desc':
+          if (!dateA || !dateB) return 0;
+          return dateB - dateA;
+        case 'total_asc':
+          return totalA - totalB;
+        case 'total_desc':
+          return totalB - totalA;
+        default:
+          return 0;
+      }
+    });
+  }, [filteredOrders, sortBy]);
 
   const getStatusColor = (status) => {
     switch (status) {
@@ -220,15 +248,31 @@ export const HistoryTab = ({
         </div>
       </div>
 
+      {/* Tri des commandes d'historique */}
+      <div className="flex justify-end mb-3">
+        <div className="flex items-center gap-2 text-xs sm:text-sm">
+          <span className="text-[#666663]">Trier par :</span>
+          <select
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value)}
+            className="border border-[#E5E4DF] rounded-md px-2 py-1 text-xs sm:text-sm bg-white focus:outline-none focus:ring-1 focus:ring-[#191919]"
+          >
+            <option value="date_desc">Date (plus récent)</option>
+            <option value="date_asc">Date (plus ancien)</option>
+            <option value="total_desc">Montant (décroissant)</option>
+            <option value="total_asc">Montant (croissant)</option>
+          </select>
+        </div>
+      </div>
+
       <div className="space-y-3">
-        {filteredOrders.length === 0 ? (
+        {sortedOrders.length === 0 ? (
           <div className="bg-white rounded-xl shadow-sm border border-[#E5E4DF] p-8">
             <p className="text-[#666663] text-center text-sm">Aucune commande trouvée pour ces critères</p>
           </div>
         ) : (
-          filteredOrders
-            .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
-            .map(order => (
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+            {sortedOrders.map(order => (
               <OrderCard
                 key={order.id}
                 order={order}
@@ -241,7 +285,8 @@ export const HistoryTab = ({
                 showActions={false}
                 compactMode={false}
               />
-            ))
+            ))}
+          </div>
         )}
       </div>
     </motion.div>

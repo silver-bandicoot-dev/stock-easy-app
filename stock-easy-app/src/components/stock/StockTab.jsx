@@ -127,13 +127,17 @@ export const StockTab = ({
       {products && products.length > 0 && (
         <div className="bg-white rounded-xl shadow-sm border border-[#E5E4DF] p-6">
           <div className="mb-4">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 bg-purple-50 rounded-lg flex items-center justify-center border border-purple-200 shrink-0">
-                <Package className="w-6 h-6 text-purple-600 shrink-0" />
+            <div className="flex items-center gap-3 mb-2">
+              <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center border border-[#E5E4DF] shrink-0">
+                <Package className="w-5 h-5 text-[#4F46E5] shrink-0" />
               </div>
               <div>
-                <h2 className="text-2xl font-bold text-[#191919]">Santé de l'Inventaire</h2>
-                <p className="text-sm text-[#666663]">Vue d'ensemble de l'état de vos stocks</p>
+                <h2 className="text-sm font-semibold text-[#191919] tracking-wide uppercase">
+                  Santé de l'inventaire
+                </h2>
+                <p className="text-xs text-[#666663]">
+                  Vue d'ensemble de l'état de vos stocks
+                </p>
               </div>
             </div>
           </div>

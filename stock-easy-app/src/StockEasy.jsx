@@ -29,6 +29,8 @@ import CommentSection from './components/comments/CommentSection';
 import { InlineModalsContainer } from './components/modals/InlineModalsContainer';
 
 import Sidebar from './components/layout/Sidebar';
+import { Logo } from './components/ui/Logo';
+import { SearchBar } from './components/SearchBar';
 import { useInlineModals } from './hooks/useInlineModals';
 import { useSupabaseSync } from './hooks/useSupabaseSync';
 import { checkAndSaveKPISnapshot } from './utils/kpiScheduler';
@@ -104,6 +106,7 @@ import { useReconciliation } from './hooks/useReconciliation';
 import { useEmailGeneration } from './hooks/useEmailGeneration';
 import { useShipOrderModal } from './hooks/useShipOrderModal';
 import { useAutoNotifications } from './hooks/useAutoNotifications';
+import { useMLWeeklyNotifications } from './hooks/useMLWeeklyNotifications';
 
 // ============================================
 // FONCTIONS API - Importées depuis apiAdapter
@@ -173,22 +176,34 @@ const StockEasy = () => {
   const [deviseDefaut, setDeviseDefaut] = useState('EUR');
   const [multiplicateurDefaut, setMultiplicateurDefaut] = useState(1.2);
 
-  // Hook pour les notifications automatiques
+  // Hook pour les notifications automatiques - DÉSACTIVÉ
+  // Les notifications automatiques sont désormais gérées uniquement pour :
+  // 1. Les mentions (@user) dans les commentaires
+  // 2. Les recommandations ML hebdomadaires et critiques
   useAutoNotifications(
     { products, orders, suppliers },
     {
-      enabled: true,
-      stockCheckInterval: 60 * 60 * 1000, // 1 heure
-      unmappedCheckInterval: 6 * 60 * 60 * 1000, // 6 heures
-      weeklyReportDay: 1, // Lundi
-      weeklyReportHour: 9, // 9h du matin
-      orderDelayedInterval: 12 * 60 * 60 * 1000, // 12 heures
-      orderDiscrepancyInterval: 6 * 60 * 60 * 1000, // 6 heures
-      surstockCheckHour: 8, // 8h du matin
-      supplierInfoInterval: 12 * 60 * 60 * 1000, // 12 heures
-      surstockThresholdDays: seuilSurstockProfond || 90 // Utiliser le seuil configuré
+      enabled: false, // Désactivé complètement
+      stockCheckInterval: 60 * 60 * 1000,
+      unmappedCheckInterval: 6 * 60 * 60 * 1000,
+      weeklyReportDay: 1,
+      weeklyReportHour: 9,
+      orderDelayedInterval: 12 * 60 * 60 * 1000,
+      orderDiscrepancyInterval: 6 * 60 * 60 * 1000,
+      surstockCheckHour: 8,
+      supplierInfoInterval: 12 * 60 * 60 * 1000,
+      surstockThresholdDays: seuilSurstockProfond || 90
     }
   );
+
+  // Hook pour les notifications ML hebdomadaires et critiques
+  // TODO: Passer les vraies prévisions ML quand le modèle est actif
+  useMLWeeklyNotifications(products, {}, {
+    enabled: true,
+    weeklyDay: 1, // Lundi
+    weeklyHour: 9, // 9h du matin
+    criticalCheckInterval: 24 * 60 * 60 * 1000 // Vérifier les alertes critiques toutes les 24h
+  });
   
   // Hook pour la gestion des commandes
   const {
@@ -274,7 +289,6 @@ const StockEasy = () => {
   const [trackTabSection, setTrackTabSection] = useState(TRACK_TABS.EN_COURS_COMMANDE);
   const [selectedProductsFromTable, setSelectedProductsFromTable] = useState([]);
   const [selectedSupplier, setSelectedSupplier] = useState(null);
-  const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [receivingProducts, setReceivingProducts] = useState([]);
   const [tempReceivedQty, setTempReceivedQty] = useState({});
   const [editingParam, setEditingParam] = useState(null);
@@ -2212,6 +2226,68 @@ ${getUserSignature()}`
     }
   };
 
+  const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
+  const [profilePhotoUrl, setProfilePhotoUrl] = useState(null);
+
+  useEffect(() => {
+    let isMounted = true;
+    const loadProfilePhoto = async () => {
+      try {
+        const { getCurrentUserProfile } = await import('./services/profileService');
+        const { data } = await getCurrentUserProfile();
+        if (!isMounted) return;
+        if (data?.photo_url) {
+          setProfilePhotoUrl(data.photo_url);
+        } else if (data?.photoUrl) {
+          setProfilePhotoUrl(data.photoUrl);
+        }
+      } catch (e) {
+        console.warn('Impossible de charger la photo de profil:', e);
+      }
+    };
+
+    loadProfilePhoto();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const userDisplayName =
+    (currentUser?.firstName && currentUser?.lastName
+      ? `${currentUser.firstName} ${currentUser.lastName}`
+      : currentUser?.displayName ||
+        currentUser?.user_metadata?.full_name ||
+        currentUser?.email ||
+        '') || '';
+
+  const userInitials = useMemo(() => {
+    if (!userDisplayName) return '';
+    const parts = userDisplayName.split(' ').filter(Boolean);
+    if (parts.length === 1) {
+      return parts[0].charAt(0).toUpperCase();
+    }
+    return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
+  }, [userDisplayName]);
+
+  const userAvatarUrl =
+    profilePhotoUrl ||
+    currentUser?.photoURL ||
+    currentUser?.avatar_url ||
+    currentUser?.user_metadata?.avatar_url ||
+    currentUser?.user_metadata?.photoUrl ||
+    null;
+
+  const handleOpenProfilePage = () => {
+    navigate('/profile');
+    setIsProfileMenuOpen(false);
+  };
+
+  const handleProfileLogout = async () => {
+    setIsProfileMenuOpen(false);
+    await handleLogout();
+  };
+
   if (loading) {
     return (
       <motion.div 
@@ -2239,45 +2315,127 @@ ${getUserSignature()}`
   return (
     <CurrencyProvider code={currencyCode}>
       <>
-      <Toaster 
-        position="top-right" 
-        expand={true}
-        richColors 
-        closeButton
-        duration={4000}
-      />
-      <div className="min-h-screen bg-[#FAFAF7]">
-        {/* Sidebar Component */}
-        <Sidebar 
-          activeTab={activeTab}
-          setActiveTab={setActiveTab}
-          handleLogout={handleLogout}
-          syncData={syncData}
-          syncing={syncing}
-          analyticsSubTab={analyticsSubTab}
-          setAnalyticsSubTab={setAnalyticsSubTab}
-          aiSubTab={aiSubTab}
-          setAiSubTab={setAiSubTab}
+        <Toaster 
+          position="top-right" 
+          expand={true}
+          richColors 
+          closeButton
+          duration={4000}
         />
+        
+        {/* Barre horizontale supérieure - Fixe au-dessus de tout */}
+        <div className="fixed top-0 left-0 right-0 z-[60] bg-[#FAFAF7] border-b border-[#E5E4DF] h-16 flex items-center">
+             {/* Logo centré dans la zone sidebar (w-64 = 256px) */}
+             <div className="w-64 flex items-center justify-center shrink-0">
+               <Logo size="small" showText={true} theme="light" />
+             </div>
+             
+             {/* SearchBar centrée par rapport à toute la largeur de l'app */}
+             <div className="absolute left-1/2 -translate-x-1/2 w-full max-w-2xl px-4">
+               <SearchBar 
+                 setActiveTab={setActiveTab}
+                 setParametersSubTab={setParametersSubTab}
+                 setTrackTabSection={setTrackTabSection}
+                 setStockLevelSearch={setStockLevelSearch}
+                 onSupplierSelect={(supplierData) => {
+                   // Convertir les données Supabase vers le format attendu
+                   const supplierForModal = {
+                     name: supplierData.nom_fournisseur,
+                     email: supplierData.email || '',
+                     leadTimeDays: supplierData.lead_time_days || 14,
+                     moq: supplierData.moq || 1,
+                     notes: supplierData.notes || ''
+                   };
+                   handleOpenSupplierModal(supplierForModal);
+                 }}
+               />
+             </div>
+             
+             {/* Notification + Profil à droite */}
+             <div className="ml-auto flex items-center gap-4 pr-4 sm:pr-6 lg:pr-8">
 
-        {/* Main Content - Pleine hauteur avec padding pour sidebar desktop */}
-        <div className="md:ml-64 min-h-screen bg-[#FAFAF7]">
-          {/* Spacer pour le header mobile uniquement */}
-          <div className="md:hidden h-[72px]" />
-          
-          
-          {/* Content Area avec NotificationBell intégré */}
-          <div className="relative min-h-screen">
-            {/* NotificationBell flottant en haut à droite - Masqué sur mobile */}
-            <div className="hidden md:block absolute top-4 right-4 sm:top-6 sm:right-6 z-30">
-              <NotificationBell />
-            </div>
+                {/* Zone notifications + profil */}
+                <div className="flex items-center gap-4">
+                  <NotificationBell variant="inline" />
+                  <div className="relative">
+                    <button
+                      type="button"
+                      onClick={() => setIsProfileMenuOpen((open) => !open)}
+                      className="flex items-center gap-2 px-2 py-1.5 rounded-full hover:bg-[#E5E4DF] transition-colors"
+                    >
+                      <div className="w-8 h-8 rounded-full bg-[#E5E4DF] overflow-hidden flex items-center justify-center text-sm font-semibold text-[#191919]">
+                        {userAvatarUrl ? (
+                          <img
+                            src={userAvatarUrl}
+                            alt={userDisplayName || 'Profil'}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <span>{userInitials || 'U'}</span>
+                        )}
+                      </div>
+                      <div className="hidden sm:flex flex-col items-start">
+                        <span className="text-xs text-[#666663]">Mon profil</span>
+                        <span className="text-sm font-medium text-[#191919] truncate max-w-[120px]">
+                          {userDisplayName || 'Utilisateur'}
+                        </span>
+                      </div>
+                    </button>
 
-            {/* Contenu principal avec padding */}
-            <div className="p-4 sm:p-6 lg:p-8 pt-10 sm:pt-12 lg:pt-14">
-              <div className="max-w-7xl mx-auto">
-                {/* DASHBOARD TAB */}
-                <AnimatePresence mode="wait">
+                    {isProfileMenuOpen && (
+                      <div className="absolute right-0 mt-2 w-56 rounded-lg border border-[#E5E4DF] bg-white shadow-lg py-1 text-sm z-40">
+                        <button
+                          type="button"
+                          onClick={handleOpenProfilePage}
+                          className="w-full flex items-center gap-2 px-3 py-2 hover:bg-[#FAFAF7] text-left text-[#191919]"
+                        >
+                          <User className="w-4 h-4 text-[#666663]" />
+                          <span>Mon profil</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleProfileLogout}
+                          className="w-full flex items-center gap-2 px-3 py-2 hover:bg-[#FAFAF7] text-left text-[#EF1C43]"
+                        >
+                          <LogOut className="w-4 h-4" />
+                          <span>Se déconnecter</span>
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+        </div>
+
+        {/* Contenu principal avec sidebar */}
+        <div className="min-h-screen bg-[#FAFAF7]">
+            {/* Spacer pour compenser la hauteur du menu fixe */}
+            <div className="h-16" />
+
+            {/* Sidebar Component - Commence sous le menu horizontal */}
+            <Sidebar 
+            activeTab={activeTab}
+            setActiveTab={setActiveTab}
+            handleLogout={handleLogout}
+            syncData={syncData}
+            syncing={syncing}
+            analyticsSubTab={analyticsSubTab}
+            setAnalyticsSubTab={setAnalyticsSubTab}
+            aiSubTab={aiSubTab}
+            setAiSubTab={setAiSubTab}
+            settingsSubTab={parametersSubTab}
+            setSettingsSubTab={setParametersSubTab}
+            />
+
+            {/* Main Content */}
+            <div className="md:ml-64 min-h-screen bg-[#FAFAF7]">
+            {/* Content Area */}
+            <div className="relative min-h-screen">
+              {/* Contenu principal avec padding */}
+              <div className="p-4 sm:p-6 lg:p-8 pt-10 sm:pt-12 lg:pt-14">
+                <div className="max-w-7xl mx-auto">
+                  {/* DASHBOARD TAB */}
+                  <AnimatePresence mode="wait">
                   {activeTab === MAIN_TABS.DASHBOARD && (
                     <DashboardTab 
                       productsByStatus={productsByStatus}
@@ -2442,85 +2600,84 @@ ${getUserSignature()}`
                     />
                   )}
 
-                </AnimatePresence>
-              </div> {/* Fin max-w-7xl mx-auto */}
-            </div> {/* Fin contenu principal avec padding */}
-          </div> {/* Fin Content Area relative */}
-        </div> {/* Fin Main Content md:ml-64 */}
-      </div> {/* Fin min-h-screen */}
+                  </AnimatePresence>
+                </div> {/* Fin max-w-7xl mx-auto */}
+              </div> {/* Fin contenu principal avec padding */}
+              </div> {/* Fin Content Area relative */}
+            </div> {/* Fin Main Content md:ml-64 */}
+          </div> {/* Fin min-h-screen */}
 
-      {/* ============================================
-          MODALS
-      ============================================ */}
-      
-      {/* Modal de réconciliation */}
-      <ReconciliationModal
-        isOpen={reconciliationModal.isOpen}
-        onClose={reconciliationModalHandlers.close}
-        order={reconciliationModal.data.order}
-        products={products}
-        onConfirm={handleReconciliationConfirm}
-      />
+          {/* ============================================
+              MODALS
+          ============================================ */}
+          
+          {/* Modal de réconciliation */}
+          <ReconciliationModal
+            isOpen={reconciliationModal.isOpen}
+            onClose={reconciliationModalHandlers.close}
+            order={reconciliationModal.data.order}
+            products={products}
+            onConfirm={handleReconciliationConfirm}
+          />
 
-      {/* Modal d'email de réclamation */}
-      <ReclamationEmailModal
-        isOpen={reclamationEmailModal.isOpen}
-        onClose={reclamationEmailModalHandlers.close}
-        order={reclamationEmailModal.data.order}
-        emailContent={reclamationEmailModal.data.emailContent}
-        onCopy={emailGeneration.copyToClipboard}
-      />
+          {/* Modal d'email de réclamation */}
+          <ReclamationEmailModal
+            isOpen={reclamationEmailModal.isOpen}
+            onClose={reclamationEmailModalHandlers.close}
+            order={reclamationEmailModal.data.order}
+            emailContent={reclamationEmailModal.data.emailContent}
+            onCopy={emailGeneration.copyToClipboard}
+          />
 
-      {/* Modal d'expédition */}
-      <ShipOrderModal
-        isOpen={shipOrderModal.isOpen}
-        onClose={shipOrderModal.closeModal}
-        onConfirm={handleConfirmShipOrder}
-        trackingNumber={shipOrderModal.trackingNumber}
-        setTrackingNumber={shipOrderModal.setTrackingNumber}
-        trackingUrl={shipOrderModal.trackingUrl}
-        setTrackingUrl={shipOrderModal.setTrackingUrl}
-      />
+          {/* Modal d'expédition */}
+          <ShipOrderModal
+            isOpen={shipOrderModal.isOpen}
+            onClose={shipOrderModal.closeModal}
+            onConfirm={handleConfirmShipOrder}
+            trackingNumber={shipOrderModal.trackingNumber}
+            setTrackingNumber={shipOrderModal.setTrackingNumber}
+            trackingUrl={shipOrderModal.trackingUrl}
+            setTrackingUrl={shipOrderModal.setTrackingUrl}
+          />
 
-      {/* Modal de gestion des fournisseurs */}
-      <SupplierModal
-        isOpen={supplierModalOpen}
-        onClose={handleCloseSupplierModal}
-        formData={supplierFormData}
-        onChange={handleSupplierFormChange}
-        onSave={handleSaveSupplier}
-        isEditing={!!editingSupplier}
-      />
+          {/* Modal de gestion des fournisseurs */}
+          <SupplierModal
+            isOpen={supplierModalOpen}
+            onClose={handleCloseSupplierModal}
+            formData={supplierFormData}
+            onChange={handleSupplierFormChange}
+            onSave={handleSaveSupplier}
+            isEditing={!!editingSupplier}
+          />
 
-      {/* Modal d'assignation de fournisseur */}
-      <AssignSupplierModal
-        isOpen={assignSupplierModalOpen}
-        onClose={handleCloseAssignSupplierModal}
-        product={productToMap}
-        suppliers={suppliers}
-          selectedSupplier={selectedSupplierForMapping}
-        onSupplierChange={setSelectedSupplierForMapping}
-        onAssign={handleAssignSupplier}
-      />
+          {/* Modal d'assignation de fournisseur */}
+          <AssignSupplierModal
+            isOpen={assignSupplierModalOpen}
+            onClose={handleCloseAssignSupplierModal}
+            product={productToMap}
+            suppliers={suppliers}
+            selectedSupplier={selectedSupplierForMapping}
+            onSupplierChange={setSelectedSupplierForMapping}
+            onAssign={handleAssignSupplier}
+          />
 
-      {/* Conteneur des modales inline */}
-      <InlineModalsContainer
-        emailOrderModal={inlineModals.emailOrderModal}
-        warehouses={warehouses}
-        toOrderBySupplier={toOrderBySupplier}
-        emailGeneration={emailGeneration}
-        getUserSignature={getUserSignature}
-        handleCreateOrderWithoutEmail={handleCreateOrderWithoutEmail}
-        handleSendOrder={handleSendOrder}
-        suppliers={suppliers}
-        reconciliationModal={inlineModals.reconciliationModal}
-        products={products}
-        confirmReconciliationWithQuantities={confirmReconciliationWithQuantities}
-        reclamationEmailModal={inlineModals.reclamationEmailModal}
-      />
-
-      </>
-    </CurrencyProvider>
+          {/* Conteneur des modales inline */}
+          <InlineModalsContainer
+            emailOrderModal={inlineModals.emailOrderModal}
+            warehouses={warehouses}
+            toOrderBySupplier={toOrderBySupplier}
+            emailGeneration={emailGeneration}
+            getUserSignature={getUserSignature}
+            handleCreateOrderWithoutEmail={handleCreateOrderWithoutEmail}
+            handleSendOrder={handleSendOrder}
+            suppliers={suppliers}
+            reconciliationModal={inlineModals.reconciliationModal}
+            products={products}
+            confirmReconciliationWithQuantities={confirmReconciliationWithQuantities}
+            reclamationEmailModal={inlineModals.reclamationEmailModal}
+          />
+        </>
+      </CurrencyProvider>
   );
 };
 

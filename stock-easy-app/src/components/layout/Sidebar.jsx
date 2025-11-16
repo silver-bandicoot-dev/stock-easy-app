@@ -16,7 +16,14 @@ import {
   BarChart3,
   ChevronDown,
   ChevronRight,
-  AlertTriangle
+  AlertTriangle,
+  Sliders,
+  Box,
+  Users,
+  Warehouse,
+  Zap,
+  PlugZap,
+  Cog
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -32,17 +39,25 @@ const Sidebar = ({
   analyticsSubTab,
   setAnalyticsSubTab,
   aiSubTab,
-  setAiSubTab
+  setAiSubTab,
+  settingsSubTab,
+  setSettingsSubTab,
+  mobileMenuOpen,
+  setMobileMenuOpen
 }) => {
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [analyticsExpanded, setAnalyticsExpanded] = useState(false);
   const [aiExpanded, setAiExpanded] = useState(false);
+  const [settingsExpanded, setSettingsExpanded] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
 
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: Package, type: 'tab' },
+    { id: 'actions', label: 'Order', icon: DollarSign, type: 'tab' },
+    { id: 'track', label: 'Track & Manage', icon: Truck, type: 'tab' },
+    { id: 'stock-level', label: 'Stock Level', icon: Activity, type: 'tab' },
     { id: 'analytics', label: 'Analytics', icon: TrendingUp, type: 'tab' },
+    { id: 'history', label: 'Historique', icon: FileText, type: 'tab' },
     { 
       id: 'ai', 
       label: 'IA & Prévisions', 
@@ -57,12 +72,21 @@ const Sidebar = ({
         { id: 'anomalies', label: 'Détection Anomalies', icon: AlertTriangle }
       ]
     },
-    { id: 'actions', label: 'Order', icon: DollarSign, type: 'tab' },
-    { id: 'track', label: 'Track & Manage', icon: Truck, type: 'tab' },
-    { id: 'stock-level', label: 'Stock Level', icon: Activity, type: 'tab' },
-    { id: 'history', label: 'Historique', icon: FileText, type: 'tab' },
-    { id: 'settings', label: 'Paramètres', icon: Settings, type: 'tab' },
-    { id: 'profile', label: 'Mon Profil', icon: User, type: 'route', path: '/profile' },
+    { 
+      id: 'settings', 
+      label: 'Paramètres', 
+      icon: Cog, 
+      type: 'tab',
+      hasSubMenu: true,
+      subItems: [
+        { id: 'general', label: 'Paramètres Généraux', icon: Sliders },
+        { id: 'multipliers', label: 'Multiplicateurs', icon: TrendingUp },
+        { id: 'suppliers', label: 'Gestion Fournisseurs', icon: Users },
+        { id: 'mapping', label: 'Mapping', icon: Package },
+        { id: 'warehouses', label: 'Gestion Entrepôts', icon: Warehouse },
+        { id: 'integrations', label: 'Intégrations', icon: PlugZap }
+      ]
+    },
   ];
 
   const handleMenuItemClick = (item) => {
@@ -84,11 +108,20 @@ const Sidebar = ({
         setActiveTab(item.id);
         setAiExpanded(true);
       }
+    } else if (item.hasSubMenu && item.id === 'settings') {
+      // Si on clique sur Paramètres, basculer l'expansion
+      if (activeTab === 'settings') {
+        setSettingsExpanded(!settingsExpanded);
+      } else {
+        setActiveTab(item.id);
+        setSettingsExpanded(true);
+      }
     } else {
       setActiveTab(item.id);
       // Fermer les sous-menus si on quitte
       if (item.id !== 'analytics') setAnalyticsExpanded(false);
       if (item.id !== 'ai') setAiExpanded(false);
+      if (item.id !== 'settings') setSettingsExpanded(false);
     }
     setMobileMenuOpen(false);
   };
@@ -100,19 +133,17 @@ const Sidebar = ({
     } else if (parentId === 'ai') {
       setAiSubTab(subItem.id);
       setActiveTab('ai');
+    } else if (parentId === 'settings') {
+      setSettingsSubTab(subItem.id);
+      setActiveTab('settings');
     }
     setMobileMenuOpen(false);
   };
 
   // Menu Desktop/Tablette (sidebar fixe pleine hauteur)
   const DesktopSidebar = () => (
-    <aside className="hidden md:flex md:flex-col md:fixed md:inset-y-0 md:left-0 md:w-64 md:bg-[#FAFAF7] md:border-r md:border-[#E5E4DF] md:z-40">
-      {/* Logo en haut de la sidebar */}
-      <div className="px-6 py-5 border-b border-[#E5E4DF] flex justify-center">
-        <Logo size="normal" showText={true} theme="light" />
-      </div>
-
-      {/* Navigation */}
+    <aside className="hidden md:flex md:flex-col md:fixed md:top-16 md:bottom-0 md:left-0 md:w-64 md:bg-[#FAFAF7] md:border-r md:border-[#E5E4DF] md:z-40">
+      {/* Navigation - Le logo est maintenant dans la barre horizontale globale */}
       <nav className="flex-1 px-4 py-6 space-y-2 overflow-y-auto">
         {menuItems.map((item) => {
           const Icon = item.icon;
@@ -120,7 +151,8 @@ const Sidebar = ({
           const isActive = item.type === 'tab' ? activeTab === item.id : routeActive;
           const showSubMenu = item.hasSubMenu && (
             (item.id === 'analytics' && analyticsExpanded) ||
-            (item.id === 'ai' && aiExpanded)
+            (item.id === 'ai' && aiExpanded) ||
+            (item.id === 'settings' && settingsExpanded)
           );
           
           return (
@@ -158,17 +190,20 @@ const Sidebar = ({
                       ? (analyticsSubTab === subItem.id && activeTab === 'analytics')
                       : item.id === 'ai'
                       ? (aiSubTab === subItem.id && activeTab === 'ai')
+                      : item.id === 'settings'
+                      ? (settingsSubTab === subItem.id && activeTab === 'settings')
                       : false;
                     
                     return (
                       <button
                         key={subItem.id}
                         onClick={() => handleSubMenuClick(item.id, subItem)}
-                        className={`w-full flex items-center gap-3 px-4 py-2 rounded-lg text-sm transition-colors ${
+                        className={`w-full flex items-center gap-3 px-4 py-2 rounded-lg transition-colors ${
                           isSubActive
                             ? 'bg-[#191919] text-white'
                             : 'text-[#191919] hover:bg-[#E5E4DF]'
                         }`}
+                        style={{ fontSize: '0.8125rem' }}
                       >
                         <SubIcon className="w-4 h-4 shrink-0" />
                         <span>{subItem.label}</span>
@@ -204,32 +239,9 @@ const Sidebar = ({
     </aside>
   );
 
-  // Menu Mobile (hamburger + overlay)
+  // Menu Mobile (overlay uniquement, sans header)
   const MobileSidebar = () => (
     <>
-      {/* Mobile Header - Logo, notification et hamburger */}
-      <div className="md:hidden fixed top-0 left-0 right-0 bg-[#FAFAF7] z-50 px-4 py-4 flex items-center justify-between shadow-lg">
-        <Logo size="normal" showText={true} theme="light" />
-        
-        <div className="flex items-center gap-2">
-          {/* Icône de notification */}
-          <NotificationBell variant="mobile" />
-          
-          {/* Bouton hamburger */}
-          <button
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="p-2 rounded-lg bg-[#191919] hover:bg-[#40403E] transition-colors"
-            aria-label={mobileMenuOpen ? 'Fermer le menu' : 'Ouvrir le menu'}
-          >
-            {mobileMenuOpen ? (
-              <X className="w-6 h-6 text-white" />
-            ) : (
-              <Menu className="w-6 h-6 text-white" />
-            )}
-          </button>
-        </div>
-      </div>
-
       {/* Mobile Menu Overlay */}
       <AnimatePresence>
         {mobileMenuOpen && (
@@ -258,6 +270,10 @@ const Sidebar = ({
 
               {/* Navigation */}
               <nav className="flex-1 px-4 py-6 space-y-2 overflow-y-auto">
+                {/* Notification intégrée au menu */}
+                <div className="mb-4">
+                  <NotificationBell variant="mobile" />
+                </div>
                 {menuItems.map((item) => {
                   const Icon = item.icon;
                   const routeActive = item.type === 'route' && location.pathname === item.path;

@@ -1,12 +1,46 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { BarChart3, Package } from 'lucide-react';
+import { useAuth } from '../../contexts/SupabaseAuthContext';
 import { ProductsToOrder } from './ProductsToOrder';
 import { ProductsToWatch } from './ProductsToWatch';
 import { DashboardKPIs } from './DashboardKPIs';
 import { DashboardCharts } from './DashboardCharts';
 
 export const DashboardTab = ({ productsByStatus, orders, enrichedProducts, onViewDetails }) => {
+  const { currentUser } = useAuth();
+  const [isReturningToday, setIsReturningToday] = useState(false);
+
+  useEffect(() => {
+    const STORAGE_KEY = 'stockeasy_dashboard_last_visit';
+    const now = new Date();
+    const todayKey = now.toISOString().slice(0, 10); // AAAA-MM-JJ
+
+    try {
+      const lastVisit = window.localStorage.getItem(STORAGE_KEY);
+      if (lastVisit) {
+        const lastVisitDate = new Date(lastVisit);
+        const lastKey = lastVisitDate.toISOString().slice(0, 10);
+        if (lastKey === todayKey) {
+          setIsReturningToday(true);
+        }
+      }
+      window.localStorage.setItem(STORAGE_KEY, now.toISOString());
+    } catch (e) {
+      // En cas de problème avec localStorage, on ignore et on garde le message par défaut
+      console.warn('Impossible de lire/écrire dans localStorage pour le dashboard:', e);
+    }
+  }, []);
+
+  const firstName =
+    currentUser?.firstName ||
+    currentUser?.user_metadata?.first_name ||
+    currentUser?.displayName ||
+    '';
+
+  const greetingText = isReturningToday
+    ? `Ravi de vous revoir${firstName ? ` ${firstName}` : ''} 👋`
+    : `Bonjour${firstName ? ` ${firstName}` : ''} 👋`;
 
   return (
     <motion.div
@@ -19,14 +53,13 @@ export const DashboardTab = ({ productsByStatus, orders, enrichedProducts, onVie
     >
       {/* Header de section principal */}
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <div className="w-14 h-14 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-2xl flex items-center justify-center shadow-lg">
-            <Package className="w-7 h-7 text-white" />
-          </div>
-          <div>
-            <h1 className="text-3xl font-bold text-[#191919] mb-1">Dashboard</h1>
-            <p className="text-sm text-[#666663]">Vue d'ensemble de votre inventaire et commandes</p>
-          </div>
+        <div className="flex flex-col gap-1">
+          <h1 className="text-2xl sm:text-3xl font-semibold text-[#191919]">
+            {greetingText}
+          </h1>
+          <p className="text-sm text-[#666663]">
+            Vue d'ensemble de votre inventaire et commandes
+          </p>
         </div>
         <div className="hidden md:flex items-center gap-2 text-sm text-[#666663]">
           <BarChart3 className="w-4 h-4" />

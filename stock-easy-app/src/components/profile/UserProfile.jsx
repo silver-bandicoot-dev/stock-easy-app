@@ -212,7 +212,29 @@ const UserProfile = () => {
             >
               <ArrowLeft className="w-5 h-5" />
             </button>
-            <h1 className="text-3xl font-bold text-[#191919]">Mon Profil</h1>
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full overflow-hidden bg-[#E5E4DF] flex items-center justify-center text-sm font-semibold text-[#191919]">
+                {photoPreview ? (
+                  <img
+                    src={photoPreview}
+                    alt="Profil"
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <span>{getInitials()}</span>
+                )}
+              </div>
+              <div className="flex flex-col">
+                <h1 className="text-xl font-semibold text-[#191919] leading-snug">
+                  Mon profil
+                </h1>
+                <p className="text-sm text-[#666663]">
+                  {firstName || lastName
+                    ? `${firstName} ${lastName}`.trim()
+                    : currentUser?.email || ''}
+                </p>
+              </div>
+            </div>
           </div>
           
           <button

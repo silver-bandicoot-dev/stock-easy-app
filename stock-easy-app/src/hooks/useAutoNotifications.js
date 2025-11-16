@@ -83,9 +83,7 @@ export function useAutoNotifications(data, options = {}) {
       }
     };
 
-    // Vérifier immédiatement au chargement
-    checkStock();
-
+    // NE PAS vérifier immédiatement au chargement - attendre l'intervalle
     // Puis vérifier périodiquement
     const interval = setInterval(checkStock, stockCheckInterval);
     intervalsRef.current.push(interval);
@@ -115,9 +113,7 @@ export function useAutoNotifications(data, options = {}) {
       }
     };
 
-    // Vérifier immédiatement au chargement
-    checkUnmapped();
-
+    // NE PAS vérifier immédiatement au chargement - attendre l'intervalle
     // Puis vérifier périodiquement
     const interval = setInterval(checkUnmapped, unmappedCheckInterval);
     intervalsRef.current.push(interval);
@@ -188,7 +184,7 @@ export function useAutoNotifications(data, options = {}) {
       }
     };
 
-    checkDelayed();
+    // NE PAS vérifier immédiatement au chargement - attendre l'intervalle
     const interval = setInterval(checkDelayed, orderDelayedInterval);
     intervalsRef.current.push(interval);
 
@@ -216,7 +212,7 @@ export function useAutoNotifications(data, options = {}) {
       }
     };
 
-    checkDiscrepancies();
+    // NE PAS vérifier immédiatement au chargement - attendre l'intervalle
     const interval = setInterval(checkDiscrepancies, orderDiscrepancyInterval);
     intervalsRef.current.push(interval);
 
@@ -250,8 +246,7 @@ export function useAutoNotifications(data, options = {}) {
     const interval = setInterval(checkSurstock, 60 * 60 * 1000);
     intervalsRef.current.push(interval);
 
-    // Vérifier immédiatement au chargement
-    checkSurstock();
+    // NE PAS vérifier immédiatement au chargement - attendre l'intervalle
 
     return () => clearInterval(interval);
   }, [enabled, data?.products, surstockCheckHour, surstockThresholdDays]);
@@ -277,7 +272,7 @@ export function useAutoNotifications(data, options = {}) {
       }
     };
 
-    checkSupplierInfo();
+    // NE PAS vérifier immédiatement au chargement - attendre l'intervalle
     const interval = setInterval(checkSupplierInfo, supplierInfoInterval);
     intervalsRef.current.push(interval);
 

@@ -6,24 +6,24 @@ import { BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Toolti
  */
 export function SimpleChart({ type = 'bar', data, title, height = 300 }) {
   // Palette de couleurs selon les standards de l'application
-  const COLORS = ['#8B5CF6', '#EF1C43', '#F59E0B', '#10B981', '#3B82F6'];
+  const COLORS = ['#4F46E5', '#EF4444', '#F97316', '#10B981', '#3B82F6'];
 
   const renderChart = () => {
     switch (type) {
       case 'bar':
         return (
           <ResponsiveContainer width="100%" height={height}>
-            <BarChart data={data} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#E5E4DF" />
+            <BarChart data={data} barSize={28} margin={{ top: 10, right: 20, left: 0, bottom: 5 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#EBEAE4" vertical={false} />
               <XAxis 
                 dataKey="name" 
                 stroke="#666663"
-                fontSize={12}
+                fontSize={11}
                 tick={{ fill: '#666663' }}
               />
               <YAxis 
                 stroke="#666663"
-                fontSize={12}
+                fontSize={11}
                 tick={{ fill: '#666663' }}
               />
               <Tooltip 
@@ -31,12 +31,12 @@ export function SimpleChart({ type = 'bar', data, title, height = 300 }) {
                   backgroundColor: 'white', 
                   border: '1px solid #E5E4DF',
                   borderRadius: '8px',
-                  padding: '8px'
+                  padding: '8px',
+                  boxShadow: '0 12px 30px rgba(15, 23, 42, 0.12)'
                 }}
                 labelStyle={{ color: '#191919', fontWeight: 'bold' }}
               />
-              <Legend />
-              <Bar dataKey="value" fill={data[0]?.color || '#8B5CF6'} radius={[8, 8, 0, 0]}>
+              <Bar dataKey="value" fill={data[0]?.color || '#4F46E5'} radius={[6, 6, 0, 0]}>
                 {data.map((entry, index) => (
                   <Cell key={`cell-${index}`} fill={entry.color || COLORS[index % COLORS.length]} />
                 ))}
@@ -52,11 +52,12 @@ export function SimpleChart({ type = 'bar', data, title, height = 300 }) {
               <Pie
                 data={data}
                 cx="50%"
-                cy="50%"
+                cy="52%"
                 labelLine={false}
-                label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                outerRadius={80}
-                fill="#8884d8"
+                label={({ name, percent }) => `${(percent * 100).toFixed(0)}% • ${name}`}
+                outerRadius={86}
+                innerRadius={56}
+                fill="#4F46E5"
                 dataKey="value"
               >
                 {data.map((entry, index) => (
@@ -68,7 +69,8 @@ export function SimpleChart({ type = 'bar', data, title, height = 300 }) {
                   backgroundColor: 'white', 
                   border: '1px solid #E5E4DF',
                   borderRadius: '8px',
-                  padding: '8px'
+                  padding: '8px',
+                  boxShadow: '0 12px 30px rgba(15, 23, 42, 0.12)'
                 }}
               />
             </PieChart>
@@ -83,8 +85,10 @@ export function SimpleChart({ type = 'bar', data, title, height = 300 }) {
   return (
     <div className="bg-white rounded-xl shadow-sm border border-[#E5E4DF] overflow-hidden">
       {title && (
-        <div className="bg-gradient-to-r from-gray-50 to-gray-100/50 border-b border-[#E5E4DF] px-6 py-4">
-          <h3 className="text-lg font-bold text-[#191919]">{title}</h3>
+        <div className="border-b border-[#E5E4DF] px-6 py-4 bg-[#F9F8F5]">
+          <h3 className="text-sm font-semibold text-[#191919] tracking-wide uppercase">
+            {title}
+          </h3>
         </div>
       )}
       <div className="p-6">

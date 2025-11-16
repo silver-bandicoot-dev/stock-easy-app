@@ -47,33 +47,27 @@ export const ProductsToOrder = ({ products, onViewDetails, onQuickOrder }) => {
   }, [products]);
   return (
     <div className="bg-white rounded-xl shadow-sm border border-[#E5E4DF] overflow-hidden">
-      {/* Header amélioré */}
-      <div className="bg-gradient-to-r from-red-50 to-red-100/50 border-b border-[#E5E4DF] p-6">
-        <div className="space-y-4">
-          {/* Première ligne : Titre et badge */}
-          <div className="flex items-start justify-between gap-4">
-            <div className="flex items-center gap-3 flex-1 min-w-0">
-              <div className="w-12 h-12 bg-red-500 rounded-xl flex items-center justify-center shadow-md shrink-0">
-                <AlertCircle className="w-6 h-6 text-white shrink-0" />
+      {/* Header plus sobre et aligné avec le reste de l'application */}
+      <div className="border-b border-[#E5E4DF] px-6 py-4 bg-[#F9F8F5]">
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3 flex-1 min-w-0">
+            <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center border border-[#E5E4DF] shrink-0">
+              <AlertCircle className="w-5 h-5 text-[#EF1C43] shrink-0" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2">
+                <h2 className="text-sm font-semibold text-[#191919] uppercase tracking-wide">
+                  Produits à commander
+                </h2>
+                <InfoTooltip content={tooltips.toOrder} />
               </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <h2 className="text-xl font-bold text-[#191919]">Produits à commander</h2>
-                  <InfoTooltip content={tooltips.toOrder} />
-                </div>
-                <div className="flex items-center gap-2 mt-1 flex-wrap">
-                  <span className="text-sm font-semibold text-[#EF1C43]">
-                    {products.length}
-                  </span>
-                  <span className="text-sm text-[#666663]">produit(s) nécessitent une action</span>
-                </div>
+              <div className="flex items-center gap-2 mt-1 flex-wrap">
+                <span className="text-sm font-semibold text-[#191919]">
+                  {products.length}
+                </span>
+                <span className="text-sm text-[#666663]">produit(s) nécessitent une action</span>
               </div>
             </div>
-            {products.length > 0 && (
-              <div className="px-3 py-1.5 bg-red-500 text-white text-xs font-bold rounded-full shrink-0">
-                Urgent
-              </div>
-            )}
           </div>
         </div>
       </div>
@@ -82,10 +76,10 @@ export const ProductsToOrder = ({ products, onViewDetails, onQuickOrder }) => {
         <div className="space-y-3 max-h-96 overflow-y-auto custom-scrollbar">
           {products.length === 0 ? (
             <div className="text-center py-12">
-              <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <ShoppingCart className="w-8 h-8 text-green-600" />
+              <div className="w-16 h-16 bg-[#F3F2EE] rounded-full flex items-center justify-center mx-auto mb-4">
+                <ShoppingCart className="w-8 h-8 text-[#666663]" />
               </div>
-              <p className="text-[#666663] font-medium">Rien à commander</p>
+              <p className="text-[#191919] font-medium">Rien à commander</p>
               <p className="text-xs text-[#666663] mt-1">Tous vos stocks sont à jour</p>
             </div>
           ) : (
@@ -100,137 +94,149 @@ export const ProductsToOrder = ({ products, onViewDetails, onQuickOrder }) => {
               const hasQtyInTransit = (p.qtyInTransit || 0) > 0;
 
               return (
-              <motion.div
-                key={p.sku}
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: index * 0.03, duration: 0.3 }}
-                whileHover={{ scale: 1.02, x: 4 }}
-                className="group relative bg-gradient-to-r from-red-50/50 to-transparent rounded-xl p-4 hover:shadow-md transition-all duration-300 border border-red-100 hover:border-red-300"
-              >
-                {/* Badges multiples en haut à droite */}
-                <div className="absolute top-2 right-2 flex flex-col items-end gap-1">
-                  {moqWarning && (
-                    <div className="bg-orange-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap">
-                      MOQ: {p.moq}
-                    </div>
-                  )}
-                  {hasHighStockoutRisk && (
-                    <div className="bg-red-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
-                      RISQUE {p.stockoutRisk}%
-                    </div>
-                  )}
-                  {!moqWarning && !hasHighStockoutRisk && (
-                    <div className="bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
-                      URGENT
-                    </div>
-                  )}
-                </div>
-                
-                <div className="flex items-start justify-between gap-4 pr-16">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-start gap-2 mb-2">
-                      <h3 className="font-bold text-[#191919] text-sm leading-tight">{p.name}</h3>
-                    </div>
-                    <p className="text-xs text-[#666663] mb-3 truncate">{p.supplier || 'Non assigné'}</p>
-                    
-                    {/* Barre de santé */}
-                    {p.healthPercentage !== undefined && (
-                      <div className="mb-3">
-                        <div className="flex items-center justify-between mb-1">
-                          <span className="text-[10px] font-medium text-[#666663]">Santé</span>
-                          <span className="text-[10px] font-bold text-red-600">{Math.round(p.healthPercentage)}%</span>
-                        </div>
-                        <div className="h-1.5 bg-red-100 rounded-full overflow-hidden">
-                          <div 
-                            className="h-full bg-gradient-to-r from-red-400 to-red-600 transition-all duration-500"
-                            style={{ width: `${Math.max(5, p.healthPercentage)}%` }}
-                          />
-                        </div>
+                <motion.div
+                  key={p.sku}
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: index * 0.03, duration: 0.3 }}
+                  whileHover={{ x: 4, boxShadow: '0 8px 24px rgba(0,0,0,0.06)' }}
+                  className="group relative rounded-lg p-4 border border-[#E5E4DF] bg-white transition-all duration-200"
+                >
+                  {/* Badges en haut à droite, plus discrets */}
+                  <div className="absolute top-3 right-3 flex flex-col items-end gap-1">
+                    {moqWarning && (
+                      <div className="bg-[#FFF4E5] text-[10px] font-medium text-[#8A4A00] px-2 py-0.5 rounded-full whitespace-nowrap">
+                        MOQ: {p.moq}
                       </div>
                     )}
-                    
-                    {/* Informations de stock */}
-                    <div className="flex items-center gap-3 text-xs flex-wrap">
-                      <div className="flex items-center gap-1">
-                        <TrendingDown className="w-3 h-3 text-red-600" />
-                        <span className="text-[#666663]">Stock: </span>
-                        <span className="font-bold text-[#191919]">{formatUnits(p.stock)}</span>
+                    {hasHighStockoutRisk && (
+                      <div className="bg-[#FDECEC] text-[10px] font-medium text-[#B3261E] px-2 py-0.5 rounded-full">
+                        Risque {p.stockoutRisk}%
                       </div>
-                      {(p.qtyInTransit || 0) > 0 && (
-                        <div className="flex items-center gap-1">
-                          <Package className="w-3 h-3 text-purple-600" />
-                          <span className="text-[#666663]">En transit: </span>
-                          <span className="font-bold text-purple-600">{formatUnits(p.qtyInTransit || 0)}</span>
-                        </div>
-                      )}
-                      {stockoutDateFormatted && (
-                        <div className="flex items-center gap-1">
-                          <Calendar className="w-3 h-3 text-orange-600" />
-                          <span className="text-[#666663]">Rupture: </span>
-                          <span className="font-bold text-orange-600">{stockoutDateFormatted}</span>
-                        </div>
-                      )}
-                      {(p.investment || (qtyToOrderRemaining > 0 && p.buyPrice)) && (
-                        <div className="flex items-center gap-1">
-                          <DollarSign className="w-3 h-3 text-green-600" />
-                          <span className="text-[#666663]">Investissement: </span>
-                          <span className="font-bold text-green-600">
-                            {formatCurrency(p.investment || (qtyToOrderRemaining * p.buyPrice) || 0)}
-                          </span>
-                        </div>
-                      )}
-                    </div>
+                    )}
+                    {!moqWarning && !hasHighStockoutRisk && (
+                      <div className="bg-[#F3F2EE] text-[10px] font-medium text-[#44433E] px-2 py-0.5 rounded-full">
+                        À surveiller
+                      </div>
+                    )}
                   </div>
                   
-                  <div className="flex flex-col items-end gap-2 shrink-0">
-                    <div className="text-right">
-                      <div className="text-lg font-bold text-[#EF1C43] mb-1">
-                        {formatUnits(qtyToOrderRemaining)}
+                  <div className="flex items-start justify-between gap-4 pr-20">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-start gap-2 mb-1">
+                        <h3 className="font-medium text-[#191919] text-sm leading-tight">{p.name}</h3>
                       </div>
-                      <div className="text-[10px] text-[#666663] uppercase font-medium">
-                        {p.qtyInOrder > 0 ? 'À commander' : 'Unités'}
-                      </div>
-                      {p.qtyInOrder > 0 && (
-                        <div className="text-[10px] text-purple-600 font-medium mt-1">
-                          ({p.qtyInOrder} commandé{p.qtyInOrder > 1 ? 's' : ''})
+                      <p className="text-xs text-[#666663] mb-3 truncate">
+                        {p.supplier || 'Non assigné'}
+                      </p>
+                      
+                      {/* Barre de santé plus neutre */}
+                      {p.healthPercentage !== undefined && (
+                        <div className="mb-3">
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-[10px] font-medium text-[#666663]">Santé</span>
+                            <span className="text-[10px] font-semibold text-[#191919]">
+                              {Math.round(p.healthPercentage)}%
+                            </span>
+                          </div>
+                          <div className="h-1.5 bg-[#F3F2EE] rounded-full overflow-hidden">
+                            <div 
+                              className="h-full bg-[#EF1C43] transition-all duration-500"
+                              style={{ width: `${Math.max(5, p.healthPercentage)}%` }}
+                            />
+                          </div>
                         </div>
                       )}
-                      {moqWarning && (
-                        <div className="text-[10px] text-orange-600 font-bold mt-1">
-                          Min: {p.moq}
+                      
+                      {/* Informations de stock */}
+                      <div className="flex items-center gap-3 text-xs flex-wrap">
+                        <div className="flex items-center gap-1">
+                          <TrendingDown className="w-3 h-3 text-[#EF1C43]" />
+                          <span className="text-[#666663]">Stock: </span>
+                          <span className="font-semibold text-[#191919]">
+                            {formatUnits(p.stock)}
+                          </span>
                         </div>
-                      )}
+                        {hasQtyInTransit && (
+                          <div className="flex items-center gap-1">
+                            <Package className="w-3 h-3 text-[#666663]" />
+                            <span className="text-[#666663]">En transit: </span>
+                            <span className="font-semibold text-[#191919]">
+                              {formatUnits(p.qtyInTransit || 0)}
+                            </span>
+                          </div>
+                        )}
+                        {stockoutDateFormatted && (
+                          <div className="flex items-center gap-1">
+                            <Calendar className="w-3 h-3 text-[#666663]" />
+                            <span className="text-[#666663]">Rupture: </span>
+                            <span className="font-semibold text-[#191919]">
+                              {stockoutDateFormatted}
+                            </span>
+                          </div>
+                        )}
+                        {(p.investment || (qtyToOrderRemaining > 0 && p.buyPrice)) && (
+                          <div className="flex items-center gap-1">
+                            <DollarSign className="w-3 h-3 text-[#666663]" />
+                            <span className="text-[#666663]">Investissement: </span>
+                            <span className="font-semibold text-[#191919]">
+                              {formatCurrency(
+                                p.investment || (qtyToOrderRemaining * p.buyPrice) || 0
+                              )}
+                            </span>
+                          </div>
+                        )}
+                      </div>
                     </div>
                     
-                    {/* Boutons d'action */}
-                    {onQuickOrder && (
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onQuickOrder(p);
-                        }}
-                        className="opacity-0 group-hover:opacity-100 transition-opacity px-3 py-1.5 bg-red-500 hover:bg-red-600 text-white text-xs font-semibold rounded-lg shadow-sm hover:shadow-md transition-all duration-200 flex items-center gap-1.5"
-                      >
-                        <ShoppingCart className="w-3 h-3" />
-                        Commander
-                      </button>
-                    )}
-                    {onViewDetails && (
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onViewDetails(p);
-                        }}
-                        className="opacity-0 group-hover:opacity-100 transition-opacity px-3 py-1.5 bg-white border border-[#E5E4DF] hover:border-[#191919] text-[#191919] text-xs font-semibold rounded-lg transition-all duration-200 flex items-center gap-1.5"
-                      >
-                        <Eye className="w-3 h-3" />
-                        Détails
-                      </button>
-                    )}
+                    <div className="flex flex-col items-end gap-2 shrink-0">
+                      <div className="text-right">
+                        <div className="text-lg font-semibold text-[#191919] mb-1">
+                          {formatUnits(qtyToOrderRemaining)}
+                        </div>
+                        <div className="text-[10px] text-[#666663] uppercase font-medium tracking-wide">
+                          {p.qtyInOrder > 0 ? 'À commander' : 'Unités'}
+                        </div>
+                        {p.qtyInOrder > 0 && (
+                          <div className="text-[10px] text-[#666663] font-medium mt-1">
+                            ({p.qtyInOrder} commandé{p.qtyInOrder > 1 ? 's' : ''})
+                          </div>
+                        )}
+                        {moqWarning && (
+                          <div className="text-[10px] text-[#8A4A00] font-medium mt-1">
+                            Min: {p.moq}
+                          </div>
+                        )}
+                      </div>
+                      
+                      {/* Boutons d'action, sobres et uniquement au survol */}
+                      {onQuickOrder && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onQuickOrder(p);
+                          }}
+                          className="opacity-0 group-hover:opacity-100 transition-opacity px-3 py-1.5 bg-[#191919] hover:bg-black text-white text-xs font-semibold rounded-lg flex items-center gap-1.5"
+                        >
+                          <ShoppingCart className="w-3 h-3" />
+                          Commander
+                        </button>
+                      )}
+                      {onViewDetails && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onViewDetails(p);
+                          }}
+                          className="opacity-0 group-hover:opacity-100 transition-opacity px-3 py-1.5 bg-white border border-[#E5E4DF] hover:border-[#191919] text-[#191919] text-xs font-semibold rounded-lg flex items-center gap-1.5"
+                        >
+                          <Eye className="w-3 h-3" />
+                          Détails
+                        </button>
+                      )}
+                    </div>
                   </div>
-                </div>
-              </motion.div>
+                </motion.div>
               );
             })
           )}

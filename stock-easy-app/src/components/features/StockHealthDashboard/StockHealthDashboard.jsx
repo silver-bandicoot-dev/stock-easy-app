@@ -6,44 +6,36 @@ export function StockHealthDashboard({ totalUrgent, totalWarning, totalHealthy, 
 
   const cards = [
     {
-      title: "Action Immédiate",
+      title: "Action immédiate",
       value: totalUrgent,
       description: "produits à commander maintenant",
       icon: AlertTriangle,
-      bgColor: "bg-red-50",
-      borderColor: "border-red-200",
-      iconColor: "text-red-600",
-      valueColor: "text-red-600",
+      accentColor: "text-[#B3261E]",
+      badgeBg: "bg-[#FDECEC]",
     },
     {
-      title: "À Surveiller",
+      title: "À surveiller",
       value: totalWarning,
       description: "produits approchant le seuil",
       icon: Eye,
-      bgColor: "bg-orange-50",
-      borderColor: "border-orange-200",
-      iconColor: "text-orange-500",
-      valueColor: "text-orange-500",
+      accentColor: "text-[#8A4A00]",
+      badgeBg: "bg-[#FFF4E5]",
     },
     {
-      title: "En Bonne Santé",
+      title: "En bonne santé",
       value: totalHealthy,
       description: "produits avec stock suffisant",
       icon: CheckCircle,
-      bgColor: "bg-green-50",
-      borderColor: "border-green-200",
-      iconColor: "text-green-600",
-      valueColor: "text-green-600",
+      accentColor: "text-[#166534]",
+      badgeBg: "bg-[#ECFDF3]",
     },
     {
-      title: "Score de Santé",
+      title: "Score de santé",
       value: `${healthScore}%`,
       description: "de l'inventaire en bonne santé",
       icon: TrendingUp,
-      bgColor: "bg-blue-50",
-      borderColor: "border-blue-200",
-      iconColor: "text-blue-600",
-      valueColor: "text-blue-600",
+      accentColor: "text-[#1D4ED8]",
+      badgeBg: "bg-[#EFF6FF]",
     },
   ];
 
@@ -55,23 +47,35 @@ export function StockHealthDashboard({ totalUrgent, totalWarning, totalHealthy, 
         return (
           <div
             key={index}
-            className={`${card.bgColor} border-2 ${card.borderColor} rounded-xl p-6 hover:shadow-lg transition-all duration-300 hover:-translate-y-1`}
+            className="group relative rounded-xl border border-[#E5E4DF] bg-white p-5 hover:shadow-md transition-all duration-200"
           >
             {/* Header avec icône */}
-            <div className="flex items-center gap-3 mb-4">
-              <div className={`w-10 h-10 ${card.bgColor} rounded-lg flex items-center justify-center border-2 ${card.borderColor}`}>
-                <Icon className={`w-6 h-6 ${card.iconColor}`} />
+            <div className="flex items-center gap-3 mb-3 pl-3">
+              <div className={`w-9 h-9 rounded-lg flex items-center justify-center bg-[#F9F8F5]`}>
+                <Icon className={`w-5 h-5 ${card.accentColor}`} />
               </div>
-              <h3 className="font-semibold text-[#191919] text-sm">{card.title}</h3>
+              <h3 className="font-medium text-[#191919] text-xs tracking-wide uppercase">
+                {card.title}
+              </h3>
             </div>
 
             {/* Valeur principale */}
-            <div className={`text-3xl font-bold ${card.valueColor} mb-2`}>
-              {card.value}
+            <div className="pl-3 mb-1">
+              <div className="inline-flex items-baseline gap-1">
+                <span className="text-2xl font-semibold text-[#191919]">
+                  {card.value}
+                </span>
+              </div>
             </div>
 
             {/* Description */}
-            <p className="text-xs text-[#666663]">{card.description}</p>
+            <div className="pl-3">
+              <span
+                className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium ${card.badgeBg} ${card.accentColor}`}
+              >
+                {card.description}
+              </span>
+            </div>
           </div>
         );
       })}

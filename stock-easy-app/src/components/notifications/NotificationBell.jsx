@@ -12,7 +12,7 @@ import {
 import { supabase } from '../../lib/supabaseClient';
 import { toast } from 'sonner';
 
-const NotificationBell = () => {
+const NotificationBell = ({ variant = 'floating' }) => {
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [isOpen, setIsOpen] = useState(false);
@@ -170,15 +170,30 @@ const NotificationBell = () => {
     }
   };
 
+  const wrapperClass =
+    variant === 'floating'
+      ? 'fixed top-2 right-3 z-50'
+      : 'relative';
+
+  const buttonClass =
+    variant === 'floating'
+      ? 'relative flex items-center justify-center w-8 h-8 text-white bg-black hover:bg-gray-900 rounded-full transition-colors shadow-md'
+      : 'relative flex items-center justify-center w-9 h-9 rounded-full bg-[#E5E4DF] hover:bg-[#D6D5CF] transition-colors';
+
+  const iconClass =
+    variant === 'floating'
+      ? 'text-white'
+      : 'text-[#191919]';
+
   return (
-    <div className="fixed top-2 right-3 z-50">
+    <div className={wrapperClass}>
       {/* Bouton cloche */}
       <button
         onClick={toggleDropdown}
-        className="relative flex items-center justify-center w-8 h-8 text-white bg-black hover:bg-gray-900 rounded-full transition-colors shadow-md"
+        className={buttonClass}
         aria-label="Notifications"
       >
-        <Bell size={16} className="text-white" />
+        <Bell size={16} className={iconClass} />
         {hasNewNotification && (
           <span className="absolute top-1 right-1 inline-flex h-3.5 w-3.5">
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>

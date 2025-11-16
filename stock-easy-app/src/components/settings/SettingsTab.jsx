@@ -1,12 +1,13 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Settings, Users, Package, MapPin, Cog, TrendingUp } from 'lucide-react';
+import { Cog, Sliders, Users, Package, MapPin, TrendingUp, PlugZap } from 'lucide-react';
 import { SubTabsNavigation } from '../features/SubTabsNavigation';
 import { ParametresGeneraux } from '../settings/ParametresGeneraux';
 import { GestionFournisseurs } from '../settings/GestionFournisseurs';
 import { MappingSKUFournisseur } from '../settings/MappingSKUFournisseur';
 import { GestionWarehouses } from '../settings/GestionWarehouses';
 import { GestionMultiplicateurs } from '../settings/GestionMultiplicateurs';
+import { IntegrationsSettings } from '../settings/IntegrationsSettings';
 import { SETTINGS_TABS } from '../../constants/stockEasyConstants';
 
 export const SettingsTab = ({
@@ -39,7 +40,7 @@ export const SettingsTab = ({
     {
       key: SETTINGS_TABS.GENERAL,
       title: 'Paramètres Généraux',
-      icon: Cog,
+      icon: Sliders,
       shortTitle: 'Généraux'
     },
     {
@@ -65,6 +66,12 @@ export const SettingsTab = ({
       title: 'Gestion Entrepôts',
       icon: MapPin,
       shortTitle: 'Entrepôts'
+    },
+    {
+      key: SETTINGS_TABS.INTEGRATIONS,
+      title: 'Intégrations',
+      icon: PlugZap,
+      shortTitle: 'Intégrations'
     }
   ];
 
@@ -80,7 +87,7 @@ export const SettingsTab = ({
       {/* Header avec titre et sous-titre */}
       <div className="bg-white rounded-xl shadow-sm border border-[#E5E4DF] p-6">
         <div className="flex items-center gap-3 mb-2">
-          <Settings className="w-8 h-8 text-[#191919]" />
+          <Cog className="w-8 h-8 text-[#191919]" />
           <h1 className="text-2xl font-bold text-[#191919]">Paramètres</h1>
         </div>
         <p className="text-xs sm:text-sm text-[#666663]">
@@ -168,6 +175,10 @@ export const SettingsTab = ({
                   loadData={loadData}
                   multiplicateurDefaut={multiplicateurDefaut}
                 />
+              )}
+
+              {parametersSubTab === SETTINGS_TABS.INTEGRATIONS && (
+                <IntegrationsSettings />
               )}
             </motion.div>
           )

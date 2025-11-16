@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabaseClient';
+import { notifyMentionedUsers, extractMentions } from './mentionNotificationsService';
 
 // Récupérer les commentaires d'une commande
 export async function getOrderComments(orderId: string) {
@@ -90,18 +91,41 @@ export async function addComment(orderId: string, content: string, mentions: str
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error('Non authentifié');
 
+    // Récupérer l'ID de l'entreprise de l'utilisateur
+    const { data: profile } = await supabase
+      .from('user_profiles')
+      .select('company_id')
+      .eq('id', user.id)
+      .single();
+
+    const companyId = profile?.company_id;
+
+    // Si pas de mentions fournies, extraire automatiquement du contenu
+    let mentionedUserIds = mentions;
+    if (mentionedUserIds.length === 0 && companyId) {
+      mentionedUserIds = await extractMentions(content, companyId);
+    }
+
+    // Créer le commentaire
     const { data, error } = await supabase
       .from('order_comments')
       .insert({
         order_id: orderId,
         user_id: user.id,
         content: content,
-        mentioned_users: mentions
+        mentioned_users: mentionedUserIds
       })
       .select()
       .single();
 
     if (error) throw error;
+
+    // Créer des notifications pour les utilisateurs mentionnés
+    if (mentionedUserIds.length > 0) {
+      await notifyMentionedUsers(orderId, user.id, content, mentionedUserIds);
+      console.log(`✅ ${mentionedUserIds.length} notification(s) de mention créée(s)`);
+    }
+
     return { data, error: null };
   } catch (error) {
     console.error('Erreur addComment:', error);
