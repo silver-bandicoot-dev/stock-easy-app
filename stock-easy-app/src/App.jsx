@@ -7,9 +7,9 @@ import SupabaseLogin from './components/auth/SupabaseLogin';
 import SupabaseSignup from './components/auth/SupabaseSignup';
 import SupabaseResetPassword from './components/auth/SupabaseResetPassword';
 import AcceptInvitation from './components/auth/AcceptInvitation';
-import ProfileWithSidebar from './components/profile/ProfileWithSidebar';
 import NotificationsPage from './components/notifications/NotificationsPage';
 import StockEasy from './StockEasy';
+import ProfileRedirect from './components/profile/ProfileRedirect';
 import SupabaseConnectionTest from './components/debug/SupabaseConnectionTest';
 import './config/i18n';
 
@@ -52,7 +52,7 @@ const App = () => {
             path="/profile"
             element={
               <ProtectedRoute>
-                <ProfileWithSidebar />
+                <ProfileRedirect />
               </ProtectedRoute>
             }
           />

@@ -73,7 +73,8 @@ export const MAIN_TABS = {
   ANALYTICS: 'analytics',
   HISTORY: 'history',
   SETTINGS: 'settings',
-  AI: 'ai'
+  AI: 'ai',
+  PROFILE: 'profile'
 };
 
 // Sous-onglets Track

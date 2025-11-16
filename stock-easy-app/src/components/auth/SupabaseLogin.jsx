@@ -28,7 +28,6 @@ const SupabaseLogin = () => {
         }
         toast.error(errorMessage);
       } else if (user) {
-        toast.success('Connexion réussie !');
         navigate('/');
       }
     } catch (error) {

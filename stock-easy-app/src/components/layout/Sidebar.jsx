@@ -8,10 +8,8 @@ import {
   FileText, 
   Settings, 
   User,
-  LogOut,
   Menu,
   X,
-  RefreshCw,
   Brain,
   BarChart3,
   ChevronDown,
@@ -33,9 +31,7 @@ import { Logo } from '../ui/Logo';
 const Sidebar = ({ 
   activeTab, 
   setActiveTab, 
-  handleLogout, 
-  syncData, 
-  syncing,
+  handleLogout,
   analyticsSubTab,
   setAnalyticsSubTab,
   aiSubTab,
@@ -216,26 +212,6 @@ const Sidebar = ({
           );
         })}
       </nav>
-
-      {/* Actions Footer */}
-      <div className="px-4 py-4 border-t border-[#E5E4DF] space-y-2">
-        <button
-          onClick={syncData}
-          disabled={syncing}
-          className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-[#191919] hover:bg-[#E5E4DF] transition-all text-sm font-medium"
-        >
-          <RefreshCw className={`w-5 h-5 shrink-0 ${syncing ? 'animate-spin' : ''}`} />
-          <span>Synchroniser</span>
-        </button>
-
-        <button
-          onClick={handleLogout}
-          className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-red-400 hover:bg-red-900/20 transition-all text-sm font-medium"
-        >
-          <LogOut className="w-5 h-5 shrink-0" />
-          <span>Déconnexion</span>
-        </button>
-      </div>
     </aside>
   );
 
@@ -270,57 +246,76 @@ const Sidebar = ({
 
               {/* Navigation */}
               <nav className="flex-1 px-4 py-6 space-y-2 overflow-y-auto">
-                {/* Notification intégrée au menu */}
-                <div className="mb-4">
-                  <NotificationBell variant="mobile" />
-                </div>
                 {menuItems.map((item) => {
                   const Icon = item.icon;
                   const routeActive = item.type === 'route' && location.pathname === item.path;
                   const isActive = item.type === 'tab' ? activeTab === item.id : routeActive;
+                  const showSubMenu = item.hasSubMenu && (
+                    (item.id === 'analytics' && analyticsExpanded) ||
+                    (item.id === 'ai' && aiExpanded) ||
+                    (item.id === 'settings' && settingsExpanded)
+                  );
                   
                   return (
-                    <button
-                      key={item.id}
-                      onClick={() => handleMenuItemClick(item)}
-                      className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg font-medium text-sm transition-all ${
-                        isActive
-                          ? 'bg-[#191919] text-white shadow-lg'
-                          : 'text-[#191919] hover:bg-[#E5E4DF]'
-                      }`}
-                    >
-                      <Icon className="w-5 h-5 shrink-0" />
-                      <span>{item.label}</span>
-                    </button>
+                    <div key={item.id}>
+                      {/* Menu principal */}
+                      <button
+                        onClick={() => handleMenuItemClick(item)}
+                        className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg font-medium text-sm transition-all ${
+                          isActive
+                            ? 'bg-[#191919] text-white shadow-lg'
+                            : 'text-[#191919] hover:bg-[#E5E4DF]'
+                        }`}
+                      >
+                        <Icon className="w-5 h-5 shrink-0" />
+                        <span className="flex-1 text-left">{item.label}</span>
+                        {item.badge && (
+                          <span className="px-2 py-0.5 text-xs font-bold bg-purple-600 text-white rounded">
+                            {item.badge}
+                          </span>
+                        )}
+                        {item.hasSubMenu && (
+                          showSubMenu ? 
+                            <ChevronDown className="w-4 h-4" /> : 
+                            <ChevronRight className="w-4 h-4" />
+                        )}
+                      </button>
+                      
+                      {/* Sous-menu */}
+                      {showSubMenu && item.subItems && (
+                        <div className="ml-4 mt-1 space-y-1">
+                          {item.subItems.map((subItem) => {
+                            const SubIcon = subItem.icon;
+                            const isSubActive = item.id === 'analytics' 
+                              ? (analyticsSubTab === subItem.id && activeTab === 'analytics')
+                              : item.id === 'ai'
+                              ? (aiSubTab === subItem.id && activeTab === 'ai')
+                              : item.id === 'settings'
+                              ? (settingsSubTab === subItem.id && activeTab === 'settings')
+                              : false;
+                            
+                            return (
+                              <button
+                                key={subItem.id}
+                                onClick={() => handleSubMenuClick(item.id, subItem)}
+                                className={`w-full flex items-center gap-3 px-4 py-2 rounded-lg transition-colors ${
+                                  isSubActive
+                                    ? 'bg-[#191919] text-white'
+                                    : 'text-[#191919] hover:bg-[#E5E4DF]'
+                                }`}
+                                style={{ fontSize: '0.8125rem' }}
+                              >
+                                <SubIcon className="w-4 h-4 shrink-0" />
+                                <span>{subItem.label}</span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
                   );
                 })}
               </nav>
-
-              {/* Actions Footer */}
-              <div className="px-4 py-4 border-t border-[#E5E4DF] space-y-2">
-                <button
-                  onClick={() => {
-                    syncData();
-                    setMobileMenuOpen(false);
-                  }}
-                  disabled={syncing}
-                  className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-[#191919] hover:bg-[#E5E4DF] transition-all text-sm font-medium"
-                >
-                  <RefreshCw className={`w-5 h-5 shrink-0 ${syncing ? 'animate-spin' : ''}`} />
-                  <span>Synchroniser</span>
-                </button>
-
-                <button
-                  onClick={() => {
-                    handleLogout();
-                    setMobileMenuOpen(false);
-                  }}
-                  className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-red-400 hover:bg-red-900/20 transition-all text-sm font-medium"
-                >
-                  <LogOut className="w-5 h-5 shrink-0" />
-                  <span>Déconnexion</span>
-                </button>
-              </div>
             </motion.div>
           </>
         )}

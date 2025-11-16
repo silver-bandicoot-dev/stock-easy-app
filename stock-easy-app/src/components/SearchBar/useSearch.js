@@ -91,33 +91,33 @@ export const useSearch = (query) => {
 
       // Recherche parallèle dans produits, fournisseurs, commandes et entrepôts
       const [produitsRes, fournisseursRes, commandesRes, warehousesRes] = await Promise.all([
-        // Recherche ÉLARGIE dans les produits (SKU, nom, fournisseur, catégorie)
+        // Recherche ÉLARGIE dans les produits (SKU, nom, fournisseur)
         supabase
           .from('produits')
-          .select('sku, nom_produit, stock_actuel, fournisseur, prix_vente, image_url, prix_achat, categorie, health_status')
-          .or(`sku.ilike.${searchPattern},nom_produit.ilike.${searchPattern},fournisseur.ilike.${searchPattern},categorie.ilike.${searchPattern}`)
+          .select('sku, nom_produit, stock_actuel, fournisseur, prix_vente, image_url, prix_achat, health_status')
+          .or(`sku.ilike.${searchPattern},nom_produit.ilike.${searchPattern},fournisseur.ilike.${searchPattern}`)
           .limit(10), // Augmenté de 5 à 10
 
-        // Recherche ÉLARGIE dans les fournisseurs (nom, email, téléphone)
+        // Recherche ÉLARGIE dans les fournisseurs (nom, email, contacts)
         supabase
           .from('fournisseurs')
-          .select('id, nom_fournisseur, email, lead_time_days, telephone, adresse')
-          .or(`nom_fournisseur.ilike.${searchPattern},email.ilike.${searchPattern},telephone.ilike.${searchPattern}`)
+          .select('id, nom_fournisseur, email, lead_time_days, commercial_contact_phone, commercial_contact_email, notes')
+          .or(`nom_fournisseur.ilike.${searchPattern},email.ilike.${searchPattern},commercial_contact_phone.ilike.${searchPattern},commercial_contact_email.ilike.${searchPattern}`)
           .limit(5), // Augmenté de 3 à 5
 
         // Recherche ÉLARGIE dans les commandes (ID, fournisseur, statut, numéro de suivi)
         supabase
           .from('commandes')
-          .select('id, supplier, status, total, created_at, tracking_number, warehouse_name')
-          .or(`id.ilike.${searchPattern},supplier.ilike.${searchPattern},tracking_number.ilike.${searchPattern},warehouse_name.ilike.${searchPattern}`)
+          .select('id, supplier, status, total, created_at, tracking_number, warehouse_id')
+          .or(`id.ilike.${searchPattern},supplier.ilike.${searchPattern},tracking_number.ilike.${searchPattern}`)
           .order('created_at', { ascending: false })
           .limit(5), // Augmenté de 3 à 5
 
         // Recherche dans les ENTREPÔTS ⭐ NOUVEAU
         supabase
           .from('warehouses')
-          .select('id, name, location, address, city, country, capacity, notes')
-          .or(`name.ilike.${searchPattern},location.ilike.${searchPattern},address.ilike.${searchPattern},city.ilike.${searchPattern}`)
+          .select('id, name, address, city, country, postal_code, notes')
+          .or(`name.ilike.${searchPattern},address.ilike.${searchPattern},city.ilike.${searchPattern},country.ilike.${searchPattern}`)
           .limit(3),
       ]);
       
@@ -176,8 +176,8 @@ export const useSearch = (query) => {
             id: f.id,
             type: 'supplier',
             title: f.nom_fournisseur,
-            subtitle: f.email || f.telephone || 'Pas de contact',
-            meta: `Lead time: ${f.lead_time_days || 14} jours${f.adresse ? ` • ${f.adresse}` : ''}`,
+            subtitle: f.email || f.commercial_contact_email || 'Pas de contact',
+            meta: `Lead time: ${f.lead_time_days || 14} jours${f.commercial_contact_phone ? ` • ${f.commercial_contact_phone}` : ''}`,
             data: f,
           })),
         });
@@ -203,7 +203,7 @@ export const useSearch = (query) => {
               type: 'order',
               title: `Commande #${c.id?.substring(0, 8) || 'N/A'}`,
               subtitle: `${c.supplier}${c.tracking_number ? ` • 📦 ${c.tracking_number}` : ''}`,
-              meta: `${statusLabel}${c.total ? ` • ${c.total.toFixed(2)}€` : ''}${c.warehouse_name ? ` • ${c.warehouse_name}` : ''}`,
+              meta: `${statusLabel}${c.total ? ` • ${c.total.toFixed(2)}€` : ''}`,
               data: c,
             };
           }),
@@ -218,8 +218,8 @@ export const useSearch = (query) => {
             id: w.id,
             type: 'warehouse',
             title: w.name,
-            subtitle: `${w.city || w.location || 'Localisation non définie'}${w.address ? ` • ${w.address}` : ''}`,
-            meta: `${w.country || 'France'}${w.capacity ? ` • Capacité: ${w.capacity} unités` : ''}`,
+            subtitle: `${w.city || 'Localisation non définie'}${w.address ? ` • ${w.address}` : ''}`,
+            meta: `${w.country || 'France'}${w.postal_code ? ` • ${w.postal_code}` : ''}`,
             data: w,
           })),
         });

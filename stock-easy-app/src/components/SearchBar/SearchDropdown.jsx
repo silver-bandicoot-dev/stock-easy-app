@@ -12,8 +12,9 @@ import { useAuth } from '../../contexts/SupabaseAuthContext';
  * @param {string} query - Terme de recherche pour le highlighting
  * @param {boolean} show - Si le dropdown est visible
  * @param {Function} getQuickActions - Fonction pour obtenir les actions rapides d'un item
+ * @param {boolean} isMobile - Si le dropdown est affiché en mode mobile (dans un modal)
  */
-export const SearchDropdown = ({ results, loading, activeIndex, onItemClick, query, show, getQuickActions }) => {
+export const SearchDropdown = ({ results, loading, activeIndex, onItemClick, query, show, getQuickActions, isMobile = false }) => {
   const { currentUser } = useAuth();
   const dropdownRef = useRef(null);
   const activeItemRef = useRef(null);
@@ -38,7 +39,10 @@ export const SearchDropdown = ({ results, loading, activeIndex, onItemClick, que
   return (
     <div
       ref={dropdownRef}
-      className="absolute top-full left-0 right-0 mt-2 bg-white border border-neutral-200 rounded-lg shadow-xl max-h-[500px] overflow-y-auto z-50 animate-slide-down"
+      className={isMobile 
+        ? "bg-white" 
+        : "absolute top-full left-0 right-0 mt-2 bg-white border border-neutral-200 rounded-lg shadow-xl max-h-[500px] overflow-y-auto z-50 animate-slide-down"
+      }
     >
       {/* Message si non authentifié */}
       {!currentUser && query.length >= 2 && (

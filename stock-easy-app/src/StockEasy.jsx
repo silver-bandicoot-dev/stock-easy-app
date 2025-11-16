@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { Package, Bell, Mail, X, Check, Truck, Clock, AlertCircle, CheckCircle, Eye, Settings, Info, Edit2, Activity, TrendingUp, TrendingDown, ArrowUpRight, ArrowDownRight, Upload, FileText, Calendar, RefreshCw, Plus, User, LogOut, Warehouse, Brain, AtSign } from 'lucide-react';
+import { Package, Bell, Mail, X, Check, Truck, Clock, AlertCircle, CheckCircle, Eye, Settings, Info, Edit2, Activity, TrendingUp, TrendingDown, ArrowUpRight, ArrowDownRight, Upload, FileText, Calendar, RefreshCw, Plus, User, LogOut, Warehouse, Brain, AtSign, Compass, Menu } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from './contexts/SupabaseAuthContext';
 import NotificationBell from './components/notifications/NotificationBell';
@@ -30,7 +30,7 @@ import { InlineModalsContainer } from './components/modals/InlineModalsContainer
 
 import Sidebar from './components/layout/Sidebar';
 import { Logo } from './components/ui/Logo';
-import { SearchBar } from './components/SearchBar';
+import { SearchBar, SearchModal } from './components/SearchBar';
 import { useInlineModals } from './hooks/useInlineModals';
 import { useSupabaseSync } from './hooks/useSupabaseSync';
 import { checkAndSaveKPISnapshot } from './utils/kpiScheduler';
@@ -87,6 +87,7 @@ import { AnalyticsTab } from './components/analytics/AnalyticsTab';
 import { HistoryTab } from './components/history/HistoryTab';
 import { SettingsTab } from './components/settings/SettingsTab';
 import { AITab } from './components/ai/AITab';
+import ProfilePage from './components/profile/ProfilePage';
 
 // ============================================
 // IMPORTS DES MODALS
@@ -287,6 +288,15 @@ const StockEasy = () => {
   // États restants pour l'UI et la navigation
   const [activeTab, setActiveTab] = useState(MAIN_TABS.DASHBOARD);
   const [trackTabSection, setTrackTabSection] = useState(TRACK_TABS.EN_COURS_COMMANDE);
+
+  // Gérer la redirection depuis /profile vers l'onglet profil
+  useEffect(() => {
+    if (location.state?.targetTab) {
+      setActiveTab(location.state.targetTab);
+      // Nettoyer l'état pour éviter de réactiver l'onglet à chaque re-render
+      window.history.replaceState({}, document.title);
+    }
+  }, [location.state]);
   const [selectedProductsFromTable, setSelectedProductsFromTable] = useState([]);
   const [selectedSupplier, setSelectedSupplier] = useState(null);
   const [receivingProducts, setReceivingProducts] = useState([]);
@@ -315,6 +325,10 @@ const StockEasy = () => {
   const [receivedQuantities, setReceivedQuantities] = useState({});
   const [unsavedParameterChanges, setUnsavedParameterChanges] = useState({});
   const [isSavingParameters, setIsSavingParameters] = useState(false);
+  
+  // États pour le menu mobile et la recherche mobile
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [searchModalOpen, setSearchModalOpen] = useState(false);
 
 
   // CORRECTION 3: Gestion de l'expansion des détails de commandes
@@ -2279,7 +2293,7 @@ ${getUserSignature()}`
     null;
 
   const handleOpenProfilePage = () => {
-    navigate('/profile');
+    setActiveTab(MAIN_TABS.PROFILE);
     setIsProfileMenuOpen(false);
   };
 
@@ -2323,8 +2337,8 @@ ${getUserSignature()}`
           duration={4000}
         />
         
-        {/* Barre horizontale supérieure - Fixe au-dessus de tout */}
-        <div className="fixed top-0 left-0 right-0 z-[60] bg-[#FAFAF7] border-b border-[#E5E4DF] h-16 flex items-center">
+        {/* Barre horizontale supérieure - Desktop */}
+        <div className="hidden md:flex fixed top-0 left-0 right-0 z-[60] bg-[#FAFAF7] border-b border-[#E5E4DF] h-16 items-center">
              {/* Logo centré dans la zone sidebar (w-64 = 256px) */}
              <div className="w-64 flex items-center justify-center shrink-0">
                <Logo size="small" showText={true} theme="light" />
@@ -2357,6 +2371,18 @@ ${getUserSignature()}`
                 {/* Zone notifications + profil */}
                 <div className="flex items-center gap-4">
                   <NotificationBell variant="inline" />
+                  
+                  {/* Bouton Synchroniser */}
+                  <button
+                    onClick={syncData}
+                    disabled={syncing}
+                    className="p-2 rounded-lg hover:bg-[#E5E4DF] transition-colors disabled:opacity-50"
+                    aria-label="Synchroniser"
+                    title="Synchroniser"
+                  >
+                    <RefreshCw className={`w-5 h-5 text-[#191919] ${syncing ? 'animate-spin' : ''}`} />
+                  </button>
+                  
                   <div className="relative">
                     <button
                       type="button"
@@ -2407,6 +2433,63 @@ ${getUserSignature()}`
               </div>
         </div>
 
+        {/* Barre horizontale supérieure - Mobile */}
+        <div className="md:hidden fixed top-0 left-0 right-0 z-[60] bg-[#FAFAF7] border-b border-[#E5E4DF] h-16 flex items-center px-4">
+          {/* Bouton Menu Hamburger */}
+          <button
+            onClick={() => setMobileMenuOpen(true)}
+            className="p-2 rounded-lg hover:bg-[#E5E4DF] transition-colors"
+            aria-label="Menu"
+          >
+            <Menu className="w-6 h-6 text-[#191919]" />
+          </button>
+
+          {/* Logo centré */}
+          <div className="flex-1 flex items-center justify-center">
+            <Logo size="small" showText={true} theme="light" />
+          </div>
+
+          {/* Icônes à droite : Recherche + Notification + Sync */}
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setSearchModalOpen(true)}
+              className="p-2 rounded-lg hover:bg-[#E5E4DF] transition-colors"
+              aria-label="Rechercher"
+            >
+              <Compass className="w-5 h-5 text-[#191919]" />
+            </button>
+            <NotificationBell variant="inline" />
+            <button
+              onClick={syncData}
+              disabled={syncing}
+              className="p-2 rounded-lg hover:bg-[#E5E4DF] transition-colors disabled:opacity-50"
+              aria-label="Synchroniser"
+            >
+              <RefreshCw className={`w-5 h-5 text-[#191919] ${syncing ? 'animate-spin' : ''}`} />
+            </button>
+          </div>
+        </div>
+
+        {/* Modal de recherche mobile */}
+        <SearchModal
+          isOpen={searchModalOpen}
+          onClose={() => setSearchModalOpen(false)}
+          setActiveTab={setActiveTab}
+          setParametersSubTab={setParametersSubTab}
+          setTrackTabSection={setTrackTabSection}
+          setStockLevelSearch={setStockLevelSearch}
+          onSupplierSelect={(supplierData) => {
+            const supplierForModal = {
+              name: supplierData.nom_fournisseur,
+              email: supplierData.email || '',
+              leadTimeDays: supplierData.lead_time_days || 14,
+              moq: supplierData.moq || 1,
+              notes: supplierData.notes || ''
+            };
+            handleOpenSupplierModal(supplierForModal);
+          }}
+        />
+
         {/* Contenu principal avec sidebar */}
         <div className="min-h-screen bg-[#FAFAF7]">
             {/* Spacer pour compenser la hauteur du menu fixe */}
@@ -2417,14 +2500,14 @@ ${getUserSignature()}`
             activeTab={activeTab}
             setActiveTab={setActiveTab}
             handleLogout={handleLogout}
-            syncData={syncData}
-            syncing={syncing}
             analyticsSubTab={analyticsSubTab}
             setAnalyticsSubTab={setAnalyticsSubTab}
             aiSubTab={aiSubTab}
             setAiSubTab={setAiSubTab}
             settingsSubTab={parametersSubTab}
             setSettingsSubTab={setParametersSubTab}
+            mobileMenuOpen={mobileMenuOpen}
+            setMobileMenuOpen={setMobileMenuOpen}
             />
 
             {/* Main Content */}
@@ -2598,6 +2681,11 @@ ${getUserSignature()}`
                       handleSaveWarehouse={handleSaveWarehouse}
                       handleDeleteWarehouse={handleDeleteWarehouse}
                     />
+                  )}
+
+                  {/* PROFILE TAB */}
+                  {activeTab === MAIN_TABS.PROFILE && (
+                    <ProfilePage />
                   )}
 
                   </AnimatePresence>

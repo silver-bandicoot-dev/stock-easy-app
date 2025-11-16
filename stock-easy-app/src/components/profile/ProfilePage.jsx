@@ -407,7 +407,7 @@ const ProfilePage = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#FAFAF7]">
+      <div className="flex items-center justify-center py-20">
         <div className="text-center">
           <div className="w-16 h-16 border-4 border-[#191919] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
           <p className="text-lg font-medium text-[#191919]">Chargement...</p>
@@ -419,10 +419,9 @@ const ProfilePage = () => {
   const isAdmin = userData?.role === 'owner' || userData?.role === 'admin';
 
   return (
-    <div className="min-h-full p-4 md:p-6">
-      <div className="max-w-7xl mx-auto">
-        {/* Bouton de sauvegarde (apparait uniquement si nécessaire) */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+    <div className="max-w-7xl mx-auto">
+      {/* Bouton de sauvegarde (apparait uniquement si nécessaire) */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
           {/* Profil Personnel */}
           <div className="lg:col-span-2 space-y-5">
             {/* Carte Profil */}
@@ -794,11 +793,10 @@ const ProfilePage = () => {
             )}
           </div>
         </div>
-      </div>
 
-      {/* Modal d'invitation */}
-      {showInviteModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+        {/* Modal d'invitation */}
+        {showInviteModal && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6">
             <div className="flex items-center justify-between mb-6">
               <h3 className="text-xl font-bold text-[#191919]">Inviter un collaborateur</h3>
