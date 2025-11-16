@@ -56,10 +56,21 @@ export const useEmailGeneration = () => {
       `${warehouseInfo.address}, ${warehouseInfo.postalCode} ${warehouseInfo.city}, ${warehouseInfo.country}` : 
       warehouse;
 
-    const emailContent = `À: ${supplier?.email || 'contact@fournisseur.com'}
+    const commercialEmail =
+      supplier?.commercialContactEmail ||
+      supplier?.email ||
+      'contact@fournisseur.com';
+
+    const commercialName = supplier?.commercialContactName || '';
+    const commercialPhone = supplier?.commercialContactPhone || '';
+
+    const commercialFirstName = commercialName ? commercialName.split(' ')[0] : '';
+    const greetingLine = commercialFirstName ? `Bonjour ${commercialFirstName},` : 'Bonjour,';
+
+    const emailContent = `À: ${commercialEmail}
 Objet: Commande de réapprovisionnement - ${supplierName}
 
-Bonjour,
+${greetingLine}
 
 Nous souhaitons passer une commande de réapprovisionnement pour les produits suivants :
 
@@ -73,6 +84,8 @@ Entrepôt de livraison : ${warehouse}
 Adresse : ${warehouseAddress}
 
 Merci de confirmer la disponibilité et les délais de livraison.
+
+Contact commercial: ${commercialName || 'N/A'}${commercialPhone ? ` - Tél: ${commercialPhone}` : ''}
 
 Cordialement,
 ${userSignature}`;
@@ -106,15 +119,30 @@ ${userSignature}`;
       })
       .join('\n');
 
-    const emailContent = `Objet: Réclamation - Commande ${order.poNumber}
-    
-Bonjour,
+    const poNumber = order?.poNumber || order?.id || '';
 
-Nous avons réceptionné la commande ${order.poNumber} avec les problèmes suivants :
+    const contactName =
+      order?.contactName ||
+      order?.supplierContactName ||
+      order?.supplier_contact_name ||
+      '';
+    const contactFirstName = contactName ? contactName.split(' ')[0] : '';
+    const greetingLine = contactFirstName ? `Bonjour ${contactFirstName},` : 'Bonjour,';
+
+    const hasUserNotes =
+      typeof notes === 'string' &&
+      notes.trim().length > 0 &&
+      notes.trim() !== "L'équipe StockEasy";
+
+    const emailContent = `Objet: Réclamation - Commande ${poNumber}
+
+${greetingLine}
+
+Nous avons réceptionné la commande ${poNumber} avec les problèmes suivants :
 
 ${discrepancyText ? `Écarts de quantité :\n${discrepancyText}\n` : ''}
 ${damagedText ? `Produits endommagés :\n${damagedText}\n` : ''}
-${notes ? `Notes : ${notes}` : ''}
+${hasUserNotes ? `Notes : ${notes.trim()}\n` : ''}
 
 Merci de nous contacter pour résoudre ces problèmes.
 

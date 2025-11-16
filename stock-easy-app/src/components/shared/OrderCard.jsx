@@ -2,6 +2,7 @@ import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowDownRight, Truck, ExternalLink, CheckCircle, Calendar, Clock, AlertTriangle } from 'lucide-react';
 import CommentSection from '../comments/CommentSection';
+import { ImagePreview } from '../ui/ImagePreview';
 import { formatConfirmedDate, calculateETA, formatETA } from '../../utils/dateUtils';
 import { roundToTwoDecimals } from '../../utils/decimalUtils';
 import { formatTrackingUrl, getTrackingLinkText, isValidUrl } from '../../utils/trackingUtils';
@@ -288,13 +289,26 @@ export const OrderCard = ({
                     const product = products?.find(p => p.sku === item.sku);
                     return (
                       <div key={idx} className="flex justify-between items-center text-xs">
-                        <div className="flex-1 min-w-0">
-                          <span className="text-[#191919] font-medium truncate block">
-                            {product?.name || item.sku}
-                          </span>
-                          <span className="text-[#666663] text-xs">
-                            SKU: {item.sku}
-                          </span>
+                        <div className="flex items-center gap-2 min-w-0 flex-1">
+                          {product?.imageUrl ? (
+                            <ImagePreview
+                              src={product.imageUrl}
+                              alt={product?.name || item.sku}
+                              thumbClassName="w-8 h-8 rounded-md object-cover flex-shrink-0 bg-[#E5E4DF]"
+                            />
+                          ) : (
+                            <div className="w-8 h-8 rounded-md bg-[#E5E4DF] flex items-center justify-center text-[10px] text-[#666663] flex-shrink-0">
+                              {(product?.name || item.sku || '?').charAt(0)}
+                            </div>
+                          )}
+                          <div className="min-w-0">
+                            <span className="text-[#191919] font-medium truncate block">
+                              {product?.name || item.sku}
+                            </span>
+                            <span className="text-[#666663] text-xs">
+                              SKU: {item.sku}
+                            </span>
+                          </div>
                         </div>
                         <div className="text-right ml-2 shrink-0">
                           <span className="text-[#191919] font-bold">
@@ -322,13 +336,26 @@ export const OrderCard = ({
                     return (
                       <div key={idx} className="bg-[#FAFAF7] rounded border border-[#E5E4DF] p-2 sm:p-3">
                         <div className="space-y-2">
-                          {/* Nom du produit */}
-                          <div>
-                            <div className="font-medium text-[#191919] text-xs sm:text-sm">
-                              {product?.name || item.sku}
-                            </div>
-                            <div className="text-xs text-[#666663] mt-0.5">
-                              SKU: {item.sku}
+                          {/* Nom du produit + image */}
+                          <div className="flex items-start gap-2">
+                            {product?.imageUrl ? (
+                              <ImagePreview
+                                src={product.imageUrl}
+                                alt={product?.name || item.sku}
+                                thumbClassName="w-9 h-9 rounded-md object-cover flex-shrink-0 bg-[#E5E4DF]"
+                              />
+                            ) : (
+                              <div className="w-9 h-9 rounded-md bg-[#E5E4DF] flex items-center justify-center text-[11px] text-[#666663] flex-shrink-0">
+                                {(product?.name || item.sku || '?').charAt(0)}
+                              </div>
+                            )}
+                            <div>
+                              <div className="font-medium text-[#191919] text-xs sm:text-sm">
+                                {product?.name || item.sku}
+                              </div>
+                              <div className="text-xs text-[#666663] mt-0.5">
+                                SKU: {item.sku}
+                              </div>
                             </div>
                           </div>
                           

@@ -4,6 +4,7 @@ import { X, Mail, Send, FileText, Calculator, Package } from 'lucide-react';
 import { Modal } from '../../ui/Modal';
 import { Button } from '../../shared/Button';
 import { formatPrice } from '../../../utils/decimalUtils';
+import { ImagePreview } from '../../ui/ImagePreview';
 
 export const EmailOrderModal = ({
   isOpen,
@@ -175,10 +176,20 @@ export const EmailOrderModal = ({
                 return (
                   <div key={product.sku} className="flex items-center justify-between p-3 bg-white border border-gray-200 rounded-lg">
                     <div className="flex items-center gap-3">
-                      <Package className="w-4 h-4 text-gray-400" />
+                      {product.imageUrl ? (
+                        <ImagePreview
+                          src={product.imageUrl}
+                          alt={product.name}
+                          thumbClassName="w-9 h-9 rounded-md object-cover flex-shrink-0 bg-gray-200"
+                        />
+                      ) : (
+                        <div className="w-9 h-9 rounded-md bg-gray-200 flex items-center justify-center text-xs text-gray-600 flex-shrink-0">
+                          {product.name?.charAt(0) || '?'}
+                        </div>
+                      )}
                       <div>
-                        <p className="font-medium text-gray-900">{product.sku}</p>
-                        <p className="text-sm text-gray-600">{product.name}</p>
+                        <p className="font-medium text-gray-900">{product.name}</p>
+                        <p className="text-sm text-gray-600">SKU: {product.sku}</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-4">

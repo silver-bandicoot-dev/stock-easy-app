@@ -10,6 +10,8 @@ import {
   AlertCircle
 } from 'lucide-react';
 import { Button } from '../../ui/Button';
+import { ImagePreview } from '../../ui/ImagePreview';
+import * as supabaseApi from '../../../services/supabaseApiService';
 
 const normalizeText = (value = '') =>
   value.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
@@ -294,6 +296,58 @@ export function MappingSKUFournisseur({
     }
   };
 
+  const handleUpdateProductMoq = useCallback(async (product, rawValue) => {
+    const parsed = Number(rawValue);
+    const moq = Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+
+    try {
+      const result = await supabaseApi.updateProduct(product.sku, {
+        // Seul le MOQ est mis à jour, les autres champs restent inchangés côté SQL
+        moq
+      });
+
+      if (!result.success) {
+        throw new Error(result.error || 'Échec de la mise à jour du MOQ produit');
+      }
+
+      console.log('✅ MOQ produit mis à jour', { sku: product.sku, moq });
+    } catch (error) {
+      console.error('❌ Erreur mise à jour MOQ produit:', error);
+    }
+  }, []);
+
+  const handleBulkSyncMoqFromSupplier = useCallback(async () => {
+    if (!selectedSupplier) return;
+
+    const skusSet = assignments[selectedSupplier] ?? new Set();
+    if (!skusSet.size) return;
+
+    const productsToSync = products.filter(
+      (p) => skusSet.has(p.sku) && (!p.moq || p.moq <= 0) && p.supplier === selectedSupplier
+    );
+
+    if (!productsToSync.length) {
+      console.log('ℹ️ Aucun produit à synchroniser pour le fournisseur', selectedSupplier);
+      return;
+    }
+
+    console.log('🔄 Synchronisation des MOQ depuis le fournisseur pour', {
+      supplier: selectedSupplier,
+      count: productsToSync.length
+    });
+
+    try {
+      await Promise.all(
+        productsToSync.map((p) =>
+          supabaseApi.syncProductMoqFromSupplier(p.sku, selectedSupplier, false)
+        )
+      );
+      console.log('✅ Synchronisation des MOQ terminée pour', selectedSupplier);
+    } catch (error) {
+      console.error('❌ Erreur synchronisation MOQ en masse:', error);
+    }
+  }, [assignments, products, selectedSupplier]);
+
   const handleReset = () => {
     if (!selectedSupplier) return;
     setAssignments((prev) => {
@@ -568,6 +622,14 @@ export function MappingSKUFournisseur({
                   >
                     Sauvegarder
                   </Button>
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    onClick={handleBulkSyncMoqFromSupplier}
+                    disabled={!selectedSupplier}
+                  >
+                    Synchroniser les MOQ depuis le fournisseur
+                  </Button>
                 </div>
               </header>
 
@@ -613,15 +675,45 @@ export function MappingSKUFournisseur({
                             onDragEnd={handleDragEnd}
                             className="px-4 py-3 flex items-center justify-between gap-3 bg-white"
                           >
-                            <div>
-                              <div className="text-sm font-semibold text-neutral-800">
-                                {product.sku}
+                            <div className="flex items-center gap-3">
+                              {product.imageUrl ? (
+                                <ImagePreview
+                                  src={product.imageUrl}
+                                  alt={product.name}
+                                  thumbClassName="w-9 h-9 rounded-md object-cover flex-shrink-0 bg-neutral-200"
+                                />
+                              ) : (
+                                <div className="w-9 h-9 rounded-md bg-neutral-200 flex items-center justify-center text-xs text-neutral-600 flex-shrink-0">
+                                  {product.name?.charAt(0) || '?'}
+                                </div>
+                              )}
+                              <div>
+                                <div className="text-sm font-semibold text-neutral-800">
+                                  {product.name ?? 'Produit sans nom'}
+                                </div>
+                                <div className="text-xs text-neutral-500">
+                                  {product.sku}
+                                </div>
+                                <div className="text-xs text-neutral-400 mt-1">
+                                  Stock actuel : {product.stock ?? 0}
+                                </div>
                               </div>
+                            </div>
+                            <div className="flex flex-col items-end gap-2">
                               <div className="text-xs text-neutral-500">
-                                {product.name ?? 'Produit sans nom'}
+                                MOQ produit
                               </div>
-                              <div className="text-xs text-neutral-400 mt-1">
-                                Stock actuel : {product.stock ?? 0}
+                              <input
+                                type="number"
+                                min="1"
+                                defaultValue={product.moq ?? ''}
+                                onBlur={(event) =>
+                                  handleUpdateProductMoq(product, event.target.value)
+                                }
+                                className="w-20 px-2 py-1 border border-neutral-200 rounded text-right text-sm"
+                              />
+                              <div className="text-[10px] text-neutral-400">
+                                Source : {product.moqSource || 'non défini'}
                               </div>
                             </div>
                             <Button
@@ -676,15 +768,28 @@ export function MappingSKUFournisseur({
                             onDragEnd={handleDragEnd}
                             className="px-4 py-3 flex items-center justify-between gap-3 bg-white"
                           >
-                            <div>
-                              <div className="text-sm font-semibold text-neutral-800">
-                                {product.sku}
-                              </div>
-                              <div className="text-xs text-neutral-500">
-                                {product.name ?? 'Produit sans nom'}
-                              </div>
-                              <div className="text-xs text-neutral-400 mt-1">
-                                Stock actuel : {product.stock ?? 0}
+                            <div className="flex items-center gap-3">
+                              {product.imageUrl ? (
+                                <ImagePreview
+                                  src={product.imageUrl}
+                                  alt={product.name}
+                                  thumbClassName="w-9 h-9 rounded-md object-cover flex-shrink-0 bg-neutral-200"
+                                />
+                              ) : (
+                                <div className="w-9 h-9 rounded-md bg-neutral-200 flex items-center justify-center text-xs text-neutral-600 flex-shrink-0">
+                                  {product.name?.charAt(0) || '?'}
+                                </div>
+                              )}
+                              <div>
+                                <div className="text-sm font-semibold text-neutral-800">
+                                  {product.name ?? 'Produit sans nom'}
+                                </div>
+                                <div className="text-xs text-neutral-500">
+                                  {product.sku}
+                                </div>
+                                <div className="text-xs text-neutral-400 mt-1">
+                                  Stock actuel : {product.stock ?? 0}
+                                </div>
                               </div>
                             </div>
                             <Button

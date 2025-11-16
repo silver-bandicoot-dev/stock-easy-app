@@ -685,9 +685,6 @@ export function checkMissingSupplierInfo(suppliers) {
     if (!supplier.leadTimeDays || supplier.leadTimeDays <= 0) {
       missing.push('délai de livraison');
     }
-    if (!supplier.moq || supplier.moq <= 0) {
-      missing.push('MOQ (quantité minimum)');
-    }
 
     if (missing.length > 0) {
       incomplete.push({
@@ -723,7 +720,7 @@ export async function notifyMissingSupplierInfo(userIds, suppliers) {
 
   let message = count === 1
     ? `${incomplete[0].name} : ${incomplete[0].missing.join(', ')} manquant(s). Compléter pour optimiser les commandes.`
-    : `${supplierList}${moreText} ${count === 1 ? 'a' : 'ont'} des informations manquantes (email, délai, MOQ). Compléter les données pour améliorer la gestion.`;
+    : `${supplierList}${moreText} ${count === 1 ? 'a' : 'ont'} des informations manquantes (email, délai). Compléter les données pour améliorer la gestion.`;
 
   await createNotificationsForUsers(
     userIds,
@@ -737,6 +734,60 @@ export async function notifyMissingSupplierInfo(userIds, suppliers) {
         name: s.name,
         missing: s.missing
       }))
+    }
+  );
+
+  return { count, notificationsCreated: 1 };
+}
+
+/**
+ * Vérifie les produits sans MOQ défini
+ * @param {Array} products - Liste des produits
+ * @returns {Array} Liste des produits sans MOQ
+ */
+export function checkProductsMissingMoq(products) {
+  return (products || []).filter(product => {
+    const moq = product.moq;
+    return moq === undefined || moq === null || moq <= 0;
+  }).map(product => ({
+    sku: product.sku,
+    name: product.name || product.sku
+  }));
+}
+
+/**
+ * Crée des notifications pour les produits sans MOQ
+ * @param {Array<string>} userIds - Liste des IDs utilisateurs
+ * @param {Array} products - Liste des produits
+ */
+export async function notifyMissingProductMoq(userIds, products) {
+  const missing = checkProductsMissingMoq(products);
+
+  if (missing.length === 0) {
+    return { count: 0, notificationsCreated: 0 };
+  }
+
+  const count = missing.length;
+  const productList = missing.slice(0, 5).map(p => p.name).join(', ');
+  const moreText = count > 5 ? ` et ${count - 5} autre(s)` : '';
+
+  const title = count === 1
+    ? '⚠️ Produit sans MOQ'
+    : `⚠️ ${count} produits sans MOQ`;
+
+  const message = count === 1
+    ? `${missing[0].name} n'a pas de MOQ défini. Définir un MOQ au niveau produit pour sécuriser les calculs de réapprovisionnement.`
+    : `${productList}${moreText} ${count === 1 ? 'n\'a' : 'n\'ont'} pas de MOQ défini. Définir un MOQ au niveau produit pour sécuriser les calculs de réapprovisionnement.`;
+
+  await createNotificationsForUsers(
+    userIds,
+    'missing_product_moq',
+    title,
+    message,
+    '/stock?filter=all',
+    {
+      count,
+      products: missing.map(p => p.sku)
     }
   );
 

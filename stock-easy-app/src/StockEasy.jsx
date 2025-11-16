@@ -1755,7 +1755,17 @@ ${getUserSignature()}`
     
     const damagedItems = order.items.filter(i => (i.damagedQuantity || 0) > 0);
     
-    let email = `Objet: Réclamation - Commande ${order.id}\n\n`;
+    const supplierData = suppliers[order.supplier] || {};
+    const reclamationEmail =
+      supplierData.reclamationContactEmail ||
+      supplierData.commercialContactEmail ||
+      supplierData.email ||
+      '';
+    const reclamationName = supplierData.reclamationContactName || supplierData.commercialContactName || '';
+    const reclamationPhone = supplierData.reclamationContactPhone || supplierData.commercialContactPhone || '';
+
+    let email = `À: ${reclamationEmail}\n`;
+    email += `Objet: Réclamation - Commande ${order.id}\n\n`;
     email += `Bonjour,\n\n`;
     email += `Nous avons réceptionné la commande ${order.id} mais constatons les problèmes suivants :\n\n`;
     
@@ -1804,6 +1814,9 @@ ${getUserSignature()}`
     
     email += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
     email += `Merci de procéder rapidement au remplacement ou à l'envoi des articles manquants/endommagés.\n\n`;
+    if (reclamationName || reclamationPhone) {
+      email += `Contact réclamations côté fournisseur: ${reclamationName || 'N/A'}${reclamationPhone ? ` - Tél: ${reclamationPhone}` : ''}\n\n`;
+    }
     email += `Cordialement,\n`;
     email += `${getUserSignature()}`;
     

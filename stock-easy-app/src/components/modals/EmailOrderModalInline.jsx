@@ -4,6 +4,7 @@ import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
 import { roundToTwoDecimals } from '../../utils/decimalUtils';
 import { useCurrency } from '../../contexts/CurrencyContext';
+import { ImagePreview } from '../ui/ImagePreview';
 
 export const EmailOrderModalInline = ({
   isOpen,
@@ -177,10 +178,23 @@ export const EmailOrderModalInline = ({
           {productsToOrder.map(p => (
             <div key={p.sku} className="bg-white rounded p-2 border border-[#E5E4DF]">
               <div className="grid grid-cols-4 gap-2 items-center">
-                <div className="col-span-2">
-                  <div className="font-medium text-[#191919] text-xs truncate">{p.name}</div>
-                  <div className="text-xs text-[#666663]">
-                    SKU: {p.sku} • Rec: {Math.ceil(p.qtyToOrder || 0)}
+                <div className="col-span-2 flex items-center gap-2">
+                  {p.imageUrl ? (
+                    <ImagePreview
+                      src={p.imageUrl}
+                      alt={p.name}
+                      thumbClassName="w-8 h-8 rounded-md object-cover flex-shrink-0 bg-[#E5E4DF]"
+                    />
+                  ) : (
+                    <div className="w-8 h-8 rounded-md bg-[#E5E4DF] flex items-center justify-center text-[10px] text-[#666663] flex-shrink-0">
+                      {p.name?.charAt(0) || '?'}
+                    </div>
+                  )}
+                  <div>
+                    <div className="font-medium text-[#191919] text-xs truncate">{p.name}</div>
+                    <div className="text-xs text-[#666663]">
+                      SKU: {p.sku} • Rec: {Math.ceil(p.qtyToOrder || 0)}
+                    </div>
                   </div>
                 </div>
                 <div>

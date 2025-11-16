@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { AlertCircle, CheckCircle, Mail, Package } from 'lucide-react';
 import { Button } from '../shared/Button';
 import { InfoTooltip } from '../ui/InfoTooltip';
+import { ImagePreview } from '../ui/ImagePreview';
 import { formatUnits } from '../../utils/decimalUtils';
 
 export const OrderBySupplier = ({ 
@@ -77,11 +78,24 @@ export const OrderBySupplier = ({
                     >
                       {/* Produit */}
                       <td className="px-4 py-4">
-                        <div className="flex flex-col">
-                          <div className="font-bold text-[#191919] text-sm">{product.name}</div>
-                          <div className="text-xs text-[#666663]">SKU: {product.sku}</div>
-                          <div className="text-xs text-[#666663] mt-1">
-                            Point de commande: {formatUnits(product.reorderPoint || 0)}
+                        <div className="flex items-center gap-3">
+                          {product.imageUrl ? (
+                            <ImagePreview
+                              src={product.imageUrl}
+                              alt={product.name}
+                              thumbClassName="w-10 h-10 rounded-md object-cover flex-shrink-0 bg-[#E5E4DF]"
+                            />
+                          ) : (
+                            <div className="w-10 h-10 rounded-md bg-[#E5E4DF] flex items-center justify-center text-xs text-[#666663] flex-shrink-0">
+                              {product.name?.charAt(0) || '?'}
+                            </div>
+                          )}
+                          <div className="flex flex-col">
+                            <div className="font-bold text-[#191919] text-sm">{product.name}</div>
+                            <div className="text-xs text-[#666663]">SKU: {product.sku}</div>
+                            <div className="text-xs text-[#666663] mt-1">
+                              Point de commande: {formatUnits(product.reorderPoint || 0)}
+                            </div>
                           </div>
                         </div>
                       </td>

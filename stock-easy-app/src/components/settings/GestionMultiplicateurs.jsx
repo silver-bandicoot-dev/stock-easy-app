@@ -5,6 +5,7 @@ import { InfoTooltip } from '../ui/InfoTooltip/InfoTooltip';
 import { toast } from 'sonner';
 import api from '../../services/apiAdapter';
 import { multiplierOptimizer } from '../../services/ml/multiplierOptimizer';
+import { ImagePreview } from '../ui/ImagePreview';
 
 /**
  * Composant pour gérer les multiplicateurs de prévision de tous les produits
@@ -604,8 +605,21 @@ export function GestionMultiplicateurs({ products, loadData, multiplicateurDefau
                         </button>
                       </td>
                       <td className="px-4 py-3">
-                        <div className="font-medium text-[#191919]">
-                          {product.name || product.nom_produit || 'Sans nom'}
+                        <div className="flex items-center gap-3">
+                          {product.imageUrl ? (
+                            <ImagePreview
+                              src={product.imageUrl}
+                              alt={product.name || product.nom_produit || 'Produit'}
+                              thumbClassName="w-9 h-9 rounded-md object-cover flex-shrink-0 bg-[#E5E4DF]"
+                            />
+                          ) : (
+                            <div className="w-9 h-9 rounded-md bg-[#E5E4DF] flex items-center justify-center text-xs text-[#666663] flex-shrink-0">
+                              {(product.name || product.nom_produit || '?').charAt(0)}
+                            </div>
+                          )}
+                          <div className="font-medium text-[#191919]">
+                            {product.name || product.nom_produit || 'Sans nom'}
+                          </div>
                         </div>
                       </td>
                       <td className="px-4 py-3">

@@ -3,6 +3,7 @@ import { toast } from 'sonner';
 import api from '../../services/apiAdapter';
 import { multiplierOptimizer } from '../../services/ml/multiplierOptimizer';
 import { InfoTooltip } from '../ui/InfoTooltip/InfoTooltip';
+import { ImagePreview } from '../ui/ImagePreview';
 
 /**
  * Composant pour éditer le multiplicateur de prévision d'un produit
@@ -155,17 +156,30 @@ export function ProductMultiplierEditor({ product, onUpdate, onClose }) {
         )}
       </div>
 
-      <div className="mb-4">
-        <p className="text-sm text-[#666663] mb-2">
-          <strong>{product.name || product.nom_produit}</strong> (SKU: {product.sku})
-        </p>
-        <div className="flex items-center gap-2">
+      <div className="mb-4 flex items-start gap-3">
+        {product.imageUrl ? (
+          <ImagePreview
+            src={product.imageUrl}
+            alt={product.name || product.nom_produit || 'Produit'}
+            thumbClassName="w-12 h-12 rounded-md object-cover flex-shrink-0 bg-[#E5E4DF]"
+          />
+        ) : (
+          <div className="w-12 h-12 rounded-md bg-[#E5E4DF] flex items-center justify-center text-sm text-[#666663] flex-shrink-0">
+            {(product.name || product.nom_produit || '?').charAt(0)}
+          </div>
+        )}
+        <div className="flex-1">
+          <p className="text-sm text-[#666663] mb-2">
+            <strong>{product.name || product.nom_produit}</strong> (SKU: {product.sku})
+          </p>
+          <div className="flex items-center gap-2">
           <span className="text-xs text-[#666663] cursor-help underline">
             Qu'est-ce que le multiplicateur de prévision ?
           </span>
           <InfoTooltip
             content="Coefficient pour ajuster les prévisions selon la saisonnalité ou les événements (BFCM, soldes). 1 = normal, 0.5 = hors saison, 5 = pic majeur."
           />
+          </div>
         </div>
       </div>
 

@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { AlertCircle } from 'lucide-react';
 import { InfoTooltip, tooltips } from '../ui/InfoTooltip';
 import { formatUnits } from '../../utils/decimalUtils';
+import { ImagePreview } from '../ui/ImagePreview';
 
 export const ProductsToOrder = ({ products }) => {
   return (
@@ -30,9 +31,22 @@ export const ProductsToOrder = ({ products }) => {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.03, duration: 0.3 }}
               className="flex justify-between items-center p-3 bg-[#FAFAF7] rounded-lg hover:bg-[#F0F0EB] transition-colors border border-[#E5E4DF]">
-              <div className="min-w-0">
-                <p className="font-medium text-[#191919] text-sm truncate">{p.name}</p>
-                <p className="text-xs text-[#666663] truncate">{p.supplier}</p>
+              <div className="flex items-center gap-3 min-w-0">
+                {p.imageUrl ? (
+                  <ImagePreview
+                    src={p.imageUrl}
+                    alt={p.name}
+                    thumbClassName="w-10 h-10 rounded-md object-cover flex-shrink-0 bg-[#E5E4DF]"
+                  />
+                ) : (
+                  <div className="w-10 h-10 rounded-md bg-[#E5E4DF] flex items-center justify-center text-xs text-[#666663] flex-shrink-0">
+                    {p.name?.charAt(0) || '?'}
+                  </div>
+                )}
+                <div className="min-w-0">
+                  <p className="font-medium text-[#191919] text-sm truncate">{p.name}</p>
+                  <p className="text-xs text-[#666663] truncate">{p.supplier}</p>
+                </div>
               </div>
               <div className="text-right shrink-0 ml-4">
                 <p className="font-bold text-[#EF1C43] text-sm">{formatUnits(p.qtyToOrder)} unités</p>
@@ -45,6 +59,7 @@ export const ProductsToOrder = ({ products }) => {
     </div>
   );
 };
+
 
 
 

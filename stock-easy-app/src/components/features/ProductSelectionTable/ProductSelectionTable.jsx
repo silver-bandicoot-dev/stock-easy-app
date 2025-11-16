@@ -3,6 +3,7 @@ import { Filter, Search, Check, X, Package, AlertCircle, ArrowUpDown, ArrowUp, A
 import { toast } from 'sonner';
 import { Button } from '../../shared/Button';
 import { useCurrency } from '../../../contexts/CurrencyContext';
+import { ImagePreview } from '../../ui/ImagePreview';
 
 export function ProductSelectionTable({ products, suppliers, onCreateOrder }) {
   const { format: formatCurrency } = useCurrency();
@@ -388,11 +389,24 @@ export function ProductSelectionTable({ products, suppliers, onCreateOrder }) {
                         </span>
                       </td>
 
-                      {/* Nom */}
+                      {/* Nom + image */}
                       <td className="px-4 py-3">
-                        <span className="text-sm font-medium text-[#191919]">
-                          {product.name}
-                        </span>
+                        <div className="flex items-center gap-3">
+                          {product.imageUrl ? (
+                            <ImagePreview
+                              src={product.imageUrl}
+                              alt={product.name}
+                              thumbClassName="w-9 h-9 rounded-md object-cover flex-shrink-0 bg-[#E5E4DF]"
+                            />
+                          ) : (
+                            <div className="w-9 h-9 rounded-md bg-[#E5E4DF] flex items-center justify-center text-xs text-[#666663] flex-shrink-0">
+                              {product.name?.charAt(0) || '?'}
+                            </div>
+                          )}
+                          <span className="text-sm font-medium text-[#191919]">
+                            {product.name}
+                          </span>
+                        </div>
                       </td>
 
                       {/* Fournisseur */}

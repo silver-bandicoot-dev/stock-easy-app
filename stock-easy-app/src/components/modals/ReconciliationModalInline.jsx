@@ -264,15 +264,19 @@ export const ReconciliationModalInline = ({
           <h4 className="font-semibold text-base text-[#191919]">Quantités reçues</h4>
           {reconciliationOrder.items.map((item, idx) => {
             const product = products.find(p => p.sku === item.sku);
-            const currentReceived = discrepancyItems[item.sku]?.received !== undefined 
+            const currentReceivedRaw = discrepancyItems[item.sku]?.received !== undefined 
               ? discrepancyItems[item.sku].received 
               : item.quantity;
             const currentDamaged = damagedQuantities[item.sku] || 0;
             
+            // Valeur numérique pour les calculs (autoriser les champs vides côté UI)
+            const receivedNumeric = parseInt(currentReceivedRaw || 0, 10) || 0;
+            const damagedNumeric = parseInt(currentDamaged || 0, 10) || 0;
+            
             // Calculer le total reçu (sain + endommagé)
-            const totalReceived = parseInt(currentReceived || 0) + parseInt(currentDamaged || 0);
+            const totalReceived = receivedNumeric + damagedNumeric;
             const hasMissing = totalReceived < item.quantity;
-            const hasDamaged = parseInt(currentDamaged) > 0;
+            const hasDamaged = damagedNumeric > 0;
             const missingQuantity = item.quantity - totalReceived;
             const hasExcess = totalReceived > item.quantity;
             const excessQuantity = totalReceived - item.quantity;
@@ -310,9 +314,9 @@ export const ReconciliationModalInline = ({
                     <input 
                       type="number" 
                       min="0"
-                      value={currentReceived}
+                      value={currentReceivedRaw}
                       onChange={(e) => {
-                        const value = parseInt(e.target.value) || 0;
+                        const value = e.target.value;
                         setDiscrepancyItems(prev => ({
                           ...prev,
                           [item.sku]: {
@@ -412,19 +416,23 @@ export const ReconciliationModalInline = ({
         {/* Résumé global des écarts */}
         {(() => {
           const totalOrdered = reconciliationOrder.items.reduce((sum, item) => sum + item.quantity, 0);
-          const totalReceivedGood = Object.values(discrepancyItems).reduce((sum, item) => sum + (item?.received || 0), 0);
+          const totalReceivedGood = Object.values(discrepancyItems).reduce((sum, item) => {
+            const received = item?.received;
+            const numericReceived = parseInt(received || 0, 10) || 0;
+            return sum + numericReceived;
+          }, 0);
           const totalDamaged = Object.values(damagedQuantities).reduce((sum, qty) => sum + (qty || 0), 0);
           const totalMissing = reconciliationOrder.items.reduce((sum, item) => {
             const received = (discrepancyItems[item.sku]?.received !== undefined ? discrepancyItems[item.sku].received : item.quantity);
             const damaged = damagedQuantities[item.sku] || 0;
-            const total = parseInt(received || 0) + parseInt(damaged || 0);
+            const total = (parseInt(received || 0, 10) || 0) + (parseInt(damaged || 0, 10) || 0);
             return sum + Math.max(0, item.quantity - total);
           }, 0);
           
           const totalLossMissing = reconciliationOrder.items.reduce((sum, item) => {
             const received = (discrepancyItems[item.sku]?.received !== undefined ? discrepancyItems[item.sku].received : item.quantity);
             const damaged = damagedQuantities[item.sku] || 0;
-            const total = parseInt(received || 0) + parseInt(damaged || 0);
+            const total = (parseInt(received || 0, 10) || 0) + (parseInt(damaged || 0, 10) || 0);
             const missing = Math.max(0, item.quantity - total);
             return sum + (missing * item.pricePerUnit);
           }, 0);

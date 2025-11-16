@@ -4,6 +4,7 @@ import { Package } from 'lucide-react';
 import { HealthBar } from '../ui/HealthBar';
 import { InfoTooltip } from '../ui/InfoTooltip';
 import { StockHealthDashboard } from '../features/StockHealthDashboard';
+import { ImagePreview } from '../ui/ImagePreview';
 import { formatUnits, formatSalesPerDay } from '../../utils/decimalUtils';
 import { formatETA } from '../../utils/dateUtils';
 
@@ -253,24 +254,37 @@ export const StockTab = ({
                   <tr key={product.sku} className="hover:bg-[#FAFAF7] transition-colors">
                     {/* Produit */}
                     <td className="px-4 py-4">
-                      <div className="flex flex-col">
-                        <div className="font-bold text-[#191919] text-sm">{product.name}</div>
-                        <div className="text-xs text-[#666663]">{product.sku}</div>
-                        <div className="text-xs text-[#666663] mt-1 space-y-0.5">
-                          <div>
-                            Ventes/jour (ajustées)&nbsp;
-                            <span className="font-medium">
-                              {formatSalesPerDay(product.salesPerDay ?? 0)}
-                            </span>
+                      <div className="flex items-center gap-3">
+                        {product.imageUrl ? (
+                          <ImagePreview
+                            src={product.imageUrl}
+                            alt={product.name}
+                            thumbClassName="w-11 h-11 rounded-md object-cover flex-shrink-0 bg-[#E5E4DF]"
+                          />
+                        ) : (
+                          <div className="w-11 h-11 rounded-md bg-[#E5E4DF] flex items-center justify-center text-xs text-[#666663] flex-shrink-0">
+                            {product.name?.charAt(0) || '?'}
                           </div>
-                          {(product.sales30d ?? null) !== null && !Number.isNaN(Number(product.sales30d)) && (
-                            <div className="text-[11px] text-[#8A8A86]">
-                              Moyenne brute 30j&nbsp;
+                        )}
+                        <div className="flex flex-col">
+                          <div className="font-bold text-[#191919] text-sm">{product.name}</div>
+                          <div className="text-xs text-[#666663]">{product.sku}</div>
+                          <div className="text-xs text-[#666663] mt-1 space-y-0.5">
+                            <div>
+                              Ventes/jour (ajustées)&nbsp;
                               <span className="font-medium">
-                                {formatSalesPerDay(Number(product.sales30d) / 30)}
+                                {formatSalesPerDay(product.salesPerDay ?? 0)}
                               </span>
                             </div>
-                          )}
+                            {(product.sales30d ?? null) !== null && !Number.isNaN(Number(product.sales30d)) && (
+                              <div className="text-[11px] text-[#8A8A86]">
+                                Moyenne brute 30j&nbsp;
+                                <span className="font-medium">
+                                  {formatSalesPerDay(Number(product.sales30d) / 30)}
+                                </span>
+                              </div>
+                            )}
+                          </div>
                         </div>
                       </div>
                     </td>

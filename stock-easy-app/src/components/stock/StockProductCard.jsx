@@ -2,6 +2,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { Package, AlertTriangle, CheckCircle, Eye } from 'lucide-react';
 import { formatUnits } from '../../utils/decimalUtils';
+import { ImagePreview } from '../ui/ImagePreview';
 import { STOCK_FILTERS } from '../../constants/stockEasyConstants';
 import { useCurrency } from '../../contexts/CurrencyContext';
 
@@ -24,11 +25,26 @@ export const StockProductCard = ({ product, suppliers, onViewDetails }) => {
       transition={{ duration: 0.3 }}
       className="bg-white rounded-xl shadow-sm border border-[#E5E4DF] p-6 hover:shadow-md transition-shadow"
     >
-      <div className="flex items-start justify-between mb-4">
-        <div className="flex-1 min-w-0">
-          <h3 className="font-bold text-[#191919] text-lg mb-1 truncate">{product.name}</h3>
-          <p className="text-sm text-[#666663] mb-2">SKU: {product.sku}</p>
-          <p className="text-sm text-[#666663]">Fournisseur: {suppliers[product.supplierId]?.name || 'N/A'}</p>
+      <div className="flex items-start justify-between mb-4 gap-3">
+        <div className="flex items-start gap-3 flex-1 min-w-0">
+          {product.imageUrl ? (
+            <ImagePreview
+              src={product.imageUrl}
+              alt={product.name}
+              thumbClassName="w-12 h-12 rounded-md object-cover flex-shrink-0 bg-[#E5E4DF]"
+            />
+          ) : (
+            <div className="w-12 h-12 rounded-md bg-[#E5E4DF] flex items-center justify-center text-sm text-[#666663] flex-shrink-0">
+              {product.name?.charAt(0) || '?'}
+            </div>
+          )}
+          <div>
+            <h3 className="font-bold text-[#191919] text-lg mb-1 truncate">{product.name}</h3>
+            <p className="text-sm text-[#666663] mb-1">SKU: {product.sku}</p>
+            <p className="text-sm text-[#666663]">
+              Fournisseur: {suppliers[product.supplierId]?.name || 'N/A'}
+            </p>
+          </div>
         </div>
         <div className={`w-12 h-12 ${stockInfo.bgColor} rounded-lg flex items-center justify-center border ${stockInfo.borderColor} shrink-0`}>
           <Icon className={`w-6 h-6 ${stockInfo.color} shrink-0`} />

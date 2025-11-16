@@ -25,14 +25,6 @@ const getAllData = async () => {
   // Mapper les champs spécifiques pour la compatibilité frontend
   if (converted.suppliers) {
     converted.suppliers = converted.suppliers.map(s => {
-      const moqRaw =
-        s.moq ??
-        s.moqStandard ??
-        s.defaultMoq ??
-        s.minimumOrderQuantity ??
-        s.minOrderQuantity ??
-        null;
-
       const leadTimeRaw =
         s.leadTimeDays ??
         s.leadTime ??
@@ -40,9 +32,11 @@ const getAllData = async () => {
         s.standardLeadTime ??
         null;
 
+      // Le MOQ fournisseur est maintenant principalement une valeur par défaut / suggestion.
+      // On se base sur moqStandard s'il existe, sinon on le laisse à null.
       const moq =
-        moqRaw !== null && moqRaw !== undefined
-          ? Number(moqRaw)
+        s.moqStandard !== null && s.moqStandard !== undefined
+          ? Number(s.moqStandard)
           : null;
 
       const leadTimeDays =
@@ -55,7 +49,7 @@ const getAllData = async () => {
         name: s.nomFournisseur || s.name,
         email: s.email || s.contactEmail || s.contact_email || s.emailPrincipal || s.primaryEmail || null,
         moq,
-        moqStandard: s.moqStandard ?? moq,
+        moqStandard: s.moqStandard !== undefined && s.moqStandard !== null ? Number(s.moqStandard) : moq,
         leadTimeDays,
       };
     });
@@ -108,7 +102,12 @@ const getAllData = async () => {
               (p.margin !== undefined ? p.margin : 0),
       
       // Autres champs
-      moq: p.moq !== undefined ? p.moq : 1,
+      // On expose le MOQ produit tel quel (peut être null / 0) pour pouvoir détecter
+      // les produits sans MOQ. Les calculs frontend continuent à utiliser (product.moq || 1)
+      // pour garder un comportement cohérent avec le backend.
+      moq: p.moq !== undefined && p.moq !== null ? p.moq : null,
+      moqSource: p.moqSource !== undefined ? p.moqSource :
+                 (p.moq_source !== undefined ? p.moq_source : null),
       multiplier: p.multiplicateurPrevision !== undefined ? p.multiplicateurPrevision :
                   (p.multiplicateur !== undefined ? p.multiplicateur : 
                   (p.multiplier !== undefined ? p.multiplier : 1)),
@@ -188,7 +187,9 @@ const getAllData = async () => {
       grossMargin: p.margeBrute !== undefined ? p.margeBrute :
                    (p.grossMargin !== undefined ? p.grossMargin : 0),
       supplierReliability: p.fiabiliteFournisseur !== undefined ? p.fiabiliteFournisseur :
-                           (p.supplierReliability !== undefined ? p.supplierReliability : 80)
+                           (p.supplierReliability !== undefined ? p.supplierReliability : 80),
+      // Image principale du produit
+      imageUrl: p.imageUrl || p.imageURL || null
     }));
   }
   

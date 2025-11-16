@@ -14,7 +14,15 @@ export const useSupplierManagement = (suppliers, loadData) => {
     email: '',
     leadTimeDays: 30,
     moq: 50,
-    notes: ''
+    notes: '',
+    commercialContactName: '',
+    commercialContactEmail: '',
+    commercialContactPhone: '',
+    reclamationContactName: '',
+    reclamationContactEmail: '',
+    reclamationContactPhone: '',
+    reclamationContactRole: '',
+    contactNotes: ''
   });
 
   const handleOpenSupplierModal = (supplier = null) => {
@@ -25,7 +33,15 @@ export const useSupplierManagement = (suppliers, loadData) => {
         email: supplier.email,
         leadTimeDays: supplier.leadTimeDays,
         moq: supplier.moq ?? supplier.moqStandard ?? supplier.defaultMoq ?? supplier.minimumOrderQuantity ?? supplier.minOrderQuantity ?? 50,
-        notes: supplier.notes || ''
+        notes: supplier.notes || '',
+        commercialContactName: supplier.commercialContactName || '',
+        commercialContactEmail: supplier.commercialContactEmail || '',
+        commercialContactPhone: supplier.commercialContactPhone || '',
+        reclamationContactName: supplier.reclamationContactName || '',
+        reclamationContactEmail: supplier.reclamationContactEmail || '',
+        reclamationContactPhone: supplier.reclamationContactPhone || '',
+        reclamationContactRole: supplier.reclamationContactRole || '',
+        contactNotes: supplier.contactNotes || ''
       });
     } else {
       setEditingSupplier(null);
@@ -34,7 +50,15 @@ export const useSupplierManagement = (suppliers, loadData) => {
         email: '',
         leadTimeDays: 30,
         moq: 50,
-        notes: ''
+        notes: '',
+        commercialContactName: '',
+        commercialContactEmail: '',
+        commercialContactPhone: '',
+        reclamationContactName: '',
+        reclamationContactEmail: '',
+        reclamationContactPhone: '',
+        reclamationContactRole: '',
+        contactNotes: ''
       });
     }
     setSupplierModalOpen(true);
@@ -48,7 +72,15 @@ export const useSupplierManagement = (suppliers, loadData) => {
       email: '',
       leadTimeDays: 30,
       moq: 50,
-      notes: ''
+      notes: '',
+      commercialContactName: '',
+      commercialContactEmail: '',
+      commercialContactPhone: '',
+      reclamationContactName: '',
+      reclamationContactEmail: '',
+      reclamationContactPhone: '',
+      reclamationContactRole: '',
+      contactNotes: ''
     });
   };
 
@@ -76,9 +108,8 @@ export const useSupplierManagement = (suppliers, loadData) => {
       errors.push('Le délai doit être supérieur à 0');
     }
     
-    if (supplierFormData.moq <= 0) {
-      errors.push('Le MOQ doit être supérieur à 0');
-    }
+    // Le MOQ fournisseur devient une valeur par défaut / informative.
+    // On ne le rend plus bloquant pour la validation du formulaire.
     
     if (!editingSupplier) {
       const existingSupplier = Object.values(suppliers).find(

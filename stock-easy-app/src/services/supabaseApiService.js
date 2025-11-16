@@ -297,19 +297,55 @@ export async function updateStock(updates) {
 export async function updateProduct(sku, updates) {
   try {
     const { data, error } = await supabase.rpc('update_product', {
-      p_sku: sku,
-      p_product_name: updates.productName,
-      p_supplier: updates.supplier,
-      p_lead_time_days: updates.leadTimeDays,
-      p_moq: updates.moq,
-      p_order_point: updates.orderPoint,
-      p_max_stock: updates.maxStock
+      // D'après l'erreur PGRST202, la fonction attend (p_data, p_sku)
+      p_data: updates || {},
+      p_sku: sku
     });
 
-    if (error) throw error;
+    if (error) {
+      console.error('❌ Erreur Supabase RPC update_product:', error);
+      return { success: false, error: error.message || 'Erreur RPC update_product' };
+    }
+
+    // Certaines implémentations de update_product retournent un JSON { success, message, product }
+    if (data && typeof data === 'object' && data.success === false) {
+      console.error('❌ Erreur logique update_product (payload):', data);
+      return { success: false, error: data.message || data.error || 'Erreur logique update_product' };
+    }
+
     return { success: true, data };
   } catch (error) {
     console.error('❌ Erreur mise à jour produit:', error);
+    return { success: false, error: error.message };
+  }
+}
+
+// Synchroniser le MOQ d'un produit depuis son fournisseur principal
+// Utilise la fonction SQL public.sync_moq_from_supplier(p_sku, p_supplier, p_override)
+export async function syncProductMoqFromSupplier(sku, supplierName, override = false) {
+  try {
+    if (!sku || !supplierName) {
+      return {
+        success: false,
+        error: 'SKU et fournisseur sont requis pour synchroniser le MOQ'
+      };
+    }
+
+    const { data, error } = await supabase.rpc('sync_moq_from_supplier', {
+      p_sku: sku,
+      p_supplier: supplierName,
+      p_override: override
+    });
+
+    if (error) throw error;
+
+    if (data && data.success === false) {
+      return { success: false, error: data.message || 'Erreur lors de la synchronisation du MOQ' };
+    }
+
+    return { success: true, data };
+  } catch (error) {
+    console.error('❌ Erreur synchronisation MOQ produit depuis fournisseur:', error);
     return { success: false, error: error.message };
   }
 }
@@ -324,7 +360,15 @@ export async function createSupplier(supplierData) {
         email: supplierData.email,
         lead_time_days: Number(supplierData.leadTimeDays) || 0,
         moq_standard: Number(supplierData.moq) || 0,
-        notes: supplierData.notes ?? null
+        notes: supplierData.notes ?? null,
+        commercial_contact_name: supplierData.commercialContactName || null,
+        commercial_contact_email: supplierData.commercialContactEmail || null,
+        commercial_contact_phone: supplierData.commercialContactPhone || null,
+        reclamation_contact_name: supplierData.reclamationContactName || null,
+        reclamation_contact_email: supplierData.reclamationContactEmail || null,
+        reclamation_contact_phone: supplierData.reclamationContactPhone || null,
+        reclamation_contact_role: supplierData.reclamationContactRole || null,
+        contact_notes: supplierData.contactNotes || null
       })
       .select()
       .single();
@@ -345,7 +389,15 @@ export async function updateSupplier(supplierId, updates) {
         email: updates.email,
         lead_time_days: Number(updates.leadTimeDays) || 0,
         moq_standard: Number(updates.moq) || 0,
-        notes: updates.notes ?? null
+        notes: updates.notes ?? null,
+        commercial_contact_name: updates.commercialContactName || null,
+        commercial_contact_email: updates.commercialContactEmail || null,
+        commercial_contact_phone: updates.commercialContactPhone || null,
+        reclamation_contact_name: updates.reclamationContactName || null,
+        reclamation_contact_email: updates.reclamationContactEmail || null,
+        reclamation_contact_phone: updates.reclamationContactPhone || null,
+        reclamation_contact_role: updates.reclamationContactRole || null,
+        contact_notes: updates.contactNotes || null
       })
       .eq('id', supplierId)
       .select()
@@ -623,7 +675,8 @@ export default {
   updateParameter,
   confirmOrderReconciliation,
   assignSupplierToProduct,
-  removeSupplierFromProduct
+  removeSupplierFromProduct,
+  syncProductMoqFromSupplier
 };
 
 
