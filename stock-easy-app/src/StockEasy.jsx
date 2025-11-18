@@ -18,7 +18,6 @@ import { DateRangePicker } from './components/features/DateRangePicker';
 import { InsightAlert } from './components/features/InsightAlert';
 import { ChartModal } from './components/features/ChartModal';
 import { ComparisonSelector } from './components/features/ComparisonSelector';
-import { AIMainDashboard } from './components/ml';
 import { AssignSupplierModal } from './components/settings/AssignSupplierModal';
 import { SupplierModal } from './components/settings/SupplierModal';
 import { GestionFournisseurs } from './components/settings/GestionFournisseurs';
@@ -52,7 +51,6 @@ import {
   STOCK_TABS,
   SETTINGS_TABS,
   ANALYTICS_TABS,
-  AI_TABS,
   STOCK_FILTERS,
   CURRENCIES,
   DEFAULT_PARAMETERS,
@@ -86,7 +84,6 @@ import { StockTab } from './components/stock/StockTab';
 import { AnalyticsTab } from './components/analytics/AnalyticsTab';
 import { HistoryTab } from './components/history/HistoryTab';
 import { SettingsTab } from './components/settings/SettingsTab';
-import { AITab } from './components/ai/AITab';
 import ProfilePage from './components/profile/ProfilePage';
 
 // ============================================
@@ -319,7 +316,6 @@ const StockEasy = () => {
   // NOUVEAUX ÉTATS pour les sous-onglets de Paramètres
   const [parametersSubTab, setParametersSubTab] = useState(SETTINGS_TABS.GENERAL);
   const [analyticsSubTab, setAnalyticsSubTab] = useState(ANALYTICS_TABS.KPIS);
-  const [aiSubTab, setAiSubTab] = useState(AI_TABS.OVERVIEW);
   
   // NOUVEAUX ÉTATS pour CORRECTION 5 et 6
   const [discrepancyTypes, setDiscrepancyTypes] = useState({});
@@ -813,6 +809,21 @@ const StockEasy = () => {
     });
     return grouped;
   }, [productsByStatus]);
+
+  // Calculer le nombre de commandes dans le flux (de pending_confirmation à reconciliation)
+  const trackBadgeCount = useMemo(() => {
+    if (!orders || orders.length === 0) return 0;
+    
+    const activeStatuses = [
+      'pending_confirmation',
+      'preparing',
+      'in_transit',
+      'received',
+      'reconciliation'
+    ];
+    
+    return orders.filter(order => activeStatuses.includes(order.status)).length;
+  }, [orders]);
 
   const notifications = useMemo(() => {
     const notifs = [];
@@ -2523,13 +2534,12 @@ ${getUserSignature()}`
             handleLogout={handleLogout}
             analyticsSubTab={analyticsSubTab}
             setAnalyticsSubTab={setAnalyticsSubTab}
-            aiSubTab={aiSubTab}
-            setAiSubTab={setAiSubTab}
             settingsSubTab={parametersSubTab}
             setSettingsSubTab={setParametersSubTab}
             mobileMenuOpen={mobileMenuOpen}
             setMobileMenuOpen={setMobileMenuOpen}
             orderBadgeCount={productsByStatus.to_order.length}
+            trackBadgeCount={trackBadgeCount}
             />
 
             {/* Main Content */}
@@ -2623,16 +2633,8 @@ ${getUserSignature()}`
                       suppliers={suppliers}
                       warehouses={warehouses}
                       seuilSurstockProfond={seuilSurstockProfond}
-                    />
-                  )}
-
-                  {/* AI TAB */}
-                  {activeTab === MAIN_TABS.AI && (
-                    <AITab
-                      products={products}
-                      orders={orders}
-                      aiSubTab={aiSubTab}
-                      setAiSubTab={setAiSubTab}
+                      analyticsSubTab={analyticsSubTab}
+                      setAnalyticsSubTab={setAnalyticsSubTab}
                     />
                   )}
 

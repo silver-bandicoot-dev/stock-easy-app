@@ -9,15 +9,22 @@ import { InsightAlert } from '../features/InsightAlert';
 import { useAnalytics } from '../../hooks/useAnalytics';
 import { calculateAnalyticsKPIs } from '../../utils/analyticsKPIs';
 import { useCurrency } from '../../contexts/CurrencyContext';
+import { roundToTwoDecimals } from '../../utils/decimalUtils';
 import { calculateTotalPotentialRevenueML } from '../../services/ml/revenueForecastService';
 import { DemandForecastModel } from '../../services/ml/demandForecastModel';
+import { SubTabsNavigation } from '../features/SubTabsNavigation';
+import { ANALYTICS_TABS } from '../../constants/stockEasyConstants';
+import AIMainDashboard from '../ml/AIMainDashboard';
+import { getSalesHistory } from '../../utils/salesHistoryGenerator';
 
 export const AnalyticsTab = ({
   products,
   orders,
   suppliers,
   warehouses,
-  seuilSurstockProfond = 90
+  seuilSurstockProfond = 90,
+  analyticsSubTab = ANALYTICS_TABS.KPIS,
+  setAnalyticsSubTab
 }) => {
   // États locaux pour les contrôles d'analytics
   const [dateRange, setDateRange] = useState('30d');
@@ -34,6 +41,11 @@ export const AnalyticsTab = ({
     performance: false,
     financier: false
   });
+
+  // État pour le produit sélectionné pour les prévisions
+  const [selectedProductForForecast, setSelectedProductForForecast] = useState(null);
+  const [salesHistoryForForecast, setSalesHistoryForForecast] = useState([]);
+  const [loadingSalesHistory, setLoadingSalesHistory] = useState(false);
   
   // Flag pour suivre si l'utilisateur a déjà interagi avec les accordéons
   const [userHasInteracted, setUserHasInteracted] = useState({
@@ -81,8 +93,12 @@ export const AnalyticsTab = ({
       }
 
       setMlRevenueLoading(true);
+      const startTime = performance.now();
+      
       try {
         console.log('🤖 Calcul du Revenu Potentiel avec ML...');
+        console.log(`📦 ${products.length} produits à analyser`);
+        
         const result = await calculateTotalPotentialRevenueML(products, mlModel, {
           forecastDays: 90,
           useSeasonality: true,
@@ -90,10 +106,24 @@ export const AnalyticsTab = ({
           useMLPredictions: mlModel !== null
         });
         
+        const duration = performance.now() - startTime;
+        
         setMlRevenueData(result);
         console.log('✅ Revenu Potentiel ML calculé:', result.totalRevenue);
+        console.log(`⚡ Temps de calcul: ${duration.toFixed(0)}ms (${(duration / products.length).toFixed(0)}ms/produit)`);
+        
+        // Afficher un message de performance
+        if (duration < 3000) {
+          console.log('✅ Performance EXCELLENTE');
+        } else if (duration < 5000) {
+          console.log('🟡 Performance ACCEPTABLE');
+        } else {
+          console.log('🔴 Performance LENTE - Vérifier les optimisations');
+        }
       } catch (error) {
+        const duration = performance.now() - startTime;
         console.error('❌ Erreur calcul revenu potentiel ML:', error);
+        console.error(`⏱️  Temps avant erreur: ${duration.toFixed(0)}ms`);
         // En cas d'erreur, utiliser les données de base
         setMlRevenueData(null);
       } finally {
@@ -194,7 +224,28 @@ export const AnalyticsTab = ({
     }
     
     // Revenu Potentiel (ML)
-    if (realAdditionalKPIs.totalPotentialRevenue) {
+    // PRIORITÉ : Utiliser mlRevenueData si disponible (calcul ML réel)
+    // Sinon, utiliser realAdditionalKPIs (calcul simple depuis useAnalytics)
+    if (mlRevenueData && mlRevenueData.totalRevenue !== undefined) {
+      // Utiliser le calcul ML direct (plus précis)
+      const mlRevenue = mlRevenueData.totalRevenue;
+      kpisWithMetadata.totalPotentialRevenue = {
+        ...currentKPIs.totalPotentialRevenue,
+        value: formatCurrency ? formatCurrency(roundToTwoDecimals(mlRevenue)) : mlRevenue,
+        rawValue: mlRevenue, // Utiliser la valeur ML calculée
+        change: realAdditionalKPIs.totalPotentialRevenue?.change || 0,
+        changePercent: realAdditionalKPIs.totalPotentialRevenue?.changePercent || 0,
+        trend: realAdditionalKPIs.totalPotentialRevenue?.trend || 'up',
+        chartData: normalizeChartData(realAdditionalKPIs.totalPotentialRevenue?.chartData || [], mlRevenue),
+        comparisonPeriod: realAdditionalKPIs.totalPotentialRevenue?.comparisonPeriod || 'période précédente',
+        mlData: {
+          confidence: mlRevenueData.avgConfidence || 0,
+          dataQuality: mlRevenueData.dataQuality || {},
+          methodCounts: mlRevenueData.methodCounts || {}
+        }
+      };
+    } else if (realAdditionalKPIs.totalPotentialRevenue) {
+      // Fallback vers calcul simple si ML non disponible
       kpisWithMetadata.totalPotentialRevenue = {
         ...currentKPIs.totalPotentialRevenue,
         value: realAdditionalKPIs.totalPotentialRevenue.value,
@@ -204,7 +255,7 @@ export const AnalyticsTab = ({
         trend: realAdditionalKPIs.totalPotentialRevenue.trend,
         chartData: normalizeChartData(realAdditionalKPIs.totalPotentialRevenue.chartData, realAdditionalKPIs.totalPotentialRevenue.rawValue),
         comparisonPeriod: realAdditionalKPIs.totalPotentialRevenue.comparisonPeriod,
-        mlData: currentKPIs.totalPotentialRevenue.mlData // Conserver les données ML
+        mlData: currentKPIs.totalPotentialRevenue.mlData // Conserver les données ML si disponibles
       };
     }
     
@@ -551,18 +602,105 @@ export const AnalyticsTab = ({
         </div>
       </div>
 
-      {/* État de chargement */}
-      {analyticsData.loading ? (
-        <div className="flex items-center justify-center h-40 bg-white rounded-xl shadow-sm border border-[#E5E4DF]">
-          <RefreshCw className="w-6 h-6 animate-spin text-[#666663]" />
-          <span className="ml-2 text-[#666663]">Chargement des analytics...</span>
-        </div>
-      ) : analyticsData.error ? (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-          <p className="text-red-700">Erreur: {analyticsData.error}</p>
+      {/* Navigation par sous-onglets */}
+      <SubTabsNavigation
+        tabs={[
+          { id: ANALYTICS_TABS.KPIS, label: 'KPIs', icon: TrendingUp },
+          { id: ANALYTICS_TABS.FORECAST, label: 'Prévisions IA', icon: Brain }
+        ]}
+        activeTab={analyticsSubTab}
+        onChange={setAnalyticsSubTab || (() => {})}
+      />
+
+      {/* Contenu des sous-onglets */}
+      {analyticsSubTab === ANALYTICS_TABS.FORECAST ? (
+        <div className="mt-6">
+          {/* Sélecteur de produit */}
+          <div className="mb-6 bg-white rounded-xl shadow-sm border border-[#E5E4DF] p-4">
+            <label className="block text-sm font-medium text-[#191919] mb-2">
+              Sélectionner un produit pour les prévisions
+            </label>
+            <select
+              value={selectedProductForForecast?.sku || ''}
+              onChange={async (e) => {
+                const product = products.find(p => p.sku === e.target.value);
+                setSelectedProductForForecast(product || null);
+                
+                // Charger l'historique depuis Supabase quand un produit est sélectionné
+                if (product) {
+                  setLoadingSalesHistory(true);
+                  try {
+                    const history = await getSalesHistory(product, orders, 90);
+                    setSalesHistoryForForecast(history);
+                  } catch (error) {
+                    console.error('❌ Erreur chargement historique:', error);
+                    setSalesHistoryForForecast([]);
+                  } finally {
+                    setLoadingSalesHistory(false);
+                  }
+                } else {
+                  setSalesHistoryForForecast([]);
+                }
+              }}
+              className="w-full px-4 py-2 border border-[#E5E4DF] rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+            >
+              <option value="">-- Sélectionner un produit --</option>
+              {products
+                .filter(p => p.salesPerDay > 0)
+                .map(product => (
+                  <option key={product.sku} value={product.sku}>
+                    {product.name} ({product.sku}) - {product.salesPerDay.toFixed(1)} ventes/jour
+                  </option>
+                ))}
+            </select>
+          </div>
+
+          {/* Dashboard de prévisions */}
+          {selectedProductForForecast ? (
+            loadingSalesHistory ? (
+              <div className="bg-white rounded-xl shadow-sm border border-[#E5E4DF] p-12 text-center">
+                <RefreshCw className="w-16 h-16 mx-auto text-gray-400 mb-4 animate-spin" />
+                <h3 className="text-lg font-semibold text-[#191919] mb-2">
+                  Chargement de l'historique depuis Supabase...
+                </h3>
+                <p className="text-[#666663]">
+                  Récupération des données de ventes réelles
+                </p>
+              </div>
+            ) : (
+              <AIMainDashboard
+                product={selectedProductForForecast}
+                salesHistory={salesHistoryForForecast}
+                currentStock={selectedProductForForecast.stock || 0}
+                reorderPoint={selectedProductForForecast.reorderPoint || 0}
+              />
+            )
+          ) : (
+            <div className="bg-white rounded-xl shadow-sm border border-[#E5E4DF] p-12 text-center">
+              <Brain className="w-16 h-16 mx-auto text-gray-400 mb-4" />
+              <h3 className="text-lg font-semibold text-[#191919] mb-2">
+                Prévisions IA
+              </h3>
+              <p className="text-[#666663]">
+                Sélectionnez un produit ci-dessus pour voir ses prévisions de demande
+              </p>
+            </div>
+          )}
         </div>
       ) : (
         <>
+          {/* État de chargement */}
+          {analyticsData.loading ? (
+            <div className="flex items-center justify-center h-40 bg-white rounded-xl shadow-sm border border-[#E5E4DF]">
+              <RefreshCw className="w-6 h-6 animate-spin text-[#666663]" />
+              <span className="ml-2 text-[#666663]">Chargement des analytics...</span>
+            </div>
+          ) : analyticsData.error ? (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+              <p className="text-red-700">Erreur: {analyticsData.error}</p>
+            </div>
+          ) : (
+            <>
           {/* Indicateurs Clés de l'Inventaire - KPIs principaux */}
           <div>
             <h3 className="text-lg font-bold text-[#191919] mb-4 flex items-center gap-2">
@@ -713,6 +851,8 @@ export const AnalyticsTab = ({
               )}
             </div>
           </div>
+            </>
+          )}
         </>
       )}
 

@@ -9,6 +9,7 @@
 
 import { collectSalesHistory, getSalesStatistics } from './dataCollector';
 import { DemandForecastModel } from './demandForecastModel';
+import { mlCache } from './mlCache';
 
 // Facteurs de saisonnalité mensuels (basés sur des patterns généraux de commerce)
 // Ces valeurs peuvent être ajustées avec l'historique réel
@@ -115,7 +116,7 @@ function analyzeTrends(salesHistory) {
 }
 
 /**
- * Prédit la demande future avec le modèle ML
+ * Prédit la demande future avec le modèle ML (OPTIMISÉ avec batch prediction)
  * @param {Object} product - Produit
  * @param {Object} model - Modèle ML entraîné
  * @param {number} forecastDays - Nombre de jours à prédire
@@ -130,17 +131,20 @@ async function predictFutureDemand(product, model, forecastDays = 30, seasonalit
 
   try {
     const today = new Date();
-    const predictions = [];
-
-    // Prédire pour chaque jour de la période
-    for (let i = 0; i < Math.min(forecastDays, 90); i++) {
+    const daysToForecast = Math.min(forecastDays, 90);
+    
+    // Préparer toutes les features en batch (OPTIMISATION CRITIQUE)
+    const featuresBatch = [];
+    const seasonalityFactorsArray = [];
+    
+    for (let i = 0; i < daysToForecast; i++) {
       const futureDate = new Date(today);
       futureDate.setDate(today.getDate() + i);
 
       const month = futureDate.getMonth() + 1;
       const seasonalityFactor = seasonalityFactors[month] || 1;
-
-      const prediction = await model.predict({
+      
+      featuresBatch.push({
         dayOfWeek: futureDate.getDay(),
         month: month,
         isWeekend: [0, 6].includes(futureDate.getDay()),
@@ -148,13 +152,20 @@ async function predictFutureDemand(product, model, forecastDays = 30, seasonalit
         price: product.sellPrice || product.prixVente || 0,
         avgSales: product.salesPerDay || (product.sales30d ? product.sales30d / 30 : 0)
       });
-
-      // Appliquer le facteur de saisonnalité
-      predictions.push(prediction * seasonalityFactor);
+      
+      seasonalityFactorsArray.push(seasonalityFactor);
     }
 
+    // Prédire en batch (UNE SEULE passe au lieu de 90 appels séquentiels)
+    const predictions = await model.predictBatch(featuresBatch);
+    
+    // Appliquer les facteurs de saisonnalité
+    const adjustedPredictions = predictions.map((pred, idx) => 
+      pred * seasonalityFactorsArray[idx]
+    );
+
     // Retourner la moyenne
-    const avgPrediction = predictions.reduce((sum, p) => sum + p, 0) / predictions.length;
+    const avgPrediction = adjustedPredictions.reduce((sum, p) => sum + p, 0) / adjustedPredictions.length;
     return Math.max(0, avgPrediction);
   } catch (error) {
     console.error('❌ Erreur prédiction ML:', error);
@@ -328,81 +339,89 @@ export async function calculatePotentialRevenueML(product, salesHistory = [], mo
 }
 
 /**
- * Calcule le revenu potentiel total pour tous les produits avec ML
+ * Calcule le revenu potentiel total pour tous les produits avec ML (OPTIMISÉ avec cache)
  * @param {Array} products - Liste des produits
  * @param {Object} model - Modèle ML (optionnel)
  * @param {Object} options - Options de calcul
  * @returns {Promise<Object>} Revenu potentiel total et détails par produit
  */
 export async function calculateTotalPotentialRevenueML(products = [], model = null, options = {}) {
-  try {
-    console.log('📊 Calcul du Revenu Potentiel avec ML...');
-    console.log(`📦 ${products.length} produits à analyser`);
+  // Utiliser le cache pour éviter les recalculs
+  return mlCache.cached(
+    'revenue',
+    async () => {
+      try {
+        console.log('📊 Calcul du Revenu Potentiel avec ML...');
+        console.log(`📦 ${products.length} produits à analyser`);
 
-    // Collecter l'historique des ventes pour tous les produits
-    let allSalesHistory = [];
-    try {
-      allSalesHistory = await collectSalesHistory(products, { days: 180 });
-      console.log(`📈 ${allSalesHistory.length} enregistrements d'historique collectés`);
-    } catch (error) {
-      console.warn('⚠️ Erreur collecte historique, utilisation des données disponibles:', error);
-    }
+        // Collecter l'historique des ventes pour tous les produits
+        let allSalesHistory = [];
+        try {
+          allSalesHistory = await collectSalesHistory(products, { days: 180 });
+          console.log(`📈 ${allSalesHistory.length} enregistrements d'historique collectés`);
+        } catch (error) {
+          console.warn('⚠️ Erreur collecte historique, utilisation des données disponibles:', error);
+        }
 
-    // Grouper l'historique par SKU
-    const salesHistoryBySku = {};
-    allSalesHistory.forEach(sale => {
-      if (!salesHistoryBySku[sale.sku]) {
-        salesHistoryBySku[sale.sku] = [];
-      }
-      salesHistoryBySku[sale.sku].push(sale);
-    });
+        // Grouper l'historique par SKU
+        const salesHistoryBySku = {};
+        allSalesHistory.forEach(sale => {
+          if (!salesHistoryBySku[sale.sku]) {
+            salesHistoryBySku[sale.sku] = [];
+          }
+          salesHistoryBySku[sale.sku].push(sale);
+        });
 
-    // Calculer le revenu potentiel pour chaque produit
-    const results = await Promise.all(
-      products.map(async (product) => {
-        const productHistory = salesHistoryBySku[product.sku] || [];
-        const result = await calculatePotentialRevenueML(product, productHistory, model, options);
+        // Calculer le revenu potentiel pour chaque produit
+        const results = await Promise.all(
+          products.map(async (product) => {
+            const productHistory = salesHistoryBySku[product.sku] || [];
+            const result = await calculatePotentialRevenueML(product, productHistory, model, options);
+            return {
+              sku: product.sku,
+              ...result
+            };
+          })
+        );
+
+        // Calculer le total
+        const totalRevenue = results.reduce((sum, r) => sum + (r.potentialRevenue || 0), 0);
+        
+        // Calculer la moyenne de confiance
+        const avgConfidence = results.length > 0
+          ? results.reduce((sum, r) => sum + (r.confidence || 0), 0) / results.length
+          : 0;
+
+        // Compter les méthodes utilisées
+        const methodCounts = results.reduce((acc, r) => {
+          acc[r.method] = (acc[r.method] || 0) + 1;
+          return acc;
+        }, {});
+
+        console.log(`✅ Revenu Potentiel calculé: ${totalRevenue.toFixed(2)}`);
+        console.log(`📊 Confiance moyenne: ${Math.round(avgConfidence)}%`);
+        console.log(`🤖 Méthodes utilisées:`, methodCounts);
+
         return {
-          sku: product.sku,
-          ...result
+          totalRevenue,
+          avgConfidence: Math.round(avgConfidence),
+          methodCounts,
+          productDetails: results,
+          dataQuality: {
+            productsWithHistory: Object.keys(salesHistoryBySku).length,
+            totalHistoryRecords: allSalesHistory.length,
+            mlAvailable: model && model.isReady()
+          }
         };
-      })
-    );
 
-    // Calculer le total
-    const totalRevenue = results.reduce((sum, r) => sum + (r.potentialRevenue || 0), 0);
-    
-    // Calculer la moyenne de confiance
-    const avgConfidence = results.length > 0
-      ? results.reduce((sum, r) => sum + (r.confidence || 0), 0) / results.length
-      : 0;
-
-    // Compter les méthodes utilisées
-    const methodCounts = results.reduce((acc, r) => {
-      acc[r.method] = (acc[r.method] || 0) + 1;
-      return acc;
-    }, {});
-
-    console.log(`✅ Revenu Potentiel calculé: ${totalRevenue.toFixed(2)}`);
-    console.log(`📊 Confiance moyenne: ${Math.round(avgConfidence)}%`);
-    console.log(`🤖 Méthodes utilisées:`, methodCounts);
-
-    return {
-      totalRevenue,
-      avgConfidence: Math.round(avgConfidence),
-      methodCounts,
-      productDetails: results,
-      dataQuality: {
-        productsWithHistory: Object.keys(salesHistoryBySku).length,
-        totalHistoryRecords: allSalesHistory.length,
-        mlAvailable: model && model.isReady()
+      } catch (error) {
+        console.error('❌ Erreur calcul revenu potentiel total ML:', error);
+        throw error;
       }
-    };
-
-  } catch (error) {
-    console.error('❌ Erreur calcul revenu potentiel total ML:', error);
-    throw error;
-  }
+    },
+    { products, ...options },
+    5 * 60 * 1000 // Cache pendant 5 minutes
+  );
 }
 
 

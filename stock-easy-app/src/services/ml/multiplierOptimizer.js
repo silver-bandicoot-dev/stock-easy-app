@@ -1,11 +1,13 @@
 /**
  * Service ML pour optimiser le multiplicateur de prévision
  * Analyse les données historiques et suggère un multiplicateur optimal
+ * OPTIMISÉ avec cache ML et performance logging
  * 
  * @module services/ml/multiplierOptimizer
  */
 
 import { getSalesHistory } from '../../services/supabaseApiService';
+import { mlCache } from './mlCache';
 
 /**
  * Classe pour optimiser le multiplicateur de prévision basé sur l'analyse ML
@@ -19,11 +21,37 @@ export class MultiplierOptimizer {
 
   /**
    * Analyse un produit et suggère un multiplicateur optimal
+   * OPTIMISÉ avec cache ML pour éviter les recalculs
    * @param {Object} product - Le produit à analyser
    * @param {Array} salesHistory - Historique des ventes (optionnel, sera récupéré si absent)
+   * @param {Object} options - Options (skipCache: true pour forcer le recalcul)
    * @returns {Promise<Object>} Suggestion avec multiplicateur, confiance et raisonnement
    */
-  async suggestOptimalMultiplier(product, salesHistory = null) {
+  async suggestOptimalMultiplier(product, salesHistory = null, options = {}) {
+    const startTime = performance.now();
+    const sku = product.sku;
+    
+    // Utiliser le cache si disponible et non forcé
+    if (!options.skipCache) {
+      return mlCache.cached(
+        'multiplier',
+        async () => {
+          return await this._analyzeProduct(product, salesHistory, startTime);
+        },
+        { sku, currentMultiplier: product.multiplicateur_prevision || product.multiplier || this.defaultMultiplier },
+        5 * 60 * 1000 // Cache 5 minutes
+      );
+    }
+    
+    // Forcer le recalcul
+    return await this._analyzeProduct(product, salesHistory, startTime);
+  }
+
+  /**
+   * Analyse interne d'un produit (sans cache)
+   * @private
+   */
+  async _analyzeProduct(product, salesHistory, startTime) {
     try {
       // Récupérer l'historique si non fourni
       if (!salesHistory) {
@@ -129,6 +157,10 @@ export class MultiplierOptimizer {
       // Calculer la confiance finale (max 95%)
       confidence = Math.min(95, confidence);
 
+      // Performance logging
+      const duration = performance.now() - startTime;
+      console.log(`✅ Multiplicateur ML analysé pour ${product.sku}: ${suggestedMultiplier.toFixed(1)} (${duration.toFixed(0)}ms)`);
+
       return {
         suggestedMultiplier,
         confidence: Math.round(confidence),
@@ -140,15 +172,24 @@ export class MultiplierOptimizer {
           dataPoints: salesHistory.length,
           currentMultiplier: factors.currentMultiplier
         },
-        adjustments: adjustments.length > 0 ? adjustments : ['Aucun ajustement nécessaire']
+        adjustments: adjustments.length > 0 ? adjustments : ['Aucun ajustement nécessaire'],
+        performance: {
+          duration: Math.round(duration),
+          cached: false
+        }
       };
     } catch (error) {
-      console.error('❌ Erreur analyse ML multiplicateur:', error);
+      const duration = performance.now() - startTime;
+      console.error(`❌ Erreur analyse ML multiplicateur pour ${product.sku} (${duration.toFixed(0)}ms):`, error);
       return {
         suggestedMultiplier: product.multiplicateur_prevision || this.defaultMultiplier,
         confidence: 0,
         reasoning: `Erreur lors de l'analyse : ${error.message}`,
-        error: true
+        error: true,
+        performance: {
+          duration: Math.round(duration),
+          cached: false
+        }
       };
     }
   }

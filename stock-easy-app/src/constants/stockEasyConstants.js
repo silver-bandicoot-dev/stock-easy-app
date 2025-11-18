@@ -73,7 +73,6 @@ export const MAIN_TABS = {
   ANALYTICS: 'analytics',
   HISTORY: 'history',
   SETTINGS: 'settings',
-  AI: 'ai',
   PROFILE: 'profile'
 };
 
@@ -112,16 +111,10 @@ export const SETTINGS_TABS = {
 
 // Sous-onglets Analytics
 export const ANALYTICS_TABS = {
-  KPIS: 'kpis'
+  KPIS: 'kpis',
+  FORECAST: 'forecast'
 };
 
-// Sous-onglets AI
-export const AI_TABS = {
-  OVERVIEW: 'overview',
-  FORECASTS: 'forecasts',
-  OPTIMIZATION: 'optimization',
-  ANOMALIES: 'anomalies'
-};
 
 // Filtres de stock
 export const STOCK_FILTERS = {

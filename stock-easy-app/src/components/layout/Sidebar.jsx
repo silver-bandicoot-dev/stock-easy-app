@@ -10,7 +10,6 @@ import {
   User,
   Menu,
   X,
-  Brain,
   BarChart3,
   ChevronDown,
   ChevronRight,
@@ -21,7 +20,8 @@ import {
   Warehouse,
   Zap,
   PlugZap,
-  Cog
+  Cog,
+  Brain
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -34,16 +34,14 @@ const Sidebar = ({
   handleLogout,
   analyticsSubTab,
   setAnalyticsSubTab,
-  aiSubTab,
-  setAiSubTab,
   settingsSubTab,
   setSettingsSubTab,
   mobileMenuOpen,
   setMobileMenuOpen,
-  orderBadgeCount = 0
+  orderBadgeCount = 0,
+  trackBadgeCount = 0
 }) => {
   const [analyticsExpanded, setAnalyticsExpanded] = useState(false);
-  const [aiExpanded, setAiExpanded] = useState(false);
   const [settingsExpanded, setSettingsExpanded] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
@@ -53,22 +51,18 @@ const Sidebar = ({
     { id: 'actions', label: 'Order', icon: DollarSign, type: 'tab' },
     { id: 'track', label: 'Track & Manage', icon: Truck, type: 'tab' },
     { id: 'stock-level', label: 'Stock Level', icon: Activity, type: 'tab' },
-    { id: 'analytics', label: 'Analytics', icon: TrendingUp, type: 'tab' },
-    { id: 'history', label: 'Historique', icon: FileText, type: 'tab' },
     { 
-      id: 'ai', 
-      label: 'IA & Prévisions', 
-      icon: Brain, 
+      id: 'analytics', 
+      label: 'Analytics', 
+      icon: TrendingUp, 
       type: 'tab',
-      badge: 'Beta',
       hasSubMenu: true,
       subItems: [
-        { id: 'overview', label: 'Vue d\'Ensemble', icon: BarChart3 },
-        { id: 'forecasts', label: 'Prévisions Détaillées', icon: TrendingUp },
-        { id: 'optimization', label: 'Optimisation Stocks', icon: Activity },
-        { id: 'anomalies', label: 'Détection Anomalies', icon: AlertTriangle }
+        { id: 'kpis', label: 'KPIs', icon: BarChart3 },
+        { id: 'forecast', label: 'Prévisions IA', icon: Brain }
       ]
     },
+    { id: 'history', label: 'Historique', icon: FileText, type: 'tab' },
     { 
       id: 'settings', 
       label: 'Paramètres', 
@@ -97,14 +91,6 @@ const Sidebar = ({
         setActiveTab(item.id);
         setAnalyticsExpanded(true);
       }
-    } else if (item.hasSubMenu && item.id === 'ai') {
-      // Si on clique sur IA & Prévisions, basculer l'expansion
-      if (activeTab === 'ai') {
-        setAiExpanded(!aiExpanded);
-      } else {
-        setActiveTab(item.id);
-        setAiExpanded(true);
-      }
     } else if (item.hasSubMenu && item.id === 'settings') {
       // Si on clique sur Paramètres, basculer l'expansion
       if (activeTab === 'settings') {
@@ -117,7 +103,6 @@ const Sidebar = ({
       setActiveTab(item.id);
       // Fermer les sous-menus si on quitte
       if (item.id !== 'analytics') setAnalyticsExpanded(false);
-      if (item.id !== 'ai') setAiExpanded(false);
       if (item.id !== 'settings') setSettingsExpanded(false);
     }
     setMobileMenuOpen(false);
@@ -127,9 +112,6 @@ const Sidebar = ({
     if (parentId === 'analytics') {
       setAnalyticsSubTab(subItem.id);
       setActiveTab('analytics');
-    } else if (parentId === 'ai') {
-      setAiSubTab(subItem.id);
-      setActiveTab('ai');
     } else if (parentId === 'settings') {
       setSettingsSubTab(subItem.id);
       setActiveTab('settings');
@@ -148,7 +130,6 @@ const Sidebar = ({
           const isActive = item.type === 'tab' ? activeTab === item.id : routeActive;
           const showSubMenu = item.hasSubMenu && (
             (item.id === 'analytics' && analyticsExpanded) ||
-            (item.id === 'ai' && aiExpanded) ||
             (item.id === 'settings' && settingsExpanded)
           );
           
@@ -179,6 +160,15 @@ const Sidebar = ({
                     {orderBadgeCount}
                   </span>
                 )}
+                {item.id === 'track' && trackBadgeCount > 0 && (
+                  <span className={`px-2.5 py-1 min-w-[24px] text-xs font-semibold rounded-full flex items-center justify-center ${
+                    isActive 
+                      ? 'bg-white/20 text-white' 
+                      : 'bg-[#E5E4DF] text-[#191919]'
+                  }`}>
+                    {trackBadgeCount}
+                  </span>
+                )}
                 {item.hasSubMenu && (
                   showSubMenu ? 
                     <ChevronDown className="w-4 h-4" /> : 
@@ -194,8 +184,6 @@ const Sidebar = ({
                     // Vérifier le bon sous-tab selon le parent
                     const isSubActive = item.id === 'analytics' 
                       ? (analyticsSubTab === subItem.id && activeTab === 'analytics')
-                      : item.id === 'ai'
-                      ? (aiSubTab === subItem.id && activeTab === 'ai')
                       : item.id === 'settings'
                       ? (settingsSubTab === subItem.id && activeTab === 'settings')
                       : false;
@@ -260,11 +248,10 @@ const Sidebar = ({
                   const Icon = item.icon;
                   const routeActive = item.type === 'route' && location.pathname === item.path;
                   const isActive = item.type === 'tab' ? activeTab === item.id : routeActive;
-                  const showSubMenu = item.hasSubMenu && (
-                    (item.id === 'analytics' && analyticsExpanded) ||
-                    (item.id === 'ai' && aiExpanded) ||
-                    (item.id === 'settings' && settingsExpanded)
-                  );
+                    const showSubMenu = item.hasSubMenu && (
+                      (item.id === 'analytics' && analyticsExpanded) ||
+                      (item.id === 'settings' && settingsExpanded)
+                    );
                   
                   return (
                     <div key={item.id}>
@@ -293,6 +280,15 @@ const Sidebar = ({
                             {orderBadgeCount}
                           </span>
                         )}
+                        {item.id === 'track' && trackBadgeCount > 0 && (
+                          <span className={`px-2.5 py-1 min-w-[24px] text-xs font-semibold rounded-full flex items-center justify-center ${
+                            isActive 
+                              ? 'bg-white/20 text-white' 
+                              : 'bg-[#E5E4DF] text-[#191919]'
+                          }`}>
+                            {trackBadgeCount}
+                          </span>
+                        )}
                         {item.hasSubMenu && (
                           showSubMenu ? 
                             <ChevronDown className="w-4 h-4" /> : 
@@ -307,8 +303,6 @@ const Sidebar = ({
                             const SubIcon = subItem.icon;
                             const isSubActive = item.id === 'analytics' 
                               ? (analyticsSubTab === subItem.id && activeTab === 'analytics')
-                              : item.id === 'ai'
-                              ? (aiSubTab === subItem.id && activeTab === 'ai')
                               : item.id === 'settings'
                               ? (settingsSubTab === subItem.id && activeTab === 'settings')
                               : false;

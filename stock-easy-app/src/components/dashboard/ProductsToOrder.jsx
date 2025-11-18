@@ -1,6 +1,6 @@
 import React, { useMemo, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { AlertCircle, ShoppingCart, Eye, TrendingDown, DollarSign, Calendar, Package } from 'lucide-react';
+import { AlertCircle, ShoppingCart, TrendingDown, DollarSign, Calendar, Package } from 'lucide-react';
 import { InfoTooltip, tooltips } from '../ui/InfoTooltip';
 import { formatUnits } from '../../utils/decimalUtils';
 import { useCurrency } from '../../contexts/CurrencyContext';
@@ -230,7 +230,6 @@ export const ProductsToOrder = ({ products, onViewDetails, onQuickOrder }) => {
                           }}
                           className="opacity-0 group-hover:opacity-100 transition-opacity px-3 py-1.5 bg-white border border-[#E5E4DF] hover:border-[#191919] text-[#191919] text-xs font-semibold rounded-lg flex items-center gap-1.5"
                         >
-                          <Eye className="w-3 h-3" />
                           Détails
                         </button>
                       )}

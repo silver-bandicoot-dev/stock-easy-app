@@ -5,6 +5,7 @@ import { InfoTooltip } from '../ui/InfoTooltip/InfoTooltip';
 import { toast } from 'sonner';
 import api from '../../services/apiAdapter';
 import { multiplierOptimizer } from '../../services/ml/multiplierOptimizer';
+import { collectSalesHistory } from '../../services/ml/dataCollector';
 import { ImagePreview } from '../ui/ImagePreview';
 
 /**
@@ -182,45 +183,102 @@ export function GestionMultiplicateurs({ products, loadData, multiplicateurDefau
     }
 
     setIsAnalyzingML(true);
+    const startTime = performance.now();
+    
     try {
       const selectedProducts = filteredProducts.filter(p => selectedSkus.has(p.sku));
-      const suggestions = [];
-      let successCount = 0;
-      let errorCount = 0;
-
+      
+      console.log(`🤖 Analyse ML en cours pour ${selectedProducts.length} produit(s)...`);
       toast.info(`Analyse ML en cours pour ${selectedProducts.length} produit(s)...`, {
         duration: 3000
       });
 
-      // Analyser chaque produit
-      for (const product of selectedProducts) {
+      // OPTIMISATION: Pré-charger l'historique pour tous les produits en une fois
+      let salesHistoryBySku = {};
+      try {
+        console.log('📊 Collecte de l\'historique des ventes en batch...');
+        const allSalesHistory = await collectSalesHistory(selectedProducts, { days: 180 });
+        
+        // Grouper par SKU pour un accès rapide
+        allSalesHistory.forEach(sale => {
+          const sku = sale.sku;
+          if (!salesHistoryBySku[sku]) {
+            salesHistoryBySku[sku] = [];
+          }
+          salesHistoryBySku[sku].push(sale);
+        });
+        console.log(`✅ ${allSalesHistory.length} enregistrements d'historique collectés pour ${Object.keys(salesHistoryBySku).length} produits`);
+      } catch (error) {
+        console.warn('⚠️ Erreur collecte historique batch, utilisation individuelle:', error);
+        // Fallback: chaque produit récupérera son historique individuellement
+      }
+
+      // OPTIMISATION: Traitement en parallèle avec Promise.all au lieu de boucle séquentielle
+      const analysisPromises = selectedProducts.map(async (product) => {
         try {
-          const suggestion = await multiplierOptimizer.suggestOptimalMultiplier(product);
-          suggestions.push({
-            sku: product.sku,
-            name: product.name || product.nom_produit || 'Sans nom',
-            currentMultiplier: product.multiplicateurPrevision || product.multiplier || multiplicateurDefaut,
-            suggestedMultiplier: suggestion.suggestedMultiplier,
-            confidence: suggestion.confidence,
-            reasoning: suggestion.reasoning,
-            factors: suggestion.factors
-          });
-          successCount++;
+          // Utiliser l'historique pré-chargé si disponible
+          const productHistory = salesHistoryBySku[product.sku] || null;
+          const suggestion = await multiplierOptimizer.suggestOptimalMultiplier(product, productHistory);
+          return {
+            success: true,
+            data: {
+              sku: product.sku,
+              name: product.name || product.nom_produit || 'Sans nom',
+              currentMultiplier: product.multiplicateurPrevision || product.multiplier || multiplicateurDefaut,
+              suggestedMultiplier: suggestion.suggestedMultiplier,
+              confidence: suggestion.confidence,
+              reasoning: suggestion.reasoning,
+              factors: suggestion.factors,
+              performance: suggestion.performance
+            }
+          };
         } catch (error) {
           console.error(`❌ Erreur analyse ML pour ${product.sku}:`, error);
-          errorCount++;
+          return {
+            success: false,
+            sku: product.sku,
+            error: error.message || 'Erreur inconnue'
+          };
         }
+      });
+
+      // Attendre toutes les analyses en parallèle
+      const results = await Promise.all(analysisPromises);
+      
+      // Séparer les succès et erreurs
+      const suggestions = results
+        .filter(r => r.success)
+        .map(r => r.data);
+      const errors = results.filter(r => !r.success);
+      const successCount = suggestions.length;
+      const errorCount = errors.length;
+
+      // Performance logging
+      const duration = performance.now() - startTime;
+      const avgTimePerProduct = successCount > 0 ? duration / successCount : 0;
+      
+      console.log(`✅ Analyse ML terminée: ${successCount} succès, ${errorCount} erreurs`);
+      console.log(`⚡ Temps total: ${duration.toFixed(0)}ms (${avgTimePerProduct.toFixed(0)}ms/produit)`);
+      
+      // Afficher un message de performance
+      if (duration < 2000) {
+        console.log('✅ Performance EXCELLENTE');
+      } else if (duration < 5000) {
+        console.log('🟡 Performance ACCEPTABLE');
+      } else {
+        console.log('🔴 Performance LENTE - Vérifier les optimisations');
       }
 
       if (suggestions.length > 0) {
         setMlSuggestions(suggestions);
         setShowMLModal(true);
-        toast.success(`Analyse terminée: ${successCount} suggestion(s), ${errorCount} erreur(s)`);
+        toast.success(`Analyse terminée: ${successCount} suggestion(s), ${errorCount} erreur(s) (${duration.toFixed(0)}ms)`);
       } else {
         toast.error('Aucune suggestion générée. Vérifiez que les produits ont des données historiques.');
       }
     } catch (error) {
-      console.error('❌ Erreur analyse ML en masse:', error);
+      const duration = performance.now() - startTime;
+      console.error(`❌ Erreur analyse ML en masse (${duration.toFixed(0)}ms):`, error);
       toast.error('Erreur lors de l\'analyse ML en masse');
     } finally {
       setIsAnalyzingML(false);

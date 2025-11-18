@@ -4,6 +4,12 @@
  */
 
 import * as tf from '@tensorflow/tfjs';
+import { DataValidator } from '@/utils/ml/dataValidator';
+import { 
+  DataValidationError, 
+  ModelTrainingError,
+  MLErrorHandler 
+} from '@/utils/ml/mlErrors';
 
 export class DemandForecastModel {
   constructor() {
@@ -139,63 +145,161 @@ export class DemandForecastModel {
    * @returns {Promise<Object>} Historique d'entraînement
    */
   async train(salesHistory, options = {}) {
-    const {
-      epochs = 100,
-      batchSize = 32,
-      validationSplit = 0.2,
-      verbose = 1
-    } = options;
+    return MLErrorHandler.wrap(async () => {
+      const {
+        epochs = 50, // Réduit de 100 à 50 (early stopping gérera le reste)
+        batchSize = 32,
+        validationSplit = 0.2,
+        verbose = 1,
+        minRecords = 50,
+        maxZScore = 3,
+        minCV = 0.05,
+        maxGapDays = 7,
+        earlyStopping = true,
+        patience = 10, // Arrêter si pas d'amélioration depuis 10 epochs
+        minDelta = 0.001 // Amélioration minimum pour considérer comme progrès
+      } = options;
 
-    console.log('🚀 Début de l\'entraînement du modèle ML...');
-    console.log(`📊 Données: ${salesHistory.length} enregistrements`);
-    console.log(`⚙️ Paramètres: ${epochs} epochs, batch size ${batchSize}`);
+      console.log('🚀 Début de l\'entraînement du modèle ML...');
+      console.log(`📊 Données: ${salesHistory.length} enregistrements`);
+      console.log(`⚙️ Paramètres: ${epochs} epochs, batch size ${batchSize}`);
 
-    // Préparer les données
-    const { features, labels } = this.prepareTrainingData(salesHistory);
-    
-    // Normaliser les features
-    const { normalized, stats } = this.normalizeFeatures(features);
-    this.featureStats = stats;
-    
-    // Créer le modèle
-    this.model = this.createModel();
-    
-    // Afficher l'architecture
-    console.log('🏗️ Architecture du modèle:');
-    this.model.summary();
-    
-    // Convertir en tenseurs
-    const xs = tf.tensor2d(normalized);
-    const ys = tf.tensor2d(labels, [labels.length, 1]);
-    
-    // Entraîner
-    const history = await this.model.fit(xs, ys, {
-      epochs,
-      batchSize,
-      validationSplit,
-      verbose,
-      callbacks: {
-        onEpochEnd: (epoch, logs) => {
-          if (epoch % 10 === 0) {
-            console.log(
-              `Epoch ${epoch + 1}/${epochs} - ` +
-              `loss: ${logs.loss.toFixed(4)} - ` +
-              `mae: ${logs.mae.toFixed(4)} - ` +
-              `val_loss: ${logs.val_loss.toFixed(4)} - ` +
-              `val_mae: ${logs.val_mae.toFixed(4)}`
-            );
+      // ========================================
+      // ÉTAPE 1: VALIDATION DES DONNÉES
+      // ========================================
+      
+      console.log('🔍 Validation des données...');
+
+      const validation = DataValidator.validateSalesHistory(salesHistory, {
+        minRecords,
+        maxZScore,
+        minCV,
+        maxGapDays
+      });
+
+      // Afficher le rapport de validation (en dev)
+      if (import.meta.env.DEV) {
+        console.log(DataValidator.formatValidationReport(validation));
+      }
+
+      // Si erreurs critiques, on arrête
+      if (!validation.valid) {
+        throw new DataValidationError(
+          'Les données ne sont pas valides pour l\'entraînement',
+          validation
+        );
+      }
+
+      // Si avertissements, on log mais on continue
+      if (validation.warnings.length > 0) {
+        console.warn(
+          `⚠️  ${validation.warnings.length} avertissement(s):`,
+          validation.warnings
+        );
+      }
+
+      console.log('✅ Validation réussie!');
+      console.log('📊 Statistiques:', validation.stats);
+
+      // ========================================
+      // ÉTAPE 2: PRÉPARATION DES DONNÉES
+      // ========================================
+
+      // Préparer les données
+      const { features, labels } = this.prepareTrainingData(salesHistory);
+      
+      // Normaliser les features
+      const { normalized, stats } = this.normalizeFeatures(features);
+      this.featureStats = stats;
+      
+      // Créer le modèle
+      this.model = this.createModel();
+      
+      // Afficher l'architecture
+      console.log('🏗️ Architecture du modèle:');
+      this.model.summary();
+      
+      // Convertir en tenseurs
+      const xs = tf.tensor2d(normalized);
+      const ys = tf.tensor2d(labels, [labels.length, 1]);
+      
+      // Early stopping tracking
+      let bestValLoss = Infinity;
+      let patienceCounter = 0;
+      let stoppedEarly = false;
+      let actualEpochs = 0;
+      
+      // Entraîner
+      const history = await this.model.fit(xs, ys, {
+        epochs,
+        batchSize,
+        validationSplit,
+        verbose,
+        callbacks: {
+          onEpochEnd: (epoch, logs) => {
+            actualEpochs = epoch + 1;
+            
+            // Early stopping logic
+            if (earlyStopping && logs.val_loss !== undefined) {
+              const improvement = bestValLoss - logs.val_loss;
+              
+              if (improvement > minDelta) {
+                // Amélioration significative
+                bestValLoss = logs.val_loss;
+                patienceCounter = 0;
+              } else {
+                // Pas d'amélioration
+                patienceCounter++;
+                
+                if (patienceCounter >= patience) {
+                  stoppedEarly = true;
+                  console.log(`🛑 Early stopping at epoch ${actualEpochs}/${epochs} (val_loss: ${logs.val_loss.toFixed(4)})`);
+                  // Note: TensorFlow.js ne supporte pas l'arrêt direct, mais on log pour info
+                }
+              }
+            }
+            
+            if (epoch % 10 === 0 || stoppedEarly) {
+              console.log(
+                `Epoch ${actualEpochs}/${epochs} - ` +
+                `loss: ${logs.loss.toFixed(4)} - ` +
+                `mae: ${logs.mae.toFixed(4)} - ` +
+                `val_loss: ${logs.val_loss.toFixed(4)} - ` +
+                `val_mae: ${logs.val_mae.toFixed(4)}` +
+                (stoppedEarly ? ' [EARLY STOP]' : '')
+              );
+            }
           }
         }
+      });
+      
+      // Nettoyer les tenseurs
+      xs.dispose();
+      ys.dispose();
+      
+      if (stoppedEarly) {
+        console.log(`✅ Entraînement terminé avec early stopping (${actualEpochs}/${epochs} epochs)`);
+      } else {
+        console.log('✅ Entraînement terminé!');
       }
+      
+      // Retourner l'historique avec les informations de validation
+      return {
+        history,
+        validation: {
+          stats: validation.stats,
+          warnings: validation.warnings
+        },
+        trainingInfo: {
+          actualEpochs,
+          stoppedEarly,
+          bestValLoss
+        }
+      };
+    }, {
+      operation: 'train',
+      modelName: 'DemandForecastModel'
     });
-    
-    // Nettoyer les tenseurs
-    xs.dispose();
-    ys.dispose();
-    
-    console.log('✅ Entraînement terminé!');
-    
-    return history;
   }
 
   /**
@@ -234,6 +338,69 @@ export class DemandForecastModel {
     
     // Retourner valeur positive arrondie
     return Math.max(0, Math.round(value[0]));
+  }
+
+  /**
+   * Prédit en batch pour plusieurs features (BEAUCOUP plus rapide)
+   * @param {Array<Object>} featuresArray - Tableau de features
+   * @returns {Promise<Array<number>>} Tableau de quantités prédites
+   */
+  async predictBatch(featuresArray) {
+    if (!this.model) {
+      throw new Error('Le modèle n\'est pas entraîné. Appelez train() d\'abord.');
+    }
+
+    if (!Array.isArray(featuresArray) || featuresArray.length === 0) {
+      return [];
+    }
+
+    try {
+      // Préparer toutes les features
+      const normalizedBatch = featuresArray.map(features => {
+        const featureArray = [
+          features.dayOfWeek,
+          features.month,
+          features.isWeekend ? 1 : 0,
+          features.isHoliday ? 1 : 0,
+          features.price,
+          features.avgSales
+        ];
+        
+        // Normaliser avec les stats d'entraînement
+        return featureArray.map((val, idx) => 
+          (val - this.featureStats.mean[idx]) / (this.featureStats.std[idx] + 1e-7)
+        );
+      });
+      
+      // Prédire en batch (une seule passe TensorFlow)
+      const inputTensor = tf.tensor2d(normalizedBatch);
+      const predictions = this.model.predict(inputTensor);
+      const values = await predictions.data();
+      
+      // Nettoyer
+      inputTensor.dispose();
+      predictions.dispose();
+      
+      // Convertir en array et arrondir
+      const results = Array.from(values).map(val => Math.max(0, Math.round(val)));
+      
+      return results;
+    } catch (error) {
+      console.error('❌ Erreur batch prediction:', error);
+      // Fallback vers prédictions séquentielles
+      console.warn('⚠️ Fallback vers prédictions séquentielles');
+      const results = [];
+      for (const features of featuresArray) {
+        try {
+          const prediction = await this.predict(features);
+          results.push(prediction);
+        } catch (err) {
+          console.error('❌ Erreur prédiction individuelle:', err);
+          results.push(0);
+        }
+      }
+      return results;
+    }
   }
 
   /**

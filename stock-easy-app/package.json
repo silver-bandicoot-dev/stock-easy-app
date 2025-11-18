@@ -10,6 +10,8 @@
     "test": "vitest",
     "test:ui": "vitest --ui",
     "test:coverage": "vitest --coverage",
+    "test:forecast": "vitest src/services/forecast/__tests__/SmartForecastEngine.test.js",
+    "test:forecast:quick": "node scripts/test-forecast-quick.js",
     "test:supabase": "node test-supabase-connection.js"
   },
   "dependencies": {
