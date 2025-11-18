@@ -133,9 +133,11 @@ export const useStockData = () => {
 
   useEffect(() => {
     loadData();
+    // Synchronisation périodique réduite à 2 minutes pour être plus réactif
+    // La synchronisation en temps réel via useSupabaseSync gère la plupart des changements
     const interval = setInterval(() => {
       syncData();
-    }, 5 * 60 * 1000); // 5 minutes
+    }, 2 * 60 * 1000); // 2 minutes
     return () => clearInterval(interval);
   }, []);
 

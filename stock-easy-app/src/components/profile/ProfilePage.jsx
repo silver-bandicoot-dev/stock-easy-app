@@ -7,15 +7,21 @@ import {
   Crown, UserPlus, X, Upload, Building2, Trash2, RefreshCw,
   Copy, Check, Clock, AlertCircle, Shield
 } from 'lucide-react';
+import { Modal } from '../ui/Modal';
 import { supabase } from '../../lib/supabaseClient';
 import {
   getCurrentUserProfile,
   updateUserProfile,
   uploadProfilePhoto,
   getCurrentUserCompany,
-  updateCompany
+  updateCompany,
+  getTeamMembers,
+  inviteTeamMember,
+  getPendingInvitations,
+  revokeInvitation,
+  removeTeamMember,
+  deleteTeamMember
 } from '../../services/companyService';
-import { getTeamMembers, inviteTeamMember, getPendingInvitations, revokeInvitation, removeTeamMember } from '../../services/companyService';
 
 const ProfilePage = () => {
   const { currentUser, logout } = useAuth();
@@ -47,6 +53,11 @@ const ProfilePage = () => {
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviteRole, setInviteRole] = useState('member');
   const [inviting, setInviting] = useState(false);
+  
+  // Confirmation modal states
+  const [showDeleteConfirmModal, setShowDeleteConfirmModal] = useState(false);
+  const [showDoubleConfirmModal, setShowDoubleConfirmModal] = useState(false);
+  const [memberToDelete, setMemberToDelete] = useState(null);
   
   // Original values
   const [originalValues, setOriginalValues] = useState({
@@ -339,19 +350,73 @@ const ProfilePage = () => {
     }
   };
 
-  const handleRemoveMember = async (memberId, memberName) => {
-    if (!confirm(`Êtes-vous sûr de vouloir retirer ${memberName} de l'équipe ?`)) {
-      return;
-    }
+  const handleRemoveMemberClick = (memberId, memberName) => {
+    // Utiliser l'email comme fallback si le nom est vide ou null
+    const member = teamMembers.find(m => m.id === memberId);
+    const displayName = memberName && memberName.trim() !== '' && !memberName.includes('null')
+      ? memberName
+      : (member?.email || 'ce membre');
+    
+    setMemberToDelete({ id: memberId, name: displayName });
+    setShowDeleteConfirmModal(true);
+  };
 
+  const handleFirstConfirm = () => {
+    setShowDeleteConfirmModal(false);
+    setShowDoubleConfirmModal(true);
+  };
+
+  const handleFinalConfirm = async () => {
+    if (!memberToDelete) return;
+
+    const memberName = memberToDelete.name;
+    setShowDoubleConfirmModal(false);
+    
+    console.log('🔍 handleFinalConfirm: Début de la suppression de', memberToDelete.id);
+    
     try {
-      await removeTeamMember(memberId);
-      toast.success(`${memberName} a été retiré de l'équipe`);
+      const { data, error } = await deleteTeamMember(memberToDelete.id);
+      
+      console.log('🔍 handleFinalConfirm: Résultat de deleteTeamMember:', { data, error });
+      
+      if (error) {
+        // Extraire le message d'erreur de manière sécurisée
+        const errorMessage = error?.message || error?.error || error?.toString() || 'Erreur lors de la suppression du membre';
+        throw new Error(errorMessage);
+      }
+
+      // Fermer la modale et réinitialiser l'état
+      setMemberToDelete(null);
+      
+      // Recharger les données d'abord
       await loadData();
+      
+      // Utiliser setTimeout avec un délai minimal pour éviter les warnings React
+      setTimeout(() => {
+        toast.success(`${memberName} a été supprimé définitivement de l'équipe`, {
+          description: 'Le compte utilisateur a été supprimé avec succès'
+        });
+      }, 100);
     } catch (error) {
       console.error('Erreur suppression membre:', error);
-      toast.error(error.message || 'Erreur lors de la suppression');
+      
+      // Fermer la modale et réinitialiser l'état
+      setMemberToDelete(null);
+      
+      // Extraire le message d'erreur de manière sécurisée
+      const errorMessage = error?.message || error?.error || error?.toString() || 'Erreur lors de la suppression du membre';
+      
+      // Utiliser setTimeout avec un délai minimal pour éviter les warnings React
+      setTimeout(() => {
+        toast.error(errorMessage);
+      }, 100);
     }
+  };
+
+  const handleCancelDelete = () => {
+    setShowDeleteConfirmModal(false);
+    setShowDoubleConfirmModal(false);
+    setMemberToDelete(null);
   };
 
   const copyInvitationLink = (token) => {
@@ -730,11 +795,16 @@ const ProfilePage = () => {
                       <div className="flex items-center gap-2">
                         {isAdmin && member.role !== 'owner' && member.id !== currentUser?.id && (
                           <button
-                            onClick={() => handleRemoveMember(member.id, `${member.firstName} ${member.lastName}`)}
-                            className="p-1 hover:bg-red-100 rounded transition-colors"
-                            title="Retirer de l'équipe"
+                            onClick={() => {
+                              const displayName = (member.firstName && member.lastName)
+                                ? `${member.firstName} ${member.lastName}`
+                                : (member.firstName || member.lastName || member.email || 'ce membre');
+                              handleRemoveMemberClick(member.id, displayName);
+                            }}
+                            className="p-1.5 hover:bg-red-50 rounded transition-colors group"
+                            title="Supprimer définitivement ce membre"
                           >
-                            <Trash2 className="w-4 h-4 text-red-600" />
+                            <X className="w-4 h-4 text-red-600 group-hover:text-red-700" />
                           </button>
                         )}
                       </div>
@@ -872,6 +942,94 @@ const ProfilePage = () => {
           </div>
         </div>
       )}
+
+      {/* Modale de confirmation de suppression - Première étape */}
+      <Modal
+        isOpen={showDeleteConfirmModal}
+        onClose={handleCancelDelete}
+        title="⚠️ Confirmation de suppression"
+        size="medium"
+        footer={
+          <div className="flex gap-3 justify-end">
+            <button
+              onClick={handleCancelDelete}
+              className="px-4 py-2 border border-[#E5E4DF] rounded-lg font-medium hover:bg-[#FAFAF7] transition-colors"
+            >
+              Annuler
+            </button>
+            <button
+              onClick={handleFirstConfirm}
+              className="px-4 py-2 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700 transition-colors"
+            >
+              Continuer
+            </button>
+          </div>
+        }
+      >
+        <div className="space-y-4">
+          <div className="flex items-start gap-3">
+            <AlertCircle className="w-6 h-6 text-red-600 shrink-0 mt-0.5" />
+            <div className="flex-1">
+              <p className="font-semibold text-[#191919] mb-2">
+                Vous êtes sur le point de supprimer définitivement le compte de <span className="text-red-600">{memberToDelete?.name}</span>
+              </p>
+              <p className="text-sm text-[#666663] mb-4">
+                Cette action est <strong>irréversible</strong> et supprimera :
+              </p>
+              <ul className="list-disc list-inside space-y-2 text-sm text-[#666663] mb-4">
+                <li>Le profil utilisateur</li>
+                <li>Toutes les données associées</li>
+                <li>L'accès à l'application</li>
+              </ul>
+              <p className="text-sm font-medium text-[#191919]">
+                Êtes-vous absolument sûr de vouloir continuer ?
+              </p>
+            </div>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Modale de confirmation de suppression - Deuxième étape (double confirmation) */}
+      <Modal
+        isOpen={showDoubleConfirmModal}
+        onClose={handleCancelDelete}
+        title="🔴 Dernière confirmation"
+        size="small"
+        footer={
+          <div className="flex gap-3 justify-end">
+            <button
+              onClick={handleCancelDelete}
+              className="px-4 py-2 border border-[#E5E4DF] rounded-lg font-medium hover:bg-[#FAFAF7] transition-colors"
+            >
+              Annuler
+            </button>
+            <button
+              onClick={handleFinalConfirm}
+              className="px-4 py-2 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700 transition-colors flex items-center gap-2"
+            >
+              <Trash2 className="w-4 h-4" />
+              Supprimer définitivement
+            </button>
+          </div>
+        }
+      >
+        <div className="space-y-4">
+          <div className="flex items-start gap-3">
+            <AlertCircle className="w-6 h-6 text-red-600 shrink-0 mt-0.5" />
+            <div className="flex-1">
+              <p className="font-semibold text-[#191919] mb-2">
+                Dernière confirmation
+              </p>
+              <p className="text-sm text-[#666663]">
+                Vous êtes sur le point de supprimer définitivement <span className="font-semibold text-red-600">{memberToDelete?.name}</span>.
+              </p>
+              <p className="text-sm font-medium text-red-600 mt-3">
+                Cette action ne peut pas être annulée.
+              </p>
+            </div>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 };

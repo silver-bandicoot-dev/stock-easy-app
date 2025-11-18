@@ -11,6 +11,7 @@ export const DateRangePicker = ({
   const [isOpen, setIsOpen] = useState(false);
 
   const ranges = [
+    { value: 'yesterday', label: 'Hier' },
     { value: '7d', label: '7 derniers jours' },
     { value: '30d', label: '30 derniers jours' },
     { value: '90d', label: '3 derniers mois' },

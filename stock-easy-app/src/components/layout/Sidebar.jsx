@@ -39,7 +39,8 @@ const Sidebar = ({
   settingsSubTab,
   setSettingsSubTab,
   mobileMenuOpen,
-  setMobileMenuOpen
+  setMobileMenuOpen,
+  orderBadgeCount = 0
 }) => {
   const [analyticsExpanded, setAnalyticsExpanded] = useState(false);
   const [aiExpanded, setAiExpanded] = useState(false);
@@ -169,6 +170,15 @@ const Sidebar = ({
                     {item.badge}
                   </span>
                 )}
+                {item.id === 'actions' && orderBadgeCount > 0 && (
+                  <span className={`px-2.5 py-1 min-w-[24px] text-xs font-semibold rounded-full flex items-center justify-center ${
+                    isActive 
+                      ? 'bg-white/20 text-white' 
+                      : 'bg-[#E5E4DF] text-[#191919]'
+                  }`}>
+                    {orderBadgeCount}
+                  </span>
+                )}
                 {item.hasSubMenu && (
                   showSubMenu ? 
                     <ChevronDown className="w-4 h-4" /> : 
@@ -272,6 +282,15 @@ const Sidebar = ({
                         {item.badge && (
                           <span className="px-2 py-0.5 text-xs font-bold bg-purple-600 text-white rounded">
                             {item.badge}
+                          </span>
+                        )}
+                        {item.id === 'actions' && orderBadgeCount > 0 && (
+                          <span className={`px-2.5 py-1 min-w-[24px] text-xs font-semibold rounded-full flex items-center justify-center ${
+                            isActive 
+                              ? 'bg-white/20 text-white' 
+                              : 'bg-[#E5E4DF] text-[#191919]'
+                          }`}>
+                            {orderBadgeCount}
                           </span>
                         )}
                         {item.hasSubMenu && (

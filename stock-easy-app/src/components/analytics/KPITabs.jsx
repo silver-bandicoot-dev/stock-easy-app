@@ -39,7 +39,7 @@ export const KPITabs = ({ analyticsData, comparisonType }) => {
       unit: ''
     },
     salesLost: {
-      title: 'Ventes Perdues - Rupture de Stock',
+      title: 'Ventes Perdues - Ruptures Réelles',
       icon: TrendingDown,
       color: '#EF4444',
       format: (kpiData) => kpiData?.value || formatNoDecimals(0),

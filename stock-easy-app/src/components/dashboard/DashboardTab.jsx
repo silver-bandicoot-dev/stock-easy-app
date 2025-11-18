@@ -6,10 +6,14 @@ import { ProductsToOrder } from './ProductsToOrder';
 import { ProductsToWatch } from './ProductsToWatch';
 import { DashboardKPIs } from './DashboardKPIs';
 import { DashboardCharts } from './DashboardCharts';
+import { useAnalytics } from '../../hooks/useAnalytics';
 
-export const DashboardTab = ({ productsByStatus, orders, enrichedProducts, onViewDetails }) => {
+export const DashboardTab = ({ productsByStatus, orders, enrichedProducts, onViewDetails, seuilSurstockProfond = 90 }) => {
   const { currentUser } = useAuth();
   const [isReturningToday, setIsReturningToday] = useState(false);
+  
+  // Utiliser useAnalytics pour récupérer les données de comparaison (7 derniers jours)
+  const analyticsData = useAnalytics(enrichedProducts, orders, '7d', null, 'previous', seuilSurstockProfond);
 
   useEffect(() => {
     const STORAGE_KEY = 'stockeasy_dashboard_last_visit';
@@ -77,6 +81,8 @@ export const DashboardTab = ({ productsByStatus, orders, enrichedProducts, onVie
           enrichedProducts={enrichedProducts || []}
           orders={orders || []}
           productsByStatus={productsByStatus || {}}
+          seuilSurstockProfond={seuilSurstockProfond}
+          analyticsData={analyticsData}
         />
       </div>
 

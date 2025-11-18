@@ -197,6 +197,64 @@ export async function removeTeamMember(userId) {
 }
 
 /**
+ * Supprimer complètement un membre de l'équipe (supprime le compte utilisateur)
+ * Cette fonction supprime le profil utilisateur et toutes les données associées
+ */
+export async function deleteTeamMember(userId) {
+  console.log('🚀 deleteTeamMember: FONCTION APPELÉE avec userId:', userId);
+  try {
+    // Vérifier que l'utilisateur est authentifié
+    const { data: { user: currentUser } } = await supabase.auth.getUser();
+    if (!currentUser) {
+      throw new Error('Utilisateur non authentifié');
+    }
+
+    console.log('🚀 deleteTeamMember: Appel de la fonction RPC delete_team_member_rpc...');
+    
+    // Appeler directement la fonction RPC qui fait toutes les vérifications
+    // Cette fonction utilise SECURITY DEFINER pour contourner RLS
+    // Elle vérifie :
+    // - Que l'utilisateur actuel est authentifié
+    // - Que l'utilisateur actuel est admin ou owner
+    // - Que l'utilisateur cible n'est pas le propriétaire
+    // - Qu'ils sont dans la même entreprise (ou que l'utilisateur cible est orphelin)
+    // - Qu'on ne supprime pas soi-même
+    const { data: rpcResult, error: rpcError } = await supabase.rpc('delete_team_member_rpc', {
+      p_target_user_id: userId
+    });
+
+    console.log('🔍 deleteTeamMember: Résultat de la fonction RPC:', { rpcResult, rpcError });
+
+    if (rpcError) {
+      console.error('❌ deleteTeamMember: Erreur lors de l\'appel RPC:', rpcError);
+      throw new Error(rpcError.message || 'Erreur lors de la suppression du profil utilisateur');
+    }
+
+    // Vérifier le résultat de la fonction RPC
+    if (!rpcResult || !rpcResult.success) {
+      const errorMessage = rpcResult?.error || 'Erreur inconnue lors de la suppression';
+      console.error('❌ deleteTeamMember: La fonction RPC a retourné une erreur:', errorMessage);
+      throw new Error(errorMessage);
+    }
+
+    console.log('✅ deleteTeamMember: Suppression réussie via RPC');
+
+    return { 
+      data: { 
+        success: true, 
+        message: rpcResult.message || 'Membre supprimé avec succès. Le compte d\'authentification peut nécessiter une suppression manuelle par un administrateur Supabase.' 
+      }, 
+      error: null 
+    };
+  } catch (error) {
+    console.error('Erreur deleteTeamMember:', error);
+    // Extraire le message d'erreur de manière sécurisée
+    const errorMessage = error?.message || error?.error || error?.toString() || 'Erreur inconnue lors de la suppression';
+    return { data: null, error: new Error(errorMessage) };
+  }
+}
+
+/**
  * Mettre à jour le rôle d'un membre
  */
 export async function updateMemberRole(userId, newRole) {
@@ -405,6 +463,7 @@ export default {
   revokeInvitation,
   getTeamMembers,
   removeTeamMember,
+  deleteTeamMember,
   updateMemberRole,
   updateMemberPermissions,
   hasPermission,

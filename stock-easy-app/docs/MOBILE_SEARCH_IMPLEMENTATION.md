@@ -160,3 +160,4 @@ StockEasy.jsx
 **Auteur** : Équipe Stock Easy  
 **Version** : 1.0.0
 
+

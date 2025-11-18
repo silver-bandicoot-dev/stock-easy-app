@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/SupabaseAuthContext';
 import { toast } from 'sonner';
 import { Logo } from '../ui/Logo';
@@ -9,7 +9,19 @@ const SupabaseLogin = () => {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
   const { login } = useAuth();
+
+  // Afficher le message de confirmation d'email si présent
+  useEffect(() => {
+    if (location.state?.message) {
+      toast.success(location.state.message, {
+        duration: 5000
+      });
+      // Nettoyer l'état pour éviter de réafficher le message
+      window.history.replaceState({}, document.title);
+    }
+  }, [location.state]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();

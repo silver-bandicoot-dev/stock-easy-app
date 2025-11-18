@@ -27,10 +27,11 @@ export const StockProductCard = ({ product, suppliers, onViewDetails }) => {
     >
       <div className="flex items-start justify-between mb-4 gap-3">
         <div className="flex items-start gap-3 flex-1 min-w-0">
-          {product.imageUrl ? (
+          {(product.imageUrl || product.sku) ? (
             <ImagePreview
               src={product.imageUrl}
               alt={product.name}
+              sku={product.sku}
               thumbClassName="w-12 h-12 rounded-md object-cover flex-shrink-0 bg-[#E5E4DF]"
             />
           ) : (

@@ -16,11 +16,35 @@ export const SupabaseAuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Vérifier la session actuelle
+    // Vérifier la session actuelle au chargement
     const checkSession = async () => {
       try {
-        const { data: { session } } = await supabase.auth.getSession();
-        setCurrentUser(session?.user ?? null);
+        // Récupérer la session depuis le storage
+        const { data: { session }, error } = await supabase.auth.getSession();
+        
+        if (error) {
+          console.error('Erreur lors de la récupération de la session:', error);
+          setCurrentUser(null);
+        } else if (session) {
+          // Vérifier si le token est toujours valide
+          const now = Math.floor(Date.now() / 1000);
+          if (session.expires_at && session.expires_at > now) {
+            setCurrentUser(session.user);
+          } else {
+            // Tenter de rafraîchir le token
+            const { data: { session: refreshedSession }, error: refreshError } = 
+              await supabase.auth.refreshSession();
+            
+            if (refreshError) {
+              console.error('Erreur lors du rafraîchissement de la session:', refreshError);
+              setCurrentUser(null);
+            } else {
+              setCurrentUser(refreshedSession?.user ?? null);
+            }
+          }
+        } else {
+          setCurrentUser(null);
+        }
       } catch (error) {
         console.error('Erreur lors de la vérification de la session:', error);
         setCurrentUser(null);
@@ -34,8 +58,14 @@ export const SupabaseAuthProvider = ({ children }) => {
     // Écouter les changements d'authentification
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        console.log('🔐 Auth state changed:', event);
-        setCurrentUser(session?.user ?? null);
+        console.log('🔐 Auth state changed:', event, session?.user?.email);
+        
+        if (event === 'SIGNED_OUT' || event === 'TOKEN_REFRESHED') {
+          setCurrentUser(session?.user ?? null);
+        } else {
+          setCurrentUser(session?.user ?? null);
+        }
+        
         setLoading(false);
       }
     );
@@ -69,6 +99,7 @@ export const SupabaseAuthProvider = ({ children }) => {
         password,
         options: {
           data: metadata,
+          emailRedirectTo: `${window.location.origin}/confirm-email`,
         },
       });
 

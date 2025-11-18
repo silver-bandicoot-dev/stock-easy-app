@@ -2,9 +2,18 @@ import { useState, useEffect, useCallback } from 'react';
 import { useDebounce } from '../../hooks/useDebounce';
 import { supabase } from '../../lib/supabaseClient';
 import { useAuth } from '../../contexts/SupabaseAuthContext';
+import { 
+  normalizeText, 
+  fuzzyMatch, 
+  detectSearchType, 
+  rankResults,
+  buildSearchPattern,
+  buildSmartQuery,
+  calculateRelevanceScore
+} from '../../utils/searchUtils';
 
 const SEARCH_HISTORY_KEY = 'stock_easy_search_history';
-const MAX_HISTORY_ITEMS = 10;
+const MAX_HISTORY_ITEMS = 3; // Limité à 3 recherches récentes
 
 /**
  * Hook personnalisé pour la recherche intelligente avec autocomplétion
@@ -42,12 +51,12 @@ export const useSearch = (query) => {
         timestamp: Date.now(),
       };
 
-      // Éviter les doublons
+      // Éviter les doublons (corrigé : utiliser AND au lieu de OR)
       const filteredHistory = history.filter(
-        (item) => item.query !== searchTerm || item.type !== resultType
+        (item) => !(item.query === searchTerm && item.type === resultType)
       );
 
-      const updatedHistory = [newEntry, ...filteredHistory].slice(0, MAX_HISTORY_ITEMS);
+      const updatedHistory = [newEntry, ...filteredHistory].slice(0, MAX_HISTORY_ITEMS); // Limité à 3
       localStorage.setItem(SEARCH_HISTORY_KEY, JSON.stringify(updatedHistory));
     } catch (err) {
       console.error('Erreur lors de la sauvegarde dans l\'historique:', err);
@@ -81,82 +90,178 @@ export const useSearch = (query) => {
     setError(null);
 
     try {
-      const searchPattern = `%${searchQuery}%`;
+      // Normaliser la requête pour gérer les accents
+      const normalizedQuery = normalizeText(searchQuery);
+      const searchWords = normalizedQuery.split(/\s+/).filter(w => w.length > 0);
+      
+      // Construire des patterns optimisés (max 2 patterns pour performance)
+      const exactPattern = `%${normalizedQuery}%`;
+      // Limiter à 2 patterns max pour éviter la surcharge DB
+      const wordPatterns = searchWords.slice(0, 2).map(w => `%${w}%`); // Max 2 mots
+      
+      // Détecter le type de recherche souhaité
+      const searchType = detectSearchType(searchQuery);
       
       console.log('🔍 Recherche lancée:', {
-        pattern: searchPattern,
+        exactPattern,
+        wordPatterns,
         query: searchQuery,
+        normalized: normalizedQuery,
+        detectedType: searchType,
         user: currentUser?.email
       });
+      
+      // 🔍 DEBUG: Vérifier les conditions pour chaque type
+      console.log('🔍 DEBUG CONDITIONS:', {
+        searchType,
+        willSearchProducts: !searchType.type || searchType.type === 'product' || searchType.type === 'all',
+        willSearchSuppliers: !searchType.type || searchType.type === 'supplier' || searchType.type === 'all',
+        willSearchOrders: !searchType.type || searchType.type === 'order' || searchType.type === 'all',
+        willSearchWarehouses: !searchType.type || searchType.type === 'warehouse' || searchType.type === 'all'
+      });
 
-      // Recherche parallèle dans produits, fournisseurs, commandes et entrepôts
-      const [produitsRes, fournisseursRes, commandesRes, warehousesRes] = await Promise.all([
-        // Recherche ÉLARGIE dans les produits (SKU, nom, fournisseur)
+      // Construire les requêtes selon le type détecté
+      const promises = [];
+      
+      // Produits (recherche intelligente)
+      if (!searchType.type || searchType.type === 'product' || searchType.type === 'all') {
+        promises.push(
         supabase
           .from('produits')
           .select('sku, nom_produit, stock_actuel, fournisseur, prix_vente, image_url, prix_achat, health_status')
-          .or(`sku.ilike.${searchPattern},nom_produit.ilike.${searchPattern},fournisseur.ilike.${searchPattern}`)
-          .limit(10), // Augmenté de 5 à 10
+            .or(buildSmartQuery(
+              ['sku', 'nom_produit', 'fournisseur'],
+              [exactPattern, ...wordPatterns] // Max 2 patterns au lieu de 3+
+            ))
+            .limit(12) // Réduit de 15 à 12 pour performance
+        );
+      }
 
-        // Recherche ÉLARGIE dans les fournisseurs (nom, email, contacts)
-        supabase
+      // Fournisseurs
+      if (!searchType.type || searchType.type === 'supplier' || searchType.type === 'all') {
+        const supplierQuery = supabase
           .from('fournisseurs')
           .select('id, nom_fournisseur, email, lead_time_days, commercial_contact_phone, commercial_contact_email, notes')
-          .or(`nom_fournisseur.ilike.${searchPattern},email.ilike.${searchPattern},commercial_contact_phone.ilike.${searchPattern},commercial_contact_email.ilike.${searchPattern}`)
-          .limit(5), // Augmenté de 3 à 5
+          .or(buildSmartQuery(
+            ['nom_fournisseur', 'email', 'commercial_contact_email'],
+            [exactPattern, ...wordPatterns.slice(0, 2)]
+          ))
+          .limit(10);
+        
+        console.log('🔍 DEBUG: Ajout requête fournisseurs', {
+          query: searchQuery,
+          pattern: exactPattern,
+          wordPatterns: wordPatterns.slice(0, 2),
+          builtQuery: buildSmartQuery(
+            ['nom_fournisseur', 'email', 'commercial_contact_email'],
+            [exactPattern, ...wordPatterns.slice(0, 2)]
+          )
+        });
+        
+        promises.push(supplierQuery);
+      } else {
+        console.log('🔍 DEBUG: Requête fournisseurs SKIPPÉE', {
+          searchType,
+          reason: 'Condition non remplie'
+        });
+      }
 
-        // Recherche ÉLARGIE dans les commandes (ID, fournisseur, statut, numéro de suivi)
+      // Commandes
+      if (!searchType.type || searchType.type === 'order' || searchType.type === 'all') {
+        promises.push(
         supabase
           .from('commandes')
           .select('id, supplier, status, total, created_at, tracking_number, warehouse_id')
-          .or(`id.ilike.${searchPattern},supplier.ilike.${searchPattern},tracking_number.ilike.${searchPattern}`)
+            .or(buildSmartQuery(
+              ['id', 'supplier', 'tracking_number'],
+              [exactPattern]
+            ))
           .order('created_at', { ascending: false })
-          .limit(5), // Augmenté de 3 à 5
+            .limit(10)
+        );
+      }
 
-        // Recherche dans les ENTREPÔTS ⭐ NOUVEAU
+      // Entrepôts
+      if (!searchType.type || searchType.type === 'warehouse' || searchType.type === 'all') {
+        promises.push(
         supabase
           .from('warehouses')
           .select('id, name, address, city, country, postal_code, notes')
-          .or(`name.ilike.${searchPattern},address.ilike.${searchPattern},city.ilike.${searchPattern},country.ilike.${searchPattern}`)
-          .limit(3),
-      ]);
+            .or(buildSmartQuery(
+              ['name', 'city', 'address'],
+              [exactPattern, ...wordPatterns.slice(0, 2)]
+            ))
+            .limit(8)
+        );
+      }
+
+      const results = await Promise.all(promises);
       
-      console.log('🔍 Résultats bruts Supabase:', {
-        produits: {
-          count: produitsRes.data?.length || 0,
-          data: produitsRes.data,
-          error: produitsRes.error
-        },
-        fournisseurs: {
-          count: fournisseursRes.data?.length || 0,
-          data: fournisseursRes.data,
-          error: fournisseursRes.error
-        },
-        commandes: {
-          count: commandesRes.data?.length || 0,
-          data: commandesRes.data,
-          error: commandesRes.error
-        },
-        entrepots: {
-          count: warehousesRes.data?.length || 0,
-          data: warehousesRes.data,
-          error: warehousesRes.error
+      // Gestion des erreurs
+      results.forEach((res, index) => {
+        if (res.error) {
+          console.error(`Erreur recherche ${index}:`, res.error);
         }
       });
+      
+      console.log('🔍 Résultats bruts Supabase:', {
+        totalResults: results.length,
+        results: results.map((r, i) => ({
+          index: i,
+          count: r.data?.length || 0,
+          error: r.error?.message,
+          sampleData: r.data?.slice(0, 2) // Aperçu des données
+        }))
+      });
+      
+      // 🔍 DEBUG: Compter les promesses par type
+      let promiseIndex = 0;
+      console.log('🔍 DEBUG PROMISES COUNT:', {
+        totalPromises: promises.length,
+        expectedProducts: (!searchType.type || searchType.type === 'product' || searchType.type === 'all') ? 1 : 0,
+        expectedSuppliers: (!searchType.type || searchType.type === 'supplier' || searchType.type === 'all') ? 1 : 0,
+        expectedOrders: (!searchType.type || searchType.type === 'order' || searchType.type === 'all') ? 1 : 0,
+        expectedWarehouses: (!searchType.type || searchType.type === 'warehouse' || searchType.type === 'all') ? 1 : 0
+      });
+      
+      // Extraire les résultats selon le type de recherche
+      let resultIndex = 0;
+      let produitsRes = null;
+      let fournisseursRes = null;
+      let commandesRes = null;
+      let warehousesRes = null;
+      
+      if (!searchType.type || searchType.type === 'product' || searchType.type === 'all') {
+        produitsRes = results[resultIndex++];
+      }
+      if (!searchType.type || searchType.type === 'supplier' || searchType.type === 'all') {
+        fournisseursRes = results[resultIndex++];
+        
+        // 🔍 DEBUG FOURNISSEURS
+        console.log('🔍 DEBUG FOURNISSEURS:', {
+          query: searchQuery,
+          normalized: normalizedQuery,
+          exactPattern,
+          wordPatterns,
+          count: fournisseursRes?.data?.length || 0,
+          data: fournisseursRes?.data,
+          error: fournisseursRes?.error
+        });
+      }
+      if (!searchType.type || searchType.type === 'order' || searchType.type === 'all') {
+        commandesRes = results[resultIndex++];
+      }
+      if (!searchType.type || searchType.type === 'warehouse' || searchType.type === 'all') {
+        warehousesRes = results[resultIndex++];
+      }
 
-      // Gestion des erreurs individuelles
-      if (produitsRes.error) throw produitsRes.error;
-      if (fournisseursRes.error) throw fournisseursRes.error;
-      if (commandesRes.error) throw commandesRes.error;
-      if (warehousesRes.error) throw warehousesRes.error;
-
-      // Structurer les résultats par catégorie
+      // Structurer les résultats par catégorie avec filtrage fuzzy
       const groupedResults = [];
 
-      if (produitsRes.data && produitsRes.data.length > 0) {
-        groupedResults.push({
-          category: 'Produits',
-          items: produitsRes.data.map((p) => ({
+      // Filtrer et trier les produits par pertinence avec le nouveau scoring
+      if (produitsRes?.data && produitsRes.data.length > 0) {
+        const products = produitsRes.data
+          .map(p => ({
             id: p.sku,
             type: 'product',
             title: p.nom_produit,
@@ -165,28 +270,66 @@ export const useSearch = (query) => {
             image: p.image_url,
             healthStatus: p.health_status,
             data: p,
-          })),
-        });
+            _relevanceScore: calculateRelevanceScore(searchQuery, p, 'product')
+          }))
+          .filter(item => item._relevanceScore > 0)
+          .sort((a, b) => b._relevanceScore - a._relevanceScore)
+          .slice(0, 10); // Augmenté à 10 pour meilleure couverture
+
+        if (products.length > 0) {
+        groupedResults.push({
+            category: 'Produits',
+            items: products
+          });
+        }
       }
 
-      if (fournisseursRes.data && fournisseursRes.data.length > 0) {
+      // Filtrer et trier les fournisseurs par pertinence avec le nouveau scoring
+      if (fournisseursRes?.data && fournisseursRes.data.length > 0) {
+        const suppliers = fournisseursRes.data
+          .map(f => {
+            const score = calculateRelevanceScore(searchQuery, f, 'supplier');
+            const normalizedName = normalizeText(f.nom_fournisseur || '');
+            const normalizedQuery = normalizeText(searchQuery);
+            const matchesName = normalizedName.includes(normalizedQuery);
+            
+            // 🔍 DEBUG SCORING
+            console.log('🔍 DEBUG SCORING FOURNISSEUR:', {
+              nom: f.nom_fournisseur,
+              normalizedName,
+              query: searchQuery,
+              normalizedQuery,
+              matchesName,
+              score,
+              willInclude: score > 0 || matchesName
+            });
+            
+            return {
+              id: f.id,
+              type: 'supplier',
+              title: f.nom_fournisseur,
+              subtitle: f.email || f.commercial_contact_email || 'Pas de contact',
+              meta: `Lead time: ${f.lead_time_days || 14} jours${f.commercial_contact_phone ? ` • ${f.commercial_contact_phone}` : ''}`,
+              data: f,
+              _relevanceScore: score > 0 ? score : (matchesName ? 10 : 0) // Fallback pour correspondance partielle
+            };
+          })
+          .filter(item => item._relevanceScore > 0)
+          .sort((a, b) => b._relevanceScore - a._relevanceScore)
+          .slice(0, 5);
+
+        if (suppliers.length > 0) {
         groupedResults.push({
-          category: 'Fournisseurs',
-          items: fournisseursRes.data.map((f) => ({
-            id: f.id,
-            type: 'supplier',
-            title: f.nom_fournisseur,
-            subtitle: f.email || f.commercial_contact_email || 'Pas de contact',
-            meta: `Lead time: ${f.lead_time_days || 14} jours${f.commercial_contact_phone ? ` • ${f.commercial_contact_phone}` : ''}`,
-            data: f,
-          })),
-        });
+            category: 'Fournisseurs',
+            items: suppliers
+          });
+        }
       }
 
-      if (commandesRes.data && commandesRes.data.length > 0) {
-        groupedResults.push({
-          category: 'Commandes',
-          items: commandesRes.data.map((c) => {
+      // Filtrer et trier les commandes par pertinence avec le nouveau scoring
+      if (commandesRes?.data && commandesRes.data.length > 0) {
+        const orders = commandesRes.data
+          .map(c => {
             // Formater le statut en français
             const statusLabels = {
               'pending_confirmation': '⏳ En attente',
@@ -205,33 +348,63 @@ export const useSearch = (query) => {
               subtitle: `${c.supplier}${c.tracking_number ? ` • 📦 ${c.tracking_number}` : ''}`,
               meta: `${statusLabel}${c.total ? ` • ${c.total.toFixed(2)}€` : ''}`,
               data: c,
+              _relevanceScore: calculateRelevanceScore(searchQuery, c, 'order')
             };
-          }),
+          })
+          .filter(item => item._relevanceScore > 0)
+          .sort((a, b) => b._relevanceScore - a._relevanceScore)
+          .slice(0, 5);
+
+        if (orders.length > 0) {
+          groupedResults.push({
+            category: 'Commandes',
+            items: orders
         });
+        }
       }
 
-      // Résultats ENTREPÔTS ⭐ NOUVEAU
-      if (warehousesRes.data && warehousesRes.data.length > 0) {
-        groupedResults.push({
-          category: 'Entrepôts',
-          items: warehousesRes.data.map((w) => ({
+      // Filtrer et trier les entrepôts par pertinence avec le nouveau scoring
+      if (warehousesRes?.data && warehousesRes.data.length > 0) {
+        const warehouses = warehousesRes.data
+          .map(w => ({
             id: w.id,
             type: 'warehouse',
             title: w.name,
             subtitle: `${w.city || 'Localisation non définie'}${w.address ? ` • ${w.address}` : ''}`,
             meta: `${w.country || 'France'}${w.postal_code ? ` • ${w.postal_code}` : ''}`,
             data: w,
-          })),
+            _relevanceScore: calculateRelevanceScore(searchQuery, w, 'warehouse')
+          }))
+          .filter(item => item._relevanceScore > 0)
+          .sort((a, b) => b._relevanceScore - a._relevanceScore)
+          .slice(0, 3);
+
+        if (warehouses.length > 0) {
+          groupedResults.push({
+            category: 'Entrepôts',
+            items: warehouses
         });
+        }
       }
 
-      // Si aucun résultat, afficher l'historique
+      // Si un type de recherche a été détecté, prioriser cette catégorie
+      if (searchType.priority && groupedResults.length > 1) {
+        const priorityIndex = groupedResults.findIndex(
+          group => group.category.toLowerCase().includes(searchType.type)
+        );
+        if (priorityIndex > 0) {
+          const priorityGroup = groupedResults.splice(priorityIndex, 1)[0];
+          groupedResults.unshift(priorityGroup);
+        }
+      }
+
+      // Si aucun résultat, afficher l'historique (limité à 3)
       if (groupedResults.length === 0 && searchQuery.length >= 2) {
         const history = getSearchHistory();
         if (history.length > 0) {
           groupedResults.push({
             category: 'Historique récent',
-            items: history.slice(0, 5).map((h, idx) => ({
+            items: history.slice(0, 3).map((h, idx) => ({
               id: `history-${idx}`,
               type: h.type || 'history',
               title: h.query,
@@ -259,13 +432,13 @@ export const useSearch = (query) => {
     if (debouncedQuery && debouncedQuery.length >= 2) {
       performSearch(debouncedQuery);
     } else {
-      // Afficher l'historique si la recherche est vide
+      // Afficher l'historique si la recherche est vide (limité à 3)
       const history = getSearchHistory();
       if (history.length > 0) {
         setResults([
           {
             category: 'Recherches récentes',
-            items: history.slice(0, 5).map((h, idx) => ({
+            items: history.slice(0, 3).map((h, idx) => ({
               id: `history-${idx}`,
               type: h.type || 'history',
               title: h.query,

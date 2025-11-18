@@ -3,6 +3,8 @@ import { useAuth } from '../contexts/SupabaseAuthContext';
 import { useCurrency } from '../contexts/CurrencyContext';
 import { getKPIHistory, calculatePeriodComparison } from '../services/kpiHistoryService';
 import { calculateOverstockExcessValue } from '../utils/calculations';
+import { validateProducts, logValidationWarnings } from '../utils/validators';
+import { calculateAnalyticsKPIs } from '../utils/analyticsKPIs';
 
 /**
  * Calcule la période de comparaison selon le type choisi
@@ -83,7 +85,18 @@ export function useAnalytics(products, orders, dateRange = '30d', customRange = 
     formatCurrency(amount, { minimumFractionDigits: 0, maximumFractionDigits: 0 });
 
   // ========================================
+  // VALIDATION DES DONNÉES PRODUITS
+  // ========================================
+  useEffect(() => {
+    if (products && products.length > 0) {
+      const validationResult = validateProducts(products);
+      logValidationWarnings(validationResult);
+    }
+  }, [products]);
+
+  // ========================================
   // CALCUL DES KPIs ACTUELS
+  // Recalcul automatique quand products, orders, ou seuilSurstockProfond changent
   // ========================================
   const currentKPIs = useMemo(() => {
     console.log('📊 useAnalytics - Calcul des KPIs actuels');
@@ -110,8 +123,10 @@ export function useAnalytics(products, orders, dateRange = '30d', customRange = 
     const skuAvailabilityRate = totalSKUs > 0 ? (availableSKUs / totalSKUs) * 100 : 0;
 
     // Calcul des ventes perdues
-    // Logique unifiée avec le Dashboard : produits urgents (y compris ceux en rupture)
-    // mais on se concentre sur les produits en rupture totale pour Analytics
+    // 📊 VENTES PERDUES - APPROCHE FACTUELLE (ANALYTICS)
+    // Cette estimation compte uniquement les produits en rupture totale (stock = 0)
+    // pour refléter les pertes réelles actuelles, pas les risques futurs.
+    // Note : Diffère du Dashboard qui inclut tous les produits urgents (approche proactive)
     const outOfStockProducts = products.filter(p => (p.stock || 0) === 0 && (p.salesPerDay || 0) > 0);
     const salesLostCount = outOfStockProducts.length;
     const salesLostAmount = outOfStockProducts.reduce((sum, p) => {
@@ -129,6 +144,7 @@ export function useAnalytics(products, orders, dateRange = '30d', customRange = 
     // Utiliser la fonction utilitaire pour garantir la cohérence du calcul
     const overstockProducts = products.filter(p => p.isDeepOverstock === true);
     const overstockSKUs = overstockProducts.length;
+    const overstockSKUList = overstockProducts.map(p => p.sku || p.name || 'N/A').slice(0, 10); // Limiter à 10 SKU pour la lisibilité
     const overstockCost = overstockProducts.reduce((sum, p) => {
       const excessValue = calculateOverstockExcessValue(p, seuilSurstockProfond);
       return sum + excessValue;
@@ -167,6 +183,9 @@ export function useAnalytics(products, orders, dateRange = '30d', customRange = 
     // Taux de rupture (pourcentage de SKUs en rupture)
     const outOfStockRate = totalSKUs > 0 ? (salesLostCount / totalSKUs) * 100 : 0;
 
+    // Calculer les KPIs supplémentaires en temps réel
+    const additionalKPIs = calculateAnalyticsKPIs(products, orders, null, null);
+    
     const kpis = {
       skuAvailabilityRate: Math.round(skuAvailabilityRate * 100) / 100,
       availableSKUs,
@@ -175,11 +194,19 @@ export function useAnalytics(products, orders, dateRange = '30d', customRange = 
       salesLostCount,
       overstockCost: Math.round(overstockCost * 100) / 100,
       overstockSKUs,
+      overstockSKUList, // Liste des SKU en surstock profond
       inventoryValuation: Math.round(inventoryValuation * 100) / 100,
       annualSalesValue: Math.round(annualSalesValue * 100) / 100,
       avgCoverageDays: Math.round(avgCoverageDays * 100) / 100,
       inventoryToSalesRatio: Math.round(inventoryToSalesRatio * 100) / 100,
-      outOfStockRate: Math.round(outOfStockRate * 100) / 100
+      outOfStockRate: Math.round(outOfStockRate * 100) / 100,
+      // KPIs supplémentaires en temps réel
+      mappingPercentage: additionalKPIs.mappingPercentage?.rawValue || 0,
+      totalProducts: additionalKPIs.totalProducts?.rawValue || 0,
+      healthyPercentage: additionalKPIs.healthyPercentage?.rawValue || 0,
+      totalGrossMargin: additionalKPIs.totalGrossMargin?.rawValue || 0,
+      totalPotentialRevenue: additionalKPIs.totalPotentialRevenue?.rawValue || 0,
+      fastRotatingProducts: additionalKPIs.fastRotatingProducts?.rawValue || 0
     };
 
     console.log('✅ KPIs calculés:', kpis);
@@ -208,17 +235,31 @@ export function useAnalytics(products, orders, dateRange = '30d', customRange = 
       }
     } else {
       // Mode preset
-      end = new Date();
-      start = new Date();
-      
-      // Calculer la période actuelle
-      let days = 30;
-      if (dateRange === '7d') days = 7;
-      else if (dateRange === '30d') days = 30;
-      else if (dateRange === '90d') days = 90;
-      else if (dateRange === '1y') days = 365;
-      
-      start.setDate(end.getDate() - days);
+      if (dateRange === 'yesterday') {
+        // Hier : du début de la journée d'hier à la fin de la journée d'hier
+        end = new Date();
+        end.setDate(end.getDate() - 1); // Hier
+        end.setHours(23, 59, 59, 999); // Fin de la journée d'hier
+        
+        start = new Date();
+        start.setDate(start.getDate() - 1); // Hier
+        start.setHours(0, 0, 0, 0); // Début de la journée d'hier
+      } else {
+        // Autres périodes
+        end = new Date();
+        start = new Date();
+        
+        // Calculer la période actuelle
+        let days = 30;
+        if (dateRange === '7d') days = 7;
+        else if (dateRange === '30d') days = 30;
+        else if (dateRange === '90d') days = 90;
+        else if (dateRange === '1y') days = 365;
+        
+        start.setDate(end.getDate() - days);
+        start.setHours(0, 0, 0, 0); // Début de la journée
+        end.setHours(23, 59, 59, 999); // Fin de la journée
+      }
     }
     
     // Calculer la période de comparaison selon le type
@@ -334,11 +375,19 @@ export function useAnalytics(products, orders, dateRange = '30d', customRange = 
       salesLostAmount: periodData.reduce((sum, d) => sum + d.salesLostAmount, 0) / periodData.length,
       overstockCost: periodData.reduce((sum, d) => sum + d.overstockCost, 0) / periodData.length,
       inventoryValuation: periodData.reduce((sum, d) => sum + (d.inventoryValuation || 0), 0) / periodData.length,
+      // KPIs supplémentaires depuis l'historique
+      mappingPercentage: periodData.reduce((sum, d) => sum + (d.mappingPercentage || 0), 0) / periodData.length,
+      totalProducts: periodData.reduce((sum, d) => sum + (d.totalProducts || 0), 0) / periodData.length,
+      healthyPercentage: periodData.reduce((sum, d) => sum + (d.healthyPercentage || 0), 0) / periodData.length,
+      totalGrossMargin: periodData.reduce((sum, d) => sum + (d.totalGrossMargin || 0), 0) / periodData.length,
+      totalPotentialRevenue: periodData.reduce((sum, d) => sum + (d.totalPotentialRevenue || 0), 0) / periodData.length,
+      fastRotatingProducts: periodData.reduce((sum, d) => sum + (d.fastRotatingProducts || 0), 0) / periodData.length,
       // Ajouter les données supplémentaires (utiliser les valeurs actuelles pour les métriques en temps réel)
       availableSKUs: currentKPIs.availableSKUs,
       totalSKUs: currentKPIs.totalSKUs,
       salesLostCount: currentKPIs.salesLostCount,
       overstockSKUs: currentKPIs.overstockSKUs,
+      overstockSKUList: currentKPIs.overstockSKUList, // Liste des SKU en surstock profond
       // Nouvelles métriques (calculées en temps réel uniquement)
       annualSalesValue: currentKPIs.annualSalesValue || 0,
       avgCoverageDays: currentKPIs.avgCoverageDays || 0,
@@ -397,7 +446,14 @@ export function useAnalytics(products, orders, dateRange = '30d', customRange = 
       skuAvailabilityRate: comparisonData.reduce((sum, d) => sum + d.skuAvailabilityRate, 0) / comparisonData.length,
       salesLostAmount: comparisonData.reduce((sum, d) => sum + d.salesLostAmount, 0) / comparisonData.length,
       overstockCost: comparisonData.reduce((sum, d) => sum + d.overstockCost, 0) / comparisonData.length,
-      inventoryValuation: comparisonData.reduce((sum, d) => sum + (d.inventoryValuation || 0), 0) / comparisonData.length
+      inventoryValuation: comparisonData.reduce((sum, d) => sum + (d.inventoryValuation || 0), 0) / comparisonData.length,
+      // KPIs supplémentaires depuis l'historique
+      mappingPercentage: comparisonData.reduce((sum, d) => sum + (d.mappingPercentage || 0), 0) / comparisonData.length,
+      totalProducts: comparisonData.reduce((sum, d) => sum + (d.totalProducts || 0), 0) / comparisonData.length,
+      healthyPercentage: comparisonData.reduce((sum, d) => sum + (d.healthyPercentage || 0), 0) / comparisonData.length,
+      totalGrossMargin: comparisonData.reduce((sum, d) => sum + (d.totalGrossMargin || 0), 0) / comparisonData.length,
+      totalPotentialRevenue: comparisonData.reduce((sum, d) => sum + (d.totalPotentialRevenue || 0), 0) / comparisonData.length,
+      fastRotatingProducts: comparisonData.reduce((sum, d) => sum + (d.fastRotatingProducts || 0), 0) / comparisonData.length
     };
 
     console.log('📊 KPIs période de comparaison:', avgKPIs);
@@ -446,6 +502,31 @@ export function useAnalytics(products, orders, dateRange = '30d', customRange = 
       inventoryValuation: sampledData.map(d => ({
         date: d.dateString,
         value: d.inventoryValuation || 0
+      })),
+      // Graphiques pour KPIs supplémentaires
+      mappingPercentage: sampledData.map(d => ({
+        date: d.dateString,
+        value: d.mappingPercentage || 0
+      })),
+      totalProducts: sampledData.map(d => ({
+        date: d.dateString,
+        value: d.totalProducts || 0
+      })),
+      healthyPercentage: sampledData.map(d => ({
+        date: d.dateString,
+        value: d.healthyPercentage || 0
+      })),
+      totalGrossMargin: sampledData.map(d => ({
+        date: d.dateString,
+        value: d.totalGrossMargin || 0
+      })),
+      totalPotentialRevenue: sampledData.map(d => ({
+        date: d.dateString,
+        value: d.totalPotentialRevenue || 0
+      })),
+      fastRotatingProducts: sampledData.map(d => ({
+        date: d.dateString,
+        value: d.fastRotatingProducts || 0
       }))
     };
   }, [history, startDate, endDate]);
@@ -545,24 +626,25 @@ export function useAnalytics(products, orders, dateRange = '30d', customRange = 
   const analytics = useMemo(() => {
     console.log('🎯 Construction des analytics finaux');
 
+    // Utiliser les valeurs actuelles (temps réel) pour les comparaisons
     // SKU Availability
     const skuAvailabilityComparison = comparisonKPIs 
-      ? calculatePeriodComparison(periodCurrentKPIs.skuAvailabilityRate, comparisonKPIs.skuAvailabilityRate)
+      ? calculatePeriodComparison(currentKPIs.skuAvailabilityRate, comparisonKPIs.skuAvailabilityRate)
       : { change: 0, changePercent: 0, trend: 'neutral' };
 
     // Sales Lost
     const salesLostComparison = comparisonKPIs
-      ? calculatePeriodComparison(periodCurrentKPIs.salesLostAmount, comparisonKPIs.salesLostAmount)
+      ? calculatePeriodComparison(currentKPIs.salesLostAmount, comparisonKPIs.salesLostAmount)
       : { change: 0, changePercent: 0, trend: 'neutral' };
 
     // Overstock
     const overstockComparison = comparisonKPIs
-      ? calculatePeriodComparison(periodCurrentKPIs.overstockCost, comparisonKPIs.overstockCost)
+      ? calculatePeriodComparison(currentKPIs.overstockCost, comparisonKPIs.overstockCost)
       : { change: 0, changePercent: 0, trend: 'neutral' };
 
     // Inventory Valuation
     const inventoryValuationComparison = comparisonKPIs
-      ? calculatePeriodComparison(periodCurrentKPIs.inventoryValuation, comparisonKPIs.inventoryValuation)
+      ? calculatePeriodComparison(currentKPIs.inventoryValuation, comparisonKPIs.inventoryValuation)
       : { change: 0, changePercent: 0, trend: 'neutral' };
 
     // Formater la période de comparaison pour l'affichage
@@ -596,49 +678,56 @@ export function useAnalytics(products, orders, dateRange = '30d', customRange = 
 
     const comparisonPeriodLabel = formatComparisonPeriod();
 
+    // Utiliser les valeurs actuelles (temps réel) au lieu de la moyenne de la période
+    // Les valeurs affichées doivent refléter l'état actuel, pas une moyenne historique
+    const currentValue = currentKPIs.skuAvailabilityRate;
+    const currentInventoryValue = currentKPIs.inventoryValuation;
+    const currentSalesLost = currentKPIs.salesLostAmount;
+    const currentOverstock = currentKPIs.overstockCost;
+
     const result = {
       skuAvailability: {
-        value: `${periodCurrentKPIs.skuAvailabilityRate.toFixed(1)}%`,
-        rawValue: periodCurrentKPIs.skuAvailabilityRate,
+        value: `${currentValue.toFixed(1)}%`,
+        rawValue: currentValue,
         change: skuAvailabilityComparison.change,
         changePercent: skuAvailabilityComparison.changePercent,
         trend: skuAvailabilityComparison.trend,
         chartData: chartData.skuAvailability,
-        description: `${periodCurrentKPIs.availableSKUs} SKUs disponibles sur ${periodCurrentKPIs.totalSKUs}`,
+        description: `${currentKPIs.availableSKUs} SKUs disponibles sur ${currentKPIs.totalSKUs}`,
         comparisonPeriod: comparisonPeriodLabel,
         comparisonValue: comparisonKPIs?.skuAvailabilityRate.toFixed(1) || null
       },
       salesLost: {
-        value: formatCurrencyNoDecimals(periodCurrentKPIs.salesLostAmount),
-        rawValue: periodCurrentKPIs.salesLostAmount,
+        value: formatCurrencyNoDecimals(currentSalesLost),
+        rawValue: currentSalesLost,
         change: salesLostComparison.change,
         changePercent: salesLostComparison.changePercent,
         trend: salesLostComparison.trend,
         chartData: chartData.salesLost,
-        description: `Forecast sur 7 jours : ${periodCurrentKPIs.salesLostCount} SKU(s) en rupture ou à risque (autonomie < stock de sécurité). Inclut produits avec stock = 0 et produits urgents.`,
+        description: `⚠️ ATTENTION : Différent du Dashboard ! Compte UNIQUEMENT les produits EN RUPTURE TOTALE (stock = 0). Mesure les pertes RÉELLES actuelles, pas les risques futurs. ${currentKPIs.salesLostCount} SKU(s) en rupture. Pour voir les produits à risque, consultez le Dashboard.`,
         comparisonPeriod: comparisonPeriodLabel,
         comparisonValue: comparisonKPIs?.salesLostAmount !== undefined
           ? formatCurrencyNoDecimals(comparisonKPIs.salesLostAmount)
           : null
       },
       overstockCost: {
-        value: formatCurrencyNoDecimals(periodCurrentKPIs.overstockCost),
-        rawValue: periodCurrentKPIs.overstockCost,
+        value: formatCurrencyNoDecimals(currentOverstock),
+        rawValue: currentOverstock,
         change: overstockComparison.change,
         changePercent: overstockComparison.changePercent,
         trend: overstockComparison.trend,
         chartData: chartData.overstock,
-        description: `${periodCurrentKPIs.overstockSKUs} SKUs en surstock`,
+        description: `${currentKPIs.overstockSKUs} SKU(s) en surstock profond${currentKPIs.overstockSKUList && currentKPIs.overstockSKUList.length > 0 ? ` : ${currentKPIs.overstockSKUList.join(', ')}${currentKPIs.overstockSKUs > 10 ? ` (+ ${currentKPIs.overstockSKUs - 10} autres)` : ''}` : ''}`,
         comparisonPeriod: comparisonPeriodLabel,
         comparisonValue: comparisonKPIs?.overstockCost !== undefined
           ? formatCurrencyNoDecimals(comparisonKPIs.overstockCost)
           : null
       },
       inventoryValuation: {
-        value: formatCurrency(periodCurrentKPIs.inventoryValuation, {
+        value: formatCurrency(currentInventoryValue, {
           minimumFractionDigits: 0
         }),
-        rawValue: periodCurrentKPIs.inventoryValuation,
+        rawValue: currentInventoryValue,
         change: inventoryValuationComparison.change,
         changePercent: inventoryValuationComparison.changePercent,
         trend: inventoryValuationComparison.trend,
@@ -650,15 +739,73 @@ export function useAnalytics(products, orders, dateRange = '30d', customRange = 
           : null,
         // Analyse intelligente avec toutes les métriques contextuelles
         analysis: analyzeInventoryValuation({
-          inventoryValuation: periodCurrentKPIs.inventoryValuation,
-          annualSalesValue: periodCurrentKPIs.annualSalesValue || 0,
-          avgCoverageDays: periodCurrentKPIs.avgCoverageDays || 0,
-          inventoryToSalesRatio: periodCurrentKPIs.inventoryToSalesRatio || 0,
-          outOfStockRate: periodCurrentKPIs.outOfStockRate || 0,
-          salesLostAmount: periodCurrentKPIs.salesLostAmount,
+          inventoryValuation: currentInventoryValue,
+          annualSalesValue: currentKPIs.annualSalesValue || 0,
+          avgCoverageDays: currentKPIs.avgCoverageDays || 0,
+          inventoryToSalesRatio: currentKPIs.inventoryToSalesRatio || 0,
+          outOfStockRate: currentKPIs.outOfStockRate || 0,
+          salesLostAmount: currentSalesLost,
           trend: inventoryValuationComparison.trend,
           changePercent: inventoryValuationComparison.changePercent
         })
+      },
+      // KPIs supplémentaires avec comparaisons réelles depuis l'historique
+      // Utiliser les valeurs actuelles (temps réel) calculées depuis les produits
+      additionalKPIs: {
+        mappingPercentage: {
+          value: `${Math.round((currentKPIs.mappingPercentage || 0))}%`,
+          rawValue: currentKPIs.mappingPercentage || 0,
+          change: comparisonKPIs ? calculatePeriodComparison(currentKPIs.mappingPercentage || 0, comparisonKPIs.mappingPercentage || 0).change : 0,
+          changePercent: comparisonKPIs ? calculatePeriodComparison(currentKPIs.mappingPercentage || 0, comparisonKPIs.mappingPercentage || 0).changePercent : 0,
+          trend: comparisonKPIs ? calculatePeriodComparison(currentKPIs.mappingPercentage || 0, comparisonKPIs.mappingPercentage || 0).trend : 'neutral',
+          chartData: chartData.mappingPercentage || [],
+          comparisonPeriod: comparisonPeriodLabel
+        },
+        totalProducts: {
+          value: Math.round(currentKPIs.totalProducts || 0),
+          rawValue: currentKPIs.totalProducts || 0,
+          change: comparisonKPIs ? calculatePeriodComparison(currentKPIs.totalProducts || 0, comparisonKPIs.totalProducts || 0).change : 0,
+          changePercent: comparisonKPIs ? calculatePeriodComparison(currentKPIs.totalProducts || 0, comparisonKPIs.totalProducts || 0).changePercent : 0,
+          trend: comparisonKPIs ? calculatePeriodComparison(currentKPIs.totalProducts || 0, comparisonKPIs.totalProducts || 0).trend : 'neutral',
+          chartData: chartData.totalProducts || [],
+          comparisonPeriod: comparisonPeriodLabel
+        },
+        healthyPercentage: {
+          value: `${Math.round(currentKPIs.healthyPercentage || 0)}%`,
+          rawValue: currentKPIs.healthyPercentage || 0,
+          change: comparisonKPIs ? calculatePeriodComparison(currentKPIs.healthyPercentage || 0, comparisonKPIs.healthyPercentage || 0).change : 0,
+          changePercent: comparisonKPIs ? calculatePeriodComparison(currentKPIs.healthyPercentage || 0, comparisonKPIs.healthyPercentage || 0).changePercent : 0,
+          trend: comparisonKPIs ? calculatePeriodComparison(currentKPIs.healthyPercentage || 0, comparisonKPIs.healthyPercentage || 0).trend : 'neutral',
+          chartData: chartData.healthyPercentage || [],
+          comparisonPeriod: comparisonPeriodLabel
+        },
+        totalGrossMargin: {
+          value: formatCurrency(currentKPIs.totalGrossMargin || 0, { minimumFractionDigits: 0 }),
+          rawValue: currentKPIs.totalGrossMargin || 0,
+          change: comparisonKPIs ? calculatePeriodComparison(currentKPIs.totalGrossMargin || 0, comparisonKPIs.totalGrossMargin || 0).change : 0,
+          changePercent: comparisonKPIs ? calculatePeriodComparison(currentKPIs.totalGrossMargin || 0, comparisonKPIs.totalGrossMargin || 0).changePercent : 0,
+          trend: comparisonKPIs ? calculatePeriodComparison(currentKPIs.totalGrossMargin || 0, comparisonKPIs.totalGrossMargin || 0).trend : 'neutral',
+          chartData: chartData.totalGrossMargin || [],
+          comparisonPeriod: comparisonPeriodLabel
+        },
+        totalPotentialRevenue: {
+          value: formatCurrency(currentKPIs.totalPotentialRevenue || 0, { minimumFractionDigits: 0 }),
+          rawValue: currentKPIs.totalPotentialRevenue || 0,
+          change: comparisonKPIs ? calculatePeriodComparison(currentKPIs.totalPotentialRevenue || 0, comparisonKPIs.totalPotentialRevenue || 0).change : 0,
+          changePercent: comparisonKPIs ? calculatePeriodComparison(currentKPIs.totalPotentialRevenue || 0, comparisonKPIs.totalPotentialRevenue || 0).changePercent : 0,
+          trend: comparisonKPIs ? calculatePeriodComparison(currentKPIs.totalPotentialRevenue || 0, comparisonKPIs.totalPotentialRevenue || 0).trend : 'neutral',
+          chartData: chartData.totalPotentialRevenue || [],
+          comparisonPeriod: comparisonPeriodLabel
+        },
+        fastRotatingProducts: {
+          value: Math.round(currentKPIs.fastRotatingProducts || 0),
+          rawValue: currentKPIs.fastRotatingProducts || 0,
+          change: comparisonKPIs ? calculatePeriodComparison(currentKPIs.fastRotatingProducts || 0, comparisonKPIs.fastRotatingProducts || 0).change : 0,
+          changePercent: comparisonKPIs ? calculatePeriodComparison(currentKPIs.fastRotatingProducts || 0, comparisonKPIs.fastRotatingProducts || 0).changePercent : 0,
+          trend: comparisonKPIs ? calculatePeriodComparison(currentKPIs.fastRotatingProducts || 0, comparisonKPIs.fastRotatingProducts || 0).trend : 'neutral',
+          chartData: chartData.fastRotatingProducts || [],
+          comparisonPeriod: comparisonPeriodLabel
+        }
       },
       loading,
       error,

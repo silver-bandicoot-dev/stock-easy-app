@@ -47,7 +47,14 @@ export async function saveKPISnapshot(companyId, kpiData) {
       sales_lost_count: kpiData.salesLostCount || 0,
       overstock_cost: kpiData.overstockCost || 0,
       overstock_skus: kpiData.overstockSKUs || 0,
-      inventory_valuation: kpiData.inventoryValuation || 0
+      inventory_valuation: kpiData.inventoryValuation || 0,
+      // KPIs supplémentaires
+      mapping_percentage: kpiData.mappingPercentage || 0,
+      total_products: kpiData.totalProducts || 0,
+      healthy_percentage: kpiData.healthyPercentage || 0,
+      total_gross_margin: kpiData.totalGrossMargin || 0,
+      total_potential_revenue: kpiData.totalPotentialRevenue || 0,
+      fast_rotating_products: kpiData.fastRotatingProducts || 0
     };
     
     console.log('📦 Données du snapshot:', snapshot);
@@ -127,7 +134,14 @@ export async function getKPIHistory(companyId, startDate, endDate) {
       salesLostCount: row.sales_lost_count || 0,
       overstockCost: row.overstock_cost || 0,
       overstockSKUs: row.overstock_skus || 0,
-      inventoryValuation: row.inventory_valuation || 0
+      inventoryValuation: row.inventory_valuation || 0,
+      // KPIs supplémentaires
+      mappingPercentage: row.mapping_percentage || 0,
+      totalProducts: row.total_products || 0,
+      healthyPercentage: row.healthy_percentage || 0,
+      totalGrossMargin: row.total_gross_margin || 0,
+      totalPotentialRevenue: row.total_potential_revenue || 0,
+      fastRotatingProducts: row.fast_rotating_products || 0
     }));
     
     console.log('✅ Historique récupéré:', history.length, 'entrées');

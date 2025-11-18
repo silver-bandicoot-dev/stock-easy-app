@@ -53,6 +53,7 @@ export const TOOLTIPS = {
   reorderPoint: "Niveau de stock critique qui déclenche une alerte de commande. Calculé pour couvrir les ventes pendant le délai de réapprovisionnement + stock de sécurité.",
   stockHealth: "Indicateur visuel de la santé du stock. Vert = bon niveau, Orange = surveillance nécessaire, Rouge = urgent à commander.",
   skuAvailability: "Pourcentage de produits disponibles en stock par rapport au total des SKU actifs.",
-  salesLost: "Forecast des ventes perdues sur 7 jours incluant : (1) produits en rupture totale (stock = 0) et (2) produits à risque de rupture (autonomie < stock de sécurité). Calcul : jours en rupture × ventes/jour × prix de vente.",
+  salesLost: "⚠️ ATTENTION : Différent du Dashboard ! Compte UNIQUEMENT les produits EN RUPTURE TOTALE (stock = 0). Mesure les pertes RÉELLES actuelles, pas les risques futurs. Pour voir les produits à risque, consultez le Dashboard.",
+  salesLostDashboard: "⚠️ ATTENTION : Différent d'Analytics ! Inclut TOUS les produits à risque (ruptures actuelles + produits qui vont manquer bientôt). Permet d'anticiper les pertes avant la rupture totale. Pour voir uniquement les ruptures réelles, consultez Analytics.",
   deepOverstock: "Valeur financière des produits dont le stock dépasse largement la demande prévue."
 };

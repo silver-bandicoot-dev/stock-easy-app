@@ -9,43 +9,60 @@ import { roundToTwoDecimals } from './decimalUtils';
  * @returns {Object} Objet contenant tous les KPIs calculés
  */
 export function calculateAnalyticsKPIs(enrichedProducts = [], orders = [], formatCurrency, mlRevenueData = null) {
-  // Commandes en transit (pourcentage)
-  const inTransitOrders = orders.filter(o => o.status === 'in_transit').length;
-  const totalOrdersCount = orders.length;
-  const inTransitPercentage = totalOrdersCount > 0 
-    ? Math.round((inTransitOrders / totalOrdersCount) * 100) 
+  // Gérer les cas null/undefined
+  const safeProducts = Array.isArray(enrichedProducts) ? enrichedProducts : [];
+  const safeOrders = Array.isArray(orders) ? orders : [];
+  
+  // Total produits
+  const totalProducts = safeProducts.length;
+
+  // Pourcentage de mapping Produits ↔ Fournisseurs
+  const productsWithSupplier = safeProducts.filter(p => p.supplier && p.supplier.trim() !== '').length;
+  const mappingPercentage = totalProducts > 0 
+    ? Math.round((productsWithSupplier / totalProducts) * 100) 
     : 0;
 
-  // Total produits
-  const totalProducts = enrichedProducts.length;
-
   // Produits en bonne santé
-  const healthyProducts = enrichedProducts.filter(p => p.healthStatus === 'healthy').length;
+  const healthyProducts = safeProducts.filter(p => p.healthStatus === 'healthy').length;
   const healthyPercentage = totalProducts > 0 
     ? Math.round((healthyProducts / totalProducts) * 100) 
     : 0;
 
   // Marge brute totale
-  const totalGrossMargin = enrichedProducts.reduce((sum, p) => {
-    return sum + (p.grossMargin || (p.stock * (p.sellPrice || 0) * (p.margin || 0) / 100));
+  // Si grossMargin est pré-calculé par le backend, l'utiliser
+  // Sinon, calculer la vraie marge brute : (prix de vente - prix d'achat) × stock
+  const totalGrossMargin = safeProducts.reduce((sum, p) => {
+    // Si grossMargin est pré-calculé par le backend, l'utiliser
+    if (p.grossMargin !== undefined && p.grossMargin !== null) {
+      return sum + p.grossMargin;
+    }
+    
+    // Sinon, calculer la vraie marge brute : (prix de vente - prix d'achat) × stock
+    const marginPerUnit = (p.sellPrice || 0) - (p.buyPrice || 0);
+    const totalMargin = marginPerUnit * (p.stock || 0);
+    
+    return sum + totalMargin;
   }, 0);
 
   // Valeur potentielle des ventes (revenu potentiel total)
   // Utiliser le calcul ML si disponible, sinon fallback vers calcul simple
   const totalPotentialRevenue = mlRevenueData && mlRevenueData.totalRevenue !== undefined
     ? mlRevenueData.totalRevenue
-    : enrichedProducts.reduce((sum, p) => {
+    : safeProducts.reduce((sum, p) => {
         return sum + (p.potentialRevenue || (p.stock * (p.sellPrice || 0)));
       }, 0);
 
   // Taux de rotation moyen (ABC analysis - produits rapides)
-  const fastRotatingProducts = enrichedProducts.filter(p => {
+  // rotationRate est en rotations/an (confirmé dans StockTab.jsx)
+  // Seuil de rotation rapide : > 4 rotations/an (équivalent à > 0.33 rotations/mois)
+  const FAST_ROTATION_THRESHOLD = 4; // Minimum 4 rotations/an = rotation rapide
+  const fastRotatingProducts = safeProducts.filter(p => {
     const rotationRate = p.rotationRate || 0;
-    return rotationRate > 0.5; // Rotation > 50% par mois
+    return rotationRate > FAST_ROTATION_THRESHOLD; // 4+ rotations/an
   }).length;
 
-  // Calculer le taux de rotation moyen de tous les produits (en rotations/an, pas en pourcentage)
-  const allRotationRates = enrichedProducts
+  // Calculer le taux de rotation moyen de tous les produits (en rotations/an)
+  const allRotationRates = safeProducts
     .map(p => p.rotationRate || 0)
     .filter(rate => rate > 0); // Exclure les produits sans rotation
   const averageRotationRate = allRotationRates.length > 0
@@ -67,16 +84,16 @@ export function calculateAnalyticsKPIs(enrichedProducts = [], orders = [], forma
   };
 
   return {
-    inTransit: {
-      title: 'En Transit',
-      value: `${inTransitPercentage}%`,
-      rawValue: inTransitPercentage,
+    mappingPercentage: {
+      title: 'Mapping Produits ↔ Fournisseurs',
+      value: `${mappingPercentage}%`,
+      rawValue: mappingPercentage,
       change: 0,
-      changePercent: 3.1,
-      trend: 'up',
-      description: 'Pourcentage de commandes actuellement en transit',
-      icon: 'Clock',
-      chartData: generateChartData(inTransitPercentage, 0.1)
+      changePercent: mappingPercentage < 80 ? -5.0 : 2.5,
+      trend: mappingPercentage < 80 ? 'down' : 'up',
+      description: `Pourcentage de produits avec un fournisseur assigné (${productsWithSupplier}/${totalProducts})`,
+      icon: 'Link',
+      chartData: generateChartData(mappingPercentage, 0.05)
     },
     totalProducts: {
       title: 'Total Produits',
@@ -137,7 +154,7 @@ export function calculateAnalyticsKPIs(enrichedProducts = [], orders = [], forma
       change: 0,
       changePercent: 3.7,
       trend: 'up',
-      description: `Nombre de produits avec une rotation élevée (>0.5 rotations/mois, soit >6 rotations/an). La rotation moyenne (${averageRotationDisplay} rot/an) représente la moyenne de tous vos produits : c'est le nombre moyen de fois que chaque stock se renouvelle en une année. Par exemple, 16.86 rot/an signifie que le stock se renouvelle en moyenne tous les 21 jours environ. Une rotation élevée (>6 rot/an) indique une bonne dynamique commerciale.`,
+      description: `Nombre de produits avec une rotation élevée (>${FAST_ROTATION_THRESHOLD} rotations/an). La rotation moyenne (${averageRotationDisplay} rot/an) représente la moyenne de tous vos produits : c'est le nombre moyen de fois que chaque stock se renouvelle en une année. Par exemple, 16.86 rot/an signifie que le stock se renouvelle en moyenne tous les 21 jours environ. Une rotation élevée (>${FAST_ROTATION_THRESHOLD} rot/an) indique une bonne dynamique commerciale.`,
       icon: 'Boxes',
       chartData: generateChartData(fastRotatingProducts * 10, 0.15)
     }

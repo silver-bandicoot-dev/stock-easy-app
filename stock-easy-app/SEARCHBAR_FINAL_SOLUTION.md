@@ -184,3 +184,4 @@ Tu devrais la voir immédiatement au prochain rafraîchissement de la page. 🚀
 **Statut :** ✅ **Résolu et testé**  
 **Fichiers modifiés :** 1 (StockEasy.jsx)
 
+

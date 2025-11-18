@@ -23,7 +23,8 @@ export function KPICard({ title, value, change, changePercent, trend, descriptio
   const isPositive = trend === 'up';
   const isGood = (title.includes('Disponibilité') && isPositive) || 
                  (title.includes('Perdues') && !isPositive) ||
-                 (title.includes('Surstocks') && !isPositive);
+                 (title.includes('Surstocks') && !isPositive) ||
+                 (title.includes('Commander') && !isPositive);
   
   const isClickable = !!onClick;
   const safeChartData = Array.isArray(chartData)
@@ -107,10 +108,10 @@ export function KPICard({ title, value, change, changePercent, trend, descriptio
           </div>
         )}
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2">
-            <h3 className="text-sm font-semibold text-[#191919] truncate">{title}</h3>
+          <h3 className="text-sm font-semibold text-[#191919] truncate inline-flex items-center gap-2">
+            <span>{title}</span>
             <InfoTooltip content={description} />
-          </div>
+          </h3>
         </div>
       </div>
       
@@ -136,7 +137,7 @@ export function KPICard({ title, value, change, changePercent, trend, descriptio
               ) : (
                 <ArrowDownRight className="w-4 h-4 shrink-0" />
               )}
-              {Math.abs(changePercent)}%
+              {typeof changePercent === 'number' ? Math.abs(changePercent).toFixed(1) : Math.abs(changePercent)}%
             </span>
             <span className="text-[#666663] text-xs">
               vs {comparisonPeriod || 'période précédente'}

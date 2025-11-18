@@ -1,6 +1,6 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Package } from 'lucide-react';
+import { Package, AlertTriangle } from 'lucide-react';
 import { HealthBar } from '../ui/HealthBar';
 import { InfoTooltip } from '../ui/InfoTooltip';
 import { StockHealthDashboard } from '../features/StockHealthDashboard';
@@ -21,10 +21,19 @@ export const StockTab = ({
   onViewDetails
 }) => {
   // Calculer les statistiques de santé
-  const urgentCount = products ? products.filter(p => p.healthStatus === 'urgent').length : 0;
-  const warningCount = products ? products.filter(p => p.healthStatus === 'warning').length : 0;
-  const healthyCount = products ? products.filter(p => p.healthStatus === 'healthy').length : 0;
+  const urgentProducts = products ? products.filter(p => p.healthStatus === 'urgent') : [];
+  const warningProducts = products ? products.filter(p => p.healthStatus === 'warning') : [];
+  const healthyProducts = products ? products.filter(p => p.healthStatus === 'healthy') : [];
+  
+  const urgentCount = urgentProducts.length;
+  const warningCount = warningProducts.length;
+  const healthyCount = healthyProducts.length;
   const totalProducts = products ? products.length : 0;
+  
+  // Extraire les listes de SKU (limitées à 10 pour la lisibilité)
+  const urgentSKUList = urgentProducts.map(p => p.sku || p.name || 'N/A').slice(0, 10);
+  const warningSKUList = warningProducts.map(p => p.sku || p.name || 'N/A').slice(0, 10);
+  const healthySKUList = healthyProducts.map(p => p.sku || p.name || 'N/A').slice(0, 10);
   const supplierOptions = useMemo(() => {
     const uniqueSuppliers = new Set();
     
@@ -146,6 +155,9 @@ export const StockTab = ({
             totalWarning={warningCount}
             totalHealthy={healthyCount}
             totalProducts={totalProducts}
+            urgentSKUList={urgentSKUList}
+            warningSKUList={warningSKUList}
+            healthySKUList={healthySKUList}
           />
         </div>
       )}
@@ -259,10 +271,11 @@ export const StockTab = ({
                     {/* Produit */}
                     <td className="px-4 py-4">
                       <div className="flex items-center gap-3">
-                        {product.imageUrl ? (
+                        {product.imageUrl || product.sku ? (
                           <ImagePreview
                             src={product.imageUrl}
                             alt={product.name}
+                            sku={product.sku}
                             thumbClassName="w-11 h-11 rounded-md object-cover flex-shrink-0 bg-[#E5E4DF]"
                           />
                         ) : (
@@ -280,14 +293,6 @@ export const StockTab = ({
                                 {formatSalesPerDay(product.salesPerDay ?? 0)}
                               </span>
                             </div>
-                            {(product.sales30d ?? null) !== null && !Number.isNaN(Number(product.sales30d)) && (
-                              <div className="text-[11px] text-[#8A8A86]">
-                                Moyenne brute 30j&nbsp;
-                                <span className="font-medium">
-                                  {formatSalesPerDay(Number(product.sales30d) / 30)}
-                                </span>
-                              </div>
-                            )}
                           </div>
                         </div>
                       </div>
@@ -315,7 +320,7 @@ export const StockTab = ({
                     
                     {/* Autonomie */}
                     <td className="px-4 py-4">
-                      <div className="flex flex-col">
+                      <div className="flex flex-col gap-1.5">
                         <div className={`font-bold text-sm ${
                           product.healthStatus === 'urgent' ? 'text-red-600' :
                           product.healthStatus === 'warning' ? 'text-orange-500' :
@@ -323,6 +328,12 @@ export const StockTab = ({
                         }`}>
                           {product.daysOfStock || 0} jours
                         </div>
+                        {product.isDeepOverstock && (
+                          <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded border border-[#D1D5DB] bg-[#F9FAFB] text-[#6B7280] text-[10px] font-medium w-fit">
+                            <AlertTriangle className="w-2.5 h-2.5" />
+                            <span>Surstock profond</span>
+                          </div>
+                        )}
                         {product.qtyToOrder > 0 && (
                           <div className="text-xs text-red-600 font-medium">
                             Commander {formatUnits(product.qtyToOrder)}

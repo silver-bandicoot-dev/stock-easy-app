@@ -307,3 +307,4 @@ Modifier l'ordre dans le flex :
 **Statut :** ✅ Production Ready  
 **Architecture :** TopBar horizontale avec SearchBar intégrée
 
+

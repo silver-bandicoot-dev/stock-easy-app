@@ -531,8 +531,22 @@ const StockEasy = () => {
   const enrichedProducts = useMemo(() => products.map(p => calculateMetrics(p, seuilSurstockProfond)), [products, seuilSurstockProfond]);
 
   const productsByStatus = useMemo(() => {
+    // Statuts de commandes qui excluent un produit de la liste "à commander"
+    const activeOrderStatuses = ['pending_confirmation', 'confirmed', 'in_transit'];
+    
     return {
-      to_order: enrichedProducts.filter(p => p.qtyToOrder > 0),
+      to_order: enrichedProducts.filter(p => {
+        // Exclure si qtyToOrder est 0 ou négatif
+        if (p.qtyToOrder <= 0) return false;
+        
+        // Exclure si le produit est déjà dans une commande active
+        const isInActiveOrder = orders.some(o => 
+          activeOrderStatuses.includes(o.status) && 
+          o.items.some(item => item.sku === p.sku)
+        );
+        
+        return !isInActiveOrder;
+      }),
       watch: enrichedProducts.filter(p => p.qtyToOrder === 0 && p.stock < p.reorderPoint * 1.2),
       in_transit: enrichedProducts.filter(p => {
         return orders.some(o => 

@@ -306,6 +306,7 @@ const StockEasy = () => {
   const [chartModalOpen, setChartModalOpen] = useState(false);
   const [selectedKPI, setSelectedKPI] = useState(null);
   const [historyFilter, setHistoryFilter] = useState('all');
+  const [historySupplierFilter, setHistorySupplierFilter] = useState('all');
   const [historyDateStart, setHistoryDateStart] = useState('');
   
   // Stock Level filters
@@ -329,6 +330,26 @@ const StockEasy = () => {
   // États pour le menu mobile et la recherche mobile
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [searchModalOpen, setSearchModalOpen] = useState(false);
+
+  // Raccourci clavier ⌘K (ou Ctrl+K) pour ouvrir la barre de recherche
+  useEffect(() => {
+    const handleKeyDown = (event) => {
+      // Ignorer si on est dans un input, textarea, ou un élément éditable
+      const target = event.target;
+      const isInput = target.tagName === 'INPUT' || 
+                      target.tagName === 'TEXTAREA' || 
+                      target.isContentEditable;
+      
+      // Ouvrir le modal avec ⌘K (Mac) ou Ctrl+K (Windows/Linux)
+      if (event.key === 'k' && (event.metaKey || event.ctrlKey) && !isInput) {
+        event.preventDefault();
+        setSearchModalOpen(true);
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
 
   // CORRECTION 3: Gestion de l'expansion des détails de commandes
@@ -842,7 +863,7 @@ const StockEasy = () => {
   const kpiTitles = {
     skuAvailability: 'Taux de Disponibilité des SKU',
     inventoryValuation: 'Valeur de l\'Inventaire',
-    salesLost: 'Ventes Perdues - Rupture de Stock',
+    salesLost: 'Ventes Perdues - Ruptures Réelles',
     overstockCost: 'Valeur Surstocks Profonds'
   };
   
@@ -2508,6 +2529,7 @@ ${getUserSignature()}`
             setSettingsSubTab={setParametersSubTab}
             mobileMenuOpen={mobileMenuOpen}
             setMobileMenuOpen={setMobileMenuOpen}
+            orderBadgeCount={productsByStatus.to_order.length}
             />
 
             {/* Main Content */}
@@ -2525,6 +2547,7 @@ ${getUserSignature()}`
                       orders={orders}
                       enrichedProducts={enrichedProducts}
                       onViewDetails={onViewDetails}
+                      seuilSurstockProfond={seuilSurstockProfond}
                     />
                   )}
 
@@ -2622,6 +2645,8 @@ ${getUserSignature()}`
                       warehouses={warehouses}
                       historyFilter={historyFilter}
                       setHistoryFilter={setHistoryFilter}
+                      historySupplierFilter={historySupplierFilter}
+                      setHistorySupplierFilter={setHistorySupplierFilter}
                       historyDateStart={historyDateStart}
                       setHistoryDateStart={setHistoryDateStart}
                       historyDateEnd={historyDateEnd}

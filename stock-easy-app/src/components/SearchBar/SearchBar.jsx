@@ -399,7 +399,7 @@ export const SearchBar = ({
           onKeyDown={handleKeyDown}
           placeholder={placeholder}
           className="
-            w-full pl-10 pr-20 py-3 
+            w-full pl-10 pr-28 py-3 
             text-sm text-neutral-900 placeholder-neutral-500
             bg-white border border-neutral-300 rounded-lg
             focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent
@@ -413,6 +413,14 @@ export const SearchBar = ({
           {/* Indicateur de chargement */}
           {loading && (
             <div className="w-4 h-4 border-2 border-primary-500 border-t-transparent rounded-full animate-spin" />
+          )}
+
+          {/* Indicateur de raccourci clavier ⌘K - affiché seulement si pas de query et pas de focus */}
+          {!query && !loading && !showDropdown && (
+            <kbd className="hidden sm:inline-flex items-center gap-1 px-2 py-1.5 text-[10px] font-medium text-neutral-500 bg-white/60 border border-neutral-200/80 rounded shadow-[0_1px_2px_rgba(0,0,0,0.05)] backdrop-blur-sm">
+              <span className="text-[11px] leading-none font-semibold">⌘</span>
+              <span className="text-[11px] leading-none font-mono font-semibold">K</span>
+            </kbd>
           )}
 
           {/* Bouton Clear */}

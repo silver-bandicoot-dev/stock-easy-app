@@ -1,5 +1,6 @@
 import { saveKPISnapshot } from '../services/kpiHistoryService';
 import { calculateOverstockExcessValue } from './calculations';
+import { calculateAnalyticsKPIs } from './analyticsKPIs';
 
 /**
  * Vérifie si un snapshot KPI a déjà été créé aujourd'hui
@@ -84,6 +85,10 @@ function calculateKPIsFromData(products, orders, seuilSurstockProfond = 90) {
     return sum + productValue;
   }, 0);
 
+  // Calculer les KPIs supplémentaires avec calculateAnalyticsKPIs
+  // Note: formatCurrency n'est pas nécessaire ici car on utilise rawValue
+  const additionalKPIs = calculateAnalyticsKPIs(products, orders, null, null);
+  
   const kpis = {
     skuAvailabilityRate: Math.round(skuAvailabilityRate * 100) / 100,
     availableSKUs,
@@ -92,7 +97,14 @@ function calculateKPIsFromData(products, orders, seuilSurstockProfond = 90) {
     salesLostCount,
     overstockCost: Math.round(overstockCost * 100) / 100,
     overstockSKUs,
-    inventoryValuation: Math.round(inventoryValuation * 100) / 100
+    inventoryValuation: Math.round(inventoryValuation * 100) / 100,
+    // KPIs supplémentaires
+    mappingPercentage: additionalKPIs.mappingPercentage?.rawValue || 0,
+    totalProducts: additionalKPIs.totalProducts?.rawValue || 0,
+    healthyPercentage: additionalKPIs.healthyPercentage?.rawValue || 0,
+    totalGrossMargin: additionalKPIs.totalGrossMargin?.rawValue || 0,
+    totalPotentialRevenue: additionalKPIs.totalPotentialRevenue?.rawValue || 0,
+    fastRotatingProducts: additionalKPIs.fastRotatingProducts?.rawValue || 0
   };
 
   console.log('📊 KPIs calculés:', kpis);

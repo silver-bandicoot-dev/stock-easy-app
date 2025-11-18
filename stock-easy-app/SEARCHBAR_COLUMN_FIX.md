@@ -327,3 +327,4 @@ Les colonnes inexistantes ont été remplacées par les bonnes colonnes existant
 
 **Teste maintenant et partage les logs de la console si tu rencontres encore des problèmes !** 🔍✨
 
+

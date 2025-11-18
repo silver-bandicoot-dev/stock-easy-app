@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { RefreshCw, Clock, Package, Zap, TrendingUp, DollarSign, Boxes, Lightbulb, ShoppingCart, AlertTriangle, CheckCircle, Package2, Heart, TrendingDown, Activity, ChevronDown, AlertCircle, TrendingUp as TrendingUpIcon, Info, Brain } from 'lucide-react';
+import { RefreshCw, Clock, Package, Zap, TrendingUp, DollarSign, Boxes, Lightbulb, ShoppingCart, AlertTriangle, CheckCircle, Heart, TrendingDown, Activity, ChevronDown, AlertCircle, TrendingUp as TrendingUpIcon, Info, Brain, Link } from 'lucide-react';
 import { KPICard } from '../features/KPICard/KPICard';
 import { DateRangePicker } from './DateRangePicker';
 import { ComparisonSelector } from './ComparisonSelector';
@@ -9,7 +9,6 @@ import { InsightAlert } from '../features/InsightAlert';
 import { useAnalytics } from '../../hooks/useAnalytics';
 import { calculateAnalyticsKPIs } from '../../utils/analyticsKPIs';
 import { useCurrency } from '../../contexts/CurrencyContext';
-import { calculatePeriodComparison } from '../../services/kpiHistoryService';
 import { calculateTotalPotentialRevenueML } from '../../services/ml/revenueForecastService';
 import { DemandForecastModel } from '../../services/ml/demandForecastModel';
 
@@ -107,64 +106,125 @@ export const AnalyticsTab = ({
     return () => clearTimeout(timeoutId);
   }, [products, mlModel]);
 
-  // Calculer les KPIs supplémentaires pour Analytics avec comparaisons
+  // Utiliser les KPIs supplémentaires réels depuis l'historique (plus de simulation !)
   const additionalKPIs = useMemo(() => {
-    // Calculer les KPIs actuels avec données ML pour le revenu potentiel
+    // Calculer les KPIs actuels pour obtenir les descriptions et icônes
     const currentKPIs = calculateAnalyticsKPIs(products, orders, formatCurrency, mlRevenueData);
     
-    // Simuler des valeurs de comparaison (variation de ±5 à ±15% pour montrer une tendance)
-    // En production, ces valeurs devraient venir de l'historique stocké
-    const simulateComparison = (currentValue, key) => {
-      // Générer une variation réaliste selon le type de KPI
-      let variation = 0.08; // 8% par défaut
-      if (key.includes('Percentage') || key === 'inTransit' || key === 'healthyPercentage') {
-        variation = 0.05; // 5% pour les pourcentages
-      } else if (key.includes('Margin') || key.includes('Revenue')) {
-        variation = 0.12; // 12% pour les valeurs financières
+    // Utiliser les données réelles depuis analyticsData.additionalKPIs
+    const realAdditionalKPIs = analyticsData.additionalKPIs || {};
+    
+    // Convertir les chartData au format attendu (tableau de nombres normalisés 0-100)
+    const normalizeChartData = (chartDataArray, rawValue) => {
+      if (!chartDataArray || chartDataArray.length === 0) {
+        return [];
       }
       
-      // Simuler une valeur précédente (légèrement différente)
-      const randomFactor = 0.9 + (Math.random() * 0.2); // Entre 0.9 et 1.1
-      const previousValue = currentValue.rawValue * randomFactor;
+      // Si chartData est déjà au format [{date, value}], extraire les valeurs
+      const values = chartDataArray.map(d => typeof d === 'object' ? d.value : d);
       
-      // Calculer la comparaison
-      const comparison = calculatePeriodComparison(currentValue.rawValue, previousValue);
+      if (values.length === 0) return [];
       
-      // Générer des données de graphique simulées basées sur la période
-      // (normaliser pour affichage 0-100)
-      const generateChartData = (baseValue) => {
-        const data = [];
-        const days = dateRange === '7d' ? 7 : dateRange === '30d' ? 30 : dateRange === '90d' ? 12 : 12;
-        for (let i = 0; i < days; i++) {
-          const variationAmount = baseValue * variation * (Math.random() * 2 - 1);
-          const value = Math.max(0, baseValue + variationAmount);
-          // Normaliser pour affichage (0-100)
-          const normalizedValue = baseValue > 0 
-            ? Math.min(100, (value / (baseValue * 1.2)) * 100)
-            : 50;
-          data.push(normalizedValue);
-        }
-        return data;
-      };
+      // Trouver le min et max pour normalisation
+      const min = Math.min(...values);
+      const max = Math.max(...values);
+      const range = max - min || 1; // Éviter division par zéro
       
-      return {
-        ...currentValue,
-        change: comparison.change,
-        changePercent: comparison.changePercent,
-        trend: comparison.trend,
-        chartData: generateChartData(currentValue.rawValue),
-        comparisonPeriod: analyticsData.skuAvailability?.comparisonPeriod || 'période précédente'
-      };
+      // Normaliser entre 0 et 100
+      return values.map(v => Math.max(0, Math.min(100, ((v - min) / range) * 100)));
     };
     
-    // Appliquer les comparaisons à tous les KPIs
-    const kpisWithComparison = {};
-    Object.entries(currentKPIs).forEach(([key, kpi]) => {
-      kpisWithComparison[key] = simulateComparison(kpi, key);
-    });
+    // Mapper les KPIs réels avec les métadonnées (titre, description, icône)
+    const kpisWithMetadata = {};
     
-    return kpisWithComparison;
-  }, [products, orders, formatCurrency, analyticsData, dateRange, mlRevenueData]);
+    // Mapping Produits ↔ Fournisseurs
+    if (realAdditionalKPIs.mappingPercentage) {
+      kpisWithMetadata.mappingPercentage = {
+        ...currentKPIs.mappingPercentage,
+        value: realAdditionalKPIs.mappingPercentage.value,
+        rawValue: realAdditionalKPIs.mappingPercentage.rawValue,
+        change: realAdditionalKPIs.mappingPercentage.change,
+        changePercent: realAdditionalKPIs.mappingPercentage.changePercent,
+        trend: realAdditionalKPIs.mappingPercentage.trend,
+        chartData: normalizeChartData(realAdditionalKPIs.mappingPercentage.chartData, realAdditionalKPIs.mappingPercentage.rawValue),
+        comparisonPeriod: realAdditionalKPIs.mappingPercentage.comparisonPeriod
+      };
+    }
+    
+    // Total Produits
+    if (realAdditionalKPIs.totalProducts) {
+      kpisWithMetadata.totalProducts = {
+        ...currentKPIs.totalProducts,
+        value: realAdditionalKPIs.totalProducts.value,
+        rawValue: realAdditionalKPIs.totalProducts.rawValue,
+        change: realAdditionalKPIs.totalProducts.change,
+        changePercent: realAdditionalKPIs.totalProducts.changePercent,
+        trend: realAdditionalKPIs.totalProducts.trend,
+        chartData: normalizeChartData(realAdditionalKPIs.totalProducts.chartData, realAdditionalKPIs.totalProducts.rawValue),
+        comparisonPeriod: realAdditionalKPIs.totalProducts.comparisonPeriod
+      };
+    }
+    
+    // En Bonne Santé
+    if (realAdditionalKPIs.healthyPercentage) {
+      kpisWithMetadata.healthyPercentage = {
+        ...currentKPIs.healthyPercentage,
+        value: realAdditionalKPIs.healthyPercentage.value,
+        rawValue: realAdditionalKPIs.healthyPercentage.rawValue,
+        change: realAdditionalKPIs.healthyPercentage.change,
+        changePercent: realAdditionalKPIs.healthyPercentage.changePercent,
+        trend: realAdditionalKPIs.healthyPercentage.trend,
+        chartData: normalizeChartData(realAdditionalKPIs.healthyPercentage.chartData, realAdditionalKPIs.healthyPercentage.rawValue),
+        comparisonPeriod: realAdditionalKPIs.healthyPercentage.comparisonPeriod
+      };
+    }
+    
+    // Marge Brute Totale
+    if (realAdditionalKPIs.totalGrossMargin) {
+      kpisWithMetadata.totalGrossMargin = {
+        ...currentKPIs.totalGrossMargin,
+        value: realAdditionalKPIs.totalGrossMargin.value,
+        rawValue: realAdditionalKPIs.totalGrossMargin.rawValue,
+        change: realAdditionalKPIs.totalGrossMargin.change,
+        changePercent: realAdditionalKPIs.totalGrossMargin.changePercent,
+        trend: realAdditionalKPIs.totalGrossMargin.trend,
+        chartData: normalizeChartData(realAdditionalKPIs.totalGrossMargin.chartData, realAdditionalKPIs.totalGrossMargin.rawValue),
+        comparisonPeriod: realAdditionalKPIs.totalGrossMargin.comparisonPeriod
+      };
+    }
+    
+    // Revenu Potentiel (ML)
+    if (realAdditionalKPIs.totalPotentialRevenue) {
+      kpisWithMetadata.totalPotentialRevenue = {
+        ...currentKPIs.totalPotentialRevenue,
+        value: realAdditionalKPIs.totalPotentialRevenue.value,
+        rawValue: realAdditionalKPIs.totalPotentialRevenue.rawValue,
+        change: realAdditionalKPIs.totalPotentialRevenue.change,
+        changePercent: realAdditionalKPIs.totalPotentialRevenue.changePercent,
+        trend: realAdditionalKPIs.totalPotentialRevenue.trend,
+        chartData: normalizeChartData(realAdditionalKPIs.totalPotentialRevenue.chartData, realAdditionalKPIs.totalPotentialRevenue.rawValue),
+        comparisonPeriod: realAdditionalKPIs.totalPotentialRevenue.comparisonPeriod,
+        mlData: currentKPIs.totalPotentialRevenue.mlData // Conserver les données ML
+      };
+    }
+    
+    // Rotation Rapide
+    if (realAdditionalKPIs.fastRotatingProducts) {
+      kpisWithMetadata.fastRotatingProducts = {
+        ...currentKPIs.fastRotatingProducts,
+        value: realAdditionalKPIs.fastRotatingProducts.value,
+        rawValue: realAdditionalKPIs.fastRotatingProducts.rawValue,
+        change: realAdditionalKPIs.fastRotatingProducts.change,
+        changePercent: realAdditionalKPIs.fastRotatingProducts.changePercent,
+        trend: realAdditionalKPIs.fastRotatingProducts.trend,
+        chartData: normalizeChartData(realAdditionalKPIs.fastRotatingProducts.chartData, realAdditionalKPIs.fastRotatingProducts.rawValue),
+        comparisonPeriod: realAdditionalKPIs.fastRotatingProducts.comparisonPeriod,
+        averageRotationRate: currentKPIs.fastRotatingProducts.averageRotationRate // Conserver le taux moyen
+      };
+    }
+    
+    return kpisWithMetadata;
+  }, [products, orders, formatCurrency, analyticsData, mlRevenueData]);
   
   // Catégoriser les insights
   const categorizedInsights = useMemo(() => {
@@ -249,20 +309,6 @@ export const AnalyticsTab = ({
         value: analyticsData.overstockCost.value, 
         icon: Boxes, 
         message: "Faible niveau de surstock. Votre optimisation est efficace." 
-      });
-    }
-    if (additionalKPIs?.inTransit) {
-      performance.push({ 
-        key: 'inTransit', 
-        type: additionalKPIs.inTransit.rawValue > 50 ? 'warning' : 'info', 
-        title: 'Commandes en Transit', 
-        value: `${additionalKPIs.inTransit.rawValue}%`, 
-        icon: Package2, 
-        message: additionalKPIs.inTransit.rawValue > 50 
-          ? `${additionalKPIs.inTransit.rawValue}% de vos commandes sont en transit. Surveillez les arrivées et préparez l'espace de stockage.` 
-          : additionalKPIs.inTransit.rawValue > 20 
-          ? `${additionalKPIs.inTransit.rawValue}% de vos commandes sont en transit. Suivez les dates d'arrivée.` 
-          : "Peu de commandes en transit actuellement. Bon flux de livraison." 
       });
     }
     if (additionalKPIs?.healthyPercentage && additionalKPIs.healthyPercentage.rawValue >= 50) {
@@ -444,14 +490,15 @@ export const AnalyticsTab = ({
     Zap,
     TrendingUp,
     DollarSign,
-    Boxes
+    Boxes,
+    Link
   };
 
   // Configuration des KPIs avec leurs métadonnées
   const kpiTitles = {
     skuAvailability: 'Taux de Disponibilité des SKU',
     inventoryValuation: 'Valeur de l\'Inventaire',
-    salesLost: 'Ventes Perdues - Rupture de Stock',
+    salesLost: 'Ventes Perdues - Ruptures Réelles',
     overstockCost: 'Valeur Surstocks Profonds',
     ...Object.fromEntries(
       Object.entries(additionalKPIs).map(([key, kpi]) => [key, kpi.title])
@@ -548,7 +595,7 @@ export const AnalyticsTab = ({
               />
               
               <KPICard
-                title="Ventes Perdues - Rupture de Stock"
+                title="Ventes Perdues - Ruptures Réelles"
                 value={analyticsData.salesLost.value}
                 change={analyticsData.salesLost.change}
                 changePercent={analyticsData.salesLost.changePercent}

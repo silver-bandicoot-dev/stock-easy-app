@@ -65,7 +65,19 @@ const getAllData = async () => {
   }
   
   if (converted.products) {
-    converted.products = converted.products.map(p => ({
+    // Debug: vérifier les images dans les produits
+    const productsWithImages = converted.products.filter(p => p.imageUrl || p.image_url || p.imageURL);
+    const productsWithoutImages = converted.products.filter(p => !p.imageUrl && !p.image_url && !p.imageURL);
+    console.log('📸 Images produits:', {
+      total: converted.products.length,
+      avecImages: productsWithImages.length,
+      sansImages: productsWithoutImages.length,
+      exemplesAvecImages: productsWithImages.slice(0, 3).map(p => ({ sku: p.sku, imageUrl: p.imageUrl || p.image_url || p.imageURL })),
+      exemplesSansImages: productsWithoutImages.slice(0, 3).map(p => ({ sku: p.sku, name: p.nomProduit || p.name }))
+    });
+    
+    converted.products = converted.products.map(p => {
+      return {
       ...p,
       // Mapping des noms de champs snake_case -> camelCase
       name: p.nomProduit || p.name,
@@ -189,8 +201,10 @@ const getAllData = async () => {
       supplierReliability: p.fiabiliteFournisseur !== undefined ? p.fiabiliteFournisseur :
                            (p.supplierReliability !== undefined ? p.supplierReliability : 80),
       // Image principale du produit
-      imageUrl: p.imageUrl || p.imageURL || null
-    }));
+      // Vérifier toutes les variantes possibles (camelCase, snake_case, etc.)
+      imageUrl: p.imageUrl || p.imageURL || p.image_url || null
+      };
+    });
   }
   
   return converted;

@@ -25,125 +25,6 @@ export function useDemandForecast(products) {
   const modelRef = useRef(null);
 
   /**
-   * Initialise le modèle (charge ou entraîne) - une seule fois
-   */
-  useEffect(() => {
-    let mounted = true;
-    
-    const initModel = async () => {
-      try {
-        console.log('🤖 Initialisation du modèle ML...');
-        
-        // Créer l'instance
-        const model = new DemandForecastModel();
-        modelRef.current = model;
-        
-        // Essayer de charger un modèle existant
-        try {
-          const loaded = await model.load();
-          
-          if (!mounted) return;
-          
-          if (loaded && products && products.length > 0) {
-            console.log('✅ Modèle chargé depuis le cache');
-            setIsReady(true);
-            
-            // Générer les prévisions avec les produits
-            await generateForecasts(model, products);
-          } else {
-            console.log('ℹ️ Pas de modèle en cache');
-            console.log('💡 Cliquez sur "Réentraîner" pour générer des prévisions');
-          }
-        } catch (loadError) {
-          console.log('ℹ️ Pas de modèle sauvegardé trouvé');
-        }
-        
-      } catch (err) {
-        if (mounted) {
-          console.error('❌ Erreur lors de l\'initialisation:', err);
-          setError(err.message);
-        }
-      }
-    };
-
-    initModel();
-
-    // Cleanup
-    return () => {
-      mounted = false;
-      if (modelRef.current) {
-        modelRef.current.dispose();
-        modelRef.current = null;
-      }
-    };
-  }, []); // Une seule fois au montage
-
-  /**
-   * Entraîne le modèle
-   */
-  const trainModel = async () => {
-    if (isTraining) {
-      console.log('⚠️ Entraînement déjà en cours');
-      return;
-    }
-
-    try {
-      setIsTraining(true);
-      setError(null);
-      setTrainingProgress(0);
-      
-      console.log('📊 Collecte des données d\'entraînement...');
-      
-      // Collecter l'historique
-      const salesHistory = await collectSalesHistory(products, { days: 180 });
-      
-      if (salesHistory.length < 50) {
-        throw new Error('Pas assez de données pour entraîner (minimum 50 enregistrements)');
-      }
-      
-      setTrainingProgress(20);
-      console.log(`✅ ${salesHistory.length} enregistrements collectés`);
-      
-      // Entraîner
-      console.log('🚀 Entraînement du modèle...');
-      const model = modelRef.current || new DemandForecastModel();
-      modelRef.current = model;
-      
-      await model.train(salesHistory, {
-        epochs: 100,
-        batchSize: 32,
-        validationSplit: 0.2,
-        verbose: 0
-      });
-      
-      setTrainingProgress(80);
-      
-      // Sauvegarder
-      console.log('💾 Sauvegarde du modèle...');
-      await model.save();
-      
-      setTrainingProgress(90);
-      
-      // Générer les prévisions
-      await generateForecasts(model, products);
-      
-      setTrainingProgress(100);
-      setIsReady(true);
-      
-      // Enregistrer l'entraînement pour le système d'auto-retraining
-      recordTraining();
-      
-      console.log('✅ Entraînement terminé avec succès!');
-      
-    } catch (err) {
-      console.error('❌ Erreur lors de l\'entraînement:', err);
-      setError(err.message);
-    } finally {
-      setIsTraining(false);
-    }
-  };
-
-  /**
    * Génère les prévisions pour tous les produits
    */
   const generateForecasts = async (model, productList, useCache = true) => {
@@ -237,6 +118,127 @@ export function useDemandForecast(products) {
     } catch (err) {
       console.error('❌ Erreur lors de la génération des prévisions:', err);
       setError(err.message);
+    }
+  };
+
+  /**
+   * Initialise le modèle (charge ou entraîne) - une seule fois
+   * Met à jour les prévisions quand de nouveaux produits sont ajoutés
+   */
+  useEffect(() => {
+    let mounted = true;
+    
+    const initModel = async () => {
+      try {
+        // Si le modèle n'existe pas encore, le créer
+        if (!modelRef.current) {
+          console.log('🤖 Initialisation du modèle ML...');
+          const model = new DemandForecastModel();
+          modelRef.current = model;
+          
+          // Essayer de charger un modèle existant
+          try {
+            const loaded = await model.load();
+            
+            if (!mounted) return;
+            
+            if (loaded) {
+              console.log('✅ Modèle chargé depuis le cache');
+              setIsReady(true);
+            } else {
+              console.log('ℹ️ Pas de modèle en cache');
+              console.log('💡 Cliquez sur "Réentraîner" pour générer des prévisions');
+            }
+          } catch (loadError) {
+            console.log('ℹ️ Pas de modèle sauvegardé trouvé');
+          }
+        }
+        
+        // Si le modèle est prêt et qu'on a des produits, générer les prévisions
+        if (modelRef.current && modelRef.current.isReady() && products && products.length > 0) {
+          console.log(`🔄 Mise à jour des prévisions pour ${products.length} produits...`);
+          await generateForecasts(modelRef.current, products);
+        }
+        
+      } catch (err) {
+        if (mounted) {
+          console.error('❌ Erreur lors de l\'initialisation:', err);
+          setError(err.message);
+        }
+      }
+    };
+
+    initModel();
+
+    // Cleanup
+    return () => {
+      mounted = false;
+      // Ne pas supprimer le modèle ici, seulement au démontage complet
+    };
+  }, [products]); // Se mettre à jour quand les produits changent
+
+  /**
+   * Entraîne le modèle
+   */
+  const trainModel = async () => {
+    if (isTraining) {
+      console.log('⚠️ Entraînement déjà en cours');
+      return;
+    }
+
+    try {
+      setIsTraining(true);
+      setError(null);
+      setTrainingProgress(0);
+      
+      console.log('📊 Collecte des données d\'entraînement...');
+      
+      // Collecter l'historique
+      const salesHistory = await collectSalesHistory(products, { days: 180 });
+      
+      if (salesHistory.length < 50) {
+        throw new Error('Pas assez de données pour entraîner (minimum 50 enregistrements)');
+      }
+      
+      setTrainingProgress(20);
+      console.log(`✅ ${salesHistory.length} enregistrements collectés`);
+      
+      // Entraîner
+      console.log('🚀 Entraînement du modèle...');
+      const model = modelRef.current || new DemandForecastModel();
+      modelRef.current = model;
+      
+      await model.train(salesHistory, {
+        epochs: 100,
+        batchSize: 32,
+        validationSplit: 0.2,
+        verbose: 0
+      });
+      
+      setTrainingProgress(80);
+      
+      // Sauvegarder
+      console.log('💾 Sauvegarde du modèle...');
+      await model.save();
+      
+      setTrainingProgress(90);
+      
+      // Générer les prévisions
+      await generateForecasts(model, products);
+      
+      setTrainingProgress(100);
+      setIsReady(true);
+      
+      // Enregistrer l'entraînement pour le système d'auto-retraining
+      recordTraining();
+      
+      console.log('✅ Entraînement terminé avec succès!');
+      
+    } catch (err) {
+      console.error('❌ Erreur lors de l\'entraînement:', err);
+      setError(err.message);
+    } finally {
+      setIsTraining(false);
     }
   };
 

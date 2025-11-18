@@ -15,6 +15,8 @@ export const HistoryTab = ({
   warehouses = {}, // Ajout des entrepôts
   historyFilter,
   setHistoryFilter,
+  historySupplierFilter,
+  setHistorySupplierFilter,
   historyDateStart,
   setHistoryDateStart,
   historyDateEnd,
@@ -29,6 +31,9 @@ export const HistoryTab = ({
   const filteredOrders = orders.filter(order => {
     // Filtre par statut
     if (historyFilter !== 'all' && order.status !== historyFilter) return false;
+    
+    // Filtre par fournisseur
+    if (historySupplierFilter !== 'all' && order.supplier !== historySupplierFilter) return false;
     
     // Filtre par date
     if (historyDateStart || historyDateEnd) {
@@ -195,6 +200,20 @@ export const HistoryTab = ({
               <option value="received">Reçues</option>
               <option value="completed">Complétées</option>
               <option value="reconciliation">À réconcilier</option>
+            </select>
+            
+            {/* Sélecteur de fournisseur */}
+            <select 
+              value={historySupplierFilter}
+              onChange={(e) => setHistorySupplierFilter(e.target.value)}
+              className="w-full sm:w-auto px-3 sm:px-4 py-2 bg-[#FAFAF7] border border-[#E5E4DF] rounded-lg text-[#191919] text-sm font-medium focus:outline-none focus:ring-2 focus:ring-black"
+            >
+              <option value="all">Tous les fournisseurs</option>
+              {Object.values(suppliers || {}).map(supplier => (
+                <option key={supplier.name} value={supplier.name}>
+                  {supplier.name}
+                </option>
+              ))}
             </select>
             
             {/* Dates en grid sur mobile */}

@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { Eye, AlertTriangle, TrendingDown, Calendar, Package } from 'lucide-react';
 import { InfoTooltip, tooltips } from '../ui/InfoTooltip';
 import { formatUnits } from '../../utils/decimalUtils';
+import { HEALTH_STATUS } from '../../utils/constants';
 
 export const ProductsToWatch = ({ products, onViewDetails }) => {
   // Debug: Log pour vérifier les données
@@ -14,10 +15,51 @@ export const ProductsToWatch = ({ products, onViewDetails }) => {
         name: products[0].name,
         stockoutDate: products[0].stockoutDate,
         stockoutRisk: products[0].stockoutRisk,
-        daysOfStock: products[0].daysOfStock
+        daysOfStock: products[0].daysOfStock,
+        healthStatus: products[0].healthStatus
       });
     }
   }, [products]);
+
+  // Fonction pour obtenir les couleurs selon le statut de santé (cohérent avec StockHealthDashboard - couleurs vives)
+  const getHealthColors = (healthStatus) => {
+    switch (healthStatus) {
+      case HEALTH_STATUS.URGENT:
+        return {
+          icon: 'text-[#EF1C43]',
+          badgeBg: 'bg-[#FEE2E7]',
+          badgeText: 'text-[#EF1C43]',
+          bar: 'bg-[#EF1C43]',
+          trendIcon: 'text-[#EF1C43]',
+          headerIcon: 'text-[#EF1C43]',
+          headerBg: 'bg-[#FEE2E7]',
+          headerBorder: 'border-[#EF1C43]'
+        };
+      case HEALTH_STATUS.WARNING:
+        return {
+          icon: 'text-[#F97316]',
+          badgeBg: 'bg-[#FFF1E5]',
+          badgeText: 'text-[#F97316]',
+          bar: 'bg-[#F97316]',
+          trendIcon: 'text-[#F97316]',
+          headerIcon: 'text-[#F97316]',
+          headerBg: 'bg-[#FFF1E5]',
+          headerBorder: 'border-[#F97316]'
+        };
+      case HEALTH_STATUS.HEALTHY:
+      default:
+        return {
+          icon: 'text-[#10B981]',
+          badgeBg: 'bg-[#D1FAE5]',
+          badgeText: 'text-[#10B981]',
+          bar: 'bg-[#10B981]',
+          trendIcon: 'text-[#10B981]',
+          headerIcon: 'text-[#10B981]',
+          headerBg: 'bg-[#D1FAE5]',
+          headerBorder: 'border-[#10B981]'
+        };
+    }
+  };
 
   // Fonction pour formater la date de rupture (format relatif uniforme)
   const formatStockoutDate = (dateString) => {
@@ -77,6 +119,8 @@ export const ProductsToWatch = ({ products, onViewDetails }) => {
               const hasHighStockoutRisk = (p.stockoutRisk || 0) > 50;
               const hasQtyInTransit = (p.qtyInTransit || 0) > 0;
               const hasQtyInOrder = (p.qtyInOrder || 0) > 0;
+              const healthStatus = p.healthStatus || HEALTH_STATUS.WARNING;
+              const colors = getHealthColors(healthStatus);
 
               return (
               <motion.div
@@ -87,14 +131,14 @@ export const ProductsToWatch = ({ products, onViewDetails }) => {
                   whileHover={{ x: 4, boxShadow: '0 8px 24px rgba(0,0,0,0.06)' }}
                   className="group relative rounded-lg p-4 border border-[#E5E4DF] bg-white transition-all duration-200"
               >
-                  {/* Badge attention plus neutre */}
+                  {/* Badge attention avec couleur selon healthStatus */}
                   <div className="absolute top-3 right-3 flex flex-col items-end gap-1">
                   {hasHighStockoutRisk && (
-                      <div className="bg-[#FDECEC] text-[10px] font-medium text-[#B3261E] px-2 py-0.5 rounded-full">
+                      <div className={`${colors.badgeBg} text-[10px] font-medium ${colors.badgeText} px-2 py-0.5 rounded-full`}>
                         Risque {p.stockoutRisk}%
                     </div>
                   )}
-                    <div className="bg-[#FFF4E5] text-[10px] font-medium text-[#8A4A00] px-2 py-0.5 rounded-full flex items-center gap-1">
+                    <div className={`${colors.badgeBg} text-[10px] font-medium ${colors.badgeText} px-2 py-0.5 rounded-full flex items-center gap-1`}>
                     <AlertTriangle className="w-2.5 h-2.5" />
                       <span>À surveiller</span>
                   </div>
@@ -111,20 +155,20 @@ export const ProductsToWatch = ({ products, onViewDetails }) => {
                         {p.supplier || 'Non assigné'}
                       </p>
                     
-                      {/* Barre de progression plus discrète */}
+                      {/* Barre de progression avec couleur selon healthStatus */}
                     {p.healthPercentage !== undefined && (
                       <div className="mb-3">
                         <div className="flex items-center justify-between mb-1">
                             <span className="text-[10px] font-medium text-[#666663]">
                               Santé
                             </span>
-                            <span className="text-[10px] font-semibold text-[#191919]">
+                            <span className={`text-[10px] font-semibold ${colors.badgeText}`}>
                               {Math.round(p.healthPercentage)}%
                             </span>
                         </div>
                           <div className="h-1.5 bg-[#F3F2EE] rounded-full overflow-hidden">
                           <div 
-                              className="h-full bg-[#F97316] transition-all duration-500"
+                              className={`h-full ${colors.bar} transition-all duration-500`}
                             style={{ width: `${Math.max(5, p.healthPercentage)}%` }}
                           />
                         </div>
@@ -134,7 +178,7 @@ export const ProductsToWatch = ({ products, onViewDetails }) => {
                     {/* Informations de stock */}
                     <div className="flex items-center gap-3 text-xs flex-wrap">
                       <div className="flex items-center gap-1">
-                          <TrendingDown className="w-3 h-3 text-[#F97316]" />
+                          <TrendingDown className={`w-3 h-3 ${colors.trendIcon}`} />
                         <span className="text-[#666663]">Stock: </span>
                           <span className="font-semibold text-[#191919]">
                             {formatUnits(p.stock)}
