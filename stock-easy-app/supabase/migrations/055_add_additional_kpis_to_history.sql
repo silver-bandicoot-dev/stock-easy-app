@@ -63,3 +63,4 @@ BEGIN
   RAISE NOTICE '✅ Migration 055 terminée : Toutes les colonnes KPIs supplémentaires ont été ajoutées';
 END $$;
 
+

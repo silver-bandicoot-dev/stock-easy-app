@@ -679,3 +679,4 @@ const analytics = useMemo(() => {
 6. **KPICard.jsx** : Composant d'affichage d'un KPI
 7. **analyticsKPIs.js** : Calcul des KPIs supplémentaires
 
+

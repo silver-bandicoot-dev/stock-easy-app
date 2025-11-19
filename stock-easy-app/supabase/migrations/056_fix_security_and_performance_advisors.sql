@@ -253,3 +253,4 @@ BEGIN
   RAISE NOTICE '⚠️  Action manuelle requise: Activer la protection contre les mots de passe divulgués dans Supabase Dashboard';
 END $$;
 
+
