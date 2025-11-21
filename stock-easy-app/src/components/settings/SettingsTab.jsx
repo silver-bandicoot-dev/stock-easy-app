@@ -33,8 +33,9 @@ export const SettingsTab = ({
   handleSaveSupplierMapping,
   isSavingSupplierMapping,
   // Props pour GestionWarehouses
-  handleSaveWarehouse,
-  handleDeleteWarehouse
+  onCreateWarehouse,
+  onUpdateWarehouse,
+  onDeleteWarehouse
 }) => {
   const settingsSections = [
     {
@@ -163,9 +164,9 @@ export const SettingsTab = ({
               {parametersSubTab === SETTINGS_TABS.WAREHOUSES && (
                 <GestionWarehouses
                   warehouses={warehouses}
-                  onCreateWarehouse={handleSaveWarehouse}
-                  onUpdateWarehouse={handleSaveWarehouse}
-                  onDeleteWarehouse={handleDeleteWarehouse}
+                  onCreateWarehouse={onCreateWarehouse}
+                  onUpdateWarehouse={onUpdateWarehouse}
+                  onDeleteWarehouse={onDeleteWarehouse}
                 />
               )}
 

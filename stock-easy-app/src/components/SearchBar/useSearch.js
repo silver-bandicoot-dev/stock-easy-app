@@ -8,6 +8,7 @@ import {
   detectSearchType, 
   rankResults,
   buildSearchPattern,
+  buildSearchPatterns,
   buildSmartQuery,
   calculateRelevanceScore
 } from '../../utils/searchUtils';
@@ -92,38 +93,26 @@ export const useSearch = (query) => {
     try {
       // Normaliser la requête pour gérer les accents
       const normalizedQuery = normalizeText(searchQuery);
-      const searchWords = normalizedQuery.split(/\s+/).filter(w => w.length > 0);
       
-      // Construire des patterns optimisés (max 2 patterns pour performance)
-      const exactPattern = `%${normalizedQuery}%`;
-      // Limiter à 2 patterns max pour éviter la surcharge DB
-      const wordPatterns = searchWords.slice(0, 2).map(w => `%${w}%`); // Max 2 mots
+      // Construire des patterns optimisés via l'utilitaire
+      const searchPatterns = buildSearchPatterns(searchQuery);
       
       // Détecter le type de recherche souhaité
       const searchType = detectSearchType(searchQuery);
       
       console.log('🔍 Recherche lancée:', {
-        exactPattern,
-        wordPatterns,
+        patterns: searchPatterns,
         query: searchQuery,
         normalized: normalizedQuery,
         detectedType: searchType,
         user: currentUser?.email
-      });
-      
-      // 🔍 DEBUG: Vérifier les conditions pour chaque type
-      console.log('🔍 DEBUG CONDITIONS:', {
-        searchType,
-        willSearchProducts: !searchType.type || searchType.type === 'product' || searchType.type === 'all',
-        willSearchSuppliers: !searchType.type || searchType.type === 'supplier' || searchType.type === 'all',
-        willSearchOrders: !searchType.type || searchType.type === 'order' || searchType.type === 'all',
-        willSearchWarehouses: !searchType.type || searchType.type === 'warehouse' || searchType.type === 'all'
       });
 
       // Construire les requêtes selon le type détecté
       const promises = [];
       
       // Produits (recherche intelligente)
+      // On inclut si type='product' ou type='all'
       if (!searchType.type || searchType.type === 'product' || searchType.type === 'all') {
         promises.push(
         supabase
@@ -131,10 +120,12 @@ export const useSearch = (query) => {
           .select('sku, nom_produit, stock_actuel, fournisseur, prix_vente, image_url, prix_achat, health_status')
             .or(buildSmartQuery(
               ['sku', 'nom_produit', 'fournisseur'],
-              [exactPattern, ...wordPatterns] // Max 2 patterns au lieu de 3+
+              searchPatterns
             ))
-            .limit(12) // Réduit de 15 à 12 pour performance
+            .limit(20) // Augmenté à 20 pour avoir plus de candidats pour le scoring
         );
+      } else {
+        promises.push(Promise.resolve({ data: [], error: null })); // Placeholder pour garder l'index
       }
 
       // Fournisseurs
@@ -144,26 +135,13 @@ export const useSearch = (query) => {
           .select('id, nom_fournisseur, email, lead_time_days, commercial_contact_phone, commercial_contact_email, notes')
           .or(buildSmartQuery(
             ['nom_fournisseur', 'email', 'commercial_contact_email'],
-            [exactPattern, ...wordPatterns.slice(0, 2)]
+            searchPatterns
           ))
           .limit(10);
         
-        console.log('🔍 DEBUG: Ajout requête fournisseurs', {
-          query: searchQuery,
-          pattern: exactPattern,
-          wordPatterns: wordPatterns.slice(0, 2),
-          builtQuery: buildSmartQuery(
-            ['nom_fournisseur', 'email', 'commercial_contact_email'],
-            [exactPattern, ...wordPatterns.slice(0, 2)]
-          )
-        });
-        
         promises.push(supplierQuery);
       } else {
-        console.log('🔍 DEBUG: Requête fournisseurs SKIPPÉE', {
-          searchType,
-          reason: 'Condition non remplie'
-        });
+        promises.push(Promise.resolve({ data: [], error: null }));
       }
 
       // Commandes
@@ -174,11 +152,13 @@ export const useSearch = (query) => {
           .select('id, supplier, status, total, created_at, tracking_number, warehouse_id')
             .or(buildSmartQuery(
               ['id', 'supplier', 'tracking_number'],
-              [exactPattern]
+              searchPatterns
             ))
           .order('created_at', { ascending: false })
             .limit(10)
         );
+      } else {
+        promises.push(Promise.resolve({ data: [], error: null }));
       }
 
       // Entrepôts
@@ -189,10 +169,12 @@ export const useSearch = (query) => {
           .select('id, name, address, city, country, postal_code, notes')
             .or(buildSmartQuery(
               ['name', 'city', 'address'],
-              [exactPattern, ...wordPatterns.slice(0, 2)]
+              searchPatterns
             ))
-            .limit(8)
+            .limit(5)
         );
+      } else {
+        promises.push(Promise.resolve({ data: [], error: null }));
       }
 
       const results = await Promise.all(promises);
@@ -214,46 +196,12 @@ export const useSearch = (query) => {
         }))
       });
       
-      // 🔍 DEBUG: Compter les promesses par type
-      let promiseIndex = 0;
-      console.log('🔍 DEBUG PROMISES COUNT:', {
-        totalPromises: promises.length,
-        expectedProducts: (!searchType.type || searchType.type === 'product' || searchType.type === 'all') ? 1 : 0,
-        expectedSuppliers: (!searchType.type || searchType.type === 'supplier' || searchType.type === 'all') ? 1 : 0,
-        expectedOrders: (!searchType.type || searchType.type === 'order' || searchType.type === 'all') ? 1 : 0,
-        expectedWarehouses: (!searchType.type || searchType.type === 'warehouse' || searchType.type === 'all') ? 1 : 0
-      });
-      
       // Extraire les résultats selon le type de recherche
       let resultIndex = 0;
-      let produitsRes = null;
-      let fournisseursRes = null;
-      let commandesRes = null;
-      let warehousesRes = null;
-      
-      if (!searchType.type || searchType.type === 'product' || searchType.type === 'all') {
-        produitsRes = results[resultIndex++];
-      }
-      if (!searchType.type || searchType.type === 'supplier' || searchType.type === 'all') {
-        fournisseursRes = results[resultIndex++];
-        
-        // 🔍 DEBUG FOURNISSEURS
-        console.log('🔍 DEBUG FOURNISSEURS:', {
-          query: searchQuery,
-          normalized: normalizedQuery,
-          exactPattern,
-          wordPatterns,
-          count: fournisseursRes?.data?.length || 0,
-          data: fournisseursRes?.data,
-          error: fournisseursRes?.error
-        });
-      }
-      if (!searchType.type || searchType.type === 'order' || searchType.type === 'all') {
-        commandesRes = results[resultIndex++];
-      }
-      if (!searchType.type || searchType.type === 'warehouse' || searchType.type === 'all') {
-        warehousesRes = results[resultIndex++];
-      }
+      let produitsRes = results[resultIndex++];
+      let fournisseursRes = results[resultIndex++];
+      let commandesRes = results[resultIndex++];
+      let warehousesRes = results[resultIndex++];
 
       // Structurer les résultats par catégorie avec filtrage fuzzy
       const groupedResults = [];
@@ -292,17 +240,6 @@ export const useSearch = (query) => {
             const normalizedName = normalizeText(f.nom_fournisseur || '');
             const normalizedQuery = normalizeText(searchQuery);
             const matchesName = normalizedName.includes(normalizedQuery);
-            
-            // 🔍 DEBUG SCORING
-            console.log('🔍 DEBUG SCORING FOURNISSEUR:', {
-              nom: f.nom_fournisseur,
-              normalizedName,
-              query: searchQuery,
-              normalizedQuery,
-              matchesName,
-              score,
-              willInclude: score > 0 || matchesName
-            });
             
             return {
               id: f.id,
@@ -464,4 +401,3 @@ export const useSearch = (query) => {
     getSearchHistory,
   };
 };
-

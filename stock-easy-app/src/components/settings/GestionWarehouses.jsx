@@ -116,7 +116,9 @@ export const GestionWarehouses = ({
 
     try {
       if (editingWarehouse) {
-        await onUpdateWarehouse(editingWarehouse.name, formData);
+        // Utiliser l'ID si disponible, sinon utiliser le nom
+        const warehouseId = editingWarehouse.id || editingWarehouse.name;
+        await onUpdateWarehouse(warehouseId, formData);
         toast.success('Entrepôt modifié avec succès !');
       } else {
         await onCreateWarehouse(formData);

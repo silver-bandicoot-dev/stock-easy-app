@@ -202,3 +202,12 @@ export const DATE_FORMATS = {
   DATETIME_DISPLAY: 'DD/MM/YYYY HH:mm',
   DATETIME_API: 'YYYY-MM-DDTHH:mm:ss.SSSZ'
 };
+
+// Mapping des clés KPI vers leurs titres
+// PHASE 1 : Extraite de StockEasy.jsx (lignes 623-628)
+export const KPI_TITLES = {
+  skuAvailability: 'Taux de Disponibilité des SKU',
+  inventoryValuation: 'Valeur de l\'Inventaire',
+  salesLost: 'Ventes Perdues - Rupture de Stock',
+  overstockCost: 'Valeur Surstocks Profonds'
+};

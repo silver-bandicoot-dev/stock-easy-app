@@ -215,9 +215,35 @@ const getSalesHistoryAdapter = async ({ sku, startDate, endDate } = {}) => {
   return snakeToCamel(data || []);
 };
 
+// Adapter pour les commandes paginées
+const getOrdersPaginated = async (params) => {
+  const result = await supabaseApi.getOrdersPaginated(params);
+  
+  if (result.data) {
+    result.data = snakeToCamel(result.data);
+    // Mapper les commandes comme dans getAllData
+    result.data = result.data.map(o => ({
+      ...o,
+      missingQuantitiesBySku: o.missingQuantitiesBySku || {},
+      damagedQuantitiesBySku: o.damagedQuantitiesBySku || {}
+    }));
+  }
+  
+  if (result.aggregates) {
+    result.aggregates = snakeToCamel(result.aggregates);
+  }
+  
+  if (result.meta) {
+    result.meta = snakeToCamel(result.meta);
+  }
+  
+  return result;
+};
+
 // API adapter unifié
 const api = {
   getAllData,
+  getOrdersPaginated,
   getSalesHistory: getSalesHistoryAdapter,
   createOrder: supabaseApi.createOrder,
   updateOrderStatus: supabaseApi.updateOrderStatus,
@@ -291,6 +317,6 @@ export const {
   resetProductMultiplier,
 } = api;
 
-export { getAllData };
+export { getAllData, getOrdersPaginated };
 export default api;
 

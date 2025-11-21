@@ -1,6 +1,7 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { SupabaseAuthProvider } from './contexts/SupabaseAuthContext';
+import { ModalProvider } from './contexts/ModalContext';
 import { Toaster } from 'sonner';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import SupabaseLogin from './components/auth/SupabaseLogin';
@@ -24,6 +25,7 @@ const App = () => {
         duration={3000}
       />
       <SupabaseAuthProvider>
+        <ModalProvider>
         <Routes>
           {/* Public Routes */}
           <Route path="/login" element={<SupabaseLogin />} />
@@ -78,6 +80,7 @@ const App = () => {
           {/* Catch all - redirect to home */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
+        </ModalProvider>
       </SupabaseAuthProvider>
     </Router>
   );

@@ -432,8 +432,6 @@ export async function createWarehouse(warehouseData) {
   try {
     const { data, error } = await supabase.rpc('create_warehouse', {
       p_name: warehouseData.name,
-      p_location: warehouseData.location || null,
-      p_capacity: warehouseData.capacity || null,
       p_address: warehouseData.address || null,
       p_city: warehouseData.city || null,
       p_postal_code: warehouseData.postalCode || null,
@@ -441,11 +439,21 @@ export async function createWarehouse(warehouseData) {
       p_notes: warehouseData.notes || null
     });
 
-    if (error) throw error;
+    if (error) {
+      console.error('❌ Erreur Supabase createWarehouse:', error);
+      return { success: false, error: error.message || 'Erreur RPC create_warehouse' };
+    }
+
+    // Vérifier si la fonction RPC a retourné une erreur dans data
+    if (data && typeof data === 'object' && data.success === false) {
+      console.error('❌ Erreur logique createWarehouse:', data);
+      return { success: false, error: data.error || 'Échec de la création de l\'entrepôt' };
+    }
+
     return { success: true, data };
   } catch (error) {
     console.error('❌ Erreur création entrepôt:', error);
-    return { success: false, error: error.message };
+    return { success: false, error: error.message || 'Erreur inconnue createWarehouse' };
   }
 }
 
@@ -454,8 +462,6 @@ export async function updateWarehouse(warehouseId, updates) {
     const { data, error } = await supabase.rpc('update_warehouse', {
       p_warehouse_id: warehouseId,
       p_name: updates.name || null,
-      p_location: updates.location || null,
-      p_capacity: updates.capacity || null,
       p_address: updates.address || null,
       p_city: updates.city || null,
       p_postal_code: updates.postalCode || null,
@@ -463,11 +469,21 @@ export async function updateWarehouse(warehouseId, updates) {
       p_notes: updates.notes || null
     });
 
-    if (error) throw error;
+    if (error) {
+      console.error('❌ Erreur Supabase updateWarehouse:', error);
+      return { success: false, error: error.message || 'Erreur RPC update_warehouse' };
+    }
+
+    // Vérifier si la fonction RPC a retourné une erreur dans data
+    if (data && typeof data === 'object' && data.success === false) {
+      console.error('❌ Erreur logique updateWarehouse:', data);
+      return { success: false, error: data.error || 'Échec de la mise à jour de l\'entrepôt' };
+    }
+
     return { success: true, data };
   } catch (error) {
     console.error('❌ Erreur mise à jour entrepôt:', error);
-    return { success: false, error: error.message };
+    return { success: false, error: error.message || 'Erreur inconnue updateWarehouse' };
   }
 }
 
@@ -657,8 +673,38 @@ export async function removeSupplierFromProduct(sku, supplierName) {
   }
 }
 
+// Récupérer les commandes paginées
+export async function getOrdersPaginated({ page = 1, pageSize = 20, status, supplier, startDate, endDate, search } = {}) {
+  try {
+    const payload = {
+      p_page: page,
+      p_page_size: pageSize,
+      p_status: status === 'all' ? null : status,
+      p_supplier: supplier === 'all' ? null : supplier,
+      p_start_date: formatDateForRpc(startDate),
+      p_end_date: formatDateForRpc(endDate),
+      p_search: search || null
+    };
+
+    console.log('📄 getOrdersPaginated payload:', payload);
+
+    const { data, error } = await supabase.rpc('get_orders_paginated', payload);
+
+    if (error) {
+      console.error('❌ Erreur Supabase get_orders_paginated:', error);
+      throw error;
+    }
+
+    return data;
+  } catch (error) {
+    console.error('❌ Erreur lors du chargement des commandes paginées:', error);
+    throw error;
+  }
+}
+
 export default {
   getAllData,
+  getOrdersPaginated,
   getSalesHistory,
   createOrder,
   updateOrderStatus,

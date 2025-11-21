@@ -35,7 +35,7 @@ git reset --hard BACKUP-SAFE-COMPLET
 ## État initial
 - Date : [AUJOURD'HUI]
 - Tout fonctionne à 100%
-- Fichier principal : ~2500-3000 lignes
+- Fichier principal : StockEasy.jsx ~2500-3000 lignes
 - Objectif : Réduire à <300 lignes sans rien casser
 ```
 

@@ -1,18 +1,18 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { History, Download, Filter, Calendar, Eye, ChevronDown, ChevronRight } from 'lucide-react';
+import { Download, Loader2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '../shared/Button';
 import { OrderCard } from '../shared/OrderCard';
 import { toast } from 'sonner';
 import { formatConfirmedDate } from '../../utils/dateUtils';
-import { roundToTwoDecimals, formatUnits } from '../../utils/decimalUtils';
 import { useCurrency } from '../../contexts/CurrencyContext';
+import api from '../../services/apiAdapter';
 
 export const HistoryTab = ({
-  orders,
+  orders: initialOrders, // Ignoré en faveur du chargement serveur
   products,
-  suppliers, // Ajout des fournisseurs
-  warehouses = {}, // Ajout des entrepôts
+  suppliers,
+  warehouses = {},
   historyFilter,
   setHistoryFilter,
   historySupplierFilter,
@@ -25,63 +25,50 @@ export const HistoryTab = ({
   toggleOrderDetails
 }) => {
   const { format: formatCurrency } = useCurrency();
-  const [sortBy, setSortBy] = useState('date_desc');
+  
+  // États pour la pagination serveur
+  const [remoteOrders, setRemoteOrders] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [page, setPage] = useState(1);
+  const [pageSize] = useState(20);
+  const [meta, setMeta] = useState({ totalCount: 0, totalPages: 1 });
+  const [aggregates, setAggregates] = useState(null);
+  const [sortBy, setSortBy] = useState('created_at_desc'); // Modifié pour correspondre au backend si besoin
 
-  // Filtrer les commandes selon les critères
-  const filteredOrders = orders.filter(order => {
-    // Filtre par statut
-    if (historyFilter !== 'all' && order.status !== historyFilter) return false;
-    
-    // Filtre par fournisseur
-    if (historySupplierFilter !== 'all' && order.supplier !== historySupplierFilter) return false;
-    
-    // Filtre par date
-    if (historyDateStart || historyDateEnd) {
-      const orderDate = new Date(order.createdAt);
-      if (historyDateStart && orderDate < new Date(historyDateStart)) return false;
-      if (historyDateEnd && orderDate > new Date(historyDateEnd)) return false;
-    }
-    
-    return true;
-  });
-
-  // Tri configurable (date / montant)
-  const sortedOrders = useMemo(() => {
-    const ordersCopy = [...filteredOrders];
-    return ordersCopy.sort((a, b) => {
-      const dateA = a.createdAt ? new Date(a.createdAt) : null;
-      const dateB = b.createdAt ? new Date(b.createdAt) : null;
-      const totalA = typeof a.total === 'number' ? a.total : parseFloat(a.total || 0);
-      const totalB = typeof b.total === 'number' ? b.total : parseFloat(b.total || 0);
-
-      switch (sortBy) {
-        case 'date_asc':
-          if (!dateA || !dateB) return 0;
-          return dateA - dateB;
-        case 'date_desc':
-          if (!dateA || !dateB) return 0;
-          return dateB - dateA;
-        case 'total_asc':
-          return totalA - totalB;
-        case 'total_desc':
-          return totalB - totalA;
-        default:
-          return 0;
+  // Charger les données quand les filtres ou la page changent
+  useEffect(() => {
+    const fetchHistory = async () => {
+      setLoading(true);
+      try {
+        const result = await api.getOrdersPaginated({
+          page,
+          pageSize,
+          status: historyFilter,
+          supplier: historySupplierFilter,
+          startDate: historyDateStart,
+          endDate: historyDateEnd
+        });
+        
+        setRemoteOrders(result.data || []);
+        setMeta(result.meta || { totalCount: 0, totalPages: 1 });
+        setAggregates(result.aggregates || null);
+      } catch (error) {
+        console.error('Erreur chargement historique:', error);
+        toast.error('Impossible de charger l\'historique des commandes');
+      } finally {
+        setLoading(false);
       }
-    });
-  }, [filteredOrders, sortBy]);
+    };
 
-  const getStatusColor = (status) => {
-    switch (status) {
-      case 'pending_confirmation': return 'text-yellow-600 bg-yellow-50 border-yellow-200';
-      case 'preparing': return 'text-blue-600 bg-blue-50 border-blue-200';
-      case 'in_transit': return 'text-purple-600 bg-purple-50 border-purple-200';
-      case 'received': return 'text-green-600 bg-green-50 border-green-200';
-      case 'completed': return 'text-green-600 bg-green-50 border-green-200';
-      case 'reconciliation': return 'text-orange-600 bg-orange-50 border-orange-200';
-      default: return 'text-gray-600 bg-gray-50 border-gray-200';
-    }
-  };
+    // Debounce pour éviter trop d'appels si les filtres changent vite ? 
+    // Pour l'instant appel direct
+    fetchHistory();
+  }, [page, pageSize, historyFilter, historySupplierFilter, historyDateStart, historyDateEnd]);
+
+  // Réinitialiser la page à 1 quand les filtres changent
+  useEffect(() => {
+    setPage(1);
+  }, [historyFilter, historySupplierFilter, historyDateStart, historyDateEnd]);
 
   const getStatusLabel = (status) => {
     switch (status) {
@@ -95,28 +82,44 @@ export const HistoryTab = ({
     }
   };
 
-  const handleExportCSV = () => {
+  const handleExportCSV = async () => {
+    const toastId = toast.loading('Préparation de l\'export...');
     try {
-      const csvData = filteredOrders.map(order => {
+      // Récupérer TOUTES les données correspondant aux filtres pour l'export
+      // On utilise une grande taille de page
+      const result = await api.getOrdersPaginated({
+        page: 1,
+        pageSize: 10000, // Limite arbitraire haute
+        status: historyFilter,
+        supplier: historySupplierFilter,
+        startDate: historyDateStart,
+        endDate: historyDateEnd
+      });
+
+      const exportOrders = result.data || [];
+
+      const csvData = exportOrders.map(order => {
         const orderLine = {
           'N° Commande': order.id,
           'Fournisseur': order.supplier,
           'Statut': getStatusLabel(order.status),
           'Date': formatConfirmedDate(order.createdAt),
           'Total': formatCurrency(order.total),
-          'Produits': order.items.length,
+          'Produits': order.items ? order.items.length : 0,
           'Entrepôt': order.warehouseName || order.warehouseId || 'Non spécifié',
           'Suivi': order.trackingNumber || 'Non disponible'
         };
         
         // Ajouter les détails des produits
-        order.items.forEach((item, index) => {
-          const product = products.find(p => p.sku === item.sku);
-          orderLine[`Produit ${index + 1}`] = product?.name || item.sku;
-          orderLine[`SKU ${index + 1}`] = item.sku;
-          orderLine[`Quantité ${index + 1}`] = item.quantity;
-          orderLine[`Prix ${index + 1}`] = formatCurrency(item.pricePerUnit);
-        });
+        if (order.items) {
+          order.items.forEach((item, index) => {
+            const product = products.find(p => p.sku === item.sku);
+            orderLine[`Produit ${index + 1}`] = product?.name || item.sku;
+            orderLine[`SKU ${index + 1}`] = item.sku;
+            orderLine[`Quantité ${index + 1}`] = item.quantity;
+            orderLine[`Prix ${index + 1}`] = formatCurrency(item.pricePerUnit);
+          });
+        }
         
         return orderLine;
       });
@@ -151,12 +154,39 @@ export const HistoryTab = ({
       link.click();
       document.body.removeChild(link);
       
-      toast.success('Export CSV réussi !');
+      toast.success('Export CSV réussi !', { id: toastId });
     } catch (error) {
       console.error('Erreur export CSV:', error);
-      toast.error('Erreur lors de l\'export CSV');
+      toast.error('Erreur lors de l\'export CSV', { id: toastId });
     }
   };
+
+  // Calculer les totaux à partir des agrégats serveur
+  const stats = useMemo(() => {
+    if (!aggregates) return {
+      totalCount: 0,
+      completedCount: 0,
+      inProgressCount: 0,
+      totalAmount: 0
+    };
+
+    const statusCounts = aggregates.statusCounts || {};
+    
+    const completed = Number(statusCounts.completed || 0);
+    const inProgress = 
+      Number(statusCounts.pending_confirmation || 0) + 
+      Number(statusCounts.preparing || 0) + 
+      Number(statusCounts.in_transit || 0) +
+      Number(statusCounts.received || 0) +
+      Number(statusCounts.reconciliation || 0);
+
+    return {
+      totalCount: aggregates.totalCount || 0,
+      completedCount: completed,
+      inProgressCount: inProgress,
+      totalAmount: aggregates.totalAmount || 0
+    };
+  }, [aggregates]);
 
   return (
     <motion.div
@@ -173,7 +203,7 @@ export const HistoryTab = ({
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div>
               <h2 className="text-xl sm:text-2xl font-bold text-[#191919] mb-1 sm:mb-2">Historique des Commandes</h2>
-              <p className="text-xs sm:text-sm text-[#666663]">Consultez toutes vos commandes passées et leur statut</p>
+              <p className="text-xs sm:text-sm text-[#666663]">Consultez toutes vos commandes passées et leur statut (Mode Serveur)</p>
             </div>
             <Button
               onClick={handleExportCSV}
@@ -185,9 +215,8 @@ export const HistoryTab = ({
             </Button>
           </div>
           
-          {/* Filtres en colonne sur mobile, ligne sur desktop */}
+          {/* Filtres */}
           <div className="space-y-3 sm:space-y-0 sm:flex sm:items-center sm:gap-3 sm:flex-wrap">
-            {/* Sélecteur de statut en premier sur mobile (plus important) */}
             <select 
               value={historyFilter}
               onChange={(e) => setHistoryFilter(e.target.value)}
@@ -202,7 +231,6 @@ export const HistoryTab = ({
               <option value="reconciliation">À réconcilier</option>
             </select>
             
-            {/* Sélecteur de fournisseur */}
             <select 
               value={historySupplierFilter}
               onChange={(e) => setHistorySupplierFilter(e.target.value)}
@@ -216,7 +244,6 @@ export const HistoryTab = ({
               ))}
             </select>
             
-            {/* Dates en grid sur mobile */}
             <div className="grid grid-cols-2 gap-2 sm:flex sm:gap-3">
               <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
                 <label className="text-xs sm:text-sm text-[#666663] font-medium">Du:</label>
@@ -240,74 +267,93 @@ export const HistoryTab = ({
           </div>
         </div>
 
-        {/* KPIs en grid responsive */}
+        {/* KPIs */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
           <div className="bg-[#FAFAF7] rounded-lg p-3 sm:p-4 border border-[#E5E4DF]">
-            <div className="text-xl sm:text-2xl font-bold text-[#191919]">{orders.length}</div>
+            <div className="text-xl sm:text-2xl font-bold text-[#191919]">{stats.totalCount}</div>
             <div className="text-xs sm:text-sm text-[#666663] mt-1">Total commandes</div>
           </div>
           <div className="bg-green-50 rounded-lg p-3 sm:p-4 border border-green-200">
             <div className="text-xl sm:text-2xl font-bold text-green-600">
-              {orders.filter(o => o.status === 'completed').length}
+              {stats.completedCount}
             </div>
             <div className="text-xs sm:text-sm text-[#666663] mt-1">Complétées</div>
           </div>
           <div className="bg-blue-50 rounded-lg p-3 sm:p-4 border border-blue-200">
             <div className="text-xl sm:text-2xl font-bold text-[#64A4F2]">
-              {orders.filter(o => o.status === 'in_transit' || o.status === 'preparing' || o.status === 'pending_confirmation').length}
+              {stats.inProgressCount}
             </div>
             <div className="text-xs sm:text-sm text-[#666663] mt-1">En cours</div>
           </div>
           <div className="bg-[#FAFAF7] rounded-lg p-3 sm:p-4 border border-[#E5E4DF]">
             <div className="text-xl sm:text-2xl font-bold text-[#191919]">
-              {formatCurrency(orders.reduce((sum, o) => sum + o.total, 0))}
+              {formatCurrency(stats.totalAmount)}
             </div>
             <div className="text-xs sm:text-sm text-[#666663] mt-1">Montant total</div>
           </div>
         </div>
       </div>
 
-      {/* Tri des commandes d'historique */}
-      <div className="flex justify-end mb-3">
-        <div className="flex items-center gap-2 text-xs sm:text-sm">
-          <span className="text-[#666663]">Trier par :</span>
-          <select
-            value={sortBy}
-            onChange={(e) => setSortBy(e.target.value)}
-            className="border border-[#E5E4DF] rounded-md px-2 py-1 text-xs sm:text-sm bg-white focus:outline-none focus:ring-1 focus:ring-[#191919]"
-          >
-            <option value="date_desc">Date (plus récent)</option>
-            <option value="date_asc">Date (plus ancien)</option>
-            <option value="total_desc">Montant (décroissant)</option>
-            <option value="total_asc">Montant (croissant)</option>
-          </select>
+      {/* Loader ou Liste */}
+      {loading ? (
+        <div className="flex justify-center items-center py-12 bg-white rounded-xl border border-[#E5E4DF]">
+          <Loader2 className="w-8 h-8 animate-spin text-[#191919]" />
         </div>
-      </div>
+      ) : (
+        <div className="space-y-3">
+          {remoteOrders.length === 0 ? (
+            <div className="bg-white rounded-xl shadow-sm border border-[#E5E4DF] p-8">
+              <p className="text-[#666663] text-center text-sm">Aucune commande trouvée pour ces critères</p>
+            </div>
+          ) : (
+            <>
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+                {remoteOrders.map(order => (
+                  <OrderCard
+                    key={order.id}
+                    order={order}
+                    products={products}
+                    suppliers={suppliers}
+                    warehouses={warehouses}
+                    expandedOrders={expandedOrders}
+                    toggleOrderDetails={toggleOrderDetails}
+                    showStatus={true}
+                    showActions={false}
+                    compactMode={false}
+                  />
+                ))}
+              </div>
 
-      <div className="space-y-3">
-        {sortedOrders.length === 0 ? (
-          <div className="bg-white rounded-xl shadow-sm border border-[#E5E4DF] p-8">
-            <p className="text-[#666663] text-center text-sm">Aucune commande trouvée pour ces critères</p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
-            {sortedOrders.map(order => (
-              <OrderCard
-                key={order.id}
-                order={order}
-                products={products}
-                suppliers={suppliers}
-                warehouses={warehouses}
-                expandedOrders={expandedOrders}
-                toggleOrderDetails={toggleOrderDetails}
-                showStatus={true}
-                showActions={false}
-                compactMode={false}
-              />
-            ))}
-          </div>
-        )}
-      </div>
+              {/* Contrôles de pagination */}
+              {meta.totalPages > 1 && (
+                <div className="flex justify-center items-center gap-4 mt-6 pt-4">
+                  <Button
+                    variant="outline"
+                    onClick={() => setPage(p => Math.max(1, p - 1))}
+                    disabled={page === 1}
+                    className="px-3 py-1"
+                  >
+                    <ChevronLeft className="w-4 h-4 mr-1" />
+                    Précédent
+                  </Button>
+                  <span className="text-sm text-[#666663] font-medium">
+                    Page {page} sur {meta.totalPages}
+                  </span>
+                  <Button
+                    variant="outline"
+                    onClick={() => setPage(p => Math.min(meta.totalPages, p + 1))}
+                    disabled={page === meta.totalPages}
+                    className="px-3 py-1"
+                  >
+                    Suivant
+                    <ChevronRight className="w-4 h-4 ml-1" />
+                  </Button>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      )}
     </motion.div>
   );
 };

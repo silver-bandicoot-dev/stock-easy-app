@@ -136,9 +136,9 @@ export const detectSearchType = (query) => {
   // Patterns plus sophistiqués avec regex
   const patterns = {
     product: /(?:produit|article|sku|stock|inventaire|ref(?:erence)?)/i,
-    supplier: /(?:fournisseur|supplier|vendeur|distributeur)/i,
-    order: /(?:commande|order|po|achat|purchase)/i,
-    warehouse: /(?:entrepot|warehouse|depot|stockage|magasin)/i
+    supplier: /(?:fournisseur|supplier|vendeur|distributeur|@|mail)/i,
+    order: /(?:commande|order|po|achat|purchase|^#)/i,
+    warehouse: /(?:entrepot|warehouse|depot|stockage|magasin|ville|rue)/i
   };
   
   for (const [type, pattern] of Object.entries(patterns)) {
@@ -147,14 +147,29 @@ export const detectSearchType = (query) => {
     }
   }
   
-  // Détection par format (ex: SKU pattern) - mais seulement si ça ressemble vraiment à un SKU
-  // Un SKU typique contient des chiffres ou des tirets, pas seulement des lettres
-  // Exemples: SKU-001, PRD-123, ABC-456
-  if (/^[A-Z0-9-]{4,}$/i.test(normalized) && (/\d/.test(normalized) || /-/.test(normalized))) {
+  // Détection format Commande explicite (commence par #)
+  if (/^#\d+$/.test(normalized)) {
+    return { type: 'order', priority: true, confidence: 'high' };
+  }
+
+  // Si tout chiffres (4+), ambigu -> produit (EAN) ou commande
+  // On retourne 'all' pour chercher partout
+  if (/^\d{4,}$/.test(normalized)) {
+    return { type: 'all', priority: false, confidence: 'medium' };
+  }
+
+  // Détection format Email
+  if (normalized.includes('@') || normalized.includes('.com') || normalized.includes('.fr')) {
+    return { type: 'supplier', priority: true, confidence: 'high' };
+  }
+
+  // Détection par format SKU (lettres + chiffres/tirets, min 3 chars)
+  // Exemples: SKU-001, P123, REF-A
+  if (/^[A-Z0-9-]{3,}$/i.test(normalized) && (/\d/.test(normalized) || /-/.test(normalized))) {
     return { type: 'product', priority: true, confidence: 'medium' };
   }
   
-  // Pour les termes génériques (comme "alibaba"), rechercher dans tous les types
+  // Par défaut, tout rechercher
   return { type: 'all', priority: false, confidence: 'low' };
 };
 
@@ -200,16 +215,25 @@ export const buildSearchPatterns = (query) => {
   const normalized = normalizeText(query);
   const searchWords = normalized.split(/\s+/).filter(w => w.length > 0);
   
-  // Pattern exact (toujours présent)
-  const exactPattern = `%${normalized}%`;
+  const patterns = [];
+
+  // 1. Pattern "Commence par" (plus performant si indexé)
+  // Uniquement si la requête fait au moins 3 caractères
+  if (normalized.length >= 3) {
+    patterns.push(`${normalized}%`);
+  }
+
+  // 2. Pattern "Contient" (standard)
+  patterns.push(`%${normalized}%`);
   
-  // Si plusieurs mots, prendre seulement le premier mot pour le 2ème pattern
-  // Limiter à 2 patterns max pour éviter la surcharge DB
-  if (searchWords.length > 1 && searchWords[0].length >= 3) {
-    return [exactPattern, `%${searchWords[0]}%`];
+  // Si plusieurs mots significatifs, on peut ajouter une variante sur le premier mot
+  // Mais on limite le nombre total de patterns pour éviter l'explosion de la requête
+  if (patterns.length < 3 && searchWords.length > 1 && searchWords[0].length >= 3) {
+    patterns.push(`%${searchWords[0]}%`);
   }
   
-  return [exactPattern];
+  // Retourner les patterns uniques
+  return [...new Set(patterns)].slice(0, 3);
 };
 
 /**
