@@ -35,3 +35,4 @@ L'application chargeait **toutes** les commandes historiques au démarrage via `
 - L'onglet **Analytics** dépend encore des commandes chargées dans `orders`. Il ne verra que les 90 derniers jours d'historique pour l'instant.
 - *Solution future* : Créer une RPC dédiée `get_analytics_data` pour charger les agrégats statistiques sur toute la période demandée.
 
+

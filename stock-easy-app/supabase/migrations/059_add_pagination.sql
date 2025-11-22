@@ -123,3 +123,4 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 COMMENT ON FUNCTION public.get_orders_paginated IS 'Récupère les commandes avec pagination, filtres et agrégats';
 
+
