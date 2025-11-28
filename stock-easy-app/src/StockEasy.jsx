@@ -11,7 +11,7 @@ import { SearchBar, SearchModal } from './components/SearchBar';
 import { StockDataProvider, useStockContext } from './contexts/StockDataContext';
 import { useModalContext } from './contexts/ModalContext';
 import { CurrencyProvider } from './contexts/CurrencyContext';
-import { StockeasyModals } from './components/modals/StockeasyModals';
+import { StockeasyModals } from './components/modals/StockEasyModals';
 import { ErrorBoundary } from './components/ui/ErrorBoundary';
 import { SkeletonDashboard } from './components/ui/Skeleton';
 
@@ -500,13 +500,13 @@ const StockeasyContent = () => {
                         <ProfilePage />
                       </ErrorBoundary>
                     )}
-                  </AnimatePresence>
 
                     {activeTab === MAIN_TABS.HELP && (
                       <ErrorBoundary section="Centre d'aide">
                         <HelpCenterTab />
                       </ErrorBoundary>
                     )}
+                  </AnimatePresence>
                 </div>
               </div>
             </div>
