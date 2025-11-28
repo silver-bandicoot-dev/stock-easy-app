@@ -109,14 +109,6 @@ const SupabaseLogin = () => {
           </button>
         </form>
 
-        <div className="mt-6 text-center">
-          <p className="text-sm text-[#6B7280]">
-            Pas encore de compte ?{' '}
-            <Link to="/signup" className="text-[#191919] font-medium hover:underline">
-              S'inscrire
-            </Link>
-          </p>
-        </div>
       </div>
     </div>
   );

@@ -5,7 +5,6 @@ import { ModalProvider } from './contexts/ModalContext';
 import { Toaster } from 'sonner';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import SupabaseLogin from './components/auth/SupabaseLogin';
-import SupabaseSignup from './components/auth/SupabaseSignup';
 import SupabaseResetPassword from './components/auth/SupabaseResetPassword';
 import AcceptInvitation from './components/auth/AcceptInvitation';
 import EmailConfirmation from './components/auth/EmailConfirmation';
@@ -29,7 +28,6 @@ const App = () => {
         <Routes>
           {/* Public Routes */}
           <Route path="/login" element={<SupabaseLogin />} />
-          <Route path="/signup" element={<SupabaseSignup />} />
           <Route path="/forgot-password" element={<SupabaseResetPassword />} />
           <Route path="/confirm-email" element={<EmailConfirmation />} />
           
