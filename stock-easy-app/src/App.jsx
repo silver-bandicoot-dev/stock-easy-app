@@ -10,7 +10,7 @@ import SupabaseResetPassword from './components/auth/SupabaseResetPassword';
 import AcceptInvitation from './components/auth/AcceptInvitation';
 import EmailConfirmation from './components/auth/EmailConfirmation';
 import NotificationsPage from './components/notifications/NotificationsPage';
-import Stockeasy from './Stockeasy';
+import Stockeasy from './StockEasy';
 import ProfileRedirect from './components/profile/ProfileRedirect';
 import SupabaseConnectionTest from './components/debug/SupabaseConnectionTest';
 import './config/i18n';
