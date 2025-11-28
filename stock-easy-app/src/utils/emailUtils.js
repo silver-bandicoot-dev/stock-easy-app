@@ -1,14 +1,13 @@
 // ============================================
-// UTILITAIRES EMAIL - Extraites de StockEasy.jsx
-// PHASE 2 : Fonctions Utilitaires Pures
+// UTILITAIRES EMAIL - Réexport depuis le service centralisé
+// Maintenu pour compatibilité descendante
 // ============================================
 
+import emailService from '../services/emailService';
 import { formatCurrency } from './formatting';
 import { roundToTwoDecimals } from './decimalUtils';
 import { formatConfirmedDate } from './dateUtils';
 import { ORDER_STATUS_LABELS } from '../constants/stockEasyConstants';
-
-console.log('📁 Loading emailUtils.js - Phase 2');
 
 /**
  * Génère la signature de l'utilisateur pour les emails
@@ -21,20 +20,12 @@ export const getUserSignature = (currentUser) => {
   } else if (currentUser && currentUser.displayName) {
     return currentUser.displayName;
   }
-  return "L'équipe stockeasy";
+  return "L'équipe Stockeasy";
 };
 
 /**
  * Génère un brouillon d'email pour une commande
- * @param {string} supplier - Le nom du fournisseur
- * @param {Array} products - Les produits à commander
- * @param {Object} orderQuantities - Les quantités par SKU
- * @param {Object} suppliers - Les fournisseurs (objet map)
- * @param {Object} warehouses - Les entrepôts disponibles
- * @param {string} selectedWarehouse - L'entrepôt sélectionné
- * @param {string} deviseDefaut - La devise par défaut
- * @param {Function} getUserSignatureFn - Fonction pour obtenir la signature
- * @returns {Object} L'objet email avec to, subject, body
+ * @deprecated Utiliser emailService.generateOrderEmail() à la place
  */
 export const generateEmailDraft = (
   supplier,
@@ -47,125 +38,68 @@ export const generateEmailDraft = (
   getUserSignatureFn
 ) => {
   const supplierInfo = suppliers[supplier] || {};
-  const productList = products.map(p => {
-    const qty = orderQuantities[p.sku] || p.qtyToOrder;
-    return `- ${p.name} (SKU: ${p.sku}) - Quantité: ${qty} unités - Prix unitaire: ${formatCurrency(roundToTwoDecimals(p.buyPrice), deviseDefaut)}`;
-  }).join('\n');
-  
-  const total = roundToTwoDecimals(products.reduce((sum, p) => {
-    const qty = orderQuantities[p.sku] || p.qtyToOrder;
-    // Utiliser l'investissement si disponible, sinon calculer qty * buyPrice
-    return sum + (p.investment || (qty * p.buyPrice) || 0);
-  }, 0));
-  
-  // Informations d'entrepôt
   const warehouseInfo = selectedWarehouse && warehouses[selectedWarehouse] 
-    ? `\n\nEntrepôt de livraison : ${selectedWarehouse}\nAdresse :\n${warehouses[selectedWarehouse].address}\n${warehouses[selectedWarehouse].postalCode} ${warehouses[selectedWarehouse].city}\n${warehouses[selectedWarehouse].country}`
-    : '';
-  
+    ? warehouses[selectedWarehouse]
+    : null;
+
+  // Utiliser le service centralisé
+  const email = emailService.generateOrderEmail({
+    supplierName: supplier,
+    products,
+    quantities: orderQuantities,
+    supplier: supplierInfo,
+    warehouse: warehouseInfo ? { ...warehouseInfo, name: selectedWarehouse } : { name: selectedWarehouse },
+    signature: getUserSignatureFn ? getUserSignatureFn() : "L'équipe Stockeasy",
+    formatCurrency: (amount) => formatCurrency(roundToTwoDecimals(amount), deviseDefaut)
+  });
+
   return {
-    to: supplierInfo.email || 'email@fournisseur.com',
-    subject: `Commande stockeasy - ${new Date().toLocaleDateString('fr-FR')}`,
-    body: `Bonjour,
-
-Nous souhaitons passer la commande suivante :
-
-${productList}
-
-TOTAL: ${formatCurrency(total, deviseDefaut)}${warehouseInfo}
-
-Merci de nous confirmer la disponibilité et la date de livraison estimée.
-
-Conditions habituelles: ${supplierInfo.leadTimeDays} jours - MOQ respecté
-
-Cordialement,
-${getUserSignatureFn()}`
+    to: email.to || supplierInfo.email || 'email@fournisseur.com',
+    subject: email.subject || `Commande Stockeasy - ${new Date().toLocaleDateString('fr-FR')}`,
+    body: email.body
   };
 };
 
 /**
  * Génère un email de réclamation pour une commande avec écarts
- * @param {Object} order - La commande concernée
- * @param {Object} suppliers - Les fournisseurs (objet map)
- * @param {Array} products - Les produits
- * @param {Function} getUserSignatureFn - Fonction pour obtenir la signature
- * @returns {string} Le contenu de l'email de réclamation
+ * @deprecated Utiliser emailService.generateReclamationEmail() à la place
  */
 export const generateReclamationEmail = (order, suppliers, products, getUserSignatureFn) => {
-  // Filtrer les items avec problèmes
-  const missingItems = order.items.filter(i => {
-    const totalReceived = (i.receivedQuantity || 0) + (i.damagedQuantity || 0);
-    return totalReceived < i.quantity;
-  });
-  
-  const damagedItems = order.items.filter(i => (i.damagedQuantity || 0) > 0);
-  
-  const supplierData = suppliers[order.supplier] || {};
-  const reclamationEmail =
-    supplierData.reclamationContactEmail ||
-    supplierData.commercialContactEmail ||
-    supplierData.email ||
-    '';
-  const reclamationName = supplierData.reclamationContactName || supplierData.commercialContactName || '';
-  const reclamationPhone = supplierData.reclamationContactPhone || supplierData.commercialContactPhone || '';
+  // Convertir les items de la commande au format attendu
+  const receivedItems = {};
+  const damagedQuantities = {};
 
-  let email = `À: ${reclamationEmail}\n`;
-  email += `Objet: Réclamation - Commande ${order.id}\n\n`;
-  email += `Bonjour,\n\n`;
-  email += `Nous avons réceptionné la commande ${order.id} mais constatons les problèmes suivants :\n\n`;
-  
-  if (missingItems.length > 0) {
-    email += `🔴 QUANTITÉS MANQUANTES:\n`;
-    email += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
-    missingItems.forEach(item => {
-      const product = products.find(p => p.sku === item.sku);
-      const totalReceived = (item.receivedQuantity || 0) + (item.damagedQuantity || 0);
-      const missing = item.quantity - totalReceived;
-      email += `\n▸ ${product?.name || item.sku}\n`;
-      email += `  SKU: ${item.sku}\n`;
-      email += `  Commandé: ${item.quantity} unités\n`;
-      email += `  Reçu sain: ${item.receivedQuantity || 0} unités\n`;
+  if (order.items) {
+    order.items.forEach(item => {
+      receivedItems[item.sku] = {
+        received: item.receivedQuantity || 0,
+        ordered: item.quantity
+      };
       if (item.damagedQuantity > 0) {
-        email += `  Reçu endommagé: ${item.damagedQuantity} unités\n`;
-        email += `  Total reçu: ${totalReceived} unités\n`;
-      }
-      email += `  Manquant: ${missing} unités\n`;
-      if (item.discrepancyNotes) {
-        email += `  Notes: ${item.discrepancyNotes}\n`;
+        damagedQuantities[item.sku] = item.damagedQuantity;
       }
     });
-    email += `\n`;
   }
-  
-  if (damagedItems.length > 0) {
-    email += `⚠️ PRODUITS ENDOMMAGÉS:\n`;
-    email += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
-    damagedItems.forEach(item => {
-      const product = products.find(p => p.sku === item.sku);
-      const totalReceived = (item.receivedQuantity || 0) + (item.damagedQuantity || 0);
-      const missing = item.quantity - totalReceived;
-      email += `\n▸ ${product?.name || item.sku}\n`;
-      email += `  SKU: ${item.sku}\n`;
-      email += `  Quantité endommagée: ${item.damagedQuantity} unités\n`;
-      if (missing > 0) {
-        email += `  Note: Également ${missing} unités manquantes (voir section ci-dessus)\n`;
-      }
-      if (item.discrepancyNotes) {
-        email += `  Description: ${item.discrepancyNotes}\n`;
-      }
-    });
-    email += `\n`;
-  }
-  
-  email += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
-  email += `Merci de procéder rapidement au remplacement ou à l'envoi des articles manquants/endommagés.\n\n`;
-  if (reclamationName || reclamationPhone) {
-    email += `Contact réclamations côté fournisseur: ${reclamationName || 'N/A'}${reclamationPhone ? ` - Tél: ${reclamationPhone}` : ''}\n\n`;
-  }
-  email += `Cordialement,\n`;
-  email += `${getUserSignatureFn()}`;
-  
-  return email;
+
+  const supplierInfo = suppliers[order.supplier] || {};
+
+  const email = emailService.generateReclamationEmail({
+    order,
+    receivedItems,
+    damagedQuantities,
+    products,
+    supplier: supplierInfo,
+    notes: '',
+    signature: getUserSignatureFn ? getUserSignatureFn() : "L'équipe Stockeasy"
+  });
+
+  // Retourner au format legacy avec À: et Objet: en préfixe
+  const reclamationEmail = supplierInfo.reclamationContactEmail ||
+    supplierInfo.commercialContactEmail ||
+    supplierInfo.email ||
+    '';
+
+  return `À: ${reclamationEmail}\n${email.body}`;
 };
 
 /**
@@ -177,8 +111,8 @@ export const generateReclamationEmail = (order, suppliers, products, getUserSign
  * @param {string} historyDateEnd - Date de fin
  * @param {string} currencySymbol - Le symbole de devise
  * @param {Function} formatWithCurrency - Fonction de formatage de devise
- * @param {Function} formatConfirmedDate - Fonction de formatage de date
- * @param {Function} roundToTwoDecimals - Fonction d'arrondi
+ * @param {Function} formatConfirmedDateFn - Fonction de formatage de date
+ * @param {Function} roundToTwoDecimalsFn - Fonction d'arrondi
  * @param {Function} toastFn - Fonction toast pour les notifications
  * @returns {void}
  */
@@ -190,8 +124,8 @@ export const exportHistoryToCSV = (
   historyDateEnd,
   currencySymbol,
   formatWithCurrency,
-  formatConfirmedDate,
-  roundToTwoDecimals,
+  formatConfirmedDateFn,
+  roundToTwoDecimalsFn,
   toastFn
 ) => {
   // Filtrer les commandes selon les critères actuels
@@ -216,30 +150,27 @@ export const exportHistoryToCSV = (
   const headers = ['N° Commande', 'Fournisseur', 'Date Création', 'Date Confirmation', 'Date Expédition', 'Date Réception', 'Statut', 'SKU', 'Nom Produit', 'Quantité', priceHeader, lineTotalHeader, orderTotalHeader, 'Suivi'];
   const rows = [];
   
-  // Utiliser ORDER_STATUS_LABELS (déjà extrait en Phase 1)
   const statusLabels = ORDER_STATUS_LABELS;
   
   filteredOrders.forEach(order => {
-    // Pour chaque commande, créer une ligne par produit
     order.items.forEach((item, index) => {
       const product = products.find(p => p.sku === item.sku);
-      const lineTotal = roundToTwoDecimals(item.quantity * item.pricePerUnit);
+      const lineTotal = roundToTwoDecimalsFn(item.quantity * item.pricePerUnit);
       
       rows.push([
         order.id,
         order.supplier,
-        formatConfirmedDate(order.createdAt) || order.createdAt,
-        formatConfirmedDate(order.confirmedAt) || order.confirmedAt || '-',
-        formatConfirmedDate(order.shippedAt) || order.shippedAt || '-',
-        formatConfirmedDate(order.receivedAt) || order.receivedAt || '-',
+        formatConfirmedDateFn(order.createdAt) || order.createdAt,
+        formatConfirmedDateFn(order.confirmedAt) || order.confirmedAt || '-',
+        formatConfirmedDateFn(order.shippedAt) || order.shippedAt || '-',
+        formatConfirmedDateFn(order.receivedAt) || order.receivedAt || '-',
         statusLabels[order.status] || order.status,
         item.sku,
         product?.name || item.sku,
         item.quantity,
-        formatWithCurrency(roundToTwoDecimals(item.pricePerUnit)),
+        formatWithCurrency(roundToTwoDecimalsFn(item.pricePerUnit)),
         formatWithCurrency(lineTotal),
-        // Afficher le total de la commande seulement sur la première ligne de chaque commande
-        index === 0 ? formatWithCurrency(roundToTwoDecimals(order.total)) : '',
+        index === 0 ? formatWithCurrency(roundToTwoDecimalsFn(order.total)) : '',
         index === 0 ? (order.trackingNumber || '-') : ''
       ]);
     });
@@ -270,3 +201,5 @@ export const exportHistoryToCSV = (
   }
 };
 
+// Réexporter les helpers du service
+export const { isValidEmail, copyToClipboard, parseEmailContent, openEmailClient } = emailService;

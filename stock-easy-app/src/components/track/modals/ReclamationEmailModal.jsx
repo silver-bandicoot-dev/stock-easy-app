@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { X, Copy, ExternalLink, AlertTriangle, Paperclip, Trash2 } from 'lucide-react';
-import { Modal } from '../../ui/Modal';
-import { Button } from '../../shared/Button';
+import { Copy, ExternalLink, AlertTriangle, Paperclip, Trash2, Mail } from 'lucide-react';
+import { Modal, ModalSection, ModalFooter } from '../../ui/Modal';
+import { Button } from '../../ui/Button';
 import { toast } from 'sonner';
 
 export const ReclamationEmailModal = ({
@@ -84,7 +84,6 @@ export const ReclamationEmailModal = ({
   const handleFileInputChange = (event) => {
     const files = event.target.files;
     handleFilesAdded(files);
-    // reset input value to allow re-selecting the same file if needed
     event.target.value = '';
   };
 
@@ -148,7 +147,6 @@ export const ReclamationEmailModal = ({
       }
     }
 
-    // Si on n'a pas détecté explicitement le corps, on renvoie le contenu complet
     if (!body && content) {
       body = content;
     }
@@ -156,14 +154,12 @@ export const ReclamationEmailModal = ({
     return { to, subject, body };
   };
 
-  // Initialiser les champs éditables à partir du contenu généré + données de la commande
   useEffect(() => {
     if (!isOpen || !emailContent) return;
 
     const parsed = parseEmailContent(emailContent);
     const poNumber = order?.poNumber || order?.id || '';
 
-    // Adresse email du fournisseur en priorité si disponible
     const supplierEmail =
       order?.supplier?.email ||
       order?.supplierEmail ||
@@ -194,201 +190,220 @@ export const ReclamationEmailModal = ({
       onClose={onClose}
       size="lg"
       title={`Email de réclamation — Commande ${poNumber}`}
+      icon={Mail}
+      footer={
+        <ModalFooter>
+          <Button variant="outline" onClick={onClose}>
+            Fermer
+          </Button>
+        </ModalFooter>
+      }
     >
       {/* Avertissement */}
-      <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 mb-6">
-          <div className="flex items-center gap-2">
-            <AlertTriangle className="w-5 h-5 text-orange-600" />
-            <p className="text-sm text-orange-800">
-              <strong>Attention :</strong> Cet email contient des informations sur des écarts constatés lors de la réception. 
-              Vérifiez le contenu avant l'envoi.
-            </p>
+      <div className="bg-warning-50 border border-warning-200 rounded-lg p-4 mb-6">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 bg-warning-100 rounded-full flex items-center justify-center flex-shrink-0">
+            <AlertTriangle className="w-5 h-5 text-warning-600" />
           </div>
+          <p className="text-sm text-warning-800">
+            <strong>Attention :</strong> Cet email contient des informations sur des écarts constatés lors de la réception. 
+            Vérifiez le contenu avant l'envoi.
+          </p>
+        </div>
       </div>
 
       {/* Contenu de l'email */}
-      <div className="mb-6">
-            <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-gray-900">Contenu de l'email</h3>
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                icon={Copy}
-                onClick={handleCopy}
-                disabled={isCopied}
-              >
-                {isCopied ? 'Copié !' : 'Copier'}
-              </Button>
-              <Button
-                variant="primary"
-                size="sm"
-                icon={ExternalLink}
-                onClick={handleOpenEmailClient}
-              >
-                Ouvrir dans l'email
-              </Button>
-            </div>
+      <ModalSection title="Contenu de l'email" className="mb-6">
+        <div className="flex items-center justify-end gap-2 mb-4">
+          <Button
+            variant="outline"
+            size="sm"
+            icon={Copy}
+            onClick={handleCopy}
+            disabled={isCopied}
+          >
+            {isCopied ? 'Copié !' : 'Copier'}
+          </Button>
+          <Button
+            variant="primary"
+            size="sm"
+            icon={ExternalLink}
+            onClick={handleOpenEmailClient}
+          >
+            Ouvrir dans l'email
+          </Button>
+        </div>
+
+        <div className="space-y-4">
+          {/* Adresse email du destinataire */}
+          <div>
+            <label className="label-base">
+              Adresse email du destinataire
+            </label>
+            <input
+              type="email"
+              value={editableTo}
+              onChange={(e) => setEditableTo(e.target.value)}
+              className="input-base"
+              placeholder="Adresse email du fournisseur"
+            />
           </div>
 
-          <div className="space-y-3">
-            {/* Adresse email du destinataire */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Adresse email du destinataire
-              </label>
-              <input
-                type="email"
-                value={editableTo}
-                onChange={(e) => setEditableTo(e.target.value)}
-                className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-black"
-                placeholder="Adresse email du fournisseur"
-              />
-            </div>
-
-            {/* Objet de l'email */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Objet
-              </label>
-              <input
-                type="text"
-                value={editableSubject}
-                onChange={(e) => setEditableSubject(e.target.value)}
-                className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-black"
-                placeholder={`Réclamation - Commande ${order?.poNumber || order?.id}`}
-              />
-              <p className="mt-1 text-xs text-gray-500">
-                Le format sera toujours envoyé comme : <span className="font-medium">Réclamation - Commande {order?.poNumber || order?.id}</span>
-              </p>
-            </div>
-
-            {/* Corps du message */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Message
-              </label>
-              <textarea
-                value={editableBody}
-                onChange={(e) => setEditableBody(e.target.value)}
-                rows={10}
-                className="w-full bg-gray-50 rounded-lg p-4 border whitespace-pre-wrap text-sm text-gray-800 font-mono focus:outline-none focus:ring-2 focus:ring-black"
-              />
-            </div>
+          {/* Objet de l'email */}
+          <div>
+            <label className="label-base">
+              Objet
+            </label>
+            <input
+              type="text"
+              value={editableSubject}
+              onChange={(e) => setEditableSubject(e.target.value)}
+              className="input-base"
+              placeholder={`Réclamation - Commande ${order?.poNumber || order?.id}`}
+            />
+            <p className="helper-text">
+              Le format sera toujours envoyé comme : <span className="font-medium">Réclamation - Commande {order?.poNumber || order?.id}</span>
+            </p>
           </div>
-      </div>
+
+          {/* Corps du message */}
+          <div>
+            <label className="label-base">
+              Message
+            </label>
+            <textarea
+              value={editableBody}
+              onChange={(e) => setEditableBody(e.target.value)}
+              rows={10}
+              className="input-base font-mono text-sm resize-y min-h-[200px]"
+            />
+          </div>
+        </div>
+      </ModalSection>
 
       {/* Pièces jointes */}
-      <div className="mb-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-2 flex items-center gap-2">
-            <Paperclip className="w-4 h-4 text-gray-700" />
-            Pièces jointes (preuves)
-          </h3>
-
-          <p className="text-xs text-gray-600 mb-3">
-            Formats acceptés : <span className="font-medium">.jpg, .jpeg, .png, .heic, .pdf</span>.{' '}
-            Taille max : <span className="font-medium">{MAX_FILE_SIZE_MB} Mo</span> par fichier,{' '}
-            <span className="font-medium">{MAX_TOTAL_SIZE_MB} Mo</span> au total.{' '}
-            Maximum <span className="font-medium">{MAX_FILES}</span> fichiers.
-          </p>
-
-          <div
-            className={`border-2 border-dashed rounded-lg p-4 text-center cursor-pointer transition-colors ${
-              isDragging ? 'border-black bg-gray-50' : 'border-gray-300 hover:border-gray-400'
-            }`}
-            onDragOver={handleDragOver}
-            onDragLeave={handleDragLeave}
-            onDrop={handleDrop}
-          >
-            <input
-              id="reclamation-attachments-input"
-              type="file"
-              multiple
-              accept=".jpg,.jpeg,.png,.heic,.pdf"
-              className="hidden"
-              onChange={handleFileInputChange}
-            />
-            <label
-              htmlFor="reclamation-attachments-input"
-              className="flex flex-col items-center justify-center gap-1 cursor-pointer"
-            >
-              <Paperclip className="w-5 h-5 text-gray-700 mb-1" />
-              <span className="text-sm font-medium text-gray-800">
-                Glissez-déposez vos fichiers ici ou cliquez pour sélectionner
-              </span>
-              <span className="text-xs text-gray-500">
-                Idéalement : photos du colis, produits endommagés, BL/facture.
-              </span>
-            </label>
+      <ModalSection 
+        title="Pièces jointes" 
+        description="Ajoutez des preuves visuelles (photos, documents)"
+        className="mb-6"
+      >
+        <div className="flex items-center gap-2 mb-3">
+          <div className="w-8 h-8 bg-neutral-100 rounded-lg flex items-center justify-center">
+            <Paperclip className="w-4 h-4 text-neutral-600" />
           </div>
+          <div className="text-xs text-neutral-500">
+            <span className="font-medium">Formats :</span> .jpg, .jpeg, .png, .heic, .pdf | 
+            <span className="font-medium"> Max :</span> {MAX_FILE_SIZE_MB} Mo/fichier, {MAX_TOTAL_SIZE_MB} Mo total, {MAX_FILES} fichiers
+          </div>
+        </div>
 
-          {/* Liste des fichiers sélectionnés */}
-          {attachments.length > 0 && (
-            <div className="mt-4 space-y-2">
-              <div className="flex items-center justify-between text-xs text-gray-600 mb-1">
-                <span>{attachments.length} fichier(s) sélectionné(s)</span>
-                <span>
-                  Total :{' '}
-                  <span className={totalSizeMB > MAX_TOTAL_SIZE_MB ? 'text-red-600 font-semibold' : 'font-medium'}>
-                    {totalSizeMB.toFixed(2)} Mo
-                  </span>
-                </span>
-              </div>
-              <ul className="space-y-1 max-h-40 overflow-y-auto">
-                {attachments.map((file, index) => (
-                  <li
-                    key={`${file.name}-${index}`}
-                    className="flex items-center justify-between bg-gray-50 border border-gray-200 rounded-md px-3 py-2 text-xs"
-                  >
-                    <div className="flex items-center gap-2 min-w-0">
-                      <Paperclip className="w-3 h-3 text-gray-500 flex-shrink-0" />
-                      <div className="flex flex-col min-w-0">
-                        <span className="truncate font-medium text-gray-800" title={file.name}>
-                          {file.name}
-                        </span>
-                        <span className="text-gray-500 text-[11px]">
-                          {getFileSizeInMB(file.size).toFixed(2)} Mo
-                        </span>
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveAttachment(index)}
-                      className="ml-3 p-1 rounded hover:bg-gray-200 text-gray-500 hover:text-gray-700"
-                    >
-                      <Trash2 className="w-3 h-3" />
-                    </button>
-                  </li>
-                ))}
-              </ul>
-
-              <p className="text-[11px] text-gray-500 mt-2">
-                Pour l’instant, les pièces jointes doivent être ajoutées manuellement dans votre client email.
-                Elles seront bientôt envoyées directement depuis StockEasy via Gmail / Outlook.
-              </p>
+        <div
+          className={`
+            border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-all
+            ${isDragging 
+              ? 'border-primary-500 bg-primary-50' 
+              : 'border-neutral-300 hover:border-neutral-400 hover:bg-neutral-50'
+            }
+          `}
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+        >
+          <input
+            id="reclamation-attachments-input"
+            type="file"
+            multiple
+            accept=".jpg,.jpeg,.png,.heic,.pdf"
+            className="hidden"
+            onChange={handleFileInputChange}
+          />
+          <label
+            htmlFor="reclamation-attachments-input"
+            className="flex flex-col items-center justify-center gap-2 cursor-pointer"
+          >
+            <div className="w-12 h-12 bg-neutral-100 rounded-full flex items-center justify-center">
+              <Paperclip className="w-5 h-5 text-neutral-600" />
             </div>
-          )}
-      </div>
+            <span className="text-sm font-medium text-neutral-700">
+              Glissez-déposez vos fichiers ici ou cliquez pour sélectionner
+            </span>
+            <span className="text-xs text-neutral-500">
+              Photos du colis, produits endommagés, BL/facture
+            </span>
+          </label>
+        </div>
+
+        {/* Liste des fichiers sélectionnés */}
+        {attachments.length > 0 && (
+          <div className="mt-4 space-y-2">
+            <div className="flex items-center justify-between text-xs text-neutral-500 mb-2">
+              <span>{attachments.length} fichier(s) sélectionné(s)</span>
+              <span>
+                Total :{' '}
+                <span className={totalSizeMB > MAX_TOTAL_SIZE_MB ? 'text-danger-600 font-semibold' : 'font-medium'}>
+                  {totalSizeMB.toFixed(2)} Mo
+                </span>
+              </span>
+            </div>
+            <ul className="space-y-2 max-h-40 overflow-y-auto custom-scrollbar">
+              {attachments.map((file, index) => (
+                <li
+                  key={`${file.name}-${index}`}
+                  className="flex items-center justify-between bg-neutral-50 border border-neutral-200 rounded-lg px-3 py-2"
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-8 h-8 bg-neutral-100 rounded flex items-center justify-center flex-shrink-0">
+                      <Paperclip className="w-4 h-4 text-neutral-500" />
+                    </div>
+                    <div className="flex flex-col min-w-0">
+                      <span className="truncate text-sm font-medium text-neutral-800" title={file.name}>
+                        {file.name}
+                      </span>
+                      <span className="text-xs text-neutral-500">
+                        {getFileSizeInMB(file.size).toFixed(2)} Mo
+                      </span>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveAttachment(index)}
+                    className="ml-3 p-1.5 rounded-lg hover:bg-neutral-200 text-neutral-400 hover:text-danger-600 transition-colors"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </li>
+              ))}
+            </ul>
+
+            <p className="text-xs text-neutral-500 mt-3 p-3 bg-neutral-50 rounded-lg border border-neutral-100">
+              Les pièces jointes doivent être ajoutées manuellement dans votre client email.
+              L'envoi direct depuis Stockeasy sera bientôt disponible.
+            </p>
+          </div>
+        )}
+      </ModalSection>
 
       {/* Instructions */}
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-          <h4 className="font-medium text-blue-900 mb-2">Instructions :</h4>
-          <ul className="text-sm text-blue-800 space-y-1">
-            <li>• Cliquez sur "Copier" pour copier l'email dans le presse-papiers</li>
-            <li>• Cliquez sur "Ouvrir dans l'email" pour ouvrir votre client email</li>
-            <li>• Vérifiez les informations avant d'envoyer</li>
-            <li>• Gardez une copie de cet email pour vos archives</li>
-          </ul>
-      </div>
-
-      {/* Actions */}
-      <div className="flex items-center justify-end gap-3">
-        <Button
-          variant="outline"
-          onClick={onClose}
-        >
-          Fermer
-        </Button>
+      <div className="bg-primary-50 border border-primary-200 rounded-lg p-4">
+        <h4 className="font-medium text-primary-900 mb-2">Instructions :</h4>
+        <ul className="text-sm text-primary-700 space-y-1">
+          <li className="flex items-start gap-2">
+            <span className="text-primary-400">•</span>
+            Cliquez sur "Copier" pour copier l'email dans le presse-papiers
+          </li>
+          <li className="flex items-start gap-2">
+            <span className="text-primary-400">•</span>
+            Cliquez sur "Ouvrir dans l'email" pour ouvrir votre client email
+          </li>
+          <li className="flex items-start gap-2">
+            <span className="text-primary-400">•</span>
+            Vérifiez les informations avant d'envoyer
+          </li>
+          <li className="flex items-start gap-2">
+            <span className="text-primary-400">•</span>
+            Gardez une copie de cet email pour vos archives
+          </li>
+        </ul>
       </div>
     </Modal>
   );

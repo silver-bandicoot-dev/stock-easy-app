@@ -9,7 +9,7 @@ import { validateStockUpdate, isValidNumber, isNonEmptyString } from "../lib/val
 
 /**
  * Route handler for receiving stock updates from Supabase webhook
- * Direction: Supabase (StockEasy) → Shopify
+ * Direction: Supabase (Stockeasy) → Shopify
  * 
  * Anti-loop mechanism:
  * 1. Check if this update is a response to a recent Shopify → Supabase sync
@@ -246,7 +246,7 @@ const route = async ({ request, reply, api, logger, connections, config }) => {
         productTitle: mapping.productTitle,
         locationId 
       }, 
-      'Successfully updated Shopify inventory from StockEasy'
+      'Successfully updated Shopify inventory from Stockeasy'
     );
 
     await reply.send({ 

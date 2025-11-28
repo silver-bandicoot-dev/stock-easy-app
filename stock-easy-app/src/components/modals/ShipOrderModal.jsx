@@ -1,7 +1,7 @@
 import React from 'react';
-import { X, Truck, Link } from 'lucide-react';
-import { Button } from '../shared/Button';
-import { Modal } from '../ui/Modal';
+import { Truck, Link2 } from 'lucide-react';
+import { Button } from '../ui/Button';
+import { Modal, ModalFooter, ModalSection } from '../ui/Modal';
 
 export const ShipOrderModal = ({
   isOpen,
@@ -29,25 +29,27 @@ export const ShipOrderModal = ({
       isOpen={isOpen}
       onClose={handleClose}
       title="Expédier la commande"
-      size="medium"
+      icon={Truck}
+      size="md"
+      variant="centered"
     >
       <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Icône et description */}
-        <div className="text-center">
-          <div className="mx-auto w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mb-4">
-            <Truck className="w-6 h-6 text-blue-600" />
+        {/* Description */}
+        <div className="text-center py-2">
+          <div className="mx-auto w-14 h-14 bg-primary-100 rounded-full flex items-center justify-center mb-4">
+            <Truck className="w-7 h-7 text-primary-600" />
           </div>
-          <h3 className="text-lg font-semibold text-[#191919] mb-2">
+          <h3 className="text-lg font-semibold text-neutral-900 mb-1">
             Confirmer l'expédition
           </h3>
-          <p className="text-sm text-[#666663]">
+          <p className="text-sm text-neutral-500">
             Saisissez les informations de suivi pour cette commande
           </p>
         </div>
 
         {/* Numéro de suivi */}
-        <div>
-          <label className="block text-sm font-medium text-[#191919] mb-2">
+        <ModalSection>
+          <label className="label-base">
             Numéro de suivi
           </label>
           <input
@@ -55,17 +57,17 @@ export const ShipOrderModal = ({
             value={trackingNumber}
             onChange={(e) => setTrackingNumber(e.target.value)}
             placeholder="Ex: 1Z999AA1234567890"
-            className="w-full px-3 py-2 border-2 border-[#E5E4DF] rounded-lg bg-white text-[#191919] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="input-base"
           />
-          <p className="text-xs text-[#666663] mt-1">
+          <p className="helper-text">
             Numéro de suivi fourni par le transporteur
           </p>
-        </div>
+        </ModalSection>
 
         {/* URL de tracking */}
-        <div>
-          <label className="block text-sm font-medium text-[#191919] mb-2">
-            <Link className="w-4 h-4 inline mr-1" />
+        <ModalSection>
+          <label className="label-base flex items-center gap-1.5">
+            <Link2 className="w-4 h-4" />
             URL de suivi
           </label>
           <input
@@ -73,32 +75,33 @@ export const ShipOrderModal = ({
             value={trackingUrl}
             onChange={(e) => setTrackingUrl(e.target.value)}
             placeholder="https://www.ups.com/track?trackingNumber=..."
-            className="w-full px-3 py-2 border-2 border-[#E5E4DF] rounded-lg bg-white text-[#191919] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="input-base"
           />
-          <p className="text-xs text-[#666663] mt-1">
+          <p className="helper-text">
             Lien direct vers le suivi de la commande
           </p>
-        </div>
+        </ModalSection>
 
         {/* Boutons */}
-        <div className="flex justify-end gap-3 pt-4 border-t border-[#E5E4DF]">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={handleClose}
-            disabled={isLoading}
-          >
-            Annuler
-          </Button>
-          <Button
-            type="submit"
-            variant="primary"
-            icon={Truck}
-            disabled={isLoading}
-            className="min-w-[120px]"
-          >
-            {isLoading ? 'Expédition...' : 'Expédier'}
-          </Button>
+        <div className="pt-4 border-t border-neutral-200">
+          <ModalFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleClose}
+              disabled={isLoading}
+            >
+              Annuler
+            </Button>
+            <Button
+              type="submit"
+              variant="primary"
+              icon={Truck}
+              loading={isLoading}
+            >
+              Expédier
+            </Button>
+          </ModalFooter>
         </div>
       </form>
     </Modal>

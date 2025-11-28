@@ -1,12 +1,15 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Search, X, ArrowLeft } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { createPortal } from 'react-dom';
 import { useSearch } from './useSearch';
 import { SearchDropdown } from './SearchDropdown';
 import { useNavigate } from 'react-router-dom';
 
 /**
- * Composant SearchModal - Modal de recherche pour mobile
+ * Composant SearchModal - Modal de recherche plein écran pour mobile
+ * Utilise le même système d'animation que le Modal de base mais avec une variante "search"
+ * 
  * @param {boolean} isOpen - État d'ouverture du modal
  * @param {Function} onClose - Callback pour fermer le modal
  * @param {Function} setActiveTab - Fonction pour changer l'onglet actif
@@ -33,36 +36,35 @@ export const SearchModal = ({
   // Aplatir les résultats pour la navigation clavier
   const flatItems = results.flatMap((group) => group.items);
 
-  // Focus automatique quand le modal s'ouvre
+  // Gestion du body scroll
   useEffect(() => {
     if (isOpen) {
+      document.body.style.overflow = 'hidden';
       setTimeout(() => {
         inputRef.current?.focus();
       }, 100);
     } else {
-      // Réinitialiser l'état quand le modal se ferme
+      document.body.style.overflow = '';
       setQuery('');
       setShowDropdown(false);
       setActiveIndex(-1);
     }
+    
+    return () => {
+      document.body.style.overflow = '';
+    };
   }, [isOpen]);
 
   // Gérer la sélection d'un item
   const handleItemSelect = useCallback(
     (item) => {
-      // Sauvegarder dans l'historique
       saveToHistory(query, item.type, item.data);
-
-      // Fermer le modal et réinitialiser
       onClose();
       setQuery('');
       setShowDropdown(false);
       setActiveIndex(-1);
 
-      // Navigation selon le type
       if (setActiveTab) {
-        console.log('🔍 Navigation vers:', item.type, item.id, item.data);
-        
         switch (item.type) {
           case 'product':
             setActiveTab('stock-level');
@@ -109,7 +111,13 @@ export const SearchModal = ({
 
   // Gérer la navigation clavier
   const handleKeyDown = (event) => {
-    if (!showDropdown || flatItems.length === 0) return;
+    if (!showDropdown || flatItems.length === 0) {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        onClose();
+      }
+      return;
+    }
 
     switch (event.key) {
       case 'ArrowDown':
@@ -157,7 +165,7 @@ export const SearchModal = ({
     inputRef.current?.focus();
   };
 
-  return (
+  const modalContent = (
     <AnimatePresence>
       {isOpen && (
         <>
@@ -166,26 +174,36 @@ export const SearchModal = ({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
             onClick={onClose}
-            className="fixed inset-0 bg-black/50 z-[100]"
+            className="fixed inset-0 bg-neutral-900/60 backdrop-blur-sm z-[100]"
           />
           
-          {/* Modal Panel */}
+          {/* Modal Panel - Slide from top */}
           <motion.div
-            initial={{ opacity: 0, y: -20 }}
+            initial={{ opacity: 0, y: '-100%' }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
+            exit={{ opacity: 0, y: '-100%' }}
             transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-            className="fixed top-0 left-0 right-0 z-[101] bg-[#FAFAF7] shadow-lg"
+            className="fixed top-0 left-0 right-0 z-[101] bg-white shadow-2xl"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Recherche"
           >
-            {/* Header */}
-            <div className="flex items-center gap-3 px-4 py-4 border-b border-[#E5E4DF]">
+            {/* Header avec champ de recherche */}
+            <div className="flex items-center gap-3 px-4 py-4 border-b border-neutral-200">
               <button
                 onClick={onClose}
-                className="p-2 rounded-lg hover:bg-[#E5E4DF] transition-colors"
+                className="
+                  p-2 rounded-lg 
+                  text-neutral-600 hover:text-neutral-900
+                  hover:bg-neutral-100 
+                  transition-colors
+                  focus:outline-none focus:ring-2 focus:ring-primary-500/20
+                "
                 aria-label="Retour"
               >
-                <ArrowLeft className="w-5 h-5 text-[#191919]" />
+                <ArrowLeft className="w-5 h-5" />
               </button>
               
               <div className="flex-1 relative">
@@ -202,9 +220,10 @@ export const SearchModal = ({
                   placeholder="Rechercher un produit, fournisseur, commande..."
                   className="
                     w-full pl-10 pr-10 py-3 
-                    text-sm text-neutral-900 placeholder-neutral-500
-                    bg-white border border-neutral-300 rounded-lg
-                    focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent
+                    text-sm text-neutral-900 placeholder:text-neutral-400
+                    bg-neutral-50 border border-neutral-200 rounded-lg
+                    focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500
+                    focus:bg-white
                     transition-all
                   "
                 />
@@ -213,10 +232,16 @@ export const SearchModal = ({
                 {query && !loading && (
                   <button
                     onClick={handleClear}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 p-1 hover:bg-neutral-100 rounded transition-colors"
+                    className="
+                      absolute right-3 top-1/2 -translate-y-1/2 
+                      p-1 rounded 
+                      text-neutral-400 hover:text-neutral-600
+                      hover:bg-neutral-200 
+                      transition-colors
+                    "
                     aria-label="Effacer la recherche"
                   >
-                    <X className="w-4 h-4 text-neutral-500" />
+                    <X className="w-4 h-4" />
                   </button>
                 )}
                 
@@ -227,8 +252,8 @@ export const SearchModal = ({
               </div>
             </div>
 
-            {/* Results */}
-            <div className="max-h-[calc(100vh-120px)] overflow-y-auto">
+            {/* Résultats */}
+            <div className="max-h-[calc(100vh-80px)] overflow-y-auto custom-scrollbar">
               <SearchDropdown
                 results={results}
                 loading={loading}
@@ -245,6 +270,11 @@ export const SearchModal = ({
       )}
     </AnimatePresence>
   );
+
+  // Utiliser un portal pour rendre à la racine du DOM
+  if (typeof document !== 'undefined') {
+    return createPortal(modalContent, document.body);
+  }
+  
+  return null;
 };
-
-

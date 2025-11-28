@@ -1,5 +1,5 @@
 // ============================================
-// HANDLERS PARAMÈTRES - Extraites de StockEasy.jsx
+// HANDLERS PARAMÈTRES - Extraites de Stockeasy.jsx
 // PHASE 3 : Handlers Paramètres
 // ============================================
 

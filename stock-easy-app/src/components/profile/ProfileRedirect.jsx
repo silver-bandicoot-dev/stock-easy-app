@@ -15,7 +15,7 @@ const ProfileRedirect = () => {
 
   useEffect(() => {
     // Rediriger vers l'app principale avec l'onglet profil
-    // L'état 'targetTab' sera capté par StockEasy pour ouvrir le bon onglet
+    // L'état 'targetTab' sera capté par Stockeasy pour ouvrir le bon onglet
     navigate('/', { 
       replace: true, 
       state: { targetTab: 'profile' } 

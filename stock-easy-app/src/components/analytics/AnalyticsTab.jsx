@@ -574,7 +574,7 @@ export const AnalyticsTab = ({
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
           <h1 className="text-xl sm:text-2xl font-semibold text-[#191919]">
-            {analyticsSubTab === ANALYTICS_TABS.FORECAST ? 'Prévisions IA 🤖' : 'Analytics 📈'}
+            {analyticsSubTab === ANALYTICS_TABS.FORECAST ? 'Prévisions IA' : 'Analytics'}
           </h1>
           <p className="text-sm text-[#6B7177] mt-0.5">
             {analyticsSubTab === ANALYTICS_TABS.FORECAST 
@@ -661,19 +661,39 @@ export const AnalyticsTab = ({
                 className="w-full px-4 py-2.5 bg-white border border-[#E1E3E5] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#191919] focus:border-transparent appearance-none cursor-pointer"
               >
                 <option value="">Sélectionner un produit pour analyser...</option>
-                {products
-                  .filter(p => p.salesPerDay > 0)
-                  .map(product => (
-                    <option key={product.sku} value={product.sku}>
-                      {product.name} ({product.sku}) - {product.salesPerDay.toFixed(1)} ventes/jour
-                    </option>
-                  ))}
+                {/* Groupe 1: Produits avec historique de ventes (triés par ventes décroissantes) */}
+                {products.filter(p => (p.salesPerDay || 0) > 0).length > 0 && (
+                  <optgroup label="📊 Produits avec historique de ventes">
+                    {products
+                      .filter(p => (p.salesPerDay || 0) > 0)
+                      .sort((a, b) => (b.salesPerDay || 0) - (a.salesPerDay || 0))
+                      .map(product => (
+                        <option key={product.sku} value={product.sku}>
+                          {product.name} ({product.sku}) - {(product.salesPerDay || 0).toFixed(1)} ventes/jour
+                        </option>
+                      ))}
+                  </optgroup>
+                )}
+                {/* Groupe 2: Produits sans historique (triés par nom) */}
+                {products.filter(p => (p.salesPerDay || 0) === 0 && (p.stock || 0) > 0).length > 0 && (
+                  <optgroup label="📦 Produits en stock (sans historique)">
+                    {products
+                      .filter(p => (p.salesPerDay || 0) === 0 && (p.stock || 0) > 0)
+                      .sort((a, b) => (a.name || '').localeCompare(b.name || ''))
+                      .slice(0, 50) // Limiter à 50 pour performance
+                      .map(product => (
+                        <option key={product.sku} value={product.sku}>
+                          {product.name} ({product.sku}) - Stock: {product.stock || 0}
+                        </option>
+                      ))}
+                  </optgroup>
+                )}
               </select>
               <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#6B7177] pointer-events-none" />
             </div>
             {selectedProductForForecast && (
               <span className="text-sm text-[#6B7177] whitespace-nowrap">
-                {products.filter(p => p.salesPerDay > 0).length} produits avec historique
+                {products.filter(p => (p.salesPerDay || 0) > 0).length} avec historique / {products.length} total
               </span>
             )}
           </div>

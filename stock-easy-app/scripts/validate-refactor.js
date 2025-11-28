@@ -3,7 +3,7 @@
 
 function validateApp() {
   const checks = {
-    appStarts: typeof StockEasy !== 'undefined' || document.querySelector('[data-testid="stockeasy"]') !== null,
+    appStarts: typeof Stockeasy !== 'undefined' || document.querySelector('[data-testid="stockeasy"]') !== null,
     noConsoleErrors: true, // À vérifier manuellement dans la console
     uiIntact: true, // À vérifier visuellement
     functionsWork: true, // À tester manuellement

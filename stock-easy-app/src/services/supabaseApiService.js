@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabaseClient';
+import { invalidateCache } from './cacheService';
 
 // Fonction utilitaire pour convertir snake_case en camelCase
 const snakeToCamel = (obj) => {
@@ -155,14 +156,14 @@ export async function updateOrderStatus(orderId, updates = {}) {
       reconciliationUpdate.missing_quantity_total = missingQuantityTotal;
       reconciliationUpdate.damaged_quantity_total = damagedQuantityTotal;
       
-      if (updates.items) {
-        reconciliationUpdate.items = updates.items;
-      }
+      // Note: Les items ne sont pas stockés dans la table commandes mais dans articles_commande
+      // Ils seront mis à jour via la fonction update_order_items_reconciliation ci-dessous
       
       console.log('📤 Envoi mise à jour réconciliation:', reconciliationUpdate);
       console.log('📊 Totaux calculés:', { missingQuantityTotal, damagedQuantityTotal });
       
-      // Mettre à jour directement dans la table commandes
+      // Mettre à jour les colonnes de réconciliation dans la table commandes
+      // (sans la colonne items qui n'existe pas - les items sont dans articles_commande)
       const { data: updateData, error: updateError } = await supabase
         .from('commandes')
         .update(reconciliationUpdate)
@@ -229,6 +230,10 @@ export async function updateOrderStatus(orderId, updates = {}) {
     } else {
       console.log('⚠️ Aucune donnée de réconciliation à enregistrer');
     }
+    
+    // Invalider le cache après modification du statut de commande
+    invalidateCache(['orders', 'allData']);
+    console.log('🔄 Cache invalidé après mise à jour commande');
     
     return { success: true, data };
   } catch (error) {
@@ -702,10 +707,56 @@ export async function getOrdersPaginated({ page = 1, pageSize = 20, status, supp
   }
 }
 
+/**
+ * Récupère les statistiques mensuelles de CA vs Objectifs
+ * @param {number} months - Nombre de mois à récupérer (défaut: 12)
+ * @returns {Promise<Array>} Statistiques mensuelles
+ */
+export async function getMonthlyRevenueStats(months = 12) {
+  try {
+    const { data, error } = await supabase.rpc('get_monthly_revenue_stats', {
+      p_months: months
+    });
+
+    if (error) {
+      console.error('❌ Erreur Supabase get_monthly_revenue_stats:', error);
+      throw error;
+    }
+
+    return data || [];
+  } catch (error) {
+    console.error('❌ Erreur lors du chargement des stats mensuelles:', error);
+    throw error;
+  }
+}
+
+/**
+ * Récupère le résumé annuel CA vs Objectifs
+ * @returns {Promise<Object>} Résumé avec précision des multiplicateurs
+ */
+export async function getRevenueSummary() {
+  try {
+    const { data, error } = await supabase.rpc('get_revenue_summary');
+
+    if (error) {
+      console.error('❌ Erreur Supabase get_revenue_summary:', error);
+      throw error;
+    }
+
+    // La fonction retourne un tableau avec une seule ligne
+    return data?.[0] || null;
+  } catch (error) {
+    console.error('❌ Erreur lors du chargement du résumé CA:', error);
+    throw error;
+  }
+}
+
 export default {
   getAllData,
   getOrdersPaginated,
   getSalesHistory,
+  getMonthlyRevenueStats,
+  getRevenueSummary,
   createOrder,
   updateOrderStatus,
   processOrderReconciliation,

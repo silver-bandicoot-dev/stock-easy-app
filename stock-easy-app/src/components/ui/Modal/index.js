@@ -1,2 +1,2 @@
-export { Modal } from './Modal';
+export { Modal, ModalFooter, ModalSection } from './Modal';
 

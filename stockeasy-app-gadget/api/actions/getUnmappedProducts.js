@@ -2,7 +2,7 @@ import { getSupabaseClient } from "../lib/supabase";
 
 /**
  * Action to retrieve unmapped products for a specific shop/company
- * Used by StockEasy frontend to display the unmapped products dashboard
+ * Used by Stockeasy frontend to display the unmapped products dashboard
  * 
  * @type { ActionRun }
  */

@@ -28,6 +28,7 @@ export const UnsyncedPage = () => {
   const [syncing, setSyncing] = useState(false);
   const [data, setData] = useState({
     unsyncedItems: [],
+    unsyncedCount: 0,
     syncedSkus: 0,
     totalShopifySkus: 0
   });
@@ -48,6 +49,7 @@ export const UnsyncedPage = () => {
           setData({
             shopId: shop.id,
             unsyncedItems: result.data.unsyncedItems || [],
+            unsyncedCount: result.data.unsyncedCount || 0,
             syncedSkus: result.data.syncedSkus || 0,
             totalShopifySkus: result.data.totalShopifySkus || 0
           });
@@ -122,7 +124,7 @@ export const UnsyncedPage = () => {
   }
 
   const currentTab = tabs[selectedTab] || tabs[0];
-  const unsyncedCount = data.unsyncedItems.length;
+  const unsyncedCount = data.unsyncedCount || data.unsyncedItems.length;
 
   if (loading) {
     return (

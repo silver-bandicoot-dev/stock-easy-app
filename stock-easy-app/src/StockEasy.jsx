@@ -11,7 +11,7 @@ import { SearchBar, SearchModal } from './components/SearchBar';
 import { StockDataProvider, useStockContext } from './contexts/StockDataContext';
 import { useModalContext } from './contexts/ModalContext';
 import { CurrencyProvider } from './contexts/CurrencyContext';
-import { StockEasyModals } from './components/modals/StockEasyModals';
+import { StockeasyModals } from './components/modals/StockeasyModals';
 import { ErrorBoundary } from './components/ui/ErrorBoundary';
 import { SkeletonDashboard } from './components/ui/Skeleton';
 
@@ -20,6 +20,7 @@ import { DashboardTab } from './components/dashboard/DashboardTab';
 import { ActionsTab } from './components/actions/ActionsTab';
 import { OrdersTab } from './components/orders/OrdersTab';
 import { StockTab } from './components/stock/StockTab';
+import { InventoryTab } from './components/inventory/InventoryTab';
 import { AnalyticsTab } from './components/analytics/AnalyticsTab';
 import { SettingsTab } from './components/settings/SettingsTab';
 import ProfilePage from './components/profile/ProfilePage';
@@ -37,7 +38,7 @@ import * as UIHandlers from './handlers/uiHandlers';
 // ============================================
 // COMPOSANT CONTENU (Consomme le Context)
 // ============================================
-const StockEasyContent = () => {
+const StockeasyContent = () => {
   const navigate = useNavigate();
   const location = useLocation();
   
@@ -425,6 +426,15 @@ const StockEasyContent = () => {
                       </ErrorBoundary>
                     )}
 
+                    {activeTab === MAIN_TABS.INVENTORY && (
+                      <ErrorBoundary section="Inventaire">
+                        <InventoryTab
+                          products={enrichedProducts}
+                          suppliers={suppliers}
+                        />
+                      </ErrorBoundary>
+                    )}
+
                     {activeTab === MAIN_TABS.ANALYTICS && (
                       <ErrorBoundary section="Analytics">
                         <AnalyticsTab
@@ -522,7 +532,7 @@ const StockEasyContent = () => {
         </AnimatePresence>
 
         {/* MODALS - Sans props car tout est dans le contexte ! */}
-        <StockEasyModals />
+        <StockeasyModals />
       </>
     </CurrencyProvider>
   );
@@ -531,12 +541,12 @@ const StockEasyContent = () => {
 // ============================================
 // COMPOSANT RACINE
 // ============================================
-const StockEasy = () => {
+const Stockeasy = () => {
   return (
     <StockDataProvider>
-      <StockEasyContent />
+      <StockeasyContent />
     </StockDataProvider>
   );
 };
 
-export default StockEasy;
+export default Stockeasy;

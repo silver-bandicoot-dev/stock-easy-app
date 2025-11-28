@@ -1,5 +1,5 @@
 // ============================================
-// HANDLERS WAREHOUSES - Extraites de StockEasy.jsx
+// HANDLERS WAREHOUSES - Extraites de Stockeasy.jsx
 // PHASE 4 : Handlers Warehouses
 // ============================================
 

@@ -1,5 +1,5 @@
 // ============================================
-// HANDLERS COMMANDES - Extraites de StockEasy.jsx
+// HANDLERS COMMANDES - Extraites de Stockeasy.jsx
 // PHASE 8 : Handlers Commandes Complexes
 // PHASE 10 : Handlers Email/Commandes
 // ============================================

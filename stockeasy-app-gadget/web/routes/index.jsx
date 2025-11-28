@@ -31,7 +31,8 @@ export const DashboardPage = () => {
     syncedSkus: 0, 
     totalProducts: 0, 
     totalShopifySkus: 0,
-    unsyncedItems: [] 
+    unsyncedItems: [],
+    unsyncedCount: 0
   });
   const [statsLoading, setStatsLoading] = useState(true);
 
@@ -75,7 +76,8 @@ export const DashboardPage = () => {
           syncedSkus: result.data.syncedSkus || 0,
           totalProducts: result.data.totalProducts || 0,
           totalShopifySkus: result.data.totalShopifySkus || 0,
-          unsyncedItems: result.data.unsyncedItems || []
+          unsyncedItems: result.data.unsyncedItems || [],
+          unsyncedCount: result.data.unsyncedCount || 0
         });
       }
     } catch (error) {
@@ -94,7 +96,7 @@ export const DashboardPage = () => {
   const syncedCount = supabaseStats.syncedSkus;
   const totalSkus = supabaseStats.totalShopifySkus || 0;
   const unsyncedItems = supabaseStats.unsyncedItems || [];
-  const unsyncedCount = unsyncedItems.length;
+  const unsyncedCount = supabaseStats.unsyncedCount || unsyncedItems.length; // Use server count if available
   const lastSync = lastLogs?.[0]?.createdAt;
 
   // Format time ago
@@ -179,9 +181,7 @@ export const DashboardPage = () => {
   }, [shop?.id, loadSupabaseStats]);
 
   // Build Stockeasy dashboard URL
-  const stockeasyUrl = shop?.stockEasyCompanyId 
-    ? `https://stockeasy.app/dashboard` 
-    : 'https://stockeasy.app';
+  const stockeasyUrl = 'https://stock-easy-app.vercel.app';
 
   // Loading state
   if (shopFetching || statsLoading) {
@@ -203,30 +203,88 @@ export const DashboardPage = () => {
         {/* Main Status Card */}
         <Card>
           <BlockStack gap="500">
-            {/* Connection Status */}
-            <InlineStack gap="400" align="start" blockAlign="center">
-              <Box
-                background={isConnected ? "bg-fill-success" : "bg-fill-warning"}
-                borderRadius="full"
-                padding="300"
-              >
-                <Icon 
-                  source={isConnected ? CheckCircleIcon : AlertTriangleIcon} 
-                  tone={isConnected ? "success" : "warning"}
-                />
-              </Box>
-              <BlockStack gap="050">
-                <Text as="h1" variant="headingLg">
-                  {isConnected ? "Stockeasy connecté" : "Non connecté"}
-                </Text>
-                <Text as="p" tone="subdued" variant="bodySm">
-                  {isConnected 
-                    ? `Boutique ${shop?.name}` 
-                    : "Connectez votre boutique pour synchroniser vos produits"
-                  }
-                </Text>
-              </BlockStack>
+            {/* Header: Logo + Sync Button */}
+            <InlineStack align="space-between" blockAlign="center">
+              {/* Logo Stockeasy */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <svg
+                  viewBox="0 0 100 100"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                  style={{ width: 32, height: 32, transform: 'scaleY(-1)' }}
+                >
+                  <path d="M50 15 L85 35 L85 65 L50 85 L15 65 L15 35 Z" fill="rgba(0, 0, 0, 0.8)" stroke="#191919" strokeWidth="1.5"/>
+                  <path d="M50 15 L15 35 L15 65 L50 45 Z" fill="rgba(0, 0, 0, 0.6)" stroke="#191919" strokeWidth="1.5"/>
+                  <path d="M50 15 L85 35 L85 65 L50 45 Z" fill="rgba(0, 0, 0, 0.9)" stroke="#191919" strokeWidth="1.5"/>
+                  <line x1="50" y1="15" x2="50" y2="45" stroke="#191919" strokeWidth="1" opacity="0.5"/>
+                  <line x1="15" y1="35" x2="50" y2="45" stroke="#191919" strokeWidth="1" opacity="0.5"/>
+                  <line x1="85" y1="35" x2="50" y2="45" stroke="#191919" strokeWidth="1" opacity="0.5"/>
+                </svg>
+                <div style={{ width: '1px', height: '24px', backgroundColor: '#191919', opacity: 0.2 }} />
+                <span style={{ fontSize: '18px', fontWeight: '600', color: '#191919' }}>stockeasy</span>
+              </div>
+              
+              {/* Sync button */}
+              {isConnected && (
+                <button
+                  onClick={handleSync}
+                  disabled={syncing}
+                  style={{
+                    backgroundColor: '#000',
+                    color: '#fff',
+                    border: 'none',
+                    borderRadius: '6px',
+                    padding: '6px 12px',
+                    fontSize: '13px',
+                    fontWeight: '500',
+                    cursor: syncing ? 'not-allowed' : 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    opacity: syncing ? 0.7 : 1,
+                    transition: 'opacity 0.2s'
+                  }}
+                >
+                  {syncing ? (
+                    <span style={{ width: 14, height: 14 }}>
+                      <Spinner size="small" />
+                    </span>
+                  ) : (
+                    <Icon source={RefreshIcon} tone="inherit" />
+                  )}
+                  Synchroniser
+                </button>
+              )}
             </InlineStack>
+
+            {/* Shop name + Connection status */}
+            <InlineStack gap="200" blockAlign="center">
+              <Text as="p" variant="bodyMd">
+                {shop?.name || 'Boutique'}
+              </Text>
+              {isConnected ? (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span style={{
+                    width: '8px',
+                    height: '8px',
+                    borderRadius: '50%',
+                    backgroundColor: '#22c55e',
+                    display: 'inline-block'
+                  }} />
+                  <Text as="span" variant="bodySm" tone="subdued">connecté</Text>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span style={{
+                    width: '8px',
+                    height: '8px',
+                    borderRadius: '50%',
+                    backgroundColor: '#f59e0b',
+                    display: 'inline-block'
+                  }} />
+                  <Text as="span" variant="bodySm" tone="subdued">non connecté</Text>
+                </div>
+              )}</InlineStack>
 
             {/* Stats - Only show if connected */}
             {isConnected && (
@@ -255,25 +313,13 @@ export const DashboardPage = () => {
                       {formatTimeAgo(lastSync)}
                     </Text>
                     <Text as="p" tone="subdued" variant="bodySm">
-                      dernière sync
+                      dernière synchronisation des SKUs
                     </Text>
                   </BlockStack>
                 </InlineStack>
               </Box>
             )}
 
-            {/* Sync button */}
-            {isConnected && (
-              <Button
-                icon={RefreshIcon}
-                onClick={handleSync}
-                loading={syncing}
-                fullWidth
-                variant="secondary"
-              >
-                Synchroniser maintenant
-              </Button>
-            )}
 
             {/* SKUs not synced - Summary card with link to details */}
             {isConnected && unsyncedCount > 0 && (() => {
@@ -346,7 +392,7 @@ export const DashboardPage = () => {
             {/* Info about real-time sync */}
             {isConnected && (
               <Text as="p" variant="bodySm" tone="subdued" alignment="center">
-                🔄 Synchronisation automatique en temps réel active
+                Les modifications Shopify sont synchronisées automatiquement
               </Text>
             )}
 
@@ -398,10 +444,10 @@ export const DashboardPage = () => {
               </Text>
             </BlockStack>
             <InlineStack gap="200">
-              <Button url="https://stockeasy.app/docs" external variant="plain">
+              <Button url="https://stock-easy-app.vercel.app/docs" external variant="plain">
                 Docs
               </Button>
-              <Button url="https://stockeasy.app/support" external variant="plain">
+              <Button url="https://stock-easy-app.vercel.app/support" external variant="plain">
                 Support
               </Button>
             </InlineStack>

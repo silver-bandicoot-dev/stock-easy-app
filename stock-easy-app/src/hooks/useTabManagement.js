@@ -1,5 +1,5 @@
 // ============================================
-// HOOK useTabManagement - Extraites de StockEasy.jsx
+// HOOK useTabManagement - Extraites de Stockeasy.jsx
 // PRIORITÉ 5 : Gestion de la navigation entre onglets
 // ============================================
 

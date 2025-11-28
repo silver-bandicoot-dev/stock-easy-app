@@ -1,5 +1,5 @@
 /**
- * Utilitaires de gestion des dates pour l'intégration Shopify ↔ StockEasy
+ * Utilitaires de gestion des dates pour l'intégration Shopify ↔ Stockeasy
  * Gère la conversion des dates UTC vers la timezone du shop
  */
 import { DateTime } from 'luxon';

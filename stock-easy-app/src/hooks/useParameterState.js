@@ -1,5 +1,5 @@
 // ============================================
-// HOOK useParameterState - Extraites de StockEasy.jsx
+// HOOK useParameterState - Extraites de Stockeasy.jsx
 // PRIORITÉ 5 : Gestion de l'état des paramètres et synchronisation
 // ============================================
 

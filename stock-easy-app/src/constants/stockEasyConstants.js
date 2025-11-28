@@ -1,5 +1,5 @@
 // ============================================
-// CONSTANTES STOCK EASY - Extraites de StockEasy.jsx
+// CONSTANTES STOCKEASY - Extraites de Stockeasy.jsx
 // ============================================
 
 // Labels de statut des commandes
@@ -70,6 +70,7 @@ export const MAIN_TABS = {
   ACTIONS: 'actions',
   ORDERS: 'orders',
   STOCK: 'stock-level',
+  INVENTORY: 'inventory',
   ANALYTICS: 'analytics',
   SETTINGS: 'settings',
   PROFILE: 'profile'
@@ -203,7 +204,7 @@ export const DATE_FORMATS = {
 };
 
 // Mapping des clés KPI vers leurs titres
-// PHASE 1 : Extraite de StockEasy.jsx (lignes 623-628)
+// PHASE 1 : Extraite de Stockeasy.jsx (lignes 623-628)
 export const KPI_TITLES = {
   skuAvailability: 'Taux de Disponibilité des SKU',
   inventoryValuation: 'Valeur de l\'Inventaire',

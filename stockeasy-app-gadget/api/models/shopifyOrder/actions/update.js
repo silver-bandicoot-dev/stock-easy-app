@@ -159,20 +159,132 @@ export const onSuccess = async ({ params, record, logger, api, connections }) =>
       return; // Done processing cancellation
     }
 
-    // CASE 2: Order was updated (but not cancelled)
-    // Note: Refunds are handled automatically by Shopify for stock levels
-    // The inventory_levels/update webhook syncs stock changes to Supabase
-    // Delete old entries and re-insert updated data
-    if (record.changed('financialStatus') || record.changed('fulfillmentStatus') || 
+    // CASE 2: Order was refunded (partially or fully)
+    // Detect refunds by checking financialStatus change to PARTIALLY_REFUNDED or REFUNDED
+    const isRefund = record.changed('financialStatus') && 
+      (record.financialStatus === 'PARTIALLY_REFUNDED' || record.financialStatus === 'REFUNDED');
+    
+    if (isRefund) {
+      logger.info({ 
+        orderId: record.id, 
+        financialStatus: record.financialStatus 
+      }, '💰 Processing order refund - creating negative entries');
+
+      const lineItems = await api.shopifyOrderLineItem.findMany({
+        filter: { orderId: { equals: record.id } },
+        select: {
+          id: true,
+          variantId: true,
+          sku: true,
+          title: true,
+          variantTitle: true,
+          quantity: true,           // Original quantity
+          currentQuantity: true,    // Quantity after refunds
+          refundableQuantity: true, // Quantity that can still be refunded
+          price: true
+        }
+      });
+
+      const refundData = [];
+      const refundDate = DateTime.now()
+        .setZone(shop.timezone || 'America/New_York')
+        .toFormat('yyyy-MM-dd');
+
+      for (const lineItem of lineItems) {
+        // Calculate refunded quantity
+        const originalQty = lineItem.quantity || 0;
+        const currentQty = lineItem.currentQuantity ?? originalQty; // currentQuantity can be null
+        const refundedQty = originalQty - currentQty;
+
+        // Skip if nothing was refunded for this line item
+        if (refundedQty <= 0) {
+          continue;
+        }
+
+        // Find mapping
+        let mapping = null;
+        if (lineItem.variantId) {
+          mapping = await api.productMapping.findFirst({
+            filter: {
+              shopId: { equals: record.shopId },
+              shopifyVariantId: { equals: lineItem.variantId }
+            },
+            select: { stockEasySku: true }
+          });
+        }
+        
+        if (!mapping && lineItem.sku) {
+          mapping = await api.productMapping.findFirst({
+            filter: {
+              shopId: { equals: record.shopId },
+              shopifySku: { equals: lineItem.sku }
+            },
+            select: { stockEasySku: true }
+          });
+        }
+
+        if (!mapping) {
+          logger.warn({ variantId: lineItem.variantId, sku: lineItem.sku }, 'No mapping for refunded item - skipping');
+          continue;
+        }
+
+        // Create NEGATIVE entry for the refund
+        refundData.push({
+          company_id: companyUuid,
+          sku: mapping.stockEasySku,
+          sale_date: refundDate,
+          quantity: -refundedQty,  // NEGATIVE
+          revenue: -(parseFloat(lineItem.price) * refundedQty),  // NEGATIVE
+          source: 'shopify',
+          shopify_order_id: `${record.id}_refund`,
+          shopify_line_item_id: `${lineItem.id}_refund`,
+          metadata: {
+            shopify_order_id: record.id,
+            shopify_line_item_id: lineItem.id,
+            type: 'refund',
+            financial_status: record.financialStatus,
+            original_quantity: originalQty,
+            current_quantity: currentQty,
+            refunded_quantity: refundedQty
+          }
+        });
+      }
+
+      if (refundData.length > 0) {
+        await insertSalesHistory(refundData);
+        logger.info({ count: refundData.length }, '✅ Inserted refund entries in sales_history');
+
+        await api.syncLog.create({
+          shop: { _link: record.shopId },
+          entity: 'order',
+          operation: 'update',
+          direction: 'shopify_to_stockeasy',
+          status: 'success',
+          shopifyId: record.id,
+          message: `Order ${record.name} refunded - inserted ${refundData.length} negative entries`,
+          payload: {
+            orderId: record.id,
+            financialStatus: record.financialStatus,
+            refundedItems: refundData.length
+          }
+        });
+      }
+
+      return; // Done processing refund
+    }
+
+    // CASE 3: Order was updated (but not cancelled or refunded)
+    // Handle general updates to order data
+    if (record.changed('fulfillmentStatus') || 
         record.changed('currentSubtotalPrice') || record.changed('currentTotalPrice')) {
       
       logger.info({ orderId: record.id }, 'Order was updated - re-syncing to sales_history');
 
-      // Step 1: Delete old sales_history entries for this order
-      await deleteSalesHistoryByOrderId(companyUuid, record.id);
+      // Step 1: Delete old sales_history entries for this order (keep refund entries)
+      await deleteSalesHistoryByOrderId(companyUuid, record.id, { includeCancellations: false });
       logger.info({ orderId: record.id }, 'Deleted old sales_history entries');
 
-      // Step 2: Re-insert updated data (same logic as create.js)
+      // Step 2: Re-insert updated data using currentQuantity (reflects refunds)
       const lineItems = await api.shopifyOrderLineItem.findMany({
         filter: { orderId: { equals: record.id } },
         select: {
@@ -182,6 +294,7 @@ export const onSuccess = async ({ params, record, logger, api, connections }) =>
           title: true,
           variantTitle: true,
           quantity: true,
+          currentQuantity: true,
           price: true
         }
       });
@@ -194,6 +307,14 @@ export const onSuccess = async ({ params, record, logger, api, connections }) =>
         .toFormat('yyyy-MM-dd');
 
       for (const lineItem of lineItems) {
+        // Use currentQuantity if available (reflects refunds), fallback to quantity
+        const effectiveQuantity = lineItem.currentQuantity ?? lineItem.quantity;
+        
+        // Skip if quantity is 0 (fully refunded)
+        if (effectiveQuantity <= 0) {
+          continue;
+        }
+
         // Try to find mapping - first by variantId, then by SKU as fallback
         let mapping = null;
         
@@ -257,8 +378,8 @@ export const onSuccess = async ({ params, record, logger, api, connections }) =>
           company_id: companyUuid,
           sku: mapping.stockEasySku,
           sale_date: saleDate,
-          quantity: lineItem.quantity,
-          revenue: parseFloat(lineItem.price) * lineItem.quantity,
+          quantity: effectiveQuantity,  // Use effective quantity (after refunds)
+          revenue: parseFloat(lineItem.price) * effectiveQuantity,
           source: 'shopify',
           // Dedicated columns for unique constraint
           shopify_order_id: record.id,
@@ -269,7 +390,9 @@ export const onSuccess = async ({ params, record, logger, api, connections }) =>
             type: 'update',
             order_name: record.name,
             financial_status: record.financialStatus,
-            fulfillment_status: record.fulfillmentStatus
+            fulfillment_status: record.fulfillmentStatus,
+            original_quantity: lineItem.quantity,
+            effective_quantity: effectiveQuantity
           }
         });
       }

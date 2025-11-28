@@ -245,6 +245,8 @@ const api = {
   getAllData,
   getOrdersPaginated,
   getSalesHistory: getSalesHistoryAdapter,
+  getMonthlyRevenueStats: supabaseApi.getMonthlyRevenueStats,
+  getRevenueSummary: supabaseApi.getRevenueSummary,
   createOrder: supabaseApi.createOrder,
   updateOrderStatus: supabaseApi.updateOrderStatus,
   processOrderReconciliation: supabaseApi.processOrderReconciliation,
@@ -296,6 +298,8 @@ const api = {
 // Exports nommés pour compatibilité
 export const {
   getSalesHistory,
+  getMonthlyRevenueStats,
+  getRevenueSummary,
   createOrder,
   updateOrderStatus,
   processOrderReconciliation,

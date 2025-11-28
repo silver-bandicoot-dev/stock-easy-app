@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { AlertTriangle, CheckCircle, Package } from 'lucide-react';
-import { Modal } from '../../ui/Modal';
-import { Button } from '../../shared/Button';
-import { DISCREPANCY_TYPES } from '../../../constants/stockEasyConstants';
+import { AlertTriangle, CheckCircle, Package, ClipboardCheck } from 'lucide-react';
+import { Modal, ModalFooter, ModalSection } from '../../ui/Modal';
+import { Button } from '../../ui/Button';
 
 export const ReconciliationModal = ({
   isOpen,
@@ -20,19 +19,16 @@ export const ReconciliationModal = ({
 
   useEffect(() => {
     if (isOpen && order) {
-      // Initialiser les données avec les quantités commandées
       const initialReceivedItems = {};
       const initialDiscrepancies = {};
       const initialDamages = {};
 
       order.items?.forEach(item => {
-        // Utiliser les valeurs existantes si disponibles, sinon les quantités commandées
         const existingReceived = item.receivedQuantity !== undefined ? item.receivedQuantity : item.quantity;
         const existingDamaged = item.damagedQuantity || 0;
         const totalReceived = existingReceived + existingDamaged;
         const discrepancy = totalReceived - item.quantity;
 
-        // Stocker en string pour permettre des champs vides dans les inputs
         initialReceivedItems[item.sku] = existingReceived?.toString() ?? '';
         initialDiscrepancies[item.sku] = discrepancy;
         initialDamages[item.sku] = existingDamaged;
@@ -49,13 +45,11 @@ export const ReconciliationModal = ({
     const orderedQuantity = order.items?.find(item => item.sku === sku)?.quantity || 0;
     const receivedQty = parseInt(quantity || 0, 10) || 0;
     const damageQty = damages[sku] || 0;
-    // L'écart doit prendre en compte le total reçu (sain + endommagé)
     const totalReceived = receivedQty + damageQty;
     const discrepancy = totalReceived - orderedQuantity;
 
     setReceivedItems(prev => ({
       ...prev,
-      // On garde la valeur brute pour l'input afin de permettre la suppression du 0
       [sku]: quantity
     }));
 
@@ -69,7 +63,6 @@ export const ReconciliationModal = ({
     const damageQty = parseInt(quantity || 0, 10) || 0;
     const orderedQuantity = order.items?.find(item => item.sku === sku)?.quantity || 0;
     const receivedQty = parseInt((receivedItems[sku] ?? 0), 10) || 0;
-    // Recalculer l'écart quand la quantité endommagée change
     const totalReceived = receivedQty + damageQty;
     const discrepancy = totalReceived - orderedQuantity;
 
@@ -78,7 +71,6 @@ export const ReconciliationModal = ({
       [sku]: damageQty
     }));
 
-    // Mettre à jour l'écart aussi
     setDiscrepancies(prev => ({
       ...prev,
       [sku]: discrepancy
@@ -141,10 +133,11 @@ export const ReconciliationModal = ({
     <Modal 
       isOpen={isOpen} 
       onClose={onClose} 
-      title={`Réconciliation de commande ${order.poNumber || order.id}`}
-      size="large"
+      title={`Réconciliation ${order.poNumber || order.id}`}
+      icon={ClipboardCheck}
+      size="lg"
       footer={
-        <div className="flex items-center justify-end gap-3">
+        <ModalFooter>
           <Button
             variant="outline"
             onClick={onClose}
@@ -153,137 +146,126 @@ export const ReconciliationModal = ({
             Annuler
           </Button>
           <Button
-            variant="primary"
+            variant="success"
             onClick={handleConfirm}
-            disabled={isProcessing}
-            icon={isProcessing ? undefined : CheckCircle}
+            loading={isProcessing}
+            icon={CheckCircle}
           >
-            {isProcessing ? 'Traitement...' : 'Confirmer la réconciliation'}
+            Confirmer la réconciliation
           </Button>
-        </div>
+        </ModalFooter>
       }
     >
-
-        {/* Résumé des totaux */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-          <div className="bg-blue-50 rounded-lg p-4">
-            <div className="flex items-center gap-2 mb-1">
-              <Package className="w-4 h-4 text-blue-600" />
-              <span className="text-sm font-medium text-blue-900">Commandé</span>
-            </div>
-            <p className="text-2xl font-bold text-blue-900">{totals.totalOrdered}</p>
+      {/* Résumé des totaux */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+        <div className="bg-primary-50 rounded-lg p-4">
+          <div className="flex items-center gap-2 mb-1">
+            <Package className="w-4 h-4 text-primary-600" />
+            <span className="text-xs font-medium text-primary-900">Commandé</span>
           </div>
-          <div className="bg-green-50 rounded-lg p-4">
-            <div className="flex items-center gap-2 mb-1">
-              <CheckCircle className="w-4 h-4 text-green-600" />
-              <span className="text-sm font-medium text-green-900">Reçu</span>
-            </div>
-            <p className="text-2xl font-bold text-green-900">{totals.totalReceived}</p>
-          </div>
-          <div className="bg-orange-50 rounded-lg p-4">
-            <div className="flex items-center gap-2 mb-1">
-              <AlertTriangle className="w-4 h-4 text-orange-600" />
-              <span className="text-sm font-medium text-orange-900">Écarts</span>
-            </div>
-            <p className="text-2xl font-bold text-orange-900">{totals.totalDiscrepancies}</p>
-          </div>
-          <div className="bg-red-50 rounded-lg p-4">
-            <div className="flex items-center gap-2 mb-1">
-              <AlertTriangle className="w-4 h-4 text-red-600" />
-              <span className="text-sm font-medium text-red-900">Endommagés</span>
-            </div>
-            <p className="text-2xl font-bold text-red-900">{totals.totalDamages}</p>
-          </div>
+          <p className="text-2xl font-bold text-primary-900">{totals.totalOrdered}</p>
         </div>
+        <div className="bg-success-50 rounded-lg p-4">
+          <div className="flex items-center gap-2 mb-1">
+            <CheckCircle className="w-4 h-4 text-success-600" />
+            <span className="text-xs font-medium text-success-900">Reçu</span>
+          </div>
+          <p className="text-2xl font-bold text-success-900">{totals.totalReceived}</p>
+        </div>
+        <div className="bg-warning-50 rounded-lg p-4">
+          <div className="flex items-center gap-2 mb-1">
+            <AlertTriangle className="w-4 h-4 text-warning-600" />
+            <span className="text-xs font-medium text-warning-900">Écarts</span>
+          </div>
+          <p className="text-2xl font-bold text-warning-900">{totals.totalDiscrepancies}</p>
+        </div>
+        <div className="bg-danger-50 rounded-lg p-4">
+          <div className="flex items-center gap-2 mb-1">
+            <AlertTriangle className="w-4 h-4 text-danger-600" />
+            <span className="text-xs font-medium text-danger-900">Endommagés</span>
+          </div>
+          <p className="text-2xl font-bold text-danger-900">{totals.totalDamages}</p>
+        </div>
+      </div>
 
-        {/* Liste des produits */}
-        <div className="space-y-4 mb-6">
-          <h3 className="text-lg font-semibold text-gray-900">Articles reçus</h3>
-          <div className="space-y-3">
-            {order.items?.map(item => {
-              const product = products.find(p => p.sku === item.sku);
-              const rawReceived = receivedItems[item.sku];
-              const receivedQty = rawReceived === undefined ? '' : rawReceived;
-              const numericReceivedQty = parseInt(rawReceived || 0, 10) || 0;
-              const discrepancy = discrepancies[item.sku] || 0;
-              const damageQty = damages[item.sku] || 0;
+      {/* Liste des produits */}
+      <ModalSection title="Articles reçus" className="mb-6">
+        <div className="space-y-3">
+          {order.items?.map(item => {
+            const product = products.find(p => p.sku === item.sku);
+            const rawReceived = receivedItems[item.sku];
+            const receivedQty = rawReceived === undefined ? '' : rawReceived;
+            const numericReceivedQty = parseInt(rawReceived || 0, 10) || 0;
+            const discrepancy = discrepancies[item.sku] || 0;
+            const damageQty = damages[item.sku] || 0;
 
-              return (
-                <div key={item.sku} className="bg-gray-50 rounded-lg p-4">
-                  <div className="flex items-center justify-between mb-3">
-                    <div>
-                      <h4 className="font-medium text-gray-900">{item.sku}</h4>
-                      <p className="text-sm text-gray-600">{product?.name || 'Produit inconnu'}</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-sm text-gray-600">Commandé: {item.quantity}</p>
-                      {discrepancy !== 0 && (
-                        <p className={`text-sm font-medium ${discrepancy > 0 ? 'text-green-600' : 'text-red-600'}`}>
-                          Écart: {discrepancy > 0 ? '+' : ''}{discrepancy}
-                        </p>
-                      )}
-                      {damageQty > 0 && (
-                        <p className="text-sm font-medium text-red-600">
-                          Endommagé: {damageQty}
-                        </p>
-                      )}
-                    </div>
+            return (
+              <div key={item.sku} className="bg-neutral-50 rounded-lg p-4 border border-neutral-100">
+                <div className="flex items-center justify-between mb-3">
+                  <div>
+                    <h4 className="font-medium text-neutral-900">{item.sku}</h4>
+                    <p className="text-sm text-neutral-500">{product?.name || 'Produit inconnu'}</p>
                   </div>
+                  <div className="text-right">
+                    <p className="text-sm text-neutral-500">Commandé: <span className="font-medium text-neutral-700">{item.quantity}</span></p>
+                    {discrepancy !== 0 && (
+                      <p className={`text-sm font-medium ${discrepancy > 0 ? 'text-success-600' : 'text-danger-600'}`}>
+                        Écart: {discrepancy > 0 ? '+' : ''}{discrepancy}
+                      </p>
+                    )}
+                  </div>
+                </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Quantité reçue saine
-                      </label>
-                      <input
-                        type="number"
-                        min="0"
-                        value={receivedQty}
-                        onChange={(e) => handleReceivedQuantityChange(item.sku, e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Quantité endommagée
-                      </label>
-                      <input
-                        type="number"
-                        min="0"
-                        value={damageQty}
-                        onChange={(e) => handleDamageQuantityChange(item.sku, e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Total reçu
-                      </label>
-                      <div className="px-3 py-2 bg-gray-100 rounded-lg text-gray-900 font-medium">
-                        {numericReceivedQty + damageQty}
-                      </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <div>
+                    <label className="label-base">
+                      Quantité reçue saine
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={receivedQty}
+                      onChange={(e) => handleReceivedQuantityChange(item.sku, e.target.value)}
+                      className="input-base"
+                    />
+                  </div>
+                  <div>
+                    <label className="label-base">
+                      Quantité endommagée
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={damageQty}
+                      onChange={(e) => handleDamageQuantityChange(item.sku, e.target.value)}
+                      className="input-base"
+                    />
+                  </div>
+                  <div>
+                    <label className="label-base">
+                      Total reçu
+                    </label>
+                    <div className="px-3.5 py-2.5 bg-neutral-100 rounded-lg text-neutral-700 font-medium border border-neutral-200">
+                      {numericReceivedQty + damageQty}
                     </div>
                   </div>
                 </div>
-              );
-            })}
-          </div>
+              </div>
+            );
+          })}
         </div>
+      </ModalSection>
 
-        {/* Notes */}
-        <div className="mb-6">
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Notes (optionnel)
-          </label>
-          <textarea
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            rows={3}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            placeholder="Ajoutez des notes sur la réception..."
-          />
-        </div>
-
+      {/* Notes */}
+      <ModalSection title="Notes" description="Ajoutez des observations sur la réception (optionnel)">
+        <textarea
+          value={notes}
+          onChange={(e) => setNotes(e.target.value)}
+          rows={3}
+          className="textarea-base"
+          placeholder="Ajoutez des notes sur la réception..."
+        />
+      </ModalSection>
     </Modal>
   );
 };

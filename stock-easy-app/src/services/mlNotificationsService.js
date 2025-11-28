@@ -1,20 +1,23 @@
 /**
  * Service pour les notifications Machine Learning
  * Crée des notifications dans Supabase pour les recommandations ML importantes
+ * Version 2.0 avec déduplication et respect des préférences utilisateur
  */
 
-import { createNotification, createNotificationsForUsers, getCompanyUserIds } from './autoNotificationsService';
+import { createNotificationsForUsersV2 } from './notificationsService';
+import { getCompanyUserIds } from './autoNotificationsService';
 import { generateMLAlerts, generateAutoRecommendations } from './ml/alertService';
 
 /**
  * Crée des notifications pour les alertes ML critiques (confiance élevée)
+ * Avec déduplication basée sur le SKU
  * @param {Array} products - Liste des produits
  * @param {Object} forecasts - Prévisions ML
  * @param {number} confidenceThreshold - Seuil de confiance minimum (défaut: 80%)
  */
 export async function notifyMLCriticalAlerts(products, forecasts, confidenceThreshold = 80) {
   if (!forecasts || Object.keys(forecasts).length === 0) {
-    return { success: true, count: 0 };
+    return { success: true, count: 0, skipped: 0 };
   }
 
   try {
@@ -26,22 +29,26 @@ export async function notifyMLCriticalAlerts(products, forecasts, confidenceThre
     );
 
     if (criticalAlerts.length === 0) {
-      return { success: true, count: 0 };
+      return { success: true, count: 0, skipped: 0 };
     }
 
     // Récupérer tous les utilisateurs de l'entreprise
     const userIds = await getCompanyUserIds();
     if (userIds.length === 0) {
-      return { success: true, count: 0 };
+      return { success: true, count: 0, skipped: 0 };
     }
 
-    // Créer une notification par alerte critique
-    const notificationPromises = criticalAlerts.slice(0, 5).map(alert => { // Max 5 alertes à la fois
+    let successCount = 0;
+    let skippedCount = 0;
+
+    // Créer une notification par alerte critique (max 5)
+    // Utiliser la déduplication basée sur le SKU avec un cooldown de 24h
+    for (const alert of criticalAlerts.slice(0, 5)) {
       const title = alert.severity === 'critical' 
         ? `🚨 ML: ${alert.message}`
         : `⚠️ ML: ${alert.message}`;
 
-      return createNotificationsForUsers(
+      const result = await createNotificationsForUsersV2(
         userIds,
         'ml_alert',
         title,
@@ -54,21 +61,29 @@ export async function notifyMLCriticalAlerts(products, forecasts, confidenceThre
           alertType: alert.type,
           action: alert.action,
           confidence: alert.confidence || 'high'
-        }
+        },
+        `ml_alert_${alert.sku}`, // Clé de déduplication basée sur le SKU
+        24 // Cooldown de 24h
       );
-    });
 
-    await Promise.all(notificationPromises);
+      if (result.successCount > 0) {
+        successCount++;
+      } else {
+        skippedCount++;
+      }
+    }
 
-    return { success: true, count: criticalAlerts.length };
+    console.log(`📊 Alertes ML: ${successCount} envoyées, ${skippedCount} ignorées (cooldown)`);
+    return { success: true, count: successCount, skipped: skippedCount };
   } catch (error) {
     console.error('Erreur création notifications ML critiques:', error);
-    return { success: false, error, count: 0 };
+    return { success: false, error, count: 0, skipped: 0 };
   }
 }
 
 /**
  * Crée une notification hebdomadaire pour lancer les analyses ML
+ * Avec déduplication pour éviter les doublons si appelé plusieurs fois le même jour
  */
 export async function notifyWeeklyMLAnalysis() {
   try {
@@ -84,10 +99,13 @@ export async function notifyWeeklyMLAnalysis() {
       month: 'long'
     });
 
+    // Clé de déduplication basée sur la semaine
+    const weekKey = `${today.getFullYear()}_W${getWeekNumber(today)}`;
+
     const title = '🧠 Analyse ML hebdomadaire disponible';
     const message = `Une nouvelle analyse de prévision de demande est disponible (${dateStr}). Consultez les recommandations pour optimiser vos commandes.`;
 
-    await createNotificationsForUsers(
+    const result = await createNotificationsForUsersV2(
       userIds,
       'ml_weekly',
       title,
@@ -95,11 +113,14 @@ export async function notifyWeeklyMLAnalysis() {
       '/ml-analysis',
       {
         analysisDate: today.toISOString(),
-        type: 'weekly_report'
-      }
+        type: 'weekly_report',
+        week: weekKey
+      },
+      `ml_weekly_${weekKey}`, // Clé de déduplication par semaine
+      168 // Cooldown de 7 jours (168h)
     );
 
-    return { success: true, count: 1 };
+    return { success: true, count: result.successCount };
   } catch (error) {
     console.error('Erreur création notification ML hebdomadaire:', error);
     return { success: false, error, count: 0 };
@@ -108,6 +129,7 @@ export async function notifyWeeklyMLAnalysis() {
 
 /**
  * Crée des notifications pour les recommandations de commande ML avec haute confiance
+ * Avec déduplication par fournisseur
  * @param {Array} products - Liste des produits
  * @param {Object} forecasts - Prévisions ML
  */
@@ -119,12 +141,12 @@ export async function notifyMLRecommendations(products, forecasts) {
     const urgentRecommendations = recommendations.filter(rec => rec.urgency === 'urgent');
 
     if (urgentRecommendations.length === 0) {
-      return { success: true, count: 0 };
+      return { success: true, count: 0, skipped: 0 };
     }
 
     const userIds = await getCompanyUserIds();
     if (userIds.length === 0) {
-      return { success: true, count: 0 };
+      return { success: true, count: 0, skipped: 0 };
     }
 
     // Grouper les recommandations par fournisseur
@@ -134,8 +156,11 @@ export async function notifyMLRecommendations(products, forecasts) {
       return acc;
     }, {});
 
-    // Créer une notification par fournisseur
-    const notificationPromises = Object.entries(bySupplier).map(([supplier, recs]) => {
+    let successCount = 0;
+    let skippedCount = 0;
+
+    // Créer une notification par fournisseur avec déduplication
+    for (const [supplier, recs] of Object.entries(bySupplier)) {
       const productCount = recs.length;
       const totalCost = recs.reduce((sum, r) => sum + (r.estimatedCost || 0), 0);
       
@@ -145,7 +170,10 @@ export async function notifyMLRecommendations(products, forecasts) {
       const title = `🤖 ML recommande: Commander chez ${supplier}`;
       const message = `${productCount} produit(s) à commander URGENCE: ${productList}${moreText}. Coût estimé: ${totalCost.toFixed(2)}€. ${recs[0].reason}`;
 
-      return createNotificationsForUsers(
+      // Clé de déduplication basée sur le fournisseur et les SKUs
+      const skuHash = recs.map(r => r.sku).sort().join('_').substring(0, 50);
+      
+      const result = await createNotificationsForUsersV2(
         userIds,
         'ml_recommendation',
         title,
@@ -162,16 +190,23 @@ export async function notifyMLRecommendations(products, forecasts) {
             quantity: r.quantity,
             reason: r.reason
           }))
-        }
+        },
+        `ml_rec_${supplier}_${skuHash}`, // Clé de déduplication
+        12 // Cooldown de 12h pour les recommandations urgentes
       );
-    });
 
-    await Promise.all(notificationPromises);
+      if (result.successCount > 0) {
+        successCount++;
+      } else {
+        skippedCount++;
+      }
+    }
 
-    return { success: true, count: Object.keys(bySupplier).length };
+    console.log(`📊 Recommandations ML: ${successCount} envoyées, ${skippedCount} ignorées (cooldown)`);
+    return { success: true, count: successCount, skipped: skippedCount };
   } catch (error) {
     console.error('Erreur création notifications recommandations ML:', error);
-    return { success: false, error, count: 0 };
+    return { success: false, error, count: 0, skipped: 0 };
   }
 }
 
@@ -187,21 +222,34 @@ export async function checkAndNotifyMLInsights(products, forecasts) {
   try {
     // 1. Notifications pour alertes critiques
     const alertsResult = await notifyMLCriticalAlerts(products, forecasts, 80);
-    console.log(`✅ ${alertsResult.count} notification(s) d'alerte ML créée(s)`);
+    console.log(`✅ Alertes ML: ${alertsResult.count} créée(s), ${alertsResult.skipped} ignorée(s)`);
 
     // 2. Notifications pour recommandations urgentes
     const recsResult = await notifyMLRecommendations(products, forecasts);
-    console.log(`✅ ${recsResult.count} notification(s) de recommandation ML créée(s)`);
+    console.log(`✅ Recommandations ML: ${recsResult.count} créée(s), ${recsResult.skipped} ignorée(s)`);
 
     return {
       success: true,
       alertsCount: alertsResult.count,
+      alertsSkipped: alertsResult.skipped,
       recommendationsCount: recsResult.count,
-      totalCount: alertsResult.count + recsResult.count
+      recommendationsSkipped: recsResult.skipped,
+      totalCount: alertsResult.count + recsResult.count,
+      totalSkipped: alertsResult.skipped + recsResult.skipped
     };
   } catch (error) {
     console.error('Erreur vérification insights ML:', error);
-    return { success: false, error, totalCount: 0 };
+    return { success: false, error, totalCount: 0, totalSkipped: 0 };
   }
 }
 
+/**
+ * Obtient le numéro de semaine ISO d'une date
+ */
+function getWeekNumber(date) {
+  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+  const dayNum = d.getUTCDay() || 7;
+  d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+  return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+}

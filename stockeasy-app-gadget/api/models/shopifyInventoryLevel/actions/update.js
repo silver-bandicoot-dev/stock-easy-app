@@ -11,7 +11,7 @@ import {
 
 /**
  * Shopify Inventory Level Update Action
- * Direction: Shopify → Supabase (StockEasy)
+ * Direction: Shopify → Supabase (Stockeasy)
  * 
  * Triggered by: Shopify webhook inventory_levels/update
  * 
@@ -72,14 +72,14 @@ export const onSuccess = async ({ record, api, logger, connections }) => {
     } catch (error) {
       // No mapping found - this is expected for unmapped products
       if (error.message && error.message.includes('no productMapping found')) {
-        logger.info({ inventoryItemId }, 'No mapping found - product not synced to StockEasy');
+        logger.info({ inventoryItemId }, 'No mapping found - product not synced to Stockeasy');
         return;
       }
       throw error;
     }
 
     if (!mapping) {
-      logger.info({ inventoryItemId }, 'No mapping found - product not synced to StockEasy');
+      logger.info({ inventoryItemId }, 'No mapping found - product not synced to Stockeasy');
       return;
     }
 

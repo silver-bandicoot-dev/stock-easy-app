@@ -10,7 +10,7 @@ import SupabaseResetPassword from './components/auth/SupabaseResetPassword';
 import AcceptInvitation from './components/auth/AcceptInvitation';
 import EmailConfirmation from './components/auth/EmailConfirmation';
 import NotificationsPage from './components/notifications/NotificationsPage';
-import StockEasy from './StockEasy';
+import Stockeasy from './Stockeasy';
 import ProfileRedirect from './components/profile/ProfileRedirect';
 import SupabaseConnectionTest from './components/debug/SupabaseConnectionTest';
 import './config/i18n';
@@ -48,7 +48,7 @@ const App = () => {
             path="/"
             element={
               <ProtectedRoute>
-                <StockEasy />
+                <Stockeasy />
               </ProtectedRoute>
             }
           />

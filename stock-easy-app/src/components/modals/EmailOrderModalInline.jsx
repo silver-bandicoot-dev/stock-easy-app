@@ -1,10 +1,12 @@
-import React, { useState, useEffect } from 'react';
-import { Mail, AlertCircle } from 'lucide-react';
-import { Modal } from '../ui/Modal';
+import React, { useState, useEffect, useMemo } from 'react';
+import { Mail, AlertCircle, AlertTriangle, CheckCircle2, Copy, ExternalLink } from 'lucide-react';
+import { Modal, ModalFooter, ModalSection } from '../ui/Modal';
 import { Button } from '../ui/Button';
 import { roundToTwoDecimals } from '../../utils/decimalUtils';
 import { useCurrency } from '../../contexts/CurrencyContext';
 import { ImagePreview } from '../ui/ImagePreview';
+import emailService from '../../services/emailService';
+import { toast } from 'sonner';
 
 export const EmailOrderModalInline = ({
   isOpen,
@@ -25,233 +27,273 @@ export const EmailOrderModalInline = ({
   const [editableEmail, setEditableEmail] = useState('');
   const [editableSubject, setEditableSubject] = useState('');
   const [editableBody, setEditableBody] = useState('');
+  const [isCopied, setIsCopied] = useState(false);
   const { format: formatCurrency } = useCurrency();
 
-  // Initialiser les valeurs éditables quand le modal s'ouvre
+  // Trouver les informations du fournisseur et de l'entrepôt
+  const supplierInfo = useMemo(() => {
+    if (!selectedSupplier || !suppliers) return null;
+    return Array.isArray(suppliers)
+      ? suppliers.find(s => s.name === selectedSupplier)
+      : suppliers[selectedSupplier] || Object.values(suppliers).find(s => s.name === selectedSupplier);
+  }, [selectedSupplier, suppliers]);
+
+  const warehouseInfo = useMemo(() => {
+    if (!selectedWarehouse || !warehouses) return null;
+    return warehouses[selectedWarehouse] || Object.values(warehouses).find(w => w.name === selectedWarehouse);
+  }, [selectedWarehouse, warehouses]);
+
+  const productsToOrder = useMemo(() => {
+    if (!selectedSupplier || !toOrderBySupplier) return [];
+    return toOrderBySupplier[selectedSupplier] || [];
+  }, [selectedSupplier, toOrderBySupplier]);
+
+  // Calculer le total
+  const totalAmount = useMemo(() => {
+    return roundToTwoDecimals(
+      productsToOrder.reduce((sum, p) => {
+        const qty = orderQuantities[p.sku] ?? p.qtyToOrder ?? 0;
+        return sum + (qty * (p.buyPrice || 0));
+      }, 0)
+    );
+  }, [productsToOrder, orderQuantities]);
+
+  // Générer l'email quand les paramètres changent
   useEffect(() => {
-    if (isOpen && selectedSupplier) {
-      const emailContent = emailGeneration.generateOrderEmailDraft(
-        selectedSupplier,
-        toOrderBySupplier[selectedSupplier],
-        selectedWarehouse,
-        orderQuantities,
-        getUserSignature(),
-        suppliers,
-        warehouses
-      );
-      
-      const parsedEmail = parseEmail(emailContent);
-      setEditableEmail(parsedEmail.to);
-      setEditableSubject(parsedEmail.subject);
-      setEditableBody(parsedEmail.body);
+    if (!isOpen || !selectedSupplier || !selectedWarehouse) return;
+
+    const email = emailService.generateOrderEmail({
+      supplierName: selectedSupplier,
+      products: productsToOrder,
+      quantities: orderQuantities,
+      supplier: supplierInfo,
+      warehouse: warehouseInfo ? { ...warehouseInfo, name: selectedWarehouse } : { name: selectedWarehouse },
+      signature: getUserSignature?.() || "L'équipe Stockeasy",
+      formatCurrency
+    });
+
+    setEditableEmail(email.to);
+    setEditableSubject(email.subject);
+    setEditableBody(email.body);
+  }, [isOpen, selectedSupplier, selectedWarehouse, orderQuantities, productsToOrder, supplierInfo, warehouseInfo, formatCurrency]);
+
+  // Validation de l'email
+  const isEmailValid = emailService.isValidEmail(editableEmail);
+
+  // Handlers
+  const handleCopy = async () => {
+    const fullEmail = emailService.buildEmailContent(editableEmail, editableSubject, editableBody);
+    const success = await emailService.copyToClipboard(fullEmail);
+    if (success) {
+      setIsCopied(true);
+      toast.success('Email copié dans le presse-papiers');
+      setTimeout(() => setIsCopied(false), 2000);
+    } else {
+      toast.error('Erreur lors de la copie');
     }
-  }, [isOpen, selectedSupplier, selectedWarehouse, orderQuantities]);
+  };
+
+  const handleOpenEmailClient = () => {
+    emailService.openEmailClient(editableEmail, editableSubject, editableBody);
+  };
 
   if (!isOpen || !selectedSupplier) return null;
-
-  const productsToOrder = toOrderBySupplier[selectedSupplier];
-  
-  // Debug logs
-  console.log('🔍 Debug EmailOrderModalInline:');
-  console.log('- selectedSupplier:', selectedSupplier);
-  console.log('- productsToOrder:', productsToOrder);
-  console.log('- selectedWarehouse:', selectedWarehouse);
-  console.log('- orderQuantities:', orderQuantities);
-  console.log('- getUserSignature():', getUserSignature());
-  
-  const emailContent = emailGeneration.generateOrderEmailDraft(
-    selectedSupplier,
-    productsToOrder,
-    selectedWarehouse,
-    orderQuantities,
-    getUserSignature(),
-    suppliers,
-    warehouses
-  );
-  
-  console.log('- Generated email:', emailContent);
-  
-  // Parser l'email pour extraire les parties
-  const parseEmail = (content) => {
-    if (!content) return { to: '', subject: '', body: '' };
-    
-    const lines = content.split('\n');
-    let to = '';
-    let subject = '';
-    let body = '';
-    
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i].trim();
-      if (line.startsWith('À:')) {
-        to = line.replace('À:', '').trim();
-      } else if (line.startsWith('Objet:')) {
-        subject = line.replace('Objet:', '').trim();
-      } else if (line.startsWith('Bonjour,')) {
-        body = lines.slice(i).join('\n');
-        break;
-      }
-    }
-    
-    return { to, subject, body };
-  };
-  
-  const email = parseEmail(emailContent);
-  const totalAmount = roundToTwoDecimals(productsToOrder.reduce((sum, p) => {
-    const qty = orderQuantities[p.sku] || p.qtyToOrder;
-    return sum + (qty * p.buyPrice);
-  }, 0));
 
   return (
     <Modal
       isOpen={isOpen && selectedSupplier}
       onClose={onClose}
       title={`Commande - ${selectedSupplier}`}
-      size="large"
+      icon={Mail}
+      size="lg"
       footer={
-        <div className="flex justify-end gap-2">
-          <Button variant="outline" onClick={onClose} size="sm">
+        <ModalFooter>
+          <Button variant="outline" onClick={onClose}>
             Annuler
           </Button>
           <Button 
             variant="secondary" 
             onClick={handleCreateOrderWithoutEmail}
             disabled={!selectedWarehouse}
-            size="sm"
           >
-            Créer commande sans email
+            Créer sans email
           </Button>
           <Button 
             variant="primary" 
             icon={Mail} 
             onClick={handleSendOrder}
-            disabled={!selectedWarehouse}
-            size="sm"
+            disabled={!selectedWarehouse || !isEmailValid}
           >
-            Envoyer email et créer commande
+            Envoyer et créer
           </Button>
-        </div>
+        </ModalFooter>
       }
     >
       {/* Sélection de l'entrepôt */}
-      <div className="mb-6">
-        <label className="block text-sm font-medium text-[#191919] mb-2">
-          Entrepôt de livraison *
-        </label>
-        {Object.keys(warehouses).length === 0 ? (
-          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 flex items-start gap-3">
-            <AlertCircle className="w-5 h-5 text-yellow-600 shrink-0 mt-0.5" />
+      <ModalSection title="Entrepôt de livraison" className="mb-6">
+        {Object.keys(warehouses || {}).length === 0 ? (
+          <div className="bg-warning-50 border border-warning-200 rounded-lg p-4 flex items-start gap-3">
+            <AlertCircle className="w-5 h-5 text-warning-600 shrink-0 mt-0.5" />
             <div>
-              <p className="text-sm text-yellow-800 font-medium">Aucun entrepôt configuré</p>
-              <p className="text-sm text-yellow-700 mt-1">
+              <p className="text-sm text-warning-800 font-medium">Aucun entrepôt configuré</p>
+              <p className="text-sm text-warning-700 mt-1">
                 Veuillez d'abord créer un entrepôt dans Paramètres → Entrepôts
               </p>
             </div>
           </div>
         ) : (
-          <select
-            value={selectedWarehouse || ''}
-            onChange={(e) => setSelectedWarehouse(e.target.value)}
-            className="w-full px-4 py-2.5 border border-[#E5E4DF] rounded-lg focus:outline-none focus:ring-2 focus:ring-black bg-white"
-            required
-          >
-            {Object.values(warehouses).map((warehouse) => (
-              <option key={warehouse.name} value={warehouse.name}>
-                {warehouse.name} - {warehouse.city}, {warehouse.country}
-              </option>
-            ))}
-          </select>
+          <>
+            <select
+              value={selectedWarehouse || ''}
+              onChange={(e) => setSelectedWarehouse(e.target.value)}
+              className="select-base"
+              required
+            >
+              {Object.values(warehouses).map((warehouse) => (
+                <option key={warehouse.name} value={warehouse.name}>
+                  {warehouse.name} - {warehouse.city}, {warehouse.country}
+                </option>
+              ))}
+            </select>
+            {warehouseInfo && (
+              <div className="mt-2 text-sm text-neutral-600 bg-neutral-50 p-3 rounded-lg border border-neutral-100">
+                <p className="font-medium text-neutral-900 mb-1">Adresse de livraison :</p>
+                <p>{warehouseInfo.address}</p>
+                <p>{warehouseInfo.postalCode} {warehouseInfo.city}</p>
+                <p>{warehouseInfo.country}</p>
+              </div>
+            )}
+          </>
         )}
-        {selectedWarehouse && warehouses[selectedWarehouse] && (
-          <div className="mt-2 text-sm text-[#666663] bg-[#FAFAF7] p-3 rounded-lg">
-            <p className="font-medium text-[#191919] mb-1">Adresse de livraison :</p>
-            <p>{warehouses[selectedWarehouse].address}</p>
-            <p>{warehouses[selectedWarehouse].postalCode} {warehouses[selectedWarehouse].city}</p>
-            <p>{warehouses[selectedWarehouse].country}</p>
-          </div>
-        )}
-      </div>
+      </ModalSection>
 
       {/* Section d'édition des quantités */}
-      <div className="mb-4 bg-blue-50 border border-blue-200 rounded-lg p-3">
-        <h4 className="font-semibold text-[#191919] mb-2 text-sm">Ajuster les quantités</h4>
-        <div className="space-y-2">
-          {productsToOrder.map(p => (
-            <div key={p.sku} className="bg-white rounded p-2 border border-[#E5E4DF]">
-              <div className="grid grid-cols-4 gap-2 items-center">
-                <div className="col-span-2 flex items-center gap-2">
-                  {p.imageUrl ? (
-                    <ImagePreview
-                      src={p.imageUrl}
-                      alt={p.name}
-                      thumbClassName="w-8 h-8 rounded-md object-cover flex-shrink-0 bg-[#E5E4DF]"
-                    />
-                  ) : (
-                    <div className="w-8 h-8 rounded-md bg-[#E5E4DF] flex items-center justify-center text-[10px] text-[#666663] flex-shrink-0">
-                      {p.name?.charAt(0) || '?'}
-                    </div>
-                  )}
-                  <div>
-                    <div className="font-medium text-[#191919] text-xs truncate">{p.name}</div>
-                    <div className="text-xs text-[#666663]">
-                      SKU: {p.sku} • Rec: {Math.ceil(p.qtyToOrder || 0)}
+      <ModalSection title="Produits à commander" className="mb-6">
+        <div className="bg-primary-50 border border-primary-200 rounded-lg p-4">
+          <div className="space-y-2 max-h-60 overflow-y-auto custom-scrollbar">
+            {productsToOrder.map(p => (
+              <div key={p.sku} className="bg-white rounded-lg p-3 border border-neutral-200">
+                <div className="grid grid-cols-4 gap-3 items-center">
+                  <div className="col-span-2 flex items-center gap-3">
+                    {p.imageUrl ? (
+                      <ImagePreview
+                        src={p.imageUrl}
+                        alt={p.name}
+                        thumbClassName="w-10 h-10 rounded-lg object-cover flex-shrink-0 bg-neutral-100"
+                      />
+                    ) : (
+                      <div className="w-10 h-10 rounded-lg bg-neutral-100 flex items-center justify-center text-xs text-neutral-500 flex-shrink-0 font-medium">
+                        {p.name?.charAt(0) || '?'}
+                      </div>
+                    )}
+                    <div className="min-w-0">
+                      <div className="font-medium text-neutral-900 text-sm truncate">{p.name}</div>
+                      <div className="text-xs text-neutral-500">
+                        SKU: {p.sku} • Rec: {Math.ceil(p.qtyToOrder || 0)}
+                      </div>
                     </div>
                   </div>
-                </div>
-                <div>
-                  <input
-                    type="number"
-                    min="0"
-                    step="1"
-                    value={orderQuantities[p.sku] !== undefined ? Math.ceil(orderQuantities[p.sku]) : Math.ceil(p.qtyToOrder || 0)}
-                    onChange={(e) => {
-                      const value = parseInt(e.target.value) || 0;
-                      updateOrderQuantity(p.sku, value);
-                    }}
-                    className="w-full px-2 py-1 border border-[#E5E4DF] rounded text-center text-sm font-bold"
-                  />
-                </div>
-                <div className="text-xs text-right text-[#666663]">
-                  {formatCurrency(roundToTwoDecimals((orderQuantities[p.sku] || p.qtyToOrder) * p.buyPrice))}
+                  <div>
+                    <input
+                      type="number"
+                      min="0"
+                      step="1"
+                      value={orderQuantities[p.sku] !== undefined ? Math.ceil(orderQuantities[p.sku]) : Math.ceil(p.qtyToOrder || 0)}
+                      onChange={(e) => {
+                        const value = parseInt(e.target.value) || 0;
+                        updateOrderQuantity(p.sku, value);
+                      }}
+                      className="input-base text-center font-semibold"
+                    />
+                  </div>
+                  <div className="text-sm text-right font-medium text-neutral-700">
+                    {formatCurrency(roundToTwoDecimals((orderQuantities[p.sku] ?? p.qtyToOrder ?? 0) * (p.buyPrice || 0)))}
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
+          <div className="mt-3 pt-3 border-t border-primary-200 flex justify-between items-center">
+            <span className="text-sm font-medium text-neutral-700">Total commande :</span>
+            <span className="text-xl font-bold text-neutral-900">{formatCurrency(totalAmount)}</span>
+          </div>
         </div>
-        <div className="mt-2 pt-2 border-t border-blue-200 flex justify-between items-center">
-          <span className="text-sm text-[#666663]">Total:</span>
-          <span className="text-lg font-bold text-[#191919]">{formatCurrency(totalAmount)}</span>
-        </div>
-      </div>
+      </ModalSection>
       
       {/* Prévisualisation email */}
-      <div className="space-y-3">
-        <h4 className="font-semibold text-[#191919]">Prévisualisation email</h4>
-        <div>
-          <label className="block text-sm font-medium text-[#666663] mb-1">À:</label>
-          <input 
-            value={editableEmail} 
-            onChange={(e) => setEditableEmail(e.target.value)}
-            className="w-full px-3 py-2 border-2 border-[#E5E4DF] rounded-lg bg-white text-[#191919] text-sm focus:outline-none focus:ring-2 focus:ring-black" 
-          />
+      <ModalSection 
+        title="Email de commande" 
+        description="Vérifiez et modifiez le contenu avant envoi"
+        className="mb-4"
+      >
+        {/* Actions rapides */}
+        <div className="flex items-center justify-end gap-2 mb-4">
+          <Button
+            variant="outline"
+            size="sm"
+            icon={Copy}
+            onClick={handleCopy}
+            disabled={isCopied}
+          >
+            {isCopied ? 'Copié !' : 'Copier'}
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            icon={ExternalLink}
+            onClick={handleOpenEmailClient}
+          >
+            Ouvrir client email
+          </Button>
         </div>
-        <div>
-          <label className="block text-sm font-medium text-[#666663] mb-1">Objet:</label>
-          <input 
-            value={editableSubject} 
-            onChange={(e) => setEditableSubject(e.target.value)}
-            className="w-full px-3 py-2 border-2 border-[#E5E4DF] rounded-lg bg-white text-[#191919] text-sm focus:outline-none focus:ring-2 focus:ring-black" 
-          />
+
+        <div className="space-y-4">
+          {/* Destinataire */}
+          <div>
+            <label className="label-base flex items-center gap-2">
+              À:
+              {isEmailValid ? (
+                <CheckCircle2 className="w-4 h-4 text-success-500" />
+              ) : editableEmail && (
+                <AlertTriangle className="w-4 h-4 text-warning-500" />
+              )}
+            </label>
+            <input 
+              type="email"
+              value={editableEmail} 
+              onChange={(e) => setEditableEmail(e.target.value)}
+              className={`input-base ${!isEmailValid && editableEmail ? 'border-warning-400 focus:border-warning-500 focus:ring-warning-500/20' : ''}`}
+              placeholder="email@fournisseur.com"
+            />
+            {!isEmailValid && editableEmail && (
+              <p className="helper-text text-warning-600">Adresse email invalide</p>
+            )}
+          </div>
+
+          {/* Objet */}
+          <div>
+            <label className="label-base">Objet:</label>
+            <input 
+              type="text"
+              value={editableSubject} 
+              onChange={(e) => setEditableSubject(e.target.value)}
+              className="input-base"
+              placeholder="Objet de l'email"
+            />
+          </div>
+
+          {/* Corps du message */}
+          <div>
+            <label className="label-base">Message:</label>
+            <textarea 
+              value={editableBody} 
+              onChange={(e) => setEditableBody(e.target.value)}
+              rows={12} 
+              className="input-base font-mono text-sm resize-y min-h-[200px]"
+            />
+          </div>
         </div>
-        <div>
-          <label className="block text-sm font-medium text-[#666663] mb-1">Message:</label>
-          <textarea 
-            value={editableBody} 
-            onChange={(e) => setEditableBody(e.target.value)}
-            rows={8} 
-            className="w-full px-3 py-2 border-2 border-[#E5E4DF] rounded-lg bg-white text-[#191919] font-mono text-xs focus:outline-none focus:ring-2 focus:ring-black" 
-          />
-        </div>
-      </div>
+      </ModalSection>
     </Modal>
   );
 };

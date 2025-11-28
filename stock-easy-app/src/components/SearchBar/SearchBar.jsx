@@ -81,7 +81,7 @@ export const SearchBar = ({
       // Si setActiveTab est fourni, utiliser la navigation par onglets
       // Sinon, utiliser React Router
       if (setActiveTab) {
-        // Navigation par onglets (pour StockEasy)
+        // Navigation par onglets (pour Stockeasy)
         console.log('🔍 Navigation vers:', item.type, item.id, item.data);
         
         switch (item.type) {

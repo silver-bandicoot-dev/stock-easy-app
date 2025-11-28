@@ -1,5 +1,5 @@
 // ============================================
-// HANDLERS MAPPING - Extraites de StockEasy.jsx
+// HANDLERS MAPPING - Extraites de Stockeasy.jsx
 // PHASE 5 : Handlers Mapping
 // ============================================
 

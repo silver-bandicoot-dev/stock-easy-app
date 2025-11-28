@@ -1,6 +1,7 @@
 import React from 'react';
-import { Modal } from '../../ui/Modal';
+import { Modal, ModalFooter, ModalSection } from '../../ui/Modal';
 import { Button } from '../../ui/Button';
+import { Link2, Save, AlertTriangle, Package } from 'lucide-react';
 
 /**
  * Modal pour assigner un fournisseur à un produit
@@ -10,7 +11,7 @@ import { Button } from '../../ui/Button';
  * @param {Object} props.product - Produit à assigner
  * @param {Object} props.suppliers - Map des fournisseurs
  * @param {string} props.selectedSupplier - Fournisseur sélectionné
- * @param {Function} props.onSelectSupplier - Callback de sélection
+ * @param {Function} props.onSupplierChange - Callback de sélection
  * @param {Function} props.onAssign - Callback d'assignation
  * @returns {JSX.Element}
  */
@@ -20,18 +21,20 @@ export function AssignSupplierModal({
   product, 
   suppliers,
   selectedSupplier,
-  onSelectSupplier,
+  onSupplierChange,
   onAssign
 }) {
-  const suppliersList = Object.values(suppliers);
+  const suppliersList = Object.values(suppliers || {});
   
   return (
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title="🔗 Assigner un fournisseur"
+      title="Assigner un fournisseur"
+      icon={Link2}
+      size="md"
       footer={
-        <div className="flex gap-3 justify-end">
+        <ModalFooter>
           <Button variant="secondary" onClick={onClose}>
             Annuler
           </Button>
@@ -39,29 +42,42 @@ export function AssignSupplierModal({
             variant="primary" 
             onClick={onAssign}
             disabled={!selectedSupplier}
+            icon={Save}
           >
-            💾 Assigner
+            Assigner
           </Button>
-        </div>
+        </ModalFooter>
       }
     >
       {product && (
-        <div className="space-y-4">
-          <div className="bg-[#FAFAF7] rounded-lg p-4 border border-[#E5E4DF]">
-            <div className="text-sm text-[#666663] mb-1">Produit</div>
-            <div className="font-semibold text-[#191919]">
-              {product.sku} - {product.name}
+        <div className="space-y-5">
+          {/* Info produit */}
+          <div className="bg-neutral-50 rounded-lg p-4 border border-neutral-200">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-primary-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                <Package className="w-5 h-5 text-primary-600" />
+              </div>
+              <div>
+                <div className="text-xs text-neutral-500 mb-0.5">Produit sélectionné</div>
+                <div className="font-semibold text-neutral-900">
+                  {product.sku}
+                </div>
+                <div className="text-sm text-neutral-600">
+                  {product.name}
+                </div>
+              </div>
             </div>
           </div>
           
-          <div>
-            <label className="block text-sm font-medium text-[#666663] mb-2">
-              Sélectionner un fournisseur *
+          {/* Sélection fournisseur */}
+          <ModalSection>
+            <label className="label-base">
+              Sélectionner un fournisseur <span className="text-danger-500">*</span>
             </label>
             <select
-              value={selectedSupplier}
-              onChange={(e) => onSelectSupplier(e.target.value)}
-              className="w-full px-4 py-3 border-2 border-[#E5E4DF] rounded-lg focus:outline-none focus:border-[#8B5CF6] bg-white"
+              value={selectedSupplier || ''}
+              onChange={(e) => onSupplierChange(e.target.value)}
+              className="select-base"
             >
               <option value="">-- Choisir un fournisseur --</option>
               {suppliersList.map(s => (
@@ -72,14 +88,16 @@ export function AssignSupplierModal({
             </select>
             
             {suppliersList.length === 0 && (
-              <p className="text-sm text-[#EF1C43] mt-2">
-                ⚠️ Aucun fournisseur disponible. Créez d'abord un fournisseur dans l'onglet "Fournisseurs".
-              </p>
+              <div className="flex items-center gap-2 mt-3 p-3 bg-danger-50 border border-danger-200 rounded-lg">
+                <AlertTriangle className="w-4 h-4 text-danger-600 flex-shrink-0" />
+                <p className="text-sm text-danger-700">
+                  Aucun fournisseur disponible. Créez d'abord un fournisseur dans l'onglet "Fournisseurs".
+                </p>
+              </div>
             )}
-          </div>
+          </ModalSection>
         </div>
       )}
     </Modal>
   );
 }
-

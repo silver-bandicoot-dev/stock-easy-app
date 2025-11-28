@@ -1,5 +1,5 @@
 /**
- * Utilitaires de validation des données pour l'intégration Shopify ↔ StockEasy
+ * Utilitaires de validation des données pour l'intégration Shopify ↔ Stockeasy
  * Empêche les données corrompues d'être insérées dans Supabase
  */
 

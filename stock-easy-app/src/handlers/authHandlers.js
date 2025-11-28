@@ -1,5 +1,5 @@
 // ============================================
-// HANDLERS AUTH - Extraites de StockEasy.jsx
+// HANDLERS AUTH - Extraites de Stockeasy.jsx
 // PHASE 12 : Handlers Utilitaires Auth
 // ============================================
 

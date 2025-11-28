@@ -21,7 +21,8 @@ import {
   Zap,
   PlugZap,
   Cog,
-  Brain
+  Brain,
+  ClipboardList
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -51,6 +52,7 @@ const Sidebar = ({
     { id: 'actions', label: 'Passer Commande', icon: Plus, type: 'tab' },
     { id: 'orders', label: 'Mes Commandes', icon: Truck, type: 'tab' },
     { id: 'stock-level', label: 'Niveaux de Stock', icon: Activity, type: 'tab' },
+    { id: 'inventory', label: 'Inventaire', icon: ClipboardList, type: 'tab' },
     { 
       id: 'analytics', 
       label: 'Analytics', 

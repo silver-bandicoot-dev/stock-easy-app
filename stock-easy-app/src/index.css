@@ -147,7 +147,7 @@ html, body {
 }
 
 /* ========================================
-   StockEasy Dashboard - Style Shopify
+   Stockeasy Dashboard - Style Shopify
    Sobre, neutre, professionnel
    ======================================== */
 
@@ -217,4 +217,89 @@ html, body {
   padding: 2px 4px;
   border-radius: 4px;
   font-weight: 500;
+}
+
+/* ========================================
+   Design Tokens pour Modales & Forms
+   Système unifié pour tous les composants
+   ======================================== */
+:root {
+  /* Modal Colors */
+  --modal-bg: #FFFFFF;
+  --modal-header-bg: #0F172A;
+  --modal-header-text: #FFFFFF;
+  --modal-footer-bg: #F8FAFC;
+  --modal-border: #E2E8F0;
+  --modal-backdrop: rgba(15, 23, 42, 0.6);
+  
+  /* Form Input Colors */
+  --input-bg: #FFFFFF;
+  --input-border: #CBD5E1;
+  --input-border-focus: #6366F1;
+  --input-ring-focus: rgba(99, 102, 241, 0.2);
+  --input-text: #0F172A;
+  --input-placeholder: #94A3B8;
+  --input-label: #475569;
+  --input-helper: #64748B;
+  --input-disabled-bg: #F1F5F9;
+  
+  /* Action Colors */
+  --action-primary: #4F46E5;
+  --action-primary-hover: #4338CA;
+  --action-secondary: #475569;
+  --action-secondary-hover: #334155;
+  --action-danger: #E11D48;
+  --action-danger-hover: #BE123C;
+  --action-success: #059669;
+  --action-success-hover: #047857;
+  
+  /* Spacing */
+  --modal-padding: 1.5rem;
+  --input-padding-x: 0.875rem;
+  --input-padding-y: 0.625rem;
+  
+  /* Border Radius */
+  --modal-radius: 0.75rem;
+  --input-radius: 0.5rem;
+  --button-radius: 0.5rem;
+}
+
+/* Base Input Styles - Unified */
+.input-base {
+  @apply w-full px-3.5 py-2.5 
+         bg-white border border-neutral-300 
+         rounded-lg text-neutral-900 
+         placeholder:text-neutral-400
+         transition-all duration-200
+         focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500
+         disabled:bg-neutral-100 disabled:cursor-not-allowed disabled:opacity-60;
+}
+
+/* Label Styles - Unified */
+.label-base {
+  @apply block text-sm font-medium text-neutral-600 mb-1.5;
+}
+
+/* Helper Text - Unified */
+.helper-text {
+  @apply text-xs text-neutral-500 mt-1;
+}
+
+/* Modal Input Override (pour uniformité dans les modales) */
+.modal-input {
+  @apply input-base text-sm;
+}
+
+/* Select Styles - Unified */
+.select-base {
+  @apply input-base appearance-none bg-no-repeat cursor-pointer;
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%2394A3B8' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+  background-position: right 0.75rem center;
+  background-size: 1.25rem;
+  padding-right: 2.5rem;
+}
+
+/* Textarea Styles - Unified */
+.textarea-base {
+  @apply input-base resize-none min-h-[80px];
 }

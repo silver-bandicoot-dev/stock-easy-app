@@ -1,5 +1,5 @@
 // ============================================
-// HANDLERS UI - Extraites de StockEasy.jsx
+// HANDLERS UI - Extraites de Stockeasy.jsx
 // PHASE 12 : Handlers Utilitaires UI
 // PHASE 17 : Handlers UI Utilitaires (extension)
 // ============================================

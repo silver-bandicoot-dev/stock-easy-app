@@ -1,3 +1,11 @@
+/**
+ * @deprecated Ce composant est déprécié.
+ * Utilisez ProfilePage à la place pour une meilleure expérience utilisateur.
+ * 
+ * Ce fichier sera supprimé dans une version future.
+ * 
+ * Migration : import ProfilePage from './ProfilePage';
+ */
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/SupabaseAuthContext';
@@ -15,6 +23,9 @@ import {
   ensureUserCompany
 } from '../../services/profileService';
 
+/**
+ * @deprecated Utilisez ProfilePage à la place
+ */
 const UserProfile = () => {
   const { currentUser } = useAuth();
   const navigate = useNavigate();

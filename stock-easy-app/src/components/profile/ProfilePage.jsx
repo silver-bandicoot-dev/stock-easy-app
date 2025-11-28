@@ -2,10 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/SupabaseAuthContext';
 import { toast } from 'sonner';
+import { motion, AnimatePresence } from 'framer-motion';
 import { 
   User, Camera, Mail, Globe, Users, Save, 
   Crown, UserPlus, X, Upload, Building2, Trash2, RefreshCw,
-  Copy, Check, Clock, AlertCircle, Shield
+  Copy, Check, Clock, AlertCircle, Shield, Key
 } from 'lucide-react';
 import { Modal } from '../ui/Modal';
 import { supabase } from '../../lib/supabaseClient';
@@ -22,6 +23,27 @@ import {
   removeTeamMember,
   deleteTeamMember
 } from '../../services/companyService';
+
+// Animation variants
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: { staggerChildren: 0.1 }
+  }
+};
+
+const cardVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: { 
+    opacity: 1, 
+    y: 0,
+    transition: { duration: 0.4, ease: "easeOut" }
+  }
+};
+
+// Style d'avatar sobre et cohérent avec l'application
+const AVATAR_STYLE = 'from-[#191919] to-[#444444]';
 
 const ProfilePage = () => {
   const { currentUser, logout } = useAuth();
@@ -473,10 +495,14 @@ const ProfilePage = () => {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
-        <div className="text-center">
+        <motion.div 
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="text-center"
+        >
           <div className="w-16 h-16 border-4 border-[#191919] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
           <p className="text-lg font-medium text-[#191919]">Chargement...</p>
-        </div>
+        </motion.div>
       </div>
     );
   }
@@ -484,64 +510,94 @@ const ProfilePage = () => {
   const isAdmin = userData?.role === 'owner' || userData?.role === 'admin';
 
   return (
-    <div className="max-w-7xl mx-auto">
-      {/* Bouton de sauvegarde (apparait uniquement si nécessaire) */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-          {/* Profil Personnel */}
-          <div className="lg:col-span-2 space-y-5">
-            {/* Carte Profil */}
-            <div className="bg-white rounded-xl shadow-sm border border-[#E5E4DF] p-5 md:p-6">
-              <div className="flex items-center justify-between gap-3 mb-5">
-                <h2 className="text-lg md:text-xl font-bold text-[#191919]">Informations personnelles</h2>
-                {hasChanges() && (
-                  <button
-                    onClick={handleSaveProfile}
-                    disabled={saving || uploadingPhoto}
-                    className="inline-flex items-center gap-2 px-3 py-1.5 text-sm rounded-md bg-[#191919] text-white hover:bg-[#2A2A2A] transition-all"
-                  >
-                    <Save className="w-4 h-4" />
-                    <span>{uploadingPhoto ? 'Upload...' : saving ? 'Sauvegarde...' : 'Sauvegarder'}</span>
-                  </button>
+    <motion.div 
+      className="max-w-7xl mx-auto"
+      variants={containerVariants}
+      initial="hidden"
+      animate="visible"
+    >
+      {/* Header de page - Style cohérent avec Settings */}
+      <motion.div variants={cardVariants} className="mb-6">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <h1 className="text-xl sm:text-2xl font-semibold text-[#191919]">Mon Profil</h1>
+            <p className="text-sm text-[#6B7177] mt-0.5">
+              Gérez vos informations personnelles, votre entreprise et votre équipe
+            </p>
+          </div>
+          
+          {/* Bouton sauvegarder - Style cohérent avec l'app */}
+          <AnimatePresence>
+            {hasChanges() && (
+              <motion.button
+                initial={{ opacity: 0, scale: 0.8, y: 10 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.8, y: 10 }}
+                onClick={handleSaveProfile}
+                disabled={saving || uploadingPhoto}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-[#191919] text-white font-medium hover:bg-[#2A2A2A] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {uploadingPhoto ? (
+                  <RefreshCw className="w-4 h-4 animate-spin" />
+                ) : saving ? (
+                  <RefreshCw className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Save className="w-4 h-4" />
                 )}
+                <span>{uploadingPhoto ? 'Upload...' : saving ? 'Sauvegarde...' : 'Sauvegarder les modifications'}</span>
+              </motion.button>
+            )}
+          </AnimatePresence>
+        </div>
+      </motion.div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+        {/* Profil Personnel */}
+        <div className="lg:col-span-2 space-y-5">
+          {/* Carte Profil */}
+          <motion.div 
+            variants={cardVariants}
+            className="bg-white rounded-xl shadow-sm border border-[#E5E4DF] p-5 md:p-6"
+          >
+            <h2 className="text-lg font-semibold text-[#191919] mb-5">Informations personnelles</h2>
+            
+            {/* Photo et infos principales */}
+            <div className="flex flex-col sm:flex-row sm:items-center gap-5 mb-6 pb-6 border-b border-[#E5E4DF]">
+              <div className="relative group">
+                {photoPreview ? (
+                  <img
+                    src={photoPreview}
+                    alt="Profile"
+                    className="w-20 h-20 md:w-24 md:h-24 rounded-full object-cover ring-4 ring-[#FAFAF7]"
+                  />
+                ) : (
+                  <div className={`w-20 h-20 md:w-24 md:h-24 bg-gradient-to-br ${AVATAR_STYLE} rounded-full flex items-center justify-center text-white text-2xl md:text-3xl font-bold ring-4 ring-[#FAFAF7]`}>
+                    {getInitials()}
+                  </div>
+                )}
+                
+                <label className="absolute bottom-0 right-0 p-2 bg-white rounded-full shadow-lg cursor-pointer hover:bg-[#FAFAF7] transition-colors border border-[#E5E4DF]">
+                  <Camera className="w-4 h-4 text-[#191919]" />
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handlePhotoChange}
+                    className="hidden"
+                  />
+                </label>
               </div>
               
-              {/* Photo */}
-              <div className="flex flex-col sm:flex-row sm:items-center gap-5 mb-6 pb-6 border-b border-[#E5E4DF]">
-                <div className="relative">
-                  {photoPreview ? (
-                    <img
-                      src={photoPreview}
-                      alt="Profile"
-                      className="w-20 h-20 md:w-24 md:h-24 rounded-full object-cover ring-4 ring-[#FAFAF7]"
-                    />
-                  ) : (
-                    <div className="w-20 h-20 md:w-24 md:h-24 bg-gradient-to-br from-[#191919] to-[#666663] rounded-full flex items-center justify-center text-white text-2xl md:text-3xl font-bold ring-4 ring-[#FAFAF7]">
-                      {getInitials()}
-                    </div>
-                  )}
-                  
-                  <label className="absolute bottom-0 right-0 p-2 bg-white rounded-full shadow-lg cursor-pointer hover:bg-[#FAFAF7] transition-colors border border-[#E5E4DF]">
-                    <Camera className="w-4 h-4 text-[#191919]" />
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={handlePhotoChange}
-                      className="hidden"
-                    />
-                  </label>
-                </div>
-                
-                <div className="flex-1">
-                  <h3 className="text-xl md:text-2xl font-bold text-[#191919] mb-1">
-                    {firstName && lastName ? `${firstName} ${lastName}` : 'Votre nom'}
-                  </h3>
-                  <p className="text-[#666663] flex items-center gap-2 mb-3">
-                    <Mail className="w-4 h-4" />
-                    {email || currentUser?.email}
-                  </p>
-                  {userData?.role && getRoleBadge(userData.role)}
-                </div>
+              <div className="flex-1">
+                <h3 className="text-xl md:text-2xl font-bold text-[#191919] mb-1">
+                  {firstName && lastName ? `${firstName} ${lastName}` : 'Votre nom'}
+                </h3>
+                <p className="text-[#666663] flex items-center gap-2 mb-3">
+                  <Mail className="w-4 h-4" />
+                  {email || currentUser?.email}
+                </p>
+                {userData?.role && getRoleBadge(userData.role)}
               </div>
+            </div>
 
               {/* Formulaire */}
               <div className="space-y-5">
@@ -554,7 +610,7 @@ const ProfilePage = () => {
                       type="text"
                       value={firstName}
                       onChange={(e) => setFirstName(e.target.value)}
-                      className="w-full px-4 py-3 border border-[#E5E4DF] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#191919] bg-white"
+                      className="w-full px-4 py-3 border border-[#E5E4DF] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#191919]/10 focus:border-[#191919] bg-white transition-all"
                       placeholder="Votre prénom"
                       required
                     />
@@ -568,37 +624,83 @@ const ProfilePage = () => {
                       type="text"
                       value={lastName}
                       onChange={(e) => setLastName(e.target.value)}
-                      className="w-full px-4 py-3 border border-[#E5E4DF] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#191919] bg-white"
+                      className="w-full px-4 py-3 border border-[#E5E4DF] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#191919]/10 focus:border-[#191919] bg-white transition-all"
                       placeholder="Votre nom"
                       required
                     />
                   </div>
                 </div>
 
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-[#191919] mb-2">
+                      Adresse email *
+                    </label>
+                    <input
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      className="w-full px-4 py-3 border border-[#E5E4DF] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#191919]/10 focus:border-[#191919] bg-white transition-all"
+                      placeholder="email@exemple.com"
+                      required
+                    />
+                    <p className="text-xs text-[#666663] mt-2">
+                      Toute modification nécessitera une confirmation par email.
+                    </p>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-[#191919] mb-2 flex items-center gap-2">
+                      <Globe className="w-4 h-4 text-[#666663]" />
+                      Langue de l'interface
+                    </label>
+                    <select
+                      value={language}
+                      onChange={(e) => setLanguage(e.target.value)}
+                      className="w-full px-4 py-3 border border-[#E5E4DF] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#191919]/10 focus:border-[#191919] bg-white transition-all"
+                    >
+                      <option value="fr">Français</option>
+                      <option value="en">English</option>
+                      <option value="es">Español</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+
+            {/* Carte Sécurité - Mot de passe */}
+            <motion.div 
+              variants={cardVariants}
+              className="bg-white rounded-xl shadow-sm border border-[#E5E4DF] p-5 md:p-6"
+            >
+              <div className="flex items-center justify-between gap-3 mb-5">
                 <div>
-                  <label className="block text-sm font-medium text-[#191919] mb-2">
-                    Adresse email *
-                  </label>
-                  <input
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="w-full px-4 py-3 border border-[#E5E4DF] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#191919] bg-white"
-                    placeholder="email@exemple.com"
-                    required
-                  />
-                  <p className="text-xs text-[#666663] mt-2">
-                    Toute modification nécessitera une confirmation via un lien envoyé à la nouvelle adresse.
-                  </p>
-                  <button
-                    type="button"
-                    onClick={() => setShowPasswordForm(prev => !prev)}
-                    className="mt-3 text-sm font-medium text-[#191919] hover:text-[#2A2A2A] underline"
+                  <h2 className="text-lg font-semibold text-[#191919]">Sécurité</h2>
+                  <p className="text-sm text-[#666663]">Gérez votre mot de passe</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowPasswordForm(prev => !prev)}
+                  className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
+                    showPasswordForm 
+                      ? 'bg-[#191919] text-white' 
+                      : 'bg-white text-[#191919] border border-[#E5E4DF] hover:bg-[#FAFAF7]'
+                  }`}
+                >
+                  <Shield className="w-4 h-4" />
+                  {showPasswordForm ? 'Annuler' : 'Modifier'}
+                </button>
+              </div>
+              
+              <AnimatePresence>
+                {showPasswordForm ? (
+                  <motion.div 
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="space-y-4 overflow-hidden"
                   >
-                    {showPasswordForm ? 'Fermer la modification du mot de passe' : 'Modifier mon mot de passe'}
-                  </button>
-                  {showPasswordForm && (
-                    <div className="mt-3 space-y-4 bg-[#FAFAF7] border border-[#E5E4DF] rounded-lg p-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
                         <label className="block text-sm font-medium text-[#191919] mb-2">
                           Nouveau mot de passe
@@ -607,8 +709,8 @@ const ProfilePage = () => {
                           type="password"
                           value={newPassword}
                           onChange={(e) => setNewPassword(e.target.value)}
-                          className="w-full px-4 py-3 border border-[#E5E4DF] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#191919] bg-white"
-                          placeholder="********"
+                          className="w-full px-4 py-3 border border-[#E5E4DF] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#191919]/10 focus:border-[#191919] bg-white transition-all"
+                          placeholder="••••••••"
                         />
                       </div>
                       <div>
@@ -619,132 +721,159 @@ const ProfilePage = () => {
                           type="password"
                           value={confirmPassword}
                           onChange={(e) => setConfirmPassword(e.target.value)}
-                          className="w-full px-4 py-3 border border-[#E5E4DF] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#191919] bg-white"
-                          placeholder="********"
+                          className="w-full px-4 py-3 border border-[#E5E4DF] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#191919]/10 focus:border-[#191919] bg-white transition-all"
+                          placeholder="••••••••"
                         />
                       </div>
-                      <button
-                        onClick={handleUpdatePassword}
-                        disabled={
-                          updatingPassword ||
-                          !newPassword.trim() ||
-                          newPassword.trim().length < 8 ||
-                          newPassword.trim() !== confirmPassword.trim()
-                        }
-                        className="w-full inline-flex items-center justify-center gap-2 px-4 py-2 rounded-md bg-[#191919] text-white hover:bg-[#2A2A2A] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        {updatingPassword ? (
-                          <>
-                            <RefreshCw className="w-4 h-4 animate-spin" />
-                            Mise à jour...
-                          </>
-                        ) : (
-                          <>
-                            <Shield className="w-4 h-4" />
-                            Mettre à jour le mot de passe
-                          </>
-                        )}
-                      </button>
-                      <p className="text-xs text-[#666663]">
-                        Utilisez au moins 8 caractères. Après modification, vous devrez vous reconnecter sur vos autres appareils.
-                      </p>
                     </div>
-                  )}
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-[#191919] mb-2 flex items-center gap-2">
-                    <Globe className="w-4 h-4" />
-                    Langue de l'interface
-                  </label>
-                  <select
-                    value={language}
-                    onChange={(e) => setLanguage(e.target.value)}
-                    className="w-full px-4 py-3 border border-[#E5E4DF] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#191919] bg-white"
+                    
+                    {/* Password strength indicator */}
+                    {newPassword && (
+                      <div className="flex items-center gap-3">
+                        <div className="flex-1 h-1.5 bg-[#E5E4DF] rounded-full overflow-hidden">
+                          <div 
+                            className={`h-full rounded-full transition-all ${
+                              newPassword.length >= 12 ? 'w-full bg-green-500' :
+                              newPassword.length >= 8 ? 'w-2/3 bg-yellow-500' :
+                              'w-1/3 bg-red-500'
+                            }`}
+                          />
+                        </div>
+                        <span className={`text-xs font-medium ${
+                          newPassword.length >= 12 ? 'text-green-600' :
+                          newPassword.length >= 8 ? 'text-yellow-600' :
+                          'text-red-600'
+                        }`}>
+                          {newPassword.length >= 12 ? 'Fort' : newPassword.length >= 8 ? 'Moyen' : 'Faible'}
+                        </span>
+                      </div>
+                    )}
+                    
+                    <button
+                      onClick={handleUpdatePassword}
+                      disabled={
+                        updatingPassword ||
+                        !newPassword.trim() ||
+                        newPassword.trim().length < 8 ||
+                        newPassword.trim() !== confirmPassword.trim()
+                      }
+                      className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-[#191919] text-white font-medium hover:bg-[#2A2A2A] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {updatingPassword ? (
+                        <>
+                          <RefreshCw className="w-4 h-4 animate-spin" />
+                          Mise à jour...
+                        </>
+                      ) : (
+                        <>
+                          <Shield className="w-4 h-4" />
+                          Mettre à jour le mot de passe
+                        </>
+                      )}
+                    </button>
+                    <p className="text-xs text-[#666663]">
+                      Utilisez au moins 8 caractères. Après modification, vous devrez vous reconnecter sur vos autres appareils.
+                    </p>
+                  </motion.div>
+                ) : (
+                  <motion.div 
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="flex items-center gap-3 p-3 bg-[#FAFAF7] rounded-lg"
                   >
-                    <option value="fr">Français</option>
-                    <option value="en">English</option>
-                    <option value="es">Español</option>
-                  </select>
-                </div>
-              </div>
-
-              {companyData && (
-                <div className="pt-6 mt-6 border-t border-[#E5E4DF]">
-                  <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-5">
-                    <div>
-                      <h3 className="text-base md:text-lg font-semibold text-[#191919] flex items-center gap-2">
-                        <Building2 className="w-5 h-5" />
-                        Mon entreprise
-                      </h3>
-                      <p className="text-sm text-[#666663]">
-                        Gestion des informations partagées avec votre équipe.
-                      </p>
+                    <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center">
+                      <Check className="w-4 h-4 text-green-600" />
                     </div>
-                    <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#FAFAF7] border border-[#E5E4DF] text-sm text-[#191919]">
-                      <Users className="w-4 h-4" />
-                      {teamMembers.length} {teamMembers.length > 1 ? 'collaborateurs' : 'collaborateur'}
+                    <div>
+                      <p className="text-sm font-medium text-[#191919]">Mot de passe actif</p>
+                      <p className="text-xs text-[#666663]">Votre mot de passe est sécurisé</p>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+            </motion.div>
+
+            {/* Carte Entreprise */}
+            {companyData && (
+              <motion.div 
+                variants={cardVariants}
+                className="bg-white rounded-xl shadow-sm border border-[#E5E4DF] p-5 md:p-6"
+              >
+                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-5">
+                  <div>
+                    <h2 className="text-lg font-semibold text-[#191919] flex items-center gap-2">
+                      <Building2 className="w-5 h-5" />
+                      Mon entreprise
+                    </h2>
+                    <p className="text-sm text-[#666663]">Informations partagées avec votre équipe</p>
+                  </div>
+                  <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#FAFAF7] border border-[#E5E4DF] text-sm text-[#191919]">
+                    <Users className="w-4 h-4" />
+                    {teamMembers.length} {teamMembers.length > 1 ? 'collaborateurs' : 'collaborateur'}
+                  </div>
+                </div>
+
+                {userData?.role === 'owner' ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-[#191919] mb-2">
+                        Nom de l'entreprise *
+                      </label>
+                      <input
+                        type="text"
+                        value={companyName}
+                        onChange={(e) => setCompanyName(e.target.value)}
+                        className="w-full px-4 py-3 border border-[#E5E4DF] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#191919]/10 focus:border-[#191919] bg-white transition-all"
+                        placeholder="Nom de votre entreprise"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-[#191919] mb-2">
+                        Secteur d'activité
+                      </label>
+                      <input
+                        type="text"
+                        value={companyIndustry}
+                        onChange={(e) => setCompanyIndustry(e.target.value)}
+                        className="w-full px-4 py-3 border border-[#E5E4DF] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#191919]/10 focus:border-[#191919] bg-white transition-all"
+                        placeholder="Ex: E-commerce, Distribution, etc."
+                      />
                     </div>
                   </div>
-
-                  {userData?.role === 'owner' ? (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-sm font-medium text-[#191919] mb-2">
-                          Nom de l'entreprise *
-                        </label>
-                        <input
-                          type="text"
-                          value={companyName}
-                          onChange={(e) => setCompanyName(e.target.value)}
-                          className="w-full px-4 py-3 border border-[#E5E4DF] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#191919] bg-white"
-                          placeholder="Nom de votre entreprise"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium text-[#191919] mb-2">
-                          Secteur d'activité
-                        </label>
-                        <input
-                          type="text"
-                          value={companyIndustry}
-                          onChange={(e) => setCompanyIndustry(e.target.value)}
-                          className="w-full px-4 py-3 border border-[#E5E4DF] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#191919] bg-white"
-                          placeholder="Ex: E-commerce, Distribution, etc."
-                        />
-                      </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="p-4 border border-[#E5E4DF] rounded-lg bg-[#FAFAF7]">
+                      <p className="text-xs font-medium text-[#666663] uppercase tracking-wide">
+                        Nom de l'entreprise
+                      </p>
+                      <p className="mt-2 text-sm font-semibold text-[#191919]">
+                        {companyData.name || 'Non renseigné'}
+                      </p>
                     </div>
-                  ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="p-4 border border-[#E5E4DF] rounded-lg bg-[#FAFAF7]">
-                        <p className="text-xs font-medium text-[#666663] uppercase tracking-wide">
-                          Nom de l'entreprise
-                        </p>
-                        <p className="mt-2 text-sm font-semibold text-[#191919]">
-                          {companyData.name || 'Non renseigné'}
-                        </p>
-                      </div>
-                      <div className="p-4 border border-[#E5E4DF] rounded-lg bg-[#FAFAF7]">
-                        <p className="text-xs font-medium text-[#666663] uppercase tracking-wide">
-                          Secteur d'activité
-                        </p>
-                        <p className="mt-2 text-sm font-semibold text-[#191919]">
-                          {companyData.description || 'Non renseigné'}
-                        </p>
-                      </div>
+                    <div className="p-4 border border-[#E5E4DF] rounded-lg bg-[#FAFAF7]">
+                      <p className="text-xs font-medium text-[#666663] uppercase tracking-wide">
+                        Secteur d'activité
+                      </p>
+                      <p className="mt-2 text-sm font-semibold text-[#191919]">
+                        {companyData.description || 'Non renseigné'}
+                      </p>
                     </div>
-                  )}
-                </div>
-              )}
-            </div>
+                  </div>
+                )}
+              </motion.div>
+            )}
           </div>
 
           {/* Colonne droite - Équipe et Invitations */}
           <div className="space-y-5">
-            <div className="bg-white rounded-xl shadow-sm border border-[#E5E4DF] p-5">
+            <motion.div 
+              variants={cardVariants}
+              className="bg-white rounded-xl shadow-sm border border-[#E5E4DF] p-5"
+            >
               <div className="flex items-center justify-between mb-3">
-                <h3 className="text-base md:text-lg font-bold text-[#191919] flex items-center gap-2">
+                <h3 className="text-base md:text-lg font-semibold text-[#191919] flex items-center gap-2">
                   <Users className="w-5 h-5" />
                   Équipe
                 </h3>
@@ -778,7 +907,7 @@ const ProfilePage = () => {
                             className="w-10 h-10 rounded-full object-cover border border-[#E5E4DF]"
                           />
                         ) : (
-                          <div className="w-10 h-10 bg-gradient-to-br from-[#191919] to-[#666663] rounded-full flex items-center justify-center text-white text-sm font-bold border border-[#E5E4DF]">
+                          <div className={`w-10 h-10 bg-gradient-to-br ${AVATAR_STYLE} rounded-full flex items-center justify-center text-white text-sm font-bold border border-[#E5E4DF]`}>
                             {member.firstName?.charAt(0)}{member.lastName?.charAt(0)}
                           </div>
                         )}
@@ -812,12 +941,15 @@ const ProfilePage = () => {
                   ))
                 )}
               </div>
-            </div>
+            </motion.div>
 
             {/* Invitations en attente (admin/owner uniquement) */}
             {isAdmin && pendingInvitations.length > 0 && (
-              <div className="bg-white rounded-xl shadow-sm border border-[#E5E4DF] p-5">
-                <h3 className="text-base md:text-lg font-bold text-[#191919] mb-3 flex items-center gap-2">
+              <motion.div 
+                variants={cardVariants}
+                className="bg-white rounded-xl shadow-sm border border-[#E5E4DF] p-5"
+              >
+                <h3 className="text-base md:text-lg font-semibold text-[#191919] mb-3 flex items-center gap-2">
                   <Clock className="w-5 h-5" />
                   Invitations en attente
                 </h3>
@@ -859,7 +991,7 @@ const ProfilePage = () => {
                     </div>
                   ))}
                 </div>
-              </div>
+              </motion.div>
             )}
           </div>
         </div>
@@ -1030,7 +1162,7 @@ const ProfilePage = () => {
           </div>
         </div>
       </Modal>
-    </div>
+    </motion.div>
   );
 };
 

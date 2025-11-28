@@ -12,7 +12,7 @@ import * as ReconciliationHandlers from '../../handlers/reconciliationHandlers';
 import * as MappingHandlers from '../../handlers/mappingHandlers';
 import { roundToTwoDecimals } from '../../utils/decimalUtils';
 
-export const StockEasyModals = () => {
+export const StockeasyModals = () => {
   // 1. Contextes
   const { 
     reconciliationModal, 
@@ -49,7 +49,7 @@ export const StockEasyModals = () => {
     supplierMapping
   } = useStockContext();
 
-  // 2. État local (déplacé depuis StockEasy.jsx)
+  // 2. État local (déplacé depuis Stockeasy.jsx)
   const [discrepancyTypes, setDiscrepancyTypes] = useState({});
 
   // 3. Dérivations pour faciliter l'usage

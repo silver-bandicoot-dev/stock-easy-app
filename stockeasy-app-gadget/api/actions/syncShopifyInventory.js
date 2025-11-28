@@ -130,7 +130,7 @@ export const run = async ({ params, logger, api, connections, config }) => {
             sku: mapping.stockEasySku, 
             status: supabaseResponse.status,
             error: errorText
-          }, "Failed to update StockEasy");
+          }, "Failed to update Stockeasy");
           
           await api.syncLog.create({
             shop: { _link: shopId },
@@ -140,7 +140,7 @@ export const run = async ({ params, logger, api, connections, config }) => {
             direction: "shopify_to_stockeasy",
             shopifyId: mapping.shopifyInventoryItemId,
             stockEasySku: mapping.stockEasySku,
-            message: `Failed to update StockEasy: ${errorText}`,
+            message: `Failed to update Stockeasy: ${errorText}`,
             payload: { totalAvailable, locationCount: inventoryLevels.length }
           });
           

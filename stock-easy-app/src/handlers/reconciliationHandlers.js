@@ -1,5 +1,5 @@
 // ============================================
-// HANDLERS RÉCONCILIATION - Extraites de StockEasy.jsx
+// HANDLERS RÉCONCILIATION - Extraites de Stockeasy.jsx
 // PHASE 9 : Handlers Réconciliation
 // PHASE 13 : Handlers Réconciliation Unifiée
 // ============================================

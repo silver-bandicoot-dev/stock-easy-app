@@ -59,7 +59,7 @@ export const SettingsTab = ({
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
           <h1 className="text-xl sm:text-2xl font-semibold text-[#191919]">
-            Paramètres ⚙️
+            Paramètres
           </h1>
           <p className="text-sm text-[#6B7177] mt-0.5">
             Configurez les paramètres de votre application

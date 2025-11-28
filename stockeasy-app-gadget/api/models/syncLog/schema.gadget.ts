@@ -7,7 +7,7 @@ export const schema: GadgetModel = {
   type: "gadget/model-schema/v2",
   storageKey: "rHX4oS_a_do2",
   comment:
-    "This model represents a log of synchronization events between Shopify and StockEasy, used for auditing and debugging purposes.",
+    "This model represents a log of synchronization events between Shopify and Stockeasy, used for auditing and debugging purposes.",
   fields: {
     direction: {
       type: "enum",

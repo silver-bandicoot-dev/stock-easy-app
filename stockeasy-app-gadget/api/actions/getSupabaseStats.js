@@ -33,29 +33,10 @@ export const run = async ({ params, logger, api, connections }) => {
     
     const companyId = shop.stockEasyCompanyId;
     
-    // Get products from Supabase (with SKU list)
-    const produitsResponse = await fetch(
-      `${supabaseUrl}/rest/v1/produits?company_id=eq.${companyId}&select=sku`,
-      {
-        method: 'GET',
-        headers: {
-          'apikey': supabaseKey,
-          'Authorization': `Bearer ${supabaseKey}`,
-          'Prefer': 'count=exact'
-        }
-      }
-    );
-    
-    const totalProducts = parseInt(produitsResponse.headers.get('content-range')?.split('/')[1] || '0');
-    const produitsData = await produitsResponse.json();
-    
-    // Create set of synced SKUs
-    const syncedSkuSet = new Set((produitsData || []).map(p => p.sku));
-    
-    // Get ALL products with variants from Shopify via GraphQL
+    // Prepare Shopify connection (needed for parallel execution)
     const shopify = await connections.shopify.forShopId(shopId);
     
-    const query = `
+    const shopifyQuery = `
       query {
         products(first: 250) {
           edges {
@@ -81,12 +62,38 @@ export const run = async ({ params, logger, api, connections }) => {
       }
     `;
     
-    const shopifyData = await shopify.graphql(query);
+    // 🚀 Execute Supabase and Shopify requests IN PARALLEL
+    const [produitsResponse, shopifyData] = await Promise.all([
+      // Supabase request
+      fetch(
+        `${supabaseUrl}/rest/v1/produits?company_id=eq.${companyId}&select=sku`,
+        {
+          method: 'GET',
+          headers: {
+            'apikey': supabaseKey,
+            'Authorization': `Bearer ${supabaseKey}`,
+            'Prefer': 'count=exact'
+          }
+        }
+      ),
+      // Shopify GraphQL request
+      shopify.graphql(shopifyQuery)
+    ]);
+    
+    // Process Supabase response
+    const totalProducts = parseInt(produitsResponse.headers.get('content-range')?.split('/')[1] || '0');
+    const produitsData = await produitsResponse.json();
+    
+    // Create set of synced SKUs
+    const syncedSkuSet = new Set((produitsData || []).map(p => p.sku));
     const products = shopifyData?.products?.edges || [];
     
     // Find unsynced items (variants not in Supabase)
+    // ⚡ Optimization: limit details to first 50 items for UI performance
+    const MAX_UNSYNCED_DETAILS = 50;
     const unsyncedItems = [];
     let totalShopifySkus = 0;
+    let unsyncedCount = 0;
     
     for (const productEdge of products) {
       const product = productEdge.node;
@@ -101,14 +108,19 @@ export const run = async ({ params, logger, api, connections }) => {
         
         // Check if NOT synced
         if (!sku || !syncedSkuSet.has(sku)) {
-          unsyncedItems.push({
-            productTitle: product.title,
-            variantTitle: variant.title !== 'Default Title' ? variant.title : null,
-            sku: sku || null,
-            status: product.status,
-            tracked: isTracked,
-            reason: !sku ? 'no_sku' : (!isTracked ? 'not_tracked' : 'not_synced')
-          });
+          unsyncedCount++;
+          
+          // Only store details for first N items (optimization)
+          if (unsyncedItems.length < MAX_UNSYNCED_DETAILS) {
+            unsyncedItems.push({
+              productTitle: product.title,
+              variantTitle: variant.title !== 'Default Title' ? variant.title : null,
+              sku: sku || null,
+              status: product.status,
+              tracked: isTracked,
+              reason: !sku ? 'no_sku' : (!isTracked ? 'not_tracked' : 'not_synced')
+            });
+          }
         }
       }
     }
@@ -117,7 +129,7 @@ export const run = async ({ params, logger, api, connections }) => {
       companyId, 
       totalProducts, 
       totalShopifySkus,
-      unsyncedCount: unsyncedItems.length 
+      unsyncedCount
     }, "Fetched sync stats");
     
     return {
@@ -126,7 +138,8 @@ export const run = async ({ params, logger, api, connections }) => {
       totalShopifySkus,
       totalProducts,
       companyId,
-      unsyncedItems
+      unsyncedItems,
+      unsyncedCount // ← Total count (may be > unsyncedItems.length)
     };
     
   } catch (error) {

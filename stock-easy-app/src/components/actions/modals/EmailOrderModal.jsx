@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import { X, Mail, Send, FileText, Calculator, Package } from 'lucide-react';
-import { Modal } from '../../ui/Modal';
-import { Button } from '../../shared/Button';
+import React, { useState, useEffect, useMemo } from 'react';
+import { Mail, Send, FileText, Calculator, Package, Copy, ExternalLink, CheckCircle2, AlertTriangle } from 'lucide-react';
+import { Modal, ModalFooter, ModalSection } from '../../ui/Modal';
+import { Button } from '../../ui/Button';
 import { formatPrice } from '../../../utils/decimalUtils';
 import { ImagePreview } from '../../ui/ImagePreview';
+import emailService from '../../../services/emailService';
+import { toast } from 'sonner';
 
 export const EmailOrderModal = ({
   isOpen,
@@ -22,229 +23,127 @@ export const EmailOrderModal = ({
   generateEmailDraft,
   getUserSignature
 }) => {
-  const [emailContent, setEmailContent] = useState('');
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [userSignature, setUserSignature] = useState('');
+  const [editableEmail, setEditableEmail] = useState('');
+  const [editableSubject, setEditableSubject] = useState('');
+  const [editableBody, setEditableBody] = useState('');
+  const [isCopied, setIsCopied] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
 
-  // Initialiser la signature avec les informations du profil utilisateur
-  useEffect(() => {
-    if (isOpen && getUserSignature) {
-      setUserSignature(getUserSignature());
-    } else if (isOpen) {
-      setUserSignature('L\'équipe StockEasy');
-    }
-  }, [isOpen, getUserSignature]);
+  // Trouver les informations du fournisseur
+  const supplierInfo = useMemo(() => {
+    if (!supplier || !suppliers) return null;
+    return Array.isArray(suppliers)
+      ? suppliers.find(s => s.name === supplier)
+      : suppliers[supplier] || Object.values(suppliers).find(s => s.name === supplier);
+  }, [supplier, suppliers]);
 
-  useEffect(() => {
-    if (isOpen && supplier && products) {
-      generateEmailContent();
-    }
-  }, [isOpen, supplier, products, selectedWarehouse, orderQuantities]);
+  // Trouver les informations de l'entrepôt
+  const warehouseInfo = useMemo(() => {
+    if (!selectedWarehouse || !warehouses) return null;
+    return warehouses[selectedWarehouse] || Object.values(warehouses).find(w => w.name === selectedWarehouse);
+  }, [selectedWarehouse, warehouses]);
 
-  const generateEmailContent = async () => {
-    if (!supplier || !products || !selectedWarehouse) return;
-
-    setIsGenerating(true);
-    try {
-      const content = generateEmailDraft(
-        supplier,
-        products,
-        selectedWarehouse,
-        orderQuantities,
-        userSignature
-      );
-      setEmailContent(content);
-    } catch (error) {
-      console.error('Erreur lors de la génération de l\'email:', error);
-    } finally {
-      setIsGenerating(false);
-    }
-  };
-
-  const calculateTotals = () => {
+  // Calculer les totaux
+  const { totalAmount, totalItems } = useMemo(() => {
     if (!products || !Array.isArray(products)) {
       return { totalAmount: 0, totalItems: 0 };
     }
 
-    let totalAmount = 0;
-    let totalItems = 0;
+    let amount = 0;
+    let items = 0;
 
     products.forEach(product => {
-      const quantity = orderQuantities[product.sku] || 0;
+      const quantity = orderQuantities?.[product.sku] || 0;
       if (quantity > 0) {
-        const unitPrice = product.supplierPrice || product.price || 0;
-        totalAmount += quantity * unitPrice;
-        totalItems += quantity;
+        const unitPrice = product.supplierPrice || product.buyPrice || product.price || 0;
+        amount += quantity * unitPrice;
+        items += quantity;
       }
     });
 
-    return { totalAmount, totalItems };
+    return { totalAmount: amount, totalItems: items };
+  }, [products, orderQuantities]);
+
+  // Générer l'email quand les paramètres changent
+  useEffect(() => {
+    if (!isOpen || !supplier || !products || !selectedWarehouse) return;
+
+    const email = emailService.generateOrderEmail({
+      supplierName: supplier,
+      products: products.filter(p => (orderQuantities?.[p.sku] || 0) > 0),
+      quantities: orderQuantities,
+      supplier: supplierInfo,
+      warehouse: warehouseInfo ? { ...warehouseInfo, name: selectedWarehouse } : { name: selectedWarehouse },
+      signature: getUserSignature?.() || "L'équipe Stockeasy",
+      formatCurrency: formatPrice
+    });
+
+    setEditableEmail(email.to);
+    setEditableSubject(email.subject);
+    setEditableBody(email.body);
+  }, [isOpen, supplier, products, selectedWarehouse, orderQuantities, supplierInfo, warehouseInfo]);
+
+  // Validation de l'email
+  const isEmailValid = emailService.isValidEmail(editableEmail);
+
+  // Handlers
+  const handleCopy = async () => {
+    const fullEmail = emailService.buildEmailContent(editableEmail, editableSubject, editableBody);
+    const success = await emailService.copyToClipboard(fullEmail);
+    if (success) {
+      setIsCopied(true);
+      toast.success('Email copié dans le presse-papiers');
+      setTimeout(() => setIsCopied(false), 2000);
+    } else {
+      toast.error('Erreur lors de la copie');
+    }
+  };
+
+  const handleOpenEmailClient = () => {
+    emailService.openEmailClient(editableEmail, editableSubject, editableBody);
   };
 
   const handleSendEmail = async () => {
+    setIsProcessing(true);
     try {
       await onSendEmail();
       onClose();
     } catch (error) {
       console.error('Erreur lors de l\'envoi:', error);
+      toast.error('Erreur lors de l\'envoi de la commande');
+    } finally {
+      setIsProcessing(false);
     }
   };
 
   const handleCreateWithoutEmail = async () => {
+    setIsProcessing(true);
     try {
       await onCreateWithoutEmail();
       onClose();
     } catch (error) {
       console.error('Erreur lors de la création:', error);
+      toast.error('Erreur lors de la création de la commande');
+    } finally {
+      setIsProcessing(false);
     }
   };
 
   if (!isOpen || !supplier || !products) return null;
 
-  const { totalAmount, totalItems } = calculateTotals();
-
   return (
-    <Modal isOpen={isOpen} onClose={onClose} size="large">
-      <div className="p-6">
-        {/* En-tête */}
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-blue-50 rounded-lg flex items-center justify-center border border-blue-200">
-              <Mail className="w-6 h-6 text-blue-600" />
-            </div>
-            <div>
-              <h2 className="text-xl font-semibold text-gray-900">Email de commande</h2>
-              <p className="text-sm text-gray-600">Fournisseur: {supplier}</p>
-            </div>
-          </div>
-          <button
-            onClick={onClose}
-            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-          >
-            <X className="w-5 h-5 text-gray-500" />
-          </button>
-        </div>
-
-        {/* Sélection de l'entrepôt */}
-        <div className="mb-6">
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Entrepôt de livraison
-          </label>
-          <select
-            value={selectedWarehouse || ''}
-            onChange={(e) => onWarehouseChange(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          >
-            <option value="">Sélectionner un entrepôt</option>
-            {Object.values(warehouses).map(warehouse => (
-              <option key={warehouse.id} value={warehouse.name}>
-                {warehouse.name}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        {/* Résumé de la commande */}
-        <div className="bg-gray-50 rounded-lg p-4 mb-6">
-          <div className="flex items-center gap-2 mb-3">
-            <Calculator className="w-5 h-5 text-gray-600" />
-            <h3 className="font-semibold text-gray-900">Résumé de la commande</h3>
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <p className="text-sm text-gray-600">Nombre d'articles</p>
-              <p className="text-lg font-semibold text-gray-900">{totalItems}</p>
-            </div>
-            <div>
-              <p className="text-sm text-gray-600">Montant total</p>
-              <p className="text-lg font-semibold text-gray-900">{formatPrice(totalAmount)}</p>
-            </div>
-          </div>
-        </div>
-
-        {/* Liste des produits */}
-        <div className="mb-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Articles commandés</h3>
-          <div className="space-y-3">
-            {products
-              .filter(product => orderQuantities[product.sku] > 0)
-              .map(product => {
-                const quantity = orderQuantities[product.sku];
-                const unitPrice = product.supplierPrice || product.price || 0;
-                const totalPrice = quantity * unitPrice;
-
-                return (
-                  <div key={product.sku} className="flex items-center justify-between p-3 bg-white border border-gray-200 rounded-lg">
-                    <div className="flex items-center gap-3">
-                      {product.imageUrl ? (
-                        <ImagePreview
-                          src={product.imageUrl}
-                          alt={product.name}
-                          thumbClassName="w-9 h-9 rounded-md object-cover flex-shrink-0 bg-gray-200"
-                        />
-                      ) : (
-                        <div className="w-9 h-9 rounded-md bg-gray-200 flex items-center justify-center text-xs text-gray-600 flex-shrink-0">
-                          {product.name?.charAt(0) || '?'}
-                        </div>
-                      )}
-                      <div>
-                        <p className="font-medium text-gray-900">{product.name}</p>
-                        <p className="text-sm text-gray-600">SKU: {product.sku}</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-4">
-                      <div className="text-right">
-                        <p className="text-sm text-gray-600">{quantity} × {formatPrice(unitPrice)}</p>
-                        <p className="font-semibold text-gray-900">{formatPrice(totalPrice)}</p>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-          </div>
-        </div>
-
-        {/* Contenu de l'email */}
-        <div className="mb-6">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-lg font-semibold text-gray-900">Contenu de l'email</h3>
-            <Button
-              variant="outline"
-              size="sm"
-              icon={FileText}
-              onClick={generateEmailContent}
-              disabled={isGenerating}
-            >
-              {isGenerating ? 'Génération...' : 'Régénérer'}
-            </Button>
-          </div>
-          
-          <div className="bg-gray-50 rounded-lg p-4 border">
-            <pre className="whitespace-pre-wrap text-sm text-gray-800 font-mono">
-              {emailContent || 'Génération du contenu...'}
-            </pre>
-          </div>
-        </div>
-
-        {/* Signature */}
-        <div className="mb-6">
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Signature
-          </label>
-          <input
-            type="text"
-            value={userSignature}
-            onChange={(e) => setUserSignature(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            placeholder="Votre nom ou signature"
-          />
-        </div>
-
-        {/* Actions */}
-        <div className="flex items-center justify-end gap-3">
+    <Modal 
+      isOpen={isOpen} 
+      onClose={onClose}
+      title="Email de commande"
+      icon={Mail}
+      size="lg"
+      footer={
+        <ModalFooter>
           <Button
             variant="outline"
             onClick={onClose}
+            disabled={isProcessing}
           >
             Annuler
           </Button>
@@ -252,6 +151,8 @@ export const EmailOrderModal = ({
             variant="secondary"
             icon={FileText}
             onClick={handleCreateWithoutEmail}
+            disabled={isProcessing || !selectedWarehouse}
+            loading={isProcessing}
           >
             Créer sans email
           </Button>
@@ -259,12 +160,176 @@ export const EmailOrderModal = ({
             variant="primary"
             icon={Send}
             onClick={handleSendEmail}
-            disabled={!selectedWarehouse || !emailContent}
+            disabled={isProcessing || !selectedWarehouse || !isEmailValid}
+            loading={isProcessing}
           >
-            Envoyer par email
+            Envoyer et créer
           </Button>
+        </ModalFooter>
+      }
+    >
+      {/* En-tête avec info fournisseur */}
+      <div className="flex items-center gap-3 mb-6 p-4 bg-primary-50 rounded-lg border border-primary-100">
+        <div className="w-12 h-12 bg-primary-100 rounded-lg flex items-center justify-center">
+          <Package className="w-6 h-6 text-primary-600" />
+        </div>
+        <div>
+          <p className="text-sm text-primary-600">Fournisseur</p>
+          <p className="font-semibold text-primary-900">{supplier}</p>
         </div>
       </div>
+
+      {/* Sélection de l'entrepôt */}
+      <ModalSection title="Entrepôt de livraison" className="mb-6">
+        <select
+          value={selectedWarehouse || ''}
+          onChange={(e) => onWarehouseChange(e.target.value)}
+          className="select-base"
+        >
+          <option value="">Sélectionner un entrepôt</option>
+          {Object.values(warehouses || {}).map(warehouse => (
+            <option key={warehouse.id || warehouse.name} value={warehouse.name}>
+              {warehouse.name} - {warehouse.city}, {warehouse.country}
+            </option>
+          ))}
+        </select>
+        {warehouseInfo && (
+          <div className="mt-2 text-sm text-neutral-600 bg-neutral-50 p-3 rounded-lg border border-neutral-100">
+            <p className="font-medium text-neutral-900 mb-1">Adresse :</p>
+            <p>{warehouseInfo.address}</p>
+            <p>{warehouseInfo.postalCode} {warehouseInfo.city}, {warehouseInfo.country}</p>
+          </div>
+        )}
+      </ModalSection>
+
+      {/* Résumé de la commande */}
+      <ModalSection className="mb-6">
+        <div className="bg-neutral-50 rounded-lg p-4 border border-neutral-200">
+          <div className="flex items-center gap-2 mb-3">
+            <Calculator className="w-5 h-5 text-neutral-600" />
+            <h3 className="font-semibold text-neutral-900">Résumé</h3>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="bg-white p-3 rounded-lg border border-neutral-100">
+              <p className="text-sm text-neutral-500">Articles</p>
+              <p className="text-2xl font-bold text-neutral-900">{totalItems}</p>
+            </div>
+            <div className="bg-white p-3 rounded-lg border border-neutral-100">
+              <p className="text-sm text-neutral-500">Montant total</p>
+              <p className="text-2xl font-bold text-primary-600">{formatPrice(totalAmount)}</p>
+            </div>
+          </div>
+        </div>
+      </ModalSection>
+
+      {/* Liste des produits */}
+      <ModalSection title="Articles commandés" className="mb-6">
+        <div className="space-y-2 max-h-48 overflow-y-auto custom-scrollbar">
+          {products
+            .filter(product => (orderQuantities?.[product.sku] || 0) > 0)
+            .map(product => {
+              const quantity = orderQuantities?.[product.sku] || 0;
+              const unitPrice = product.supplierPrice || product.buyPrice || product.price || 0;
+              const totalPrice = quantity * unitPrice;
+
+              return (
+                <div key={product.sku} className="flex items-center justify-between p-3 bg-neutral-50 border border-neutral-200 rounded-lg">
+                  <div className="flex items-center gap-3">
+                    {product.imageUrl ? (
+                      <ImagePreview
+                        src={product.imageUrl}
+                        alt={product.name}
+                        thumbClassName="w-10 h-10 rounded-lg object-cover flex-shrink-0 bg-neutral-200"
+                      />
+                    ) : (
+                      <div className="w-10 h-10 rounded-lg bg-neutral-200 flex items-center justify-center text-xs text-neutral-600 flex-shrink-0 font-medium">
+                        {product.name?.charAt(0) || '?'}
+                      </div>
+                    )}
+                    <div>
+                      <p className="font-medium text-neutral-900 text-sm">{product.name}</p>
+                      <p className="text-xs text-neutral-500">SKU: {product.sku}</p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm text-neutral-500">{quantity} × {formatPrice(unitPrice)}</p>
+                    <p className="font-semibold text-neutral-900">{formatPrice(totalPrice)}</p>
+                  </div>
+                </div>
+              );
+            })}
+        </div>
+      </ModalSection>
+
+      {/* Contenu de l'email */}
+      <ModalSection 
+        title="Contenu de l'email"
+        description="Vérifiez et modifiez le contenu avant envoi"
+      >
+        {/* Actions rapides */}
+        <div className="flex items-center justify-end gap-2 mb-4">
+          <Button
+            variant="outline"
+            size="sm"
+            icon={Copy}
+            onClick={handleCopy}
+            disabled={isCopied}
+          >
+            {isCopied ? 'Copié !' : 'Copier'}
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            icon={ExternalLink}
+            onClick={handleOpenEmailClient}
+          >
+            Client email
+          </Button>
+        </div>
+
+        <div className="space-y-4">
+          {/* Destinataire */}
+          <div>
+            <label className="label-base flex items-center gap-2">
+              Destinataire
+              {isEmailValid ? (
+                <CheckCircle2 className="w-4 h-4 text-success-500" />
+              ) : editableEmail && (
+                <AlertTriangle className="w-4 h-4 text-warning-500" />
+              )}
+            </label>
+            <input 
+              type="email"
+              value={editableEmail} 
+              onChange={(e) => setEditableEmail(e.target.value)}
+              className={`input-base ${!isEmailValid && editableEmail ? 'border-warning-400' : ''}`}
+              placeholder="email@fournisseur.com"
+            />
+          </div>
+
+          {/* Objet */}
+          <div>
+            <label className="label-base">Objet</label>
+            <input 
+              type="text"
+              value={editableSubject} 
+              onChange={(e) => setEditableSubject(e.target.value)}
+              className="input-base"
+            />
+          </div>
+
+          {/* Corps */}
+          <div>
+            <label className="label-base">Message</label>
+            <textarea 
+              value={editableBody} 
+              onChange={(e) => setEditableBody(e.target.value)}
+              rows={10} 
+              className="input-base font-mono text-sm resize-y min-h-[200px]"
+            />
+          </div>
+        </div>
+      </ModalSection>
     </Modal>
   );
 };

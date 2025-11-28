@@ -1,5 +1,5 @@
 // ============================================
-// HOOK useProductStatus - Extraites de StockEasy.jsx
+// HOOK useProductStatus - Extraites de Stockeasy.jsx
 // PHASE 7 : Calculs useMemo / Business Logic
 // ============================================
 

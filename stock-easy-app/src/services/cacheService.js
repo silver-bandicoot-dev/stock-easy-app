@@ -107,7 +107,7 @@ export const invalidateCache = (keys) => {
 };
 
 /**
- * Invalide tout le cache StockEasy
+ * Invalide tout le cache Stockeasy
  */
 export const clearAllCache = () => {
   const keysToRemove = [];

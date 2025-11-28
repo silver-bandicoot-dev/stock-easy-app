@@ -1,5 +1,5 @@
 // ============================================
-// HANDLERS RÉCLAMATION - Extraites de StockEasy.jsx
+// HANDLERS RÉCLAMATION - Extraites de Stockeasy.jsx
 // PHASE 15 : Handlers Réclamation
 // ============================================
 

@@ -7,7 +7,7 @@ export const schema: GadgetModel = {
   type: "gadget/model-schema/v2",
   storageKey: "Vs5vCFyT_6UB",
   comment:
-    "This model represents the mapping between Shopify products/variants and StockEasy SKUs, used for product reconciliation.",
+    "This model represents the mapping between Shopify products/variants and Stockeasy SKUs, used for product reconciliation.",
   fields: {
     lastSyncDirection: {
       type: "enum",

@@ -1,7 +1,7 @@
 import { RouteHandler } from "gadget-server";
 
 /**
- * Route handler to update Shopify inventory from StockEasy
+ * Route handler to update Shopify inventory from Stockeasy
  * @type {RouteHandler<{ Body: { company_id: string; updates: Array<{ sku: string; stock_actuel: number }> } }>}
  */
 const route = async ({ request, reply, api, logger, config }) => {
@@ -38,7 +38,7 @@ const route = async ({ request, reply, api, logger, config }) => {
       }
     }
 
-    logger.info({ company_id, updateCount: updates.length }, 'Processing inventory updates from StockEasy');
+    logger.info({ company_id, updateCount: updates.length }, 'Processing inventory updates from Stockeasy');
 
     // 3. Find the shop by company_id
     const shop = await api.shopifyShop.findFirst({
@@ -125,7 +125,7 @@ const route = async ({ request, reply, api, logger, config }) => {
           variables: {
             input: {
               reason: "correction",
-              name: "StockEasy sync",
+              name: "Stockeasy sync",
               quantities: [
                 {
                   inventoryItemId: `gid://shopify/InventoryItem/${mapping.shopifyInventoryItemId}`,
@@ -195,7 +195,7 @@ const route = async ({ request, reply, api, logger, config }) => {
     const totalTime = Date.now() - startTime;
     logger.info(
       { successCount, errorCount, skippedCount, totalTime },
-      'Completed inventory update batch from StockEasy'
+      'Completed inventory update batch from Stockeasy'
     );
 
     return reply.code(200).send({

@@ -391,7 +391,7 @@ export function MappingSKUFournisseur({
         <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
           <div className="space-y-2">
             <h3 className="text-xl font-semibold text-neutral-900">
-              🔗 Mapping Produits ↔ Fournisseurs
+              Mapping Produits ↔ Fournisseurs
             </h3>
             <p className="text-sm text-neutral-500">
               Organisez vos catalogues à grande échelle : recherche avancée, filtres et

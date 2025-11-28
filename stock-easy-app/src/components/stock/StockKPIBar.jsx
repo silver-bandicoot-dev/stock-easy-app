@@ -130,16 +130,6 @@ export const StockKPIBar = ({
             {isActiveFilter && (
               <div className="absolute -top-1 -right-1 w-3 h-3 bg-[#191919] rounded-full border-2 border-white" />
             )}
-            
-            {/* Barre de progression subtile pour les compteurs */}
-            {!kpi.isPercentage && typeof kpi.value === 'number' && kpi.value > 0 && (
-              <div className="absolute bottom-0 left-0 right-0 h-1 rounded-b-lg overflow-hidden">
-                <div 
-                  className={`h-full ${kpi.color.replace('text-', 'bg-')} opacity-30`}
-                  style={{ width: '100%' }}
-                />
-              </div>
-            )}
           </motion.div>
         );
       })}

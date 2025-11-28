@@ -1,5 +1,5 @@
 // ============================================
-// UTILITAIRES DE DATE - Extraits de StockEasy.jsx
+// UTILITAIRES DE DATE - Extraits de Stockeasy.jsx
 // ============================================
 
 /**

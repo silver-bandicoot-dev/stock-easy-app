@@ -1,28 +1,27 @@
 import React from 'react';
-import { Mail, ShoppingBag, Boxes } from 'lucide-react';
+import { Mail, ShoppingBag, Check } from 'lucide-react';
+import { useStockContext } from '../../contexts/StockDataContext';
 
 const integrations = [
   {
     categoryKey: 'mail',
     label: 'Mail',
     icon: Mail,
-    description: 'Connectez vos messageries pour envoyer les emails directement depuis StockEasy.',
+    description: 'Connectez vos messageries pour envoyer les emails directement depuis Stockeasy.',
     items: [
       {
         name: 'Gmail',
         type: 'gmail',
-        logoText: 'G',
+        logo: '/logos/gmail.webp',
         officialName: 'Gmail',
-        highlightColor: 'bg-[#EA4335]',
-        url: 'https://workspace.google.com/marketplace', // TODO: à remplacer par l’URL exacte de l’app StockEasy
+        url: 'https://workspace.google.com/marketplace',
       },
       {
         name: 'Outlook',
         type: 'outlook',
-        logoText: 'O',
+        logo: '/logos/outlook.png',
         officialName: 'Microsoft Outlook',
-        highlightColor: 'bg-[#0078D4]',
-        url: 'https://appsource.microsoft.com/', // TODO: à remplacer par l’URL exacte de l’app StockEasy
+        url: 'https://appsource.microsoft.com/',
       },
     ],
   },
@@ -35,66 +34,54 @@ const integrations = [
       {
         name: 'Shopify',
         type: 'shopify',
-        logoText: 'S',
+        logo: '/logos/shopify.png',
         officialName: 'Shopify',
-        highlightColor: 'bg-[#96BF48]',
-        url: 'https://apps.shopify.com/', // TODO: URL spécifique à StockEasy
+        url: 'https://apps.shopify.com/',
       },
       {
         name: 'WooCommerce',
         type: 'woocommerce',
-        logoText: 'W',
+        logo: '/logos/woocommerce.png',
         officialName: 'WooCommerce',
-        highlightColor: 'bg-[#96588A]',
-        url: 'https://woocommerce.com/products/', // TODO: URL spécifique à StockEasy
-      },
-    ],
-  },
-  {
-    categoryKey: 'erp',
-    label: 'ERP',
-    icon: Boxes,
-    description: 'Reliez vos ERP pour partager les données de stock, achats et comptabilité.',
-    items: [
-      {
-        name: 'NetSuite',
-        type: 'netsuite',
-        logoText: 'N',
-        officialName: 'Oracle NetSuite',
-        highlightColor: 'bg-[#1F4D90]',
-        url: 'https://www.netsuite.com/portal/products/cloud-apps.shtml', // TODO
+        url: 'https://woocommerce.com/products/',
       },
       {
-        name: 'Holded',
-        type: 'holded',
-        logoText: 'H',
-        officialName: 'Holded',
-        highlightColor: 'bg-[#2D7EF7]',
-        url: 'https://apps.holded.com/', // TODO
+        name: 'BigCommerce',
+        type: 'bigcommerce',
+        logo: '/logos/bigcommerce.png',
+        officialName: 'BigCommerce',
+        url: 'https://www.bigcommerce.com/apps/',
       },
     ],
   },
 ];
 
 export const IntegrationsSettings = () => {
+  const { products, loading } = useStockContext();
+  
+  // Déterminer si connecté à une plateforme commerce (basé sur la présence de produits synchronisés)
+  const isCommerceConnected = !loading && products && products.length > 0;
+
   return (
     <div className="space-y-8">
       {/* Header section */}
       <div className="bg-white rounded-xl shadow-sm border border-[#E5E4DF] p-6">
         <h2 className="text-xl font-bold text-[#191919] mb-1">Intégrations</h2>
         <p className="text-sm text-[#666663] max-w-2xl">
-          Connectez StockEasy à vos outils existants (messagerie, e‑commerce, ERP) pour automatiser les flux de
+          Connectez Stockeasy à vos outils existants (messagerie, e‑commerce) pour automatiser les flux de
           données et envoyer les emails directement depuis vos comptes Gmail / Outlook.
         </p>
         <p className="text-xs text-[#8A8A86] mt-3">
           Ces intégrations sont en cours de déploiement. En attendant, les cartes ci‑dessous vous redirigent vers les
-          stores officiels pour préparer l’installation de l’app StockEasy.
+          stores officiels pour préparer l'installation de l'app Stockeasy.
         </p>
       </div>
 
       {/* Categories */}
       {integrations.map((category) => {
         const Icon = category.icon;
+        const isCommerce = category.categoryKey === 'commerce';
+        
         return (
           <section
             key={category.categoryKey}
@@ -110,37 +97,79 @@ export const IntegrationsSettings = () => {
                   <p className="text-xs text-[#666663]">{category.description}</p>
                 </div>
               </div>
+              
+              {/* Badge de connexion pour la section Commerce */}
+              {isCommerce && isCommerceConnected && (
+                <div className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 border border-emerald-200 rounded-full">
+                  <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
+                  <span className="text-xs font-medium text-emerald-700">Connecté</span>
+                </div>
+              )}
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {category.items.map((item) => (
-                <button
-                  key={item.type}
-                  type="button"
-                  onClick={() => window.open(item.url, '_blank', 'noopener,noreferrer')}
-                  className="group flex items-center gap-3 p-3 rounded-xl border border-[#E5E4DF] bg-[#FAFAF7] hover:bg-white hover:border-[#191919] transition-colors text-left"
-                >
+              {category.items.map((item) => {
+                // Pour la section commerce, marquer Shopify comme connecté si des produits existent
+                const isItemConnected = isCommerce && isCommerceConnected && item.type === 'shopify';
+                const hasLogo = item.logo;
+                
+                return (
                   <div
-                    className={`w-10 h-10 rounded-lg flex items-center justify-center text-white font-semibold text-lg ${item.highlightColor}`}
-                    aria-hidden="true"
+                    key={item.type}
+                    className={`
+                      group flex items-center gap-3 p-3 rounded-xl border transition-colors text-left
+                      ${isItemConnected 
+                        ? 'border-emerald-200 bg-emerald-50/50' 
+                        : 'border-[#E5E4DF] bg-[#FAFAF7] hover:bg-white hover:border-[#191919] cursor-pointer'
+                      }
+                    `}
+                    onClick={!isItemConnected ? () => window.open(item.url, '_blank', 'noopener,noreferrer') : undefined}
+                    role={isItemConnected ? undefined : "button"}
+                    tabIndex={isItemConnected ? undefined : 0}
                   >
-                    {item.logoText}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="text-sm font-semibold text-[#191919] truncate">
-                        {item.officialName}
-                      </span>
-                      <span className="text-[10px] uppercase tracking-wide text-[#8A8A86] group-hover:text-[#191919]">
-                        Bientôt
-                      </span>
+                    {/* Logo - Image ou Lettre */}
+                    {hasLogo ? (
+                      <div className="w-10 h-10 rounded-lg flex items-center justify-center bg-white border border-[#E5E4DF] overflow-hidden p-1.5">
+                        <img 
+                          src={item.logo} 
+                          alt={`${item.officialName} logo`}
+                          className="w-full h-full object-contain"
+                        />
+                      </div>
+                    ) : (
+                      <div
+                        className={`w-10 h-10 rounded-lg flex items-center justify-center text-white font-semibold text-lg ${item.highlightColor}`}
+                        aria-hidden="true"
+                      >
+                        {item.logoText}
+                      </div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-sm font-semibold text-[#191919] truncate">
+                          {item.officialName}
+                        </span>
+                        {isItemConnected ? (
+                          <span className="flex items-center gap-1 text-[10px] uppercase tracking-wide text-emerald-600 font-medium">
+                            <Check className="w-3 h-3" />
+                            Connecté
+                          </span>
+                        ) : (
+                          <span className="text-[10px] uppercase tracking-wide text-[#8A8A86] group-hover:text-[#191919]">
+                            Bientôt
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs text-[#666663] mt-0.5 truncate">
+                        {isItemConnected 
+                          ? `${products.length} produits synchronisés`
+                          : `Installer l'app Stockeasy sur ${item.name}`
+                        }
+                      </p>
                     </div>
-                    <p className="text-xs text-[#666663] mt-0.5 truncate">
-                      Installer l’app StockEasy sur {item.name}
-                    </p>
                   </div>
-                </button>
-              ))}
+                );
+              })}
             </div>
           </section>
         );

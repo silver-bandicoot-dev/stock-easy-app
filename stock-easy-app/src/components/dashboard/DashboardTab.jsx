@@ -1,12 +1,101 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { RefreshCw } from 'lucide-react';
 import { useAuth } from '../../contexts/SupabaseAuthContext';
-import { ProductsToOrder } from './ProductsToOrder';
-import { ProductsToWatch } from './ProductsToWatch';
 import { DashboardKPIs } from './DashboardKPIs';
 import { DashboardCharts } from './DashboardCharts';
+import { RevenueComparisonChart } from './RevenueComparisonChart';
 import { useAnalytics } from '../../hooks/useAnalytics';
+
+/**
+ * Génère un message de bienvenue dynamique basé sur l'heure, le jour et le contexte
+ */
+const getDynamicGreeting = (firstName, isReturningToday, urgentCount = 0) => {
+  const now = new Date();
+  const hour = now.getHours();
+  const dayOfWeek = now.getDay(); // 0 = dimanche, 6 = samedi
+  const name = firstName ? ` ${firstName}` : '';
+  
+  // Messages du matin (5h - 12h)
+  const morningGreetings = [
+    { text: `Bonjour${name}`, emoji: '☀️' },
+    { text: `Belle matinée${name}`, emoji: '🌅' },
+    { text: `Prêt pour une belle journée${name ? `, ${firstName}` : ''}`, emoji: '💪' },
+    { text: `Bon début de journée${name}`, emoji: '✨' },
+  ];
+  
+  // Messages de l'après-midi (12h - 18h)
+  const afternoonGreetings = [
+    { text: `Bon après-midi${name}`, emoji: '👋' },
+    { text: `L'après-midi avance bien${name ? `, ${firstName}` : ''}`, emoji: '📊' },
+    { text: `On continue${name ? `, ${firstName}` : ''}`, emoji: '🚀' },
+    { text: `Toujours au top${name}`, emoji: '⭐' },
+  ];
+  
+  // Messages du soir (18h - 22h)
+  const eveningGreetings = [
+    { text: `Bonsoir${name}`, emoji: '🌙' },
+    { text: `Belle fin de journée${name}`, emoji: '🌆' },
+  ];
+  
+  // Messages de nuit (22h - 5h)
+  const nightGreetings = [
+    { text: `Travail tardif${name ? `, ${firstName}` : ''}`, emoji: '🦉' },
+    { text: `Session nocturne${name}`, emoji: '🌙' },
+  ];
+  
+  // Messages pour retour dans la journée
+  const returningGreetings = [
+    { text: `Content de vous revoir${name}`, emoji: '👋' },
+    { text: `Encore vous${name ? `, ${firstName}` : ''}`, emoji: '😊' },
+    { text: `Re-bonjour${name}`, emoji: '✌️' },
+  ];
+  
+  // Messages spéciaux par jour
+  const specialDayGreetings = {
+    1: [{ text: `Bon lundi${name}`, emoji: '💪' }, { text: `Nouvelle semaine${name ? `, ${firstName}` : ''}`, emoji: '🚀' }], // Lundi
+    5: [{ text: `Bon vendredi${name}`, emoji: '🎉' }, { text: `Presque le weekend${name ? `, ${firstName}` : ''}`, emoji: '🙌' }], // Vendredi
+    6: [{ text: `Bon samedi${name}`, emoji: '☀️' }], // Samedi
+    0: [{ text: `Bon dimanche${name}`, emoji: '🌿' }], // Dimanche
+  };
+  
+  // Messages si beaucoup de produits urgents
+  const urgentGreetings = [
+    { text: `Des actions vous attendent${name}`, emoji: '⚡' },
+    { text: `Quelques urgences à gérer${name ? `, ${firstName}` : ''}`, emoji: '📋' },
+  ];
+  
+  let greetingPool;
+  
+  // Si retour dans la journée
+  if (isReturningToday) {
+    greetingPool = returningGreetings;
+  }
+  // Si beaucoup de produits urgents (> 5)
+  else if (urgentCount > 5) {
+    greetingPool = urgentGreetings;
+  }
+  // Message spécial du jour (20% de chance)
+  else if (specialDayGreetings[dayOfWeek] && Math.random() < 0.2) {
+    greetingPool = specialDayGreetings[dayOfWeek];
+  }
+  // Sinon, basé sur l'heure
+  else if (hour >= 5 && hour < 12) {
+    greetingPool = morningGreetings;
+  } else if (hour >= 12 && hour < 18) {
+    greetingPool = afternoonGreetings;
+  } else if (hour >= 18 && hour < 22) {
+    greetingPool = eveningGreetings;
+  } else {
+    greetingPool = nightGreetings;
+  }
+  
+  // Sélection pseudo-aléatoire mais stable pour la session
+  const sessionSeed = Math.floor(Date.now() / (1000 * 60 * 5)); // Change toutes les 5 minutes
+  const index = sessionSeed % greetingPool.length;
+  
+  return greetingPool[index];
+};
 
 // Variants pour les animations orchestrées (subtiles)
 const containerVariants = {
@@ -65,14 +154,14 @@ export const DashboardTab = ({ productsByStatus, orders, enrichedProducts, onVie
     currentUser?.displayName ||
     '';
 
-  const greetingText = isReturningToday
-    ? `Ravi de vous revoir${firstName ? ` ${firstName}` : ''}`
-    : `Bonjour${firstName ? ` ${firstName}` : ''}`;
-
   // Stats rapides
   const urgentCount = productsByStatus?.to_order?.length || 0;
-  const watchCount = productsByStatus?.watch?.length || 0;
-  const totalAttention = urgentCount + watchCount;
+  
+  // Message de bienvenue dynamique
+  const greeting = useMemo(() => 
+    getDynamicGreeting(firstName, isReturningToday, urgentCount),
+    [firstName, isReturningToday, urgentCount]
+  );
 
   return (
     <motion.div
@@ -89,7 +178,7 @@ export const DashboardTab = ({ productsByStatus, orders, enrichedProducts, onVie
       >
         <div>
           <h1 className="text-xl sm:text-2xl font-semibold text-[#191919]">
-            {greetingText} 👋
+            {greeting.text} {greeting.emoji}
           </h1>
           <p className="text-sm text-[#6B7177] mt-0.5">
             Vue d'ensemble de votre inventaire
@@ -112,22 +201,20 @@ export const DashboardTab = ({ productsByStatus, orders, enrichedProducts, onVie
         </div>
       </motion.div>
 
-      {/* Badges de statut - Discrets mais informatifs */}
-      {totalAttention > 0 && (
+      {/* Badge de statut - Discret mais informatif */}
+      {urgentCount > 0 && (
         <motion.div variants={itemVariants} className="flex items-center gap-2">
-          {urgentCount > 0 && (
-            <span className="inline-flex items-center gap-1.5 px-2 py-1 text-xs font-medium text-[#191919] bg-[#FFF4F4] border border-[#FED3D1] rounded">
-              <span className="w-1.5 h-1.5 bg-[#D72C0D] rounded-full" />
-              {urgentCount} à commander
-            </span>
-          )}
-          {watchCount > 0 && (
-            <span className="inline-flex items-center gap-1.5 px-2 py-1 text-xs font-medium text-[#191919] bg-[#FFF8E6] border border-[#FFEA8A] rounded">
-              {watchCount} à surveiller
-            </span>
-          )}
+          <span className="inline-flex items-center gap-1.5 px-2 py-1 text-xs font-medium text-[#191919] bg-[#FFF4F4] border border-[#FED3D1] rounded">
+            <span className="w-1.5 h-1.5 bg-[#D72C0D] rounded-full" />
+            {urgentCount} à commander
+          </span>
         </motion.div>
       )}
+
+      {/* Graphique CA vs Objectifs - Position principale */}
+      <motion.section variants={itemVariants}>
+        <RevenueComparisonChart />
+      </motion.section>
 
       {/* KPIs Principaux */}
       <motion.section variants={itemVariants}>
@@ -148,24 +235,6 @@ export const DashboardTab = ({ productsByStatus, orders, enrichedProducts, onVie
           enrichedProducts={enrichedProducts || []}
           orders={orders || []}
         />
-      </motion.section>
-
-      {/* Sections Actions */}
-      <motion.section variants={itemVariants}>
-        <SectionHeader 
-          title="Actions prioritaires" 
-          badge={totalAttention > 0 ? `${totalAttention}` : null}
-        />
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          <ProductsToOrder 
-            products={productsByStatus?.to_order || []} 
-            onViewDetails={onViewDetails}
-          />
-          <ProductsToWatch 
-            products={productsByStatus?.watch || []} 
-            onViewDetails={onViewDetails}
-          />
-        </div>
       </motion.section>
     </motion.div>
   );

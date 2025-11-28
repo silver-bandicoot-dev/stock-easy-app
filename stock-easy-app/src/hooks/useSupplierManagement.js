@@ -4,7 +4,7 @@ import { toast } from 'sonner';
 
 /**
  * Hook pour gérer les fournisseurs
- * Extrait de StockEasy.jsx
+ * Extrait de Stockeasy.jsx
  */
 export const useSupplierManagement = (suppliers, loadData) => {
   const [supplierModalOpen, setSupplierModalOpen] = useState(false);

@@ -2,16 +2,13 @@ import React, { useMemo, useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Package, 
-  Download, 
   Search, 
   Filter,
   ChevronLeft,
   ChevronRight,
   X,
-  AlertTriangle,
-  FileDown
+  AlertTriangle
 } from 'lucide-react';
-import { toast } from 'sonner';
 import { HealthBar } from '../ui/HealthBar';
 import { InfoTooltip } from '../ui/InfoTooltip';
 import { ImagePreview } from '../ui/ImagePreview';
@@ -19,7 +16,6 @@ import { StockKPIBar } from './StockKPIBar';
 import { StockDetailPanel } from './StockDetailPanel';
 import { formatUnits, formatSalesPerDay } from '../../utils/decimalUtils';
 import { formatETA } from '../../utils/dateUtils';
-import { exportInventoryReport } from '../../utils/exportInventory';
 
 // Onglets de statut style Shopify
 const STATUS_TABS = [
@@ -248,24 +244,6 @@ export const StockTab = ({
     setSelectedProduct(null);
   };
 
-  // Export du rapport d'inventaire
-  const handleExportInventory = () => {
-    const toastId = toast.loading('Génération du rapport...');
-    try {
-      const result = exportInventoryReport(sortedProducts);
-      if (result.success) {
-        toast.success(
-          `Rapport téléchargé ! ${result.totalProducts} produits • Valeur: ${result.totalStockValue.toLocaleString('fr-FR')} €`, 
-          { id: toastId }
-        );
-      } else {
-        toast.error(result.message || 'Erreur lors de l\'export', { id: toastId });
-      }
-    } catch (error) {
-      toast.error('Erreur lors de l\'export', { id: toastId });
-    }
-  };
-
   const handleClearFilters = () => {
     setSearchTerm('');
     setStockLevelSupplierFilter('all');
@@ -289,19 +267,12 @@ export const StockTab = ({
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
           <h1 className="text-xl sm:text-2xl font-semibold text-[#191919]">
-            Niveaux de Stock 📊
+            Niveaux de Stock
           </h1>
           <p className="text-sm text-[#6B7177] mt-0.5">
             Gérez la santé de votre inventaire
           </p>
         </div>
-        <button
-          onClick={handleExportInventory}
-          className="flex items-center gap-2 px-4 py-2 bg-[#191919] text-white rounded-full text-sm font-medium hover:bg-[#333] transition-colors shadow-sm"
-        >
-          <FileDown className="w-4 h-4" />
-          <span>Télécharger l'inventaire</span>
-        </button>
       </div>
 
       {/* KPIs cliquables */}

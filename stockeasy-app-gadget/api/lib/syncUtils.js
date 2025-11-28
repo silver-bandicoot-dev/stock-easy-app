@@ -1,6 +1,6 @@
 /**
  * Utilitaires pour la gestion de la synchronisation bidirectionnelle
- * Évite les boucles infinies lors de la synchro Shopify ↔ StockEasy
+ * Évite les boucles infinies lors de la synchro Shopify ↔ Stockeasy
  */
 
 /**

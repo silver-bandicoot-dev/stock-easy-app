@@ -6,7 +6,7 @@ import { calculateETA } from '../utils/etaUtils';
 
 /**
  * Hook pour gérer les actions sur les commandes
- * Extrait de StockEasy.jsx
+ * Extrait de Stockeasy.jsx
  */
 export const useOrderManagement = (loadData) => {
   const [orderQuantities, setOrderQuantities] = useState({});

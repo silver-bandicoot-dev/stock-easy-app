@@ -145,7 +145,7 @@ const SupabaseSignup = () => {
                 onChange={handleCompanyInfoChange('name')}
                 required
                 className="w-full px-4 py-3 border border-[#E5E7EB] rounded-lg focus:ring-2 focus:ring-[#191919] focus:border-transparent outline-none transition"
-                placeholder="Ex : StockEasy France"
+                placeholder="Ex : Stockeasy France"
               />
             </div>
 
