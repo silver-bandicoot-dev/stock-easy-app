@@ -73,7 +73,8 @@ export const MAIN_TABS = {
   INVENTORY: 'inventory',
   ANALYTICS: 'analytics',
   SETTINGS: 'settings',
-  PROFILE: 'profile'
+  PROFILE: 'profile',
+  HELP: 'help'
 };
 
 // Sous-onglets Track

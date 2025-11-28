@@ -24,6 +24,7 @@ import { InventoryTab } from './components/inventory/InventoryTab';
 import { AnalyticsTab } from './components/analytics/AnalyticsTab';
 import { SettingsTab } from './components/settings/SettingsTab';
 import ProfilePage from './components/profile/ProfilePage';
+import { HelpCenterTab } from './components/help';
 
 // Constantes et Utils
 import {
@@ -500,6 +501,12 @@ const StockeasyContent = () => {
                       </ErrorBoundary>
                     )}
                   </AnimatePresence>
+
+                    {activeTab === MAIN_TABS.HELP && (
+                      <ErrorBoundary section="Centre d'aide">
+                        <HelpCenterTab />
+                      </ErrorBoundary>
+                    )}
                 </div>
               </div>
             </div>

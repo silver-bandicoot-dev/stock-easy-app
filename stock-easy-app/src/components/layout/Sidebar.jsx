@@ -22,7 +22,8 @@ import {
   PlugZap,
   Cog,
   Brain,
-  ClipboardList
+  ClipboardList,
+  HelpCircle
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -211,6 +212,25 @@ const Sidebar = ({
           );
         })}
       </nav>
+      
+      {/* Centre d'aide - En bas de la sidebar */}
+      <div className="px-4 pb-6 mt-auto">
+        <button
+          onClick={() => {
+            setActiveTab('help');
+            setAnalyticsExpanded(false);
+            setSettingsExpanded(false);
+          }}
+          className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg font-medium text-sm transition-all ${
+            activeTab === 'help'
+              ? 'bg-[#191919] text-white shadow-lg'
+              : 'text-[#191919] hover:bg-[#E5E4DF]'
+          }`}
+        >
+          <HelpCircle className="w-5 h-5 shrink-0" />
+          <span className="flex-1 text-left">Centre d'aide</span>
+        </button>
+      </div>
     </aside>
   );
 
@@ -330,6 +350,26 @@ const Sidebar = ({
                   );
                 })}
               </nav>
+              
+              {/* Centre d'aide - En bas de la sidebar mobile */}
+              <div className="px-4 pb-6 mt-auto">
+                <button
+                  onClick={() => {
+                    setActiveTab('help');
+                    setAnalyticsExpanded(false);
+                    setSettingsExpanded(false);
+                    setMobileMenuOpen(false);
+                  }}
+                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg font-medium text-sm transition-all ${
+                    activeTab === 'help'
+                      ? 'bg-[#191919] text-white shadow-lg'
+                      : 'text-[#191919] hover:bg-[#E5E4DF]'
+                  }`}
+                >
+                  <HelpCircle className="w-5 h-5 shrink-0" />
+                  <span className="flex-1 text-left">Centre d'aide</span>
+                </button>
+              </div>
             </motion.div>
           </>
         )}

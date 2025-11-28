@@ -7,7 +7,8 @@ import {
   Activity, 
   MoreHorizontal,
   TrendingUp,
-  Settings
+  Settings,
+  HelpCircle
 } from 'lucide-react';
 
 /**
@@ -66,8 +67,8 @@ const BottomNav = ({
     }
   };
 
-  // Déterminer si "Plus" est actif (analytics ou settings)
-  const isMoreActive = ['analytics', 'settings', 'profile'].includes(activeTab);
+  // Déterminer si "Plus" est actif (analytics, settings, profile ou help)
+  const isMoreActive = ['analytics', 'settings', 'profile', 'help'].includes(activeTab);
 
   return (
     <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-[#E5E4DF] safe-area-bottom">
@@ -174,6 +175,11 @@ export const BottomNavMoreMenu = ({
         { id: 'warehouses', label: 'Entrepôts' },
         { id: 'integrations', label: 'Intégrations' }
       ]
+    },
+    { 
+      id: 'help', 
+      label: 'Centre d\'aide', 
+      icon: HelpCircle
     }
   ];
 
@@ -184,6 +190,8 @@ export const BottomNavMoreMenu = ({
     } else if (parentId === 'settings') {
       setActiveTab('settings');
       if (subItemId) setSettingsSubTab(subItemId);
+    } else if (parentId === 'help') {
+      setActiveTab('help');
     }
     onClose();
   };

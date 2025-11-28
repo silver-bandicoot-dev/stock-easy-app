@@ -99,6 +99,42 @@ export const onSuccess = async ({ params, record, logger, api, connections }) =>
         payload: { userId, companyId }
       });
 
+      // ═══════════════════════════════════════════════════════════════════════════
+      // 2b. SEND WELCOME EMAIL WITH PASSWORD SETUP LINK
+      // ═══════════════════════════════════════════════════════════════════════════
+      try {
+        logger.info({ email: shopOwnerEmail }, '📧 Sending welcome email to new merchant');
+        
+        await api.enqueue(api.sendWelcomeEmail, {
+          email: shopOwnerEmail,
+          shopName: record.name || record.domain,
+          ownerName: shopOwnerName
+        });
+        
+        logger.info({ email: shopOwnerEmail }, '✅ Welcome email enqueued');
+        
+        await api.syncLog.create({
+          shop: { _link: record.id },
+          entity: 'email',
+          operation: 'create',
+          direction: 'stockeasy_to_merchant',
+          status: 'pending',
+          message: `Welcome email enqueued for ${shopOwnerEmail}`
+        });
+      } catch (emailError) {
+        // Don't fail installation if email fails - just log it
+        logger.error({ error: emailError.message }, '⚠️ Failed to send welcome email (non-blocking)');
+        
+        await api.syncLog.create({
+          shop: { _link: record.id },
+          entity: 'email',
+          operation: 'create',
+          direction: 'stockeasy_to_merchant',
+          status: 'error',
+          message: `Failed to send welcome email: ${emailError.message}`
+        });
+      }
+
     } catch (error) {
       logger.error({ error: error.message }, '❌ Failed to create user and company in Supabase');
       
