@@ -1,44 +1,52 @@
 import React from 'react';
-import { BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 /**
- * Composant SimpleChart - Affiche des graphiques simples
+ * Composant SimpleChart - Style Shopify sobre
+ * Couleurs : gris et couleurs sémantiques discrètes
  */
-export function SimpleChart({ type = 'bar', data, title, height = 300 }) {
-  // Palette de couleurs selon les standards de l'application
-  const COLORS = ['#4F46E5', '#EF4444', '#F97316', '#10B981', '#3B82F6'];
+export function SimpleChart({ type = 'bar', data, title, height = 280 }) {
+  // Tooltip style Shopify
+  const CustomTooltip = ({ active, payload, label }) => {
+    if (active && payload && payload.length) {
+      return (
+        <div className="bg-[#202223] text-white px-2.5 py-1.5 rounded text-xs shadow-lg">
+          <p className="font-medium">{label || payload[0].name}</p>
+          <p className="text-white/70 mt-0.5">
+            {payload[0].value} produit{payload[0].value > 1 ? 's' : ''}
+          </p>
+        </div>
+      );
+    }
+    return null;
+  };
 
   const renderChart = () => {
     switch (type) {
       case 'bar':
         return (
           <ResponsiveContainer width="100%" height={height}>
-            <BarChart data={data} barSize={28} margin={{ top: 10, right: 20, left: 0, bottom: 5 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#EBEAE4" vertical={false} />
+            <BarChart data={data} barSize={24} margin={{ top: 10, right: 10, left: -15, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="0" stroke="#F1F1F1" vertical={false} />
               <XAxis 
                 dataKey="name" 
-                stroke="#666663"
+                stroke="transparent"
                 fontSize={11}
-                tick={{ fill: '#666663' }}
+                tick={{ fill: '#6B7177' }}
+                tickLine={false}
+                axisLine={false}
               />
               <YAxis 
-                stroke="#666663"
+                stroke="transparent"
                 fontSize={11}
-                tick={{ fill: '#666663' }}
+                tick={{ fill: '#8C9196' }}
+                tickLine={false}
+                axisLine={false}
               />
-              <Tooltip 
-                contentStyle={{ 
-                  backgroundColor: 'white', 
-                  border: '1px solid #E5E4DF',
-                  borderRadius: '8px',
-                  padding: '8px',
-                  boxShadow: '0 12px 30px rgba(15, 23, 42, 0.12)'
-                }}
-                labelStyle={{ color: '#191919', fontWeight: 'bold' }}
-              />
-              <Bar dataKey="value" fill={data[0]?.color || '#4F46E5'} radius={[6, 6, 0, 0]}>
+              <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(0,0,0,0.02)' }} />
+              <Bar dataKey="value" radius={[4, 4, 0, 0]}>
                 {data.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={entry.color || COLORS[index % COLORS.length]} />
+                  <Cell key={`cell-${index}`} fill={entry.color || '#5C5F62'} />
                 ))}
               </Bar>
             </BarChart>
@@ -46,35 +54,38 @@ export function SimpleChart({ type = 'bar', data, title, height = 300 }) {
         );
 
       case 'pie':
+        const total = data.reduce((sum, item) => sum + item.value, 0);
+        
         return (
-          <ResponsiveContainer width="100%" height={height}>
-            <PieChart>
-              <Pie
-                data={data}
-                cx="50%"
-                cy="52%"
-                labelLine={false}
-                label={({ name, percent }) => `${(percent * 100).toFixed(0)}% • ${name}`}
-                outerRadius={86}
-                innerRadius={56}
-                fill="#4F46E5"
-                dataKey="value"
-              >
-                {data.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={entry.color || COLORS[index % COLORS.length]} />
-                ))}
-              </Pie>
-              <Tooltip 
-                contentStyle={{ 
-                  backgroundColor: 'white', 
-                  border: '1px solid #E5E4DF',
-                  borderRadius: '8px',
-                  padding: '8px',
-                  boxShadow: '0 12px 30px rgba(15, 23, 42, 0.12)'
-                }}
-              />
-            </PieChart>
-          </ResponsiveContainer>
+          <div className="relative">
+            <ResponsiveContainer width="100%" height={height}>
+              <PieChart>
+                <Pie
+                  data={data}
+                  cx="50%"
+                  cy="50%"
+                  outerRadius={80}
+                  innerRadius={50}
+                  dataKey="value"
+                  stroke="#fff"
+                  strokeWidth={2}
+                >
+                  {data.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.color || '#5C5F62'} />
+                  ))}
+                </Pie>
+                <Tooltip content={<CustomTooltip />} />
+              </PieChart>
+            </ResponsiveContainer>
+            
+            {/* Centre du donut */}
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+              <div className="text-center">
+                <div className="text-xl font-semibold text-[#191919]">{total}</div>
+                <div className="text-[10px] text-[#6B7177]">Total</div>
+              </div>
+            </div>
+          </div>
         );
 
       default:
@@ -83,15 +94,24 @@ export function SimpleChart({ type = 'bar', data, title, height = 300 }) {
   };
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-[#E5E4DF] overflow-hidden">
+    <div className="bg-white rounded-lg border border-[#E1E3E5] overflow-hidden">
       {title && (
-        <div className="border-b border-[#E5E4DF] px-6 py-4 bg-[#F9F8F5]">
-          <h3 className="text-sm font-semibold text-[#191919] tracking-wide uppercase">
+        <div className="border-b border-[#E1E3E5] px-4 py-3 flex items-center justify-between">
+          <h3 className="text-xs font-medium text-[#6B7177]">
             {title}
           </h3>
+          {/* Légende compacte */}
+          <div className="flex items-center gap-3">
+            {data.map((item, idx) => (
+              <div key={idx} className="flex items-center gap-1.5">
+                <div className="w-2 h-2 rounded-sm" style={{ backgroundColor: item.color }} />
+                <span className="text-[10px] text-[#8C9196]">{item.name}</span>
+              </div>
+            ))}
+          </div>
         </div>
       )}
-      <div className="p-6">
+      <div className="p-4">
         {renderChart()}
       </div>
     </div>

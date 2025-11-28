@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useMemo } from 'react';
+import React, { createContext, useContext, useMemo, useEffect, useRef } from 'react';
 import { useStockData } from '../hooks/useStockData';
 import { useOrderManagement } from '../hooks/useOrderManagement';
 import { useSupplierManagement } from '../hooks/useSupplierManagement';
@@ -20,6 +20,7 @@ import * as OrderHandlers from '../handlers/orderHandlers';
 import * as ReconciliationHandlers from '../handlers/reconciliationHandlers';
 import * as EmailUtils from '../utils/emailUtils';
 import { calculateMetrics } from '../utils/calculations';
+import { checkAndSaveKPISnapshot } from '../utils/kpiScheduler';
 import api from '../services/apiAdapter';
 
 const StockDataContext = createContext(null);
@@ -39,7 +40,7 @@ export const StockDataProvider = ({ children }) => {
 
   // 1. UI & Navigation
   const tabManagement = useTabManagement();
-  const { setActiveTab, setTrackTabSection } = tabManagement;
+  const { setActiveTab } = tabManagement;
 
   // 2. Chargement des données
   const stockData = useStockData();
@@ -81,6 +82,37 @@ export const StockDataProvider = ({ children }) => {
 
   const productStatus = useProductStatus(enrichedProducts, orders);
   const { productsByStatus, toOrderBySupplier, notifications } = productStatus;
+
+  // 5b. Sauvegarde automatique des snapshots KPI (une fois par jour)
+  // Permet d'avoir de vraies données historiques pour les graphiques d'évolution
+  const kpiSnapshotSaveAttempted = useRef(false);
+  
+  useEffect(() => {
+    // Ne sauvegarder qu'une fois par session et seulement si on a des données
+    if (kpiSnapshotSaveAttempted.current) return;
+    if (!enrichedProducts || enrichedProducts.length === 0) return;
+    if (!currentUser?.uid) return;
+    
+    const companyId = currentUser.company_id || currentUser.user_metadata?.company_id;
+    
+    // Marquer comme tenté pour éviter les appels multiples
+    kpiSnapshotSaveAttempted.current = true;
+    
+    // Sauvegarder le snapshot KPI de manière asynchrone
+    checkAndSaveKPISnapshot(
+      companyId, 
+      enrichedProducts, 
+      orders || [], 
+      parameterState.seuilSurstockProfond
+    ).then(result => {
+      if (result?.success) {
+        console.log('📊 Snapshot KPI du jour sauvegardé avec succès');
+      }
+    }).catch(error => {
+      // Ne pas bloquer l'app si la sauvegarde échoue
+      console.warn('⚠️ Impossible de sauvegarder le snapshot KPI:', error.message);
+    });
+  }, [enrichedProducts, orders, currentUser, parameterState.seuilSurstockProfond]);
 
   // 6. Notifications Automatiques
   // Notifications automatiques désactivées (gérées uniquement pour mentions et ML)

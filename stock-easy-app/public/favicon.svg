@@ -1,9 +1,10 @@
 <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-  <g fill="#000000">
-    <path d="M50 8L88 30V70L50 92L12 70V30Z" fill="#050505"/>
-    <path d="M50 8L12 30V70L50 50Z" fill="#0b0b0b"/>
-    <path d="M50 8L88 30V70L50 50Z" fill="#000000"/>
-    <path d="M12 70L50 92L88 70L50 50Z" fill="#000000"/>
-  </g>
+  <!-- Face gauche -->
+  <path d="M50 8L12 30V70L50 50Z" fill="#0a0a0a"/>
+  <!-- Face droite -->
+  <path d="M50 8L88 30V70L50 50Z" fill="#000000"/>
+  <!-- Face du bas -->
+  <path d="M12 70L50 92L88 70L50 50Z" fill="#050505"/>
+  <!-- Face du haut (plus claire) -->
+  <path d="M50 8L88 30L50 50L12 30Z" fill="#1a1a1a"/>
 </svg>
-

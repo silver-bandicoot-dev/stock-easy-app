@@ -303,14 +303,16 @@ export function MappingSKUFournisseur({
     try {
       const result = await supabaseApi.updateProduct(product.sku, {
         // Seul le MOQ est mis à jour, les autres champs restent inchangés côté SQL
-        moq
+        moq,
+        // Marquer que le MOQ est modifié manuellement par l'utilisateur
+        moq_source: 'manuel'
       });
 
       if (!result.success) {
         throw new Error(result.error || 'Échec de la mise à jour du MOQ produit');
       }
 
-      console.log('✅ MOQ produit mis à jour', { sku: product.sku, moq });
+      console.log('✅ MOQ produit mis à jour manuellement', { sku: product.sku, moq, moq_source: 'manuel' });
     } catch (error) {
       console.error('❌ Erreur mise à jour MOQ produit:', error);
     }

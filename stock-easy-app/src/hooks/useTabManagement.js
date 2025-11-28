@@ -6,7 +6,6 @@
 import { useState } from 'react';
 import {
   MAIN_TABS,
-  TRACK_TABS,
   SETTINGS_TABS,
   ANALYTICS_TABS
 } from '../constants/stockEasyConstants';
@@ -20,7 +19,6 @@ console.log('📁 Loading useTabManagement.js - Priorité 5');
 export const useTabManagement = () => {
   // États pour les onglets principaux
   const [activeTab, setActiveTab] = useState(MAIN_TABS.DASHBOARD);
-  const [trackTabSection, setTrackTabSection] = useState(TRACK_TABS.EN_COURS_COMMANDE);
   
   // États pour les sous-onglets
   const [parametersSubTab, setParametersSubTab] = useState(SETTINGS_TABS.GENERAL);
@@ -35,7 +33,7 @@ export const useTabManagement = () => {
     // Mapper les noms d'onglets aux constantes MAIN_TABS
     const tabMap = {
       'settings': MAIN_TABS.SETTINGS,
-      'track': MAIN_TABS.TRACK,
+      'orders': MAIN_TABS.ORDERS,
       'actions': MAIN_TABS.ACTIONS,
       'stock': MAIN_TABS.STOCK,
       'analytics': MAIN_TABS.ANALYTICS
@@ -54,8 +52,6 @@ export const useTabManagement = () => {
   return {
     activeTab,
     setActiveTab,
-    trackTabSection,
-    setTrackTabSection,
     parametersSubTab,
     setParametersSubTab,
     analyticsSubTab,

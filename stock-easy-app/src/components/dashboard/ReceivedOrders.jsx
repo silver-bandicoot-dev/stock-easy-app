@@ -4,12 +4,11 @@ import { CheckCircle } from 'lucide-react';
 import { InfoTooltip, tooltips } from '../ui/InfoTooltip';
 import { formatConfirmedDate } from '../../utils/dateUtils';
 
-export const ReceivedOrders = ({ orders, setActiveTab, setTrackTabSection }) => {
+export const ReceivedOrders = ({ orders, setActiveTab }) => {
   const receivedOrders = orders.filter(order => order.status === 'received');
 
   const handleViewDetails = () => {
-    setActiveTab('track');
-    setTrackTabSection('commandes_recues');
+    setActiveTab('orders');
   };
 
   return (

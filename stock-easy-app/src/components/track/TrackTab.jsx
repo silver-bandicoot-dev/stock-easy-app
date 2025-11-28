@@ -249,45 +249,48 @@ export const TrackTab = ({
       transition={{ duration: 0.25 }}
       className="space-y-6"
     >
-      {/* Header avec titre et sous-titre */}
-      <div className="bg-white rounded-xl shadow-sm border border-[#E5E4DF] p-6">
-        <div className="flex items-center gap-3 mb-2">
-          <Truck className="w-8 h-8 text-[#191919]" />
-          <h1 className="text-2xl font-bold text-[#191919]">Track & Manage</h1>
+      {/* Header - Style Dashboard épuré */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div>
+          <h1 className="text-xl sm:text-2xl font-semibold text-[#191919]">
+            Track & Manage 📦
+          </h1>
+          <p className="text-sm text-[#6B7177] mt-0.5">
+            Suivez vos commandes et gérez les réceptions
+          </p>
         </div>
-        <p className="text-xs sm:text-sm text-[#666663]">
-          Suivez vos commandes et gérez les réceptions
-        </p>
+      </div>
         
-        {/* Onglets de navigation - Optimisés mobile */}
-        <div className="flex gap-2 mt-6 overflow-x-auto pb-2 -mx-2 px-2 sm:mx-0 sm:px-0">
-          {trackSections.map(section => (
-            <button
-              key={section.key}
-              onClick={() => setTrackTabSection(section.key)}
-              className={`px-3 sm:px-4 py-2 rounded-lg font-medium text-xs sm:text-sm whitespace-nowrap transition-all ${
-                trackTabSection === section.key
-                  ? 'bg-black text-white'
-                  : 'bg-[#FAFAF7] text-[#666663] hover:bg-[#F0F0EB]'
-              }`}
-            >
-              <span className="hidden sm:inline">{section.title}</span>
-              <span className="sm:hidden">{section.shortTitle}</span>
-              <span className="ml-1">
-                ({orders.filter(o => {
-                  switch (section.key) {
-                    case TRACK_TABS.EN_COURS_COMMANDE: return o.status === 'pending_confirmation';
-                    case TRACK_TABS.PREPARATION: return o.status === 'preparing';
-                    case TRACK_TABS.EN_TRANSIT: return o.status === 'in_transit';
-                    case TRACK_TABS.COMMANDES_RECUES: return o.status === 'received';
-                    case TRACK_TABS.RECONCILIATION: return o.status === 'reconciliation';
-                    default: return false;
-                  }
-                }).length})
-              </span>
-            </button>
-          ))}
-        </div>
+      {/* Onglets de navigation - Style pills */}
+      <div className="flex items-center gap-2 overflow-x-auto pb-1">
+        {trackSections.map(section => (
+          <button
+            key={section.key}
+            onClick={() => setTrackTabSection(section.key)}
+            className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all ${
+              trackTabSection === section.key
+                ? 'bg-[#191919] text-white shadow-sm'
+                : 'bg-white text-[#6B7177] border border-[#E1E3E5] hover:border-[#8A8C8E] hover:text-[#191919]'
+            }`}
+          >
+            <span className="hidden sm:inline">{section.title}</span>
+            <span className="sm:hidden">{section.shortTitle}</span>
+            <span className={`ml-1.5 px-1.5 py-0.5 rounded-full text-xs ${
+              trackTabSection === section.key ? 'bg-white/20 text-white' : 'bg-[#F6F6F7] text-[#6B7177]'
+            }`}>
+              {orders.filter(o => {
+                switch (section.key) {
+                  case TRACK_TABS.EN_COURS_COMMANDE: return o.status === 'pending_confirmation';
+                  case TRACK_TABS.PREPARATION: return o.status === 'preparing';
+                  case TRACK_TABS.EN_TRANSIT: return o.status === 'in_transit';
+                  case TRACK_TABS.COMMANDES_RECUES: return o.status === 'received';
+                  case TRACK_TABS.RECONCILIATION: return o.status === 'reconciliation';
+                  default: return false;
+                }
+              }).length}
+            </span>
+          </button>
+        ))}
       </div>
 
       {/* Contenu de chaque section */}

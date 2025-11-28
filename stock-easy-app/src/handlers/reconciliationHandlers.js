@@ -15,7 +15,7 @@ console.log('📁 Loading reconciliationHandlers.js - Phase 9 & 13');
  * @param {Object} api - Service API
  * @param {Function} loadData - Fonction pour recharger les données
  * @param {Function} setDiscrepancyTypes - Setter pour définir les types de problèmes
- * @param {Function} setTrackTabSection - Setter pour changer la section de l'onglet Track
+ * @param {Function} setActiveTab - Setter pour changer l'onglet actif
  */
 export const confirmReconciliationWithQuantities = async (
   inlineModals,
@@ -23,7 +23,7 @@ export const confirmReconciliationWithQuantities = async (
   api,
   loadData,
   setDiscrepancyTypes,
-  setTrackTabSection
+  setActiveTab
 ) => {
 
   try {
@@ -148,9 +148,9 @@ export const confirmReconciliationWithQuantities = async (
       { duration: 5000 }
     );
     
-    // Rediriger vers l'onglet Réconciliation si des problèmes sont détectés
-    if (hasProblems) {
-      setTrackTabSection('reconciliation');
+    // Rediriger vers l'onglet Commandes si des problèmes sont détectés
+    if (hasProblems && setActiveTab) {
+      setActiveTab('orders');
     }
     
   } catch (error) {

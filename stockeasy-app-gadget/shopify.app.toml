@@ -1,0 +1,20 @@
+# Learn more about working with Shopify TOML files with Gadget at https://docs.gadget.dev/guides/plugins/shopify/advanced-topics/shopify-app-toml
+
+client_id = "17cb240cc35aedce49ed32a877805a83"
+name = "stockeasy-app"
+application_url = "https://stockeasy-app.gadget.app/api/shopify/install-or-render"
+embedded = true
+
+[auth]
+redirect_urls = [ "https://stockeasy-app.gadget.app/api/connections/auth/shopify/callback" ]
+
+[webhooks]
+api_version = "2025-10"
+
+[[webhooks.subscriptions]]
+compliance_topics = [ "customers/data_request", "customers/redact", "shop/redact" ]
+uri = "https://stockeasy-app.gadget.app/api/webhooks/shopify"
+
+# App Home enabled - navigation handled via App Bridge ui-nav-menu component
+[app_home]
+enabled = true

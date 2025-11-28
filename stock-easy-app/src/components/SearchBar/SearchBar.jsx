@@ -10,7 +10,6 @@ import { useNavigate } from 'react-router-dom';
  * @param {Function} onSelect - Callback optionnel lors de la sélection d'un résultat
  * @param {Function} setActiveTab - Fonction pour changer l'onglet actif (pour navigation interne)
  * @param {Function} setParametersSubTab - Fonction pour changer le sous-onglet Paramètres
- * @param {Function} setTrackTabSection - Fonction pour changer le sous-onglet Track
  * @param {Function} setStockLevelSearch - Fonction pour filtrer dans l'onglet Stock
  * @param {string} className - Classes CSS additionnelles
  */
@@ -19,7 +18,6 @@ export const SearchBar = ({
   onSelect, 
   setActiveTab,
   setParametersSubTab,
-  setTrackTabSection,
   setStockLevelSearch,
   onSupplierSelect,
   className = '' 
@@ -31,7 +29,7 @@ export const SearchBar = ({
   const containerRef = useRef(null);
   const navigate = useNavigate();
 
-  const { results, loading, saveToHistory } = useSearch(query);
+  const { results, loading, saveToHistory, searchError } = useSearch(query);
 
   // Aplatir les résultats pour la navigation clavier
   const flatItems = results.flatMap((group) => group.items);
@@ -113,21 +111,8 @@ export const SearchBar = ({
             break;
             
           case 'order':
-            // Aller à l'onglet Track avec le bon sous-onglet selon le statut
-            setActiveTab('track');
-            if (setTrackTabSection && item.data?.status) {
-              // Mapper le statut vers le bon sous-onglet
-              const statusToTab = {
-                'pending_confirmation': 'en_cours_commande',
-                'preparing': 'preparation',
-                'in_transit': 'en_transit',
-                'received': 'commandes_recues',
-                'reconciliation': 'reconciliation',
-                'completed': 'completed'
-              };
-              const targetTab = statusToTab[item.data.status] || 'en_cours_commande';
-              setTrackTabSection(targetTab);
-            }
+            // Aller à l'onglet Commandes
+            setActiveTab('orders');
             console.log('🔍 Commande sélectionnée:', item.id, item.data);
             break;
             
@@ -170,7 +155,7 @@ export const SearchBar = ({
         }
       }
     },
-    [query, saveToHistory, onSelect, navigate, setActiveTab, setParametersSubTab, setTrackTabSection, setStockLevelSearch, onSupplierSelect]
+    [query, saveToHistory, onSelect, navigate, setActiveTab, setParametersSubTab, setStockLevelSearch, onSupplierSelect]
   );
 
   // Gérer la navigation clavier
@@ -240,30 +225,37 @@ export const SearchBar = ({
           label: 'Commander',
           icon: ShoppingBag,
           onClick: (item) => {
-            console.log('🛒 Commander produit:', item.id);
-            // TODO: Ouvrir modal de commande rapide
+            // Naviguer vers l'onglet Actions pour commander ce produit
             if (setActiveTab) {
               setActiveTab('actions');
+              // Filtrer par le produit dans le champ de recherche
+              if (setStockLevelSearch) {
+                setStockLevelSearch(item.id);
+              }
             }
           }
         });
         actions.push({
-          label: 'Historique',
+          label: 'Voir stock',
           icon: TrendingUp,
           onClick: (item) => {
-            console.log('📊 Voir historique:', item.id);
+            // Naviguer vers l'onglet Stock et filtrer
             if (setActiveTab) {
-              setActiveTab('history');
-              // TODO: Filtrer par SKU
+              setActiveTab('stock-level');
+              if (setStockLevelSearch) {
+                setStockLevelSearch(item.id);
+              }
             }
           }
         });
         actions.push({
-          label: 'Éditer',
+          label: 'Analytics',
           icon: Edit,
           onClick: (item) => {
-            console.log('✏️ Éditer produit:', item.id);
-            // TODO: Ouvrir modal d'édition
+            // Naviguer vers Analytics
+            if (setActiveTab) {
+              setActiveTab('analytics');
+            }
           }
         });
         break;
@@ -273,9 +265,9 @@ export const SearchBar = ({
           label: 'Email',
           icon: Mail,
           onClick: (item) => {
-            console.log('✉️ Envoyer email:', item.data.email);
-            if (item.data.email) {
-              window.location.href = `mailto:${item.data.email}`;
+            const email = item.data?.email || item.data?.commercial_contact_email;
+            if (email) {
+              window.location.href = `mailto:${email}`;
             }
           }
         });
@@ -283,10 +275,12 @@ export const SearchBar = ({
           label: 'Produits',
           icon: Package,
           onClick: (item) => {
-            console.log('📦 Voir produits du fournisseur:', item.id);
+            // Naviguer vers Stock et filtrer par fournisseur
             if (setActiveTab) {
               setActiveTab('stock-level');
-              // TODO: Filtrer par fournisseur
+              if (setStockLevelSearch) {
+                setStockLevelSearch(item.data?.nom_fournisseur || item.title);
+              }
             }
           }
         });
@@ -294,7 +288,6 @@ export const SearchBar = ({
           label: 'Stats',
           icon: TrendingUp,
           onClick: (item) => {
-            console.log('📈 Statistiques fournisseur:', item.id);
             if (setActiveTab) {
               setActiveTab('analytics');
             }
@@ -307,18 +300,8 @@ export const SearchBar = ({
           label: 'Détails',
           icon: FileText,
           onClick: (item) => {
-            console.log('📋 Voir détails commande:', item.id);
-            if (setActiveTab && setTrackTabSection && item.data?.status) {
-              setActiveTab('track');
-              const statusToTab = {
-                'pending_confirmation': 'en_cours_commande',
-                'preparing': 'preparation',
-                'in_transit': 'en_transit',
-                'received': 'commandes_recues',
-                'reconciliation': 'reconciliation',
-                'completed': 'completed'
-              };
-              setTrackTabSection(statusToTab[item.data.status] || 'en_cours_commande');
+            if (setActiveTab) {
+              setActiveTab('orders');
             }
           }
         });
@@ -327,8 +310,9 @@ export const SearchBar = ({
             label: 'Tracking',
             icon: Truck,
             onClick: (item) => {
-              console.log('🚚 Voir tracking:', item.data.tracking_number);
-              // TODO: Ouvrir lien de tracking
+              // Essayer d'ouvrir le lien de tracking (17track est populaire)
+              const trackingNumber = item.data.tracking_number;
+              window.open(`https://t.17track.net/fr#nums=${encodeURIComponent(trackingNumber)}`, '_blank');
             }
           });
         }
@@ -336,8 +320,11 @@ export const SearchBar = ({
           label: 'Contacter',
           icon: Mail,
           onClick: (item) => {
-            console.log('📧 Contacter fournisseur:', item.data.supplier);
-            // TODO: Ouvrir modal email
+            // Naviguer vers les paramètres fournisseurs
+            if (setActiveTab && setParametersSubTab) {
+              setActiveTab('settings');
+              setParametersSubTab('suppliers');
+            }
           }
         });
         break;
@@ -347,10 +334,8 @@ export const SearchBar = ({
           label: 'Voir stocks',
           icon: Package,
           onClick: (item) => {
-            console.log('📦 Voir stocks entrepôt:', item.id);
             if (setActiveTab) {
               setActiveTab('stock-level');
-              // TODO: Filtrer par entrepôt
             }
           }
         });
@@ -358,9 +343,9 @@ export const SearchBar = ({
           label: 'Localiser',
           icon: MapPin,
           onClick: (item) => {
-            console.log('📍 Localiser entrepôt:', item.data.address);
-            if (item.data.address) {
-              const query = encodeURIComponent(item.data.address);
+            const address = item.data?.address || item.data?.city;
+            if (address) {
+              const query = encodeURIComponent(`${address} ${item.data?.city || ''} ${item.data?.country || ''}`);
               window.open(`https://www.google.com/maps/search/?api=1&query=${query}`, '_blank');
             }
           }
@@ -369,8 +354,11 @@ export const SearchBar = ({
           label: 'Éditer',
           icon: Edit,
           onClick: (item) => {
-            console.log('✏️ Éditer entrepôt:', item.id);
-            // TODO: Ouvrir modal d'édition
+            // Naviguer vers les paramètres entrepôts
+            if (setActiveTab && setParametersSubTab) {
+              setActiveTab('settings');
+              setParametersSubTab('warehouses');
+            }
           }
         });
         break;
@@ -380,7 +368,7 @@ export const SearchBar = ({
     }
     
     return actions;
-  }, [setActiveTab, setTrackTabSection]);
+  }, [setActiveTab, setParametersSubTab, setStockLevelSearch]);
 
   return (
     <div ref={containerRef} className={`relative ${className}`}>
@@ -445,6 +433,7 @@ export const SearchBar = ({
         query={query}
         show={showDropdown && (query.length >= 2 || results.length > 0)}
         getQuickActions={getQuickActions}
+        searchError={searchError}
       />
     </div>
   );

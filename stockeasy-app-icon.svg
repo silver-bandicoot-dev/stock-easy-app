@@ -1,0 +1,19 @@
+<svg width="1200" height="1200" viewBox="0 0 1200 1200" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background with rounded corners -->
+  <rect width="1200" height="1200" rx="220" fill="#f8f8f8"/>
+  
+  <!-- Subtle border -->
+  <rect x="4" y="4" width="1192" height="1192" rx="216" fill="none" stroke="#e0e0e0" stroke-width="8"/>
+  
+  <!-- Cube 3D Stockeasy -->
+  <g transform="translate(132, 132) scale(9.36)">
+    <!-- Face gauche -->
+    <path d="M50 8L12 30V70L50 50Z" fill="#0a0a0a"/>
+    <!-- Face droite -->
+    <path d="M50 8L88 30V70L50 50Z" fill="#000000"/>
+    <!-- Face du bas -->
+    <path d="M12 70L50 92L88 70L50 50Z" fill="#050505"/>
+    <!-- Face du haut (plus claire) -->
+    <path d="M50 8L88 30L50 50L12 30Z" fill="#1a1a1a"/>
+  </g>
+</svg>

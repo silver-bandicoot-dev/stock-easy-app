@@ -7,3 +7,15 @@ export { InfoTooltip } from './InfoTooltip';
 export { HealthBar } from './HealthBar';
 export { Modal } from './Modal';
 export { Logo } from './Logo';
+export { ErrorBoundary } from './ErrorBoundary';
+export { 
+  Skeleton,
+  SkeletonKPICard,
+  SkeletonProductRow,
+  SkeletonProductCard,
+  SkeletonOrderCard,
+  SkeletonChart,
+  SkeletonDashboard,
+  SkeletonStockPage,
+  SkeletonOrdersPage
+} from './Skeleton';

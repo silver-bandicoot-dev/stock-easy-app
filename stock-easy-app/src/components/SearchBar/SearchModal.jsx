@@ -11,7 +11,6 @@ import { useNavigate } from 'react-router-dom';
  * @param {Function} onClose - Callback pour fermer le modal
  * @param {Function} setActiveTab - Fonction pour changer l'onglet actif
  * @param {Function} setParametersSubTab - Fonction pour changer le sous-onglet Paramètres
- * @param {Function} setTrackTabSection - Fonction pour changer le sous-onglet Track
  * @param {Function} setStockLevelSearch - Fonction pour filtrer dans l'onglet Stock
  * @param {Function} onSupplierSelect - Callback lors de la sélection d'un fournisseur
  */
@@ -20,7 +19,6 @@ export const SearchModal = ({
   onClose,
   setActiveTab,
   setParametersSubTab,
-  setTrackTabSection,
   setStockLevelSearch,
   onSupplierSelect
 }) => {
@@ -30,7 +28,7 @@ export const SearchModal = ({
   const inputRef = useRef(null);
   const navigate = useNavigate();
 
-  const { results, loading, saveToHistory } = useSearch(query);
+  const { results, loading, saveToHistory, searchError } = useSearch(query);
 
   // Aplatir les résultats pour la navigation clavier
   const flatItems = results.flatMap((group) => group.items);
@@ -86,19 +84,7 @@ export const SearchModal = ({
             break;
             
           case 'order':
-            setActiveTab('track');
-            if (setTrackTabSection && item.data?.status) {
-              const statusToTab = {
-                'pending_confirmation': 'en_cours_commande',
-                'preparing': 'preparation',
-                'in_transit': 'en_transit',
-                'received': 'commandes_recues',
-                'reconciliation': 'reconciliation',
-                'completed': 'completed'
-              };
-              const targetTab = statusToTab[item.data.status] || 'en_cours_commande';
-              setTrackTabSection(targetTab);
-            }
+            setActiveTab('orders');
             break;
             
           case 'warehouse':
@@ -118,7 +104,7 @@ export const SearchModal = ({
         }
       }
     },
-    [query, saveToHistory, onClose, navigate, setActiveTab, setParametersSubTab, setTrackTabSection, setStockLevelSearch, onSupplierSelect]
+    [query, saveToHistory, onClose, navigate, setActiveTab, setParametersSubTab, setStockLevelSearch, onSupplierSelect]
   );
 
   // Gérer la navigation clavier
@@ -251,6 +237,7 @@ export const SearchModal = ({
                 query={query}
                 show={showDropdown && (query.length >= 2 || results.length > 0)}
                 isMobile={true}
+                searchError={searchError}
               />
             </div>
           </motion.div>

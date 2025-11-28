@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import api from '../services/apiAdapter';
 import { toast } from 'sonner';
 import { DEFAULT_PARAMETERS } from '../constants/stockEasyConstants';
+import cache, { CACHE_CONFIG, invalidateOnMutation } from '../services/cacheService';
 
 const NUMERIC_PARAMETERS = new Set(['seuilSurstockProfond', 'multiplicateurDefaut']);
 
@@ -68,7 +69,7 @@ const buildParametersState = (rawParameters) => {
 
 /**
  * Hook personnalisé pour gérer les données de stock
- * Extrait de StockEasy.jsx
+ * Avec système de cache intelligent pour réduire les appels Supabase
  */
 export const useStockData = () => {
   const [loading, setLoading] = useState(true);
@@ -78,68 +79,138 @@ export const useStockData = () => {
   const [warehouses, setWarehouses] = useState({});
   const [orders, setOrders] = useState([]);
   const [parameters, setParameters] = useState({});
+  
+  // Ref pour éviter les appels simultanés
+  const loadingRef = useRef(false);
 
-  const loadData = async () => {
-    try {
-      setLoading(true);
-      const data = await api.getAllData();
-      
-      // Construire suppliersMap
-      const suppliersMap = {};
-      data.suppliers.forEach(s => {
-        suppliersMap[s.name] = s;
+  /**
+   * Transforme les données brutes en maps utilisables
+   */
+  const processData = useCallback((data) => {
+    // Construire suppliersMap
+    const suppliersMap = {};
+    data.suppliers.forEach(s => {
+      suppliersMap[s.name] = s;
+    });
+    
+    // Construire warehousesMap (indexé par nom ET par id)
+    const warehousesMap = {};
+    if (data.warehouses && Array.isArray(data.warehouses)) {
+      data.warehouses.forEach(w => {
+        warehousesMap[w.name] = w;  // Index par nom (legacy)
+        if (w.id) {
+          warehousesMap[w.id] = w;  // Index par ID (UUID)
+        }
       });
+    }
+    
+    return {
+      suppliersMap,
+      warehousesMap,
+      products: data.products,
+      orders: data.orders,
+      parameters: buildParametersState(data.parameters)
+    };
+  }, []);
+
+  /**
+   * Charge les données avec support du cache
+   */
+  const loadData = useCallback(async (options = {}) => {
+    const { forceRefresh = false } = options;
+    
+    // Éviter les appels simultanés
+    if (loadingRef.current) {
+      console.log('⏳ Chargement déjà en cours...');
+      return;
+    }
+    
+    try {
+      loadingRef.current = true;
+      setLoading(true);
       
-      // Construire warehousesMap (indexé par nom ET par id)
-      const warehousesMap = {};
-      if (data.warehouses && Array.isArray(data.warehouses)) {
-        data.warehouses.forEach(w => {
-          warehousesMap[w.name] = w;  // Index par nom (legacy)
-          if (w.id) {
-            warehousesMap[w.id] = w;  // Index par ID (UUID)
-          }
-        });
+      let data;
+      const cacheConfig = CACHE_CONFIG.allData;
+      
+      // Essayer le cache d'abord (sauf si forceRefresh)
+      if (!forceRefresh) {
+        const cachedData = cache.get(cacheConfig.key);
+        if (cachedData) {
+          data = cachedData;
+        }
       }
       
-      setSuppliers(suppliersMap);
-      setWarehouses(warehousesMap);
-      setProducts(data.products);
-      setOrders(data.orders);
+      // Si pas de cache, charger depuis Supabase
+      if (!data) {
+        console.log('📡 Chargement depuis Supabase...');
+        data = await api.getAllData();
+        
+        // Stocker en cache
+        cache.set(cacheConfig.key, data, cacheConfig.ttl);
+      }
       
-      // Charger les paramètres
-      const parsedParameters = buildParametersState(data.parameters);
-      setParameters(parsedParameters);
+      // Transformer et appliquer les données
+      const processed = processData(data);
       
-      console.log('✅ Données chargées depuis Supabase');
+      setSuppliers(processed.suppliersMap);
+      setWarehouses(processed.warehousesMap);
+      setProducts(processed.products);
+      setOrders(processed.orders);
+      setParameters(processed.parameters);
+      
+      console.log('✅ Données chargées');
+      
     } catch (error) {
       console.error('❌ Erreur lors du chargement:', error);
       toast.error('Erreur lors du chargement des données');
     } finally {
       setLoading(false);
+      loadingRef.current = false;
     }
-  };
+  }, [processData]);
 
-  const syncData = async () => {
+  /**
+   * Synchronisation manuelle (force refresh)
+   */
+  const syncData = useCallback(async () => {
     try {
       setSyncing(true);
-      await loadData();
+      // Invalider le cache avant de recharger
+      cache.invalidate(['allData', 'products', 'orders', 'suppliers', 'warehouses']);
+      await loadData({ forceRefresh: true });
       console.log('🔄 Synchronisation effectuée');
     } catch (error) {
       console.error('❌ Erreur lors de la synchronisation:', error);
     } finally {
       setSyncing(false);
     }
-  };
+  }, [loadData]);
+
+  /**
+   * Invalide le cache suite à une mutation
+   */
+  const invalidateCacheOnMutation = useCallback((mutationType) => {
+    invalidateOnMutation(mutationType);
+  }, []);
 
   useEffect(() => {
     loadData();
-    // Synchronisation périodique réduite à 2 minutes pour être plus réactif
-    // La synchronisation en temps réel via useSupabaseSync gère la plupart des changements
-    const interval = setInterval(() => {
-      syncData();
+    
+    // Nettoyage périodique du cache expiré
+    const cleanupInterval = setInterval(() => {
+      cache.clearOld();
+    }, 5 * 60 * 1000); // Toutes les 5 minutes
+    
+    // Synchronisation périodique (avec cache, donc légère)
+    const syncInterval = setInterval(() => {
+      loadData(); // Utilisera le cache si disponible
     }, 2 * 60 * 1000); // 2 minutes
-    return () => clearInterval(interval);
-  }, []);
+    
+    return () => {
+      clearInterval(cleanupInterval);
+      clearInterval(syncInterval);
+    };
+  }, [loadData]);
 
   return {
     loading,
@@ -155,6 +226,9 @@ export const useStockData = () => {
     setOrders,
     setSuppliers,
     setWarehouses,
-    setParameters
+    setParameters,
+    // Nouvelles fonctions pour la gestion du cache
+    invalidateCacheOnMutation,
+    forceRefresh: () => loadData({ forceRefresh: true })
   };
 };

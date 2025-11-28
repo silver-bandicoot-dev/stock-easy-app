@@ -12,7 +12,6 @@ import { useCurrency } from '../../contexts/CurrencyContext';
 import { roundToTwoDecimals } from '../../utils/decimalUtils';
 import { calculateTotalPotentialRevenueML } from '../../services/ml/revenueForecastService';
 import { DemandForecastModel } from '../../services/ml/demandForecastModel';
-import { SubTabsNavigation } from '../features/SubTabsNavigation';
 import { ANALYTICS_TABS } from '../../constants/stockEasyConstants';
 import AIMainDashboard from '../ml/AIMainDashboard';
 import { getSalesHistory } from '../../utils/salesHistoryGenerator';
@@ -480,28 +479,28 @@ export const AnalyticsTab = ({
     };
 
     return (
-      <div className="bg-white rounded-xl shadow-sm border border-[#E5E4DF] overflow-hidden">
+      <div className="bg-white rounded-lg border border-[#E1E3E5] overflow-hidden">
         <button
           onClick={handleToggle}
           type="button"
-          className="w-full px-5 py-4 flex items-center justify-between hover:bg-[#FAFAF7] transition-colors cursor-pointer"
+          className="w-full px-4 py-3 flex items-center justify-between hover:bg-[#F6F6F7] transition-colors cursor-pointer"
           aria-expanded={isOpen}
           aria-controls={`accordion-content-${title.toLowerCase().replace(/\s+/g, '-')}`}
         >
           <div className="flex items-center gap-3">
-            <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${iconColor}`}>
-              <Icon className="w-5 h-5 text-white" />
+            <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${iconColor}`}>
+              <Icon className="w-4 h-4 text-white" />
             </div>
             <div className="text-left">
-              <h4 className="font-semibold text-[#191919]">{title}</h4>
-              <p className="text-xs text-[#666663]">{count} insight{count > 1 ? 's' : ''}</p>
+              <h4 className="font-medium text-[#191919]">{title}</h4>
+              <p className="text-xs text-[#6B7177]">{count} insight{count > 1 ? 's' : ''}</p>
             </div>
           </div>
           <motion.div
             animate={{ rotate: isOpen ? 180 : 0 }}
             transition={{ duration: 0.2 }}
           >
-            <ChevronDown className="w-5 h-5 text-[#666663]" />
+            <ChevronDown className="w-5 h-5 text-[#6B7177]" />
           </motion.div>
         </button>
         
@@ -515,7 +514,7 @@ export const AnalyticsTab = ({
               transition={{ duration: 0.3 }}
               className="overflow-hidden"
             >
-              <div className="p-3 space-y-2 border-t border-[#E5E4DF]">
+              <div className="p-3 space-y-2 border-t border-[#E1E3E5]">
                 {insights.map((insight) => (
                   <InsightAlert
                     key={insight.key}
@@ -571,18 +570,48 @@ export const AnalyticsTab = ({
       transition={{ duration: 0.25 }}
       className="space-y-6"
     >
-      {/* En-tête avec contrôles - Version compacte */}
-      <div className="bg-white rounded-xl shadow-sm border border-[#E5E4DF] p-4 relative z-50">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h2 className="text-xl font-bold text-[#191919]">Indicateurs Clés de l'Inventaire</h2>
-            <p className="text-sm text-[#666663] mt-1">
-              KPIs ayant un impact direct sur vos résultats financiers
-            </p>
-          </div>
+      {/* Header - Style Dashboard épuré */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div>
+          <h1 className="text-xl sm:text-2xl font-semibold text-[#191919]">
+            {analyticsSubTab === ANALYTICS_TABS.FORECAST ? 'Prévisions IA 🤖' : 'Analytics 📈'}
+          </h1>
+          <p className="text-sm text-[#6B7177] mt-0.5">
+            {analyticsSubTab === ANALYTICS_TABS.FORECAST 
+              ? 'Prévisions de demande basées sur le Machine Learning'
+              : 'KPIs et indicateurs clés de votre inventaire'
+            }
+          </p>
         </div>
+      </div>
 
-        <div className="flex flex-col lg:flex-row gap-4">
+      {/* Onglets - Style pills */}
+      <div className="flex items-center gap-2 overflow-x-auto pb-1">
+        {[
+          { id: ANALYTICS_TABS.KPIS, label: 'KPIs', icon: TrendingUp },
+          { id: ANALYTICS_TABS.FORECAST, label: 'Prévisions IA', icon: Brain }
+        ].map(tab => {
+          const Icon = tab.icon;
+          return (
+            <button
+              key={tab.id}
+              onClick={() => setAnalyticsSubTab ? setAnalyticsSubTab(tab.id) : null}
+              className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all ${
+                analyticsSubTab === tab.id
+                  ? 'bg-[#191919] text-white shadow-sm'
+                  : 'bg-white text-[#6B7177] border border-[#E1E3E5] hover:border-[#8A8C8E] hover:text-[#191919]'
+              }`}
+            >
+              <Icon className="w-4 h-4" />
+              {tab.label}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Contrôles de période - Uniquement sur l'onglet KPIs */}
+      {analyticsSubTab === ANALYTICS_TABS.KPIS && (
+        <div className="flex flex-col lg:flex-row gap-4 p-3 bg-[#F6F6F7] rounded-lg relative z-50">
           <div className="flex-1 relative z-50">
             <DateRangePicker
               value={dateRange}
@@ -591,7 +620,6 @@ export const AnalyticsTab = ({
               onCustomRangeChange={setCustomRange}
             />
           </div>
-          
           <div className="flex-1 relative z-50">
             <ComparisonSelector
               value={comparisonType}
@@ -600,71 +628,66 @@ export const AnalyticsTab = ({
             />
           </div>
         </div>
-      </div>
-
-      {/* Navigation par sous-onglets */}
-      <SubTabsNavigation
-        tabs={[
-          { id: ANALYTICS_TABS.KPIS, label: 'KPIs', icon: TrendingUp },
-          { id: ANALYTICS_TABS.FORECAST, label: 'Prévisions IA', icon: Brain }
-        ]}
-        activeTab={analyticsSubTab}
-        onChange={setAnalyticsSubTab || (() => {})}
-      />
+      )}
 
       {/* Contenu des sous-onglets */}
       {analyticsSubTab === ANALYTICS_TABS.FORECAST ? (
-        <div className="mt-6">
-          {/* Sélecteur de produit */}
-          <div className="mb-6 bg-white rounded-xl shadow-sm border border-[#E5E4DF] p-4">
-            <label className="block text-sm font-medium text-[#191919] mb-2">
-              Sélectionner un produit pour les prévisions
-            </label>
-            <select
-              value={selectedProductForForecast?.sku || ''}
-              onChange={async (e) => {
-                const product = products.find(p => p.sku === e.target.value);
-                setSelectedProductForForecast(product || null);
-                
-                // Charger l'historique depuis Supabase quand un produit est sélectionné
-                if (product) {
-                  setLoadingSalesHistory(true);
-                  try {
-                    const history = await getSalesHistory(product, orders, 90);
-                    setSalesHistoryForForecast(history);
-                  } catch (error) {
-                    console.error('❌ Erreur chargement historique:', error);
+        <div className="space-y-6">
+          {/* Sélecteur de produit - Style compact */}
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 p-3 bg-[#F6F6F7] rounded-lg">
+            <div className="flex-1 relative">
+              <select
+                value={selectedProductForForecast?.sku || ''}
+                onChange={async (e) => {
+                  const product = products.find(p => p.sku === e.target.value);
+                  setSelectedProductForForecast(product || null);
+                  
+                  // Charger l'historique depuis Supabase quand un produit est sélectionné
+                  if (product) {
+                    setLoadingSalesHistory(true);
+                    try {
+                      const history = await getSalesHistory(product, orders, 90);
+                      setSalesHistoryForForecast(history);
+                    } catch (error) {
+                      console.error('❌ Erreur chargement historique:', error);
+                      setSalesHistoryForForecast([]);
+                    } finally {
+                      setLoadingSalesHistory(false);
+                    }
+                  } else {
                     setSalesHistoryForForecast([]);
-                  } finally {
-                    setLoadingSalesHistory(false);
                   }
-                } else {
-                  setSalesHistoryForForecast([]);
-                }
-              }}
-              className="w-full px-4 py-2 border border-[#E5E4DF] rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-            >
-              <option value="">-- Sélectionner un produit --</option>
-              {products
-                .filter(p => p.salesPerDay > 0)
-                .map(product => (
-                  <option key={product.sku} value={product.sku}>
-                    {product.name} ({product.sku}) - {product.salesPerDay.toFixed(1)} ventes/jour
-                  </option>
-                ))}
-            </select>
+                }}
+                className="w-full px-4 py-2.5 bg-white border border-[#E1E3E5] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#191919] focus:border-transparent appearance-none cursor-pointer"
+              >
+                <option value="">Sélectionner un produit pour analyser...</option>
+                {products
+                  .filter(p => p.salesPerDay > 0)
+                  .map(product => (
+                    <option key={product.sku} value={product.sku}>
+                      {product.name} ({product.sku}) - {product.salesPerDay.toFixed(1)} ventes/jour
+                    </option>
+                  ))}
+              </select>
+              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#6B7177] pointer-events-none" />
+            </div>
+            {selectedProductForForecast && (
+              <span className="text-sm text-[#6B7177] whitespace-nowrap">
+                {products.filter(p => p.salesPerDay > 0).length} produits avec historique
+              </span>
+            )}
           </div>
 
           {/* Dashboard de prévisions */}
           {selectedProductForForecast ? (
             loadingSalesHistory ? (
-              <div className="bg-white rounded-xl shadow-sm border border-[#E5E4DF] p-12 text-center">
-                <RefreshCw className="w-16 h-16 mx-auto text-gray-400 mb-4 animate-spin" />
-                <h3 className="text-lg font-semibold text-[#191919] mb-2">
-                  Chargement de l'historique depuis Supabase...
+              <div className="bg-white rounded-lg border border-[#E1E3E5] p-12 text-center">
+                <RefreshCw className="w-12 h-12 mx-auto text-[#6B7177] mb-4 animate-spin" />
+                <h3 className="text-lg font-medium text-[#191919] mb-2">
+                  Chargement de l'historique...
                 </h3>
-                <p className="text-[#666663]">
-                  Récupération des données de ventes réelles
+                <p className="text-sm text-[#6B7177]">
+                  Récupération des données de ventes depuis Supabase
                 </p>
               </div>
             ) : (
@@ -676,13 +699,15 @@ export const AnalyticsTab = ({
               />
             )
           ) : (
-            <div className="bg-white rounded-xl shadow-sm border border-[#E5E4DF] p-12 text-center">
-              <Brain className="w-16 h-16 mx-auto text-gray-400 mb-4" />
-              <h3 className="text-lg font-semibold text-[#191919] mb-2">
-                Prévisions IA
+            <div className="bg-white rounded-lg border border-[#E1E3E5] p-12 text-center">
+              <div className="w-16 h-16 mx-auto mb-4 bg-[#F6F6F7] rounded-full flex items-center justify-center">
+                <Brain className="w-8 h-8 text-[#6B7177]" />
+              </div>
+              <h3 className="text-lg font-medium text-[#191919] mb-2">
+                Sélectionnez un produit
               </h3>
-              <p className="text-[#666663]">
-                Sélectionnez un produit ci-dessus pour voir ses prévisions de demande
+              <p className="text-sm text-[#6B7177] max-w-md mx-auto">
+                Choisissez un produit avec historique de ventes pour voir ses prévisions de demande basées sur le Machine Learning
               </p>
             </div>
           )}
@@ -691,9 +716,9 @@ export const AnalyticsTab = ({
         <>
           {/* État de chargement */}
           {analyticsData.loading ? (
-            <div className="flex items-center justify-center h-40 bg-white rounded-xl shadow-sm border border-[#E5E4DF]">
-              <RefreshCw className="w-6 h-6 animate-spin text-[#666663]" />
-              <span className="ml-2 text-[#666663]">Chargement des analytics...</span>
+            <div className="flex items-center justify-center h-40 bg-white rounded-lg border border-[#E1E3E5]">
+              <RefreshCw className="w-6 h-6 animate-spin text-[#6B7177]" />
+              <span className="ml-2 text-[#6B7177]">Chargement des analytics...</span>
             </div>
           ) : analyticsData.error ? (
             <div className="bg-red-50 border border-red-200 rounded-lg p-4">

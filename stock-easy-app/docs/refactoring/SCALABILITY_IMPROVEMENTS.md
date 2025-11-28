@@ -36,3 +36,12 @@ L'application chargeait **toutes** les commandes historiques au démarrage via `
 - *Solution future* : Créer une RPC dédiée `get_analytics_data` pour charger les agrégats statistiques sur toute la période demandée.
 
 
+
+
+
+
+
+
+
+
+

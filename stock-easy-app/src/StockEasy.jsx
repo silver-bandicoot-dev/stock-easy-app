@@ -5,27 +5,28 @@ import { Toaster, toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
 import NotificationBell from './components/notifications/NotificationBell';
 import Sidebar from './components/layout/Sidebar';
+import BottomNav, { BottomNavMoreMenu } from './components/layout/BottomNav';
 import { Logo } from './components/ui/Logo';
 import { SearchBar, SearchModal } from './components/SearchBar';
 import { StockDataProvider, useStockContext } from './contexts/StockDataContext';
 import { useModalContext } from './contexts/ModalContext';
 import { CurrencyProvider } from './contexts/CurrencyContext';
 import { StockEasyModals } from './components/modals/StockEasyModals';
+import { ErrorBoundary } from './components/ui/ErrorBoundary';
+import { SkeletonDashboard } from './components/ui/Skeleton';
 
 // Composants Dashboard
 import { DashboardTab } from './components/dashboard/DashboardTab';
 import { ActionsTab } from './components/actions/ActionsTab';
-import { TrackTab } from './components/track/TrackTab';
+import { OrdersTab } from './components/orders/OrdersTab';
 import { StockTab } from './components/stock/StockTab';
 import { AnalyticsTab } from './components/analytics/AnalyticsTab';
-import { HistoryTab } from './components/history/HistoryTab';
 import { SettingsTab } from './components/settings/SettingsTab';
 import ProfilePage from './components/profile/ProfilePage';
 
 // Constantes et Utils
 import {
   MAIN_TABS,
-  TRACK_TABS,
   STOCK_FILTERS,
   DEFAULT_PARAMETERS
 } from './constants/stockEasyConstants';
@@ -41,7 +42,13 @@ const StockEasyContent = () => {
   const location = useLocation();
   
   // Contextes
-  const { inlineModals } = useModalContext();
+  const { 
+    inlineModals,
+    reconciliationModal,
+    reconciliationModalHandlers,
+    reclamationEmailModal,
+    reclamationEmailModalHandlers
+  } = useModalContext();
   const {
     // Data
     loading,
@@ -82,7 +89,6 @@ const StockEasyContent = () => {
   // Navigation State
   const { 
     activeTab, setActiveTab, 
-    trackTabSection, setTrackTabSection,
     parametersSubTab, setParametersSubTab,
     analyticsSubTab, setAnalyticsSubTab
   } = tabManagement;
@@ -92,17 +98,18 @@ const StockEasyContent = () => {
   const [searchModalOpen, setSearchModalOpen] = useState(false);
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
   const [profilePhotoUrl, setProfilePhotoUrl] = useState(null);
+  const [moreMenuOpen, setMoreMenuOpen] = useState(false);
   
   // Tab Specific Local State
   const [stockLevelFilter, setStockLevelFilter] = useState(STOCK_FILTERS.ALL);
   const [stockLevelSupplierFilter, setStockLevelSupplierFilter] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
-  const [stockLevelSearch, setStockLevelSearch] = useState('');
-  const [historyFilter, setHistoryFilter] = useState('all');
-  const [historySupplierFilter, setHistorySupplierFilter] = useState('all');
-  const [historyDateStart, setHistoryDateStart] = useState('');
-  const [historyDateEnd, setHistoryDateEnd] = useState('');
   const [expandedOrders, setExpandedOrders] = useState({});
+  
+  // Fonction pour mettre à jour la recherche depuis la SearchBar et naviguer
+  const setStockLevelSearch = (term) => {
+    setSearchTerm(term);
+  };
 
   // Gestion Profile Photo
   useEffect(() => {
@@ -128,24 +135,14 @@ const StockEasyContent = () => {
     const orderId = params.get('order');
 
     if (orderId && orders && orders.length > 0) {
-      setActiveTab(MAIN_TABS.TRACK);
+      setActiveTab(MAIN_TABS.ORDERS);
       const targetOrder = orders.find(order => order.id === orderId);
-      if (targetOrder) {
-        const statusToSectionMap = {
-          pending_confirmation: TRACK_TABS.EN_COURS_COMMANDE,
-          preparing: TRACK_TABS.PREPARATION,
-          in_transit: TRACK_TABS.EN_TRANSIT,
-          received: TRACK_TABS.COMMANDES_RECUES,
-          reconciliation: TRACK_TABS.RECONCILIATION
-        };
-        setTrackTabSection(statusToSectionMap[targetOrder.status] ?? TRACK_TABS.EN_COURS_COMMANDE);
-        setExpandedOrders(prev => ({ ...prev, [orderId]: true }));
-      } else {
+      if (!targetOrder) {
         toast.error('Commande introuvable');
       }
       navigate(location.pathname, { replace: true });
     }
-  }, [location.search, orders, navigate, setActiveTab, setTrackTabSection]);
+  }, [location.search, orders, navigate, setActiveTab]);
 
   // Gestion Raccourci Clavier Recherche
   useEffect(() => {
@@ -197,21 +194,46 @@ const StockEasyContent = () => {
     }
   };
 
-  // Loading State
+  // Code devise (défini tôt pour être utilisé dans le loading state)
+  const currencyCode = parameterState.deviseDefaut || DEFAULT_PARAMETERS.deviseDefaut;
+
+  // Loading State avec Skeleton
   if (loading) {
     return (
-      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="min-h-screen bg-[#FAFAF7] flex items-center justify-center">
-        <div className="text-center">
-          <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: "linear" }}>
-            <RefreshCw className="w-12 h-12 text-black mx-auto mb-4" />
-          </motion.div>
-          <p className="text-lg font-medium text-[#191919]">Chargement depuis Supabase...</p>
+      <CurrencyProvider code={currencyCode}>
+        <div className="min-h-screen bg-[#FAFAF7]">
+          {/* Header skeleton */}
+          <div className="hidden md:flex fixed top-0 left-0 right-0 z-[60] bg-[#FAFAF7] border-b border-[#E5E4DF] h-16 items-center">
+            <div className="w-64 flex items-center justify-center shrink-0">
+              <Logo size="small" showText={true} theme="light" />
+            </div>
+          </div>
+          
+          {/* Mobile header skeleton */}
+          <div className="md:hidden fixed top-0 left-0 right-0 z-[60] bg-[#FAFAF7] border-b border-[#E5E4DF] h-16 flex items-center px-4">
+            <div className="flex-1 flex items-center justify-center">
+              <Logo size="small" showText={true} theme="light" />
+            </div>
+          </div>
+          
+          {/* Sidebar skeleton (desktop) */}
+          <aside className="hidden md:block fixed top-16 bottom-0 left-0 w-64 bg-[#FAFAF7] border-r border-[#E5E4DF]" />
+          
+          {/* Main content with skeleton */}
+          <div className="md:ml-64 min-h-screen pt-16">
+            <div className="p-4 sm:p-6 lg:p-8 pt-10">
+              <div className="max-w-7xl mx-auto">
+                <SkeletonDashboard />
+              </div>
+            </div>
+          </div>
+          
+          {/* Bottom nav skeleton (mobile) */}
+          <div className="md:hidden fixed bottom-0 left-0 right-0 h-16 bg-white border-t border-[#E5E4DF]" />
         </div>
-      </motion.div>
+      </CurrencyProvider>
     );
   }
-
-  const currencyCode = parameterState.deviseDefaut || DEFAULT_PARAMETERS.deviseDefaut;
 
   return (
     <CurrencyProvider code={currencyCode}>
@@ -227,7 +249,6 @@ const StockEasyContent = () => {
             <SearchBar 
               setActiveTab={setActiveTab}
               setParametersSubTab={setParametersSubTab}
-              setTrackTabSection={setTrackTabSection}
               setStockLevelSearch={setStockLevelSearch}
               onSupplierSelect={(supplierData) => {
                 supplierManagement.handleOpenSupplierModal({
@@ -287,7 +308,6 @@ const StockEasyContent = () => {
           onClose={() => setSearchModalOpen(false)}
           setActiveTab={setActiveTab}
           setParametersSubTab={setParametersSubTab}
-          setTrackTabSection={setTrackTabSection}
           setStockLevelSearch={setStockLevelSearch}
           onSupplierSelect={(supplierData) => {
             supplierManagement.handleOpenSupplierModal({
@@ -314,163 +334,160 @@ const StockEasyContent = () => {
             mobileMenuOpen={mobileMenuOpen}
             setMobileMenuOpen={setMobileMenuOpen}
             orderBadgeCount={productsByStatus.to_order.length}
-            trackBadgeCount={orders.filter(o => ['pending_confirmation', 'preparing', 'in_transit', 'received', 'reconciliation'].includes(o.status)).length}
+            ordersBadgeCount={orders.filter(o => ['pending_confirmation', 'preparing', 'in_transit', 'received', 'reconciliation'].includes(o.status)).length}
           />
 
           <div className="md:ml-64 min-h-screen bg-[#FAFAF7]">
             <div className="relative min-h-screen">
-              <div className="p-4 sm:p-6 lg:p-8 pt-10 sm:pt-12 lg:pt-14">
+              {/* pb-20 pour le BottomNav sur mobile */}
+              <div className="p-4 sm:p-6 lg:p-8 pt-10 sm:pt-12 lg:pt-14 pb-24 md:pb-8">
                 <div className="max-w-7xl mx-auto">
                   <AnimatePresence mode="wait">
                     {activeTab === MAIN_TABS.DASHBOARD && (
-                      <DashboardTab 
-                        productsByStatus={productsByStatus}
-                        orders={orders}
-                        enrichedProducts={enrichedProducts}
-                        onViewDetails={onViewDetails}
-                        seuilSurstockProfond={parameterState.seuilSurstockProfond}
-                      />
+                      <ErrorBoundary section="Tableau de bord">
+                        <DashboardTab 
+                          productsByStatus={productsByStatus}
+                          orders={orders}
+                          enrichedProducts={enrichedProducts}
+                          onViewDetails={onViewDetails}
+                          seuilSurstockProfond={parameterState.seuilSurstockProfond}
+                          syncing={syncing}
+                        />
+                      </ErrorBoundary>
                     )}
 
                     {activeTab === MAIN_TABS.ACTIONS && (
-                      <ActionsTab
-                        productsByStatus={productsByStatus}
-                        toOrderBySupplier={toOrderBySupplier}
-                        suppliers={suppliers}
-                        warehouses={warehouses}
-                        orderQuantities={orderManagement.orderQuantities}
-                        updateOrderQuantity={orderManagement.updateOrderQuantity}
-                        generatePONumber={orderManagement.generatePONumber}
-                        orders={orders}
-                        handleCreateOrder={(selectedProducts) => OrderHandlers.handleCreateOrderFromTable(
-                          selectedProducts, enrichedProducts, warehouses, orders, api, loadData, 
-                          orderManagement.generatePONumber, roundToTwoDecimals, 
-                          setEmailModalOpenAdapter,
-                          inlineModals.emailOrderModal.setSelectedSupplier,
-                          orderManagement.setSelectedWarehouse, 
-                          orderManagement.setOrderQuantities
-                        )}
-                        handleOpenEmailModal={(supplier, products) => OrderHandlers.handleOpenEmailModal(
-                          inlineModals,
-                          supplier, products, warehouses
-                        )}
-                        loadData={loadData}
-                        getUserSignature={getUserSignature}
-                        allProducts={enrichedProducts}
-                        emailGeneration={emailGeneration}
-                      />
+                      <ErrorBoundary section="Passer Commande">
+                        <ActionsTab
+                          productsByStatus={productsByStatus}
+                          toOrderBySupplier={toOrderBySupplier}
+                          suppliers={suppliers}
+                          warehouses={warehouses}
+                          orderQuantities={orderManagement.orderQuantities}
+                          updateOrderQuantity={orderManagement.updateOrderQuantity}
+                          generatePONumber={orderManagement.generatePONumber}
+                          orders={orders}
+                          handleCreateOrder={(selectedProducts) => OrderHandlers.handleCreateOrderFromTable(
+                            selectedProducts, enrichedProducts, warehouses, orders, api, loadData, 
+                            orderManagement.generatePONumber, roundToTwoDecimals, 
+                            setEmailModalOpenAdapter,
+                            inlineModals.emailOrderModal.setSelectedSupplier,
+                            orderManagement.setSelectedWarehouse, 
+                            orderManagement.setOrderQuantities
+                          )}
+                          handleOpenEmailModal={(supplier, products) => OrderHandlers.handleOpenEmailModal(
+                            inlineModals,
+                            supplier, products, warehouses
+                          )}
+                          loadData={loadData}
+                          getUserSignature={getUserSignature}
+                          allProducts={enrichedProducts}
+                          emailGeneration={emailGeneration}
+                        />
+                      </ErrorBoundary>
                     )}
 
-                    {activeTab === MAIN_TABS.TRACK && (
-                      <TrackTab
-                        orders={orders}
-                        products={products}
-                        trackTabSection={trackTabSection}
-                        setTrackTabSection={setTrackTabSection}
-                        expandedOrders={expandedOrders}
-                        toggleOrderDetails={(orderId) => UIHandlers.toggleOrderDetails(setExpandedOrders, orderId)}
-                        confirmOrder={orderManagement.confirmOrder}
-                        shipOrder={handlers.handleShipOrder}
-                        receiveOrder={orderManagement.receiveOrder}
-                        suppliers={suppliers}
-                        warehouses={warehouses}
-                        loadData={loadData}
-                        reconciliationLogic={reconciliationLogic}
-                        emailGeneration={emailGeneration}
-                      />
+                    {activeTab === MAIN_TABS.ORDERS && (
+                      <ErrorBoundary section="Mes Commandes">
+                        <OrdersTab
+                          orders={orders}
+                          products={products}
+                          suppliers={suppliers}
+                          warehouses={warehouses}
+                          confirmOrder={orderManagement.confirmOrder}
+                          shipOrder={handlers.handleShipOrder}
+                          receiveOrder={orderManagement.receiveOrder}
+                          loadData={loadData}
+                          reconciliationLogic={reconciliationLogic}
+                          emailGeneration={emailGeneration}
+                          reconciliationModal={reconciliationModal}
+                          reconciliationModalHandlers={reconciliationModalHandlers}
+                          reclamationEmailModal={reclamationEmailModal}
+                          reclamationEmailModalHandlers={reclamationEmailModalHandlers}
+                        />
+                      </ErrorBoundary>
                     )}
 
                     {activeTab === MAIN_TABS.STOCK && (
-                      <StockTab
-                        products={enrichedProducts}
-                        suppliers={suppliers}
-                        orders={orders}
-                        stockLevelFilter={stockLevelFilter}
-                        setStockLevelFilter={setStockLevelFilter}
-                        stockLevelSupplierFilter={stockLevelSupplierFilter}
-                        setStockLevelSupplierFilter={setStockLevelSupplierFilter}
-                        searchTerm={searchTerm}
-                        setSearchTerm={setSearchTerm}
-                        onViewDetails={onViewDetails}
-                      />
+                      <ErrorBoundary section="Niveaux de Stock">
+                        <StockTab
+                          products={enrichedProducts}
+                          suppliers={suppliers}
+                          orders={orders}
+                          stockLevelFilter={stockLevelFilter}
+                          setStockLevelFilter={setStockLevelFilter}
+                          stockLevelSupplierFilter={stockLevelSupplierFilter}
+                          setStockLevelSupplierFilter={setStockLevelSupplierFilter}
+                          searchTerm={searchTerm}
+                          setSearchTerm={setSearchTerm}
+                          onViewDetails={onViewDetails}
+                        />
+                      </ErrorBoundary>
                     )}
 
                     {activeTab === MAIN_TABS.ANALYTICS && (
-                      <AnalyticsTab
-                        products={enrichedProducts}
-                        orders={orders}
-                        suppliers={suppliers}
-                        warehouses={warehouses}
-                        seuilSurstockProfond={parameterState.seuilSurstockProfond}
-                        analyticsSubTab={analyticsSubTab}
-                        setAnalyticsSubTab={setAnalyticsSubTab}
-                      />
-                    )}
-
-                    {activeTab === MAIN_TABS.HISTORY && (
-                      <HistoryTab
-                        orders={orders}
-                        products={products}
-                        suppliers={suppliers}
-                        warehouses={warehouses}
-                        historyFilter={historyFilter}
-                        setHistoryFilter={setHistoryFilter}
-                        historySupplierFilter={historySupplierFilter}
-                        setHistorySupplierFilter={setHistorySupplierFilter}
-                        historyDateStart={historyDateStart}
-                        setHistoryDateStart={setHistoryDateStart}
-                        historyDateEnd={historyDateEnd}
-                        setHistoryDateEnd={setHistoryDateEnd}
-                        expandedOrders={expandedOrders}
-                        toggleOrderDetails={(orderId) => UIHandlers.toggleOrderDetails(setExpandedOrders, orderId)}
-                      />
+                      <ErrorBoundary section="Analytics">
+                        <AnalyticsTab
+                          products={enrichedProducts}
+                          orders={orders}
+                          suppliers={suppliers}
+                          warehouses={warehouses}
+                          seuilSurstockProfond={parameterState.seuilSurstockProfond}
+                          analyticsSubTab={analyticsSubTab}
+                          setAnalyticsSubTab={setAnalyticsSubTab}
+                        />
+                      </ErrorBoundary>
                     )}
 
                     {activeTab === MAIN_TABS.SETTINGS && (
-                      <SettingsTab
-                        parametersSubTab={parametersSubTab}
-                        setParametersSubTab={setParametersSubTab}
-                        products={products}
-                        suppliers={suppliers}
-                        warehouses={warehouses}
-                        parameters={parameters}
-                        setParameters={parameterEditing.setParameters}
-                        loadData={loadData}
-                        // Props ParametresGeneraux
-                        seuilSurstockProfond={parameterState.seuilSurstockProfond}
-                        onUpdateSeuilSurstock={parameterEditing.onUpdateSeuilSurstock}
-                        deviseDefaut={parameterState.deviseDefaut}
-                        onUpdateDevise={parameterEditing.onUpdateDevise}
-                        multiplicateurDefaut={parameterState.multiplicateurDefaut}
-                        onUpdateMultiplicateur={parameterEditing.onUpdateMultiplicateur}
-                        // Props GestionFournisseurs
-                        supplierModalOpen={supplierManagement.supplierModalOpen}
-                        setSupplierModalOpen={supplierManagement.setSupplierModalOpen}
-                        editingSupplier={supplierManagement.editingSupplier}
-                        setEditingSupplier={supplierManagement.setEditingSupplier}
-                        supplierFormData={supplierManagement.supplierFormData}
-                        setSupplierFormData={supplierManagement.setSupplierFormData}
-                        handleOpenSupplierModal={supplierManagement.handleOpenSupplierModal}
-                        handleCloseSupplierModal={supplierManagement.handleCloseSupplierModal}
-                        handleSupplierFormChange={supplierManagement.handleSupplierFormChange}
-                        handleSaveSupplier={supplierManagement.handleSaveSupplier}
-                        handleDeleteSupplier={supplierManagement.handleDeleteSupplier}
-                        // Props Mapping
-                        assignSupplierModalOpen={supplierMapping.assignSupplierModalOpen}
-                        setAssignSupplierModalOpen={supplierMapping.setAssignSupplierModalOpen}
-                        selectedProductForMapping={supplierMapping.selectedProductForMapping}
-                        setSelectedProductForMapping={supplierMapping.setSelectedProductForMapping}
-                        handleSaveSupplierMapping={supplierMapping.handleSaveSupplierMapping}
-                        isSavingSupplierMapping={supplierMapping.isSavingSupplierMapping}
-                        // Props Warehouses
-                        onCreateWarehouse={warehouseActions.handleCreateWarehouse}
-                        onUpdateWarehouse={warehouseActions.handleUpdateWarehouse}
-                        onDeleteWarehouse={warehouseActions.handleDeleteWarehouse}
-                      />
+                      <ErrorBoundary section="Paramètres">
+                        <SettingsTab
+                          parametersSubTab={parametersSubTab}
+                          setParametersSubTab={setParametersSubTab}
+                          products={products}
+                          suppliers={suppliers}
+                          warehouses={warehouses}
+                          parameters={parameters}
+                          setParameters={parameterEditing.setParameters}
+                          loadData={loadData}
+                          // Props ParametresGeneraux
+                          seuilSurstockProfond={parameterState.seuilSurstockProfond}
+                          onUpdateSeuilSurstock={parameterEditing.onUpdateSeuilSurstock}
+                          deviseDefaut={parameterState.deviseDefaut}
+                          onUpdateDevise={parameterEditing.onUpdateDevise}
+                          multiplicateurDefaut={parameterState.multiplicateurDefaut}
+                          onUpdateMultiplicateur={parameterEditing.onUpdateMultiplicateur}
+                          // Props GestionFournisseurs
+                          supplierModalOpen={supplierManagement.supplierModalOpen}
+                          setSupplierModalOpen={supplierManagement.setSupplierModalOpen}
+                          editingSupplier={supplierManagement.editingSupplier}
+                          setEditingSupplier={supplierManagement.setEditingSupplier}
+                          supplierFormData={supplierManagement.supplierFormData}
+                          setSupplierFormData={supplierManagement.setSupplierFormData}
+                          handleOpenSupplierModal={supplierManagement.handleOpenSupplierModal}
+                          handleCloseSupplierModal={supplierManagement.handleCloseSupplierModal}
+                          handleSupplierFormChange={supplierManagement.handleSupplierFormChange}
+                          handleSaveSupplier={supplierManagement.handleSaveSupplier}
+                          handleDeleteSupplier={supplierManagement.handleDeleteSupplier}
+                          // Props Mapping
+                          assignSupplierModalOpen={supplierMapping.assignSupplierModalOpen}
+                          setAssignSupplierModalOpen={supplierMapping.setAssignSupplierModalOpen}
+                          selectedProductForMapping={supplierMapping.selectedProductForMapping}
+                          setSelectedProductForMapping={supplierMapping.setSelectedProductForMapping}
+                          handleSaveSupplierMapping={supplierMapping.handleSaveSupplierMapping}
+                          isSavingSupplierMapping={supplierMapping.isSavingSupplierMapping}
+                          // Props Warehouses
+                          onCreateWarehouse={warehouseActions.handleCreateWarehouse}
+                          onUpdateWarehouse={warehouseActions.handleUpdateWarehouse}
+                          onDeleteWarehouse={warehouseActions.handleDeleteWarehouse}
+                        />
+                      </ErrorBoundary>
                     )}
 
                     {activeTab === MAIN_TABS.PROFILE && (
-                      <ProfilePage />
+                      <ErrorBoundary section="Profil">
+                        <ProfilePage />
+                      </ErrorBoundary>
                     )}
                   </AnimatePresence>
                 </div>
@@ -478,6 +495,31 @@ const StockEasyContent = () => {
             </div>
           </div>
         </div>
+
+        {/* BOTTOM NAVIGATION MOBILE */}
+        <BottomNav
+          activeTab={activeTab}
+          setActiveTab={setActiveTab}
+          orderBadgeCount={productsByStatus.to_order.length}
+          ordersBadgeCount={orders.filter(o => ['pending_confirmation', 'preparing', 'in_transit', 'received', 'reconciliation'].includes(o.status)).length}
+          onMoreClick={() => setMoreMenuOpen(true)}
+        />
+
+        {/* MENU "PLUS" POUR MOBILE */}
+        <AnimatePresence>
+          {moreMenuOpen && (
+            <BottomNavMoreMenu
+              isOpen={moreMenuOpen}
+              onClose={() => setMoreMenuOpen(false)}
+              activeTab={activeTab}
+              setActiveTab={setActiveTab}
+              analyticsSubTab={analyticsSubTab}
+              setAnalyticsSubTab={setAnalyticsSubTab}
+              settingsSubTab={parametersSubTab}
+              setSettingsSubTab={setParametersSubTab}
+            />
+          )}
+        </AnimatePresence>
 
         {/* MODALS - Sans props car tout est dans le contexte ! */}
         <StockEasyModals />

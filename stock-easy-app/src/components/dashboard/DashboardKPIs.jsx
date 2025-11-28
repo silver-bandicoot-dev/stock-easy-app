@@ -7,7 +7,51 @@ import { calculateOverstockExcessValue } from '../../utils/calculations';
 import { calculatePeriodComparison } from '../../services/kpiHistoryService';
 
 /**
+ * Convertit les données historiques au format chartData pour KPICard
+ * @param {Array} historyData - Tableau de {date, value} depuis useAnalytics
+ * @param {number} currentValue - Valeur actuelle pour normalisation
+ * @param {boolean} isPercentage - Si la valeur est déjà un pourcentage (0-100)
+ * @returns {Array} Tableau de nombres normalisés 0-100
+ */
+function convertToChartData(historyData, currentValue, isPercentage = false) {
+  // Si pas de données historiques, retourner un tableau vide
+  if (!historyData || !Array.isArray(historyData) || historyData.length === 0) {
+    return [];
+  }
+
+  // Extraire les valeurs
+  const values = historyData.map(d => d.value || d);
+  
+  // Si c'est déjà un pourcentage, retourner directement
+  if (isPercentage) {
+    return values.map(v => Math.min(100, Math.max(0, v)));
+  }
+  
+  // Sinon, normaliser par rapport à la valeur max
+  const maxValue = Math.max(...values, currentValue || 1);
+  return values.map(v => Math.min(100, (v / maxValue) * 100));
+}
+
+/**
+ * Génère des données de graphique placeholder quand pas d'historique disponible
+ * Affiche une ligne plate avec la valeur actuelle (plus honnête que des données aléatoires)
+ * @param {number} currentValue - Valeur actuelle
+ * @param {number} points - Nombre de points à générer (défaut: 7)
+ * @returns {Array} Tableau de nombres normalisés
+ */
+function generatePlaceholderChart(currentValue, points = 7) {
+  // Si pas de valeur, retourner une ligne à zéro
+  if (!currentValue || currentValue === 0) {
+    return Array(points).fill(0);
+  }
+  
+  // Ligne plate à 50% (représentation neutre en attendant les vraies données)
+  return Array(points).fill(50);
+}
+
+/**
  * Composant DashboardKPIs - Affiche les KPIs principaux du dashboard
+ * Utilise les vraies données historiques depuis useAnalytics quand disponibles
  */
 export function DashboardKPIs({ 
   enrichedProducts = [], 
@@ -86,16 +130,19 @@ export function DashboardKPIs({
       return sum + excessValue;
     }, 0);
 
-    // Générer des données de graphique simulées pour chaque KPI (tendance sur 7 jours)
-    const generateChartData = (baseValue, variation = 0.1) => {
-      const data = [];
-      for (let i = 0; i < 7; i++) {
-        const variationAmount = baseValue * variation * (Math.random() * 2 - 1);
-        const value = Math.max(0, baseValue + variationAmount);
-        // Normaliser pour affichage (0-100)
-        data.push(Math.min(100, (value / Math.max(baseValue * 1.2, 1)) * 100));
+    // ========================================
+    // DONNÉES DE GRAPHIQUES - Vraies données historiques
+    // ========================================
+    // Utiliser les données de useAnalytics si disponibles, sinon placeholder
+    const hasRealHistory = analyticsData && !analyticsData.loading && analyticsData.skuAvailability?.chartData?.length > 0;
+    
+    // Fonction pour obtenir les vraies données ou un placeholder
+    const getChartDataFor = (kpiKey, currentValue, isPercentage = false) => {
+      if (hasRealHistory && analyticsData[kpiKey]?.chartData?.length > 0) {
+        return convertToChartData(analyticsData[kpiKey].chartData, currentValue, isPercentage);
       }
-      return data;
+      // Pas d'historique disponible - afficher un placeholder honnête
+      return generatePlaceholderChart(currentValue);
     };
 
     // Fonction helper pour calculer les comparaisons basées sur l'historique
@@ -164,9 +211,9 @@ export function DashboardKPIs({
         change: skuAvailabilityComparison.change,
         changePercent: skuAvailabilityComparison.changePercent,
         trend: normalizeTrend(skuAvailabilityComparison.trend, 'up'),
-        description: `${availableSKUs} SKUs disponibles sur ${totalSKUs}`,
+        description: `${availableSKUs} SKUs disponibles sur ${totalSKUs}${!hasRealHistory ? ' • ⏳ En attente de données historiques' : ''}`,
         icon: BarChart3,
-        chartData: generateChartData(skuAvailabilityRate, 0.05),
+        chartData: getChartDataFor('skuAvailability', skuAvailabilityRate, true),
         isCritical: skuAvailabilityRate < 60,
         comparisonPeriod: skuAvailabilityComparison.comparisonPeriod
       },
@@ -176,9 +223,9 @@ export function DashboardKPIs({
         change: inventoryValuationComparison.change,
         changePercent: inventoryValuationComparison.changePercent,
         trend: normalizeTrend(inventoryValuationComparison.trend, 'up'),
-        description: 'Valeur totale du stock actuel (prix d\'achat)',
+        description: `Valeur totale du stock actuel (prix d'achat)${!hasRealHistory ? ' • ⏳ En attente de données historiques' : ''}`,
         icon: DollarSign,
-        chartData: generateChartData(totalInventoryValue, 0.05),
+        chartData: getChartDataFor('inventoryValuation', totalInventoryValue, false),
         comparisonPeriod: inventoryValuationComparison.comparisonPeriod
       },
       {
@@ -187,9 +234,9 @@ export function DashboardKPIs({
         change: 0,
         changePercent: 0,
         trend: 'neutral',
-        description: 'Montant total à investir pour les produits à commander',
+        description: 'Montant total à investir pour les produits à commander (pas d\'historique disponible)',
         icon: TrendingDown,
-        chartData: generateChartData(totalInvestmentRequired, 0.1),
+        chartData: generatePlaceholderChart(totalInvestmentRequired),
         isCritical: totalInvestmentRequired > 5000,
         comparisonPeriod: defaultComparisonPeriod
       },
@@ -199,9 +246,9 @@ export function DashboardKPIs({
         change: 0,
         changePercent: 0,
         trend: 'neutral',
-        description: 'Nombre de produits nécessitant une commande urgente',
+        description: 'Nombre de produits nécessitant une commande urgente (pas d\'historique disponible)',
         icon: ShoppingCart,
-        chartData: generateChartData(productsToOrder * 10, 0.2),
+        chartData: generatePlaceholderChart(productsToOrder),
         isCritical: productsToOrder > 5,
         comparisonPeriod: defaultComparisonPeriod
       },
@@ -211,9 +258,9 @@ export function DashboardKPIs({
         change: 0,
         changePercent: 0,
         trend: 'neutral',
-        description: 'Nombre de commandes en attente, préparation ou transit',
+        description: 'Nombre de commandes en attente, préparation ou transit (pas d\'historique disponible)',
         icon: Clock,
-        chartData: generateChartData(activeOrders * 10, 0.15),
+        chartData: generatePlaceholderChart(activeOrders),
         comparisonPeriod: defaultComparisonPeriod
       },
       {
@@ -222,9 +269,9 @@ export function DashboardKPIs({
         change: salesLostRealComparison.change,
         changePercent: salesLostRealComparison.changePercent,
         trend: normalizeTrend(salesLostRealComparison.trend, 'down'),
-        description: `⚠️ ATTENTION : Différent de "Ventes Perdues Estimées" ! Compte UNIQUEMENT les produits EN RUPTURE TOTALE (stock = 0). Mesure les pertes RÉELLES actuelles, pas les risques futurs. ${salesLostCount} SKU(s) en rupture. Pour voir les produits à risque, consultez "Ventes Perdues Estimées".`,
+        description: `⚠️ ATTENTION : Différent de "Ventes Perdues Estimées" ! Compte UNIQUEMENT les produits EN RUPTURE TOTALE (stock = 0). Mesure les pertes RÉELLES actuelles, pas les risques futurs. ${salesLostCount} SKU(s) en rupture. Pour voir les produits à risque, consultez "Ventes Perdues Estimées".${!hasRealHistory ? ' • ⏳ En attente de données historiques' : ''}`,
         icon: TrendingDown,
-        chartData: generateChartData(salesLostAmount, 0.1),
+        chartData: getChartDataFor('salesLost', salesLostAmount, false),
         isCritical: salesLostAmount > 1000,
         comparisonPeriod: salesLostRealComparison.comparisonPeriod
       },
@@ -234,9 +281,9 @@ export function DashboardKPIs({
         change: 0,
         changePercent: 0,
         trend: 'neutral',
-        description: '⚠️ ATTENTION : Différent d\'Analytics ! Inclut TOUS les produits à risque (ruptures actuelles + produits qui vont manquer bientôt). Permet d\'anticiper les pertes avant la rupture totale. Pour voir uniquement les ruptures réelles, consultez Analytics.',
+        description: '⚠️ ATTENTION : Différent d\'Analytics ! Inclut TOUS les produits à risque (ruptures actuelles + produits qui vont manquer bientôt). Permet d\'anticiper les pertes avant la rupture totale. Pour voir uniquement les ruptures réelles, consultez Analytics. (pas d\'historique disponible)',
         icon: TrendingUp,
-        chartData: generateChartData(lostSales, 0.1),
+        chartData: generatePlaceholderChart(lostSales),
         isCritical: lostSales > 1000,
         comparisonPeriod: defaultComparisonPeriod
       },
@@ -246,9 +293,9 @@ export function DashboardKPIs({
         change: overstockComparison.change,
         changePercent: overstockComparison.changePercent,
         trend: normalizeTrend(overstockComparison.trend, 'up'),
-        description: `${overstockSKUs} SKU(s) en surstock profond${overstockSKUList && overstockSKUList.length > 0 ? ` : ${overstockSKUList.join(', ')}${overstockSKUs > 10 ? ` (+ ${overstockSKUs - 10} autres)` : ''}` : ''}`,
+        description: `${overstockSKUs} SKU(s) en surstock profond${overstockSKUList && overstockSKUList.length > 0 ? ` : ${overstockSKUList.join(', ')}${overstockSKUs > 10 ? ` (+ ${overstockSKUs - 10} autres)` : ''}` : ''}${!hasRealHistory ? ' • ⏳ En attente de données historiques' : ''}`,
         icon: Boxes,
-        chartData: generateChartData(overstockCost, 0.05),
+        chartData: getChartDataFor('overstockCost', overstockCost, false),
         isCritical: overstockCost > 2000,
         comparisonPeriod: overstockComparison.comparisonPeriod
       }

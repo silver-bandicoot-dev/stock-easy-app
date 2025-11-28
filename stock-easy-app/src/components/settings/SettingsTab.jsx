@@ -1,7 +1,6 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Cog, Sliders, Users, Package, MapPin, TrendingUp, PlugZap } from 'lucide-react';
-import { SubTabsNavigation } from '../features/SubTabsNavigation';
+import { Sliders, Users, Package, Warehouse, TrendingUp, PlugZap } from 'lucide-react';
 import { ParametresGeneraux } from '../settings/ParametresGeneraux';
 import { GestionFournisseurs } from '../settings/GestionFournisseurs';
 import { MappingSKUFournisseur } from '../settings/MappingSKUFournisseur';
@@ -9,6 +8,16 @@ import { GestionWarehouses } from '../settings/GestionWarehouses';
 import { GestionMultiplicateurs } from '../settings/GestionMultiplicateurs';
 import { IntegrationsSettings } from '../settings/IntegrationsSettings';
 import { SETTINGS_TABS } from '../../constants/stockEasyConstants';
+
+// Onglets de paramètres style Shopify
+const SETTINGS_SECTIONS = [
+  { key: SETTINGS_TABS.GENERAL, label: 'Généraux', icon: Sliders },
+  { key: SETTINGS_TABS.MULTIPLIERS, label: 'Multiplicateurs', icon: TrendingUp },
+  { key: SETTINGS_TABS.SUPPLIERS, label: 'Fournisseurs', icon: Users },
+  { key: SETTINGS_TABS.MAPPING, label: 'Mapping', icon: Package },
+  { key: SETTINGS_TABS.WAREHOUSES, label: 'Entrepôts', icon: Warehouse },
+  { key: SETTINGS_TABS.INTEGRATIONS, label: 'Intégrations', icon: PlugZap }
+];
 
 export const SettingsTab = ({
   parametersSubTab,
@@ -37,45 +46,6 @@ export const SettingsTab = ({
   onUpdateWarehouse,
   onDeleteWarehouse
 }) => {
-  const settingsSections = [
-    {
-      key: SETTINGS_TABS.GENERAL,
-      title: 'Paramètres Généraux',
-      icon: Sliders,
-      shortTitle: 'Généraux'
-    },
-    {
-      key: SETTINGS_TABS.MULTIPLIERS,
-      title: 'Multiplicateurs de Prévision',
-      icon: TrendingUp,
-      shortTitle: 'Multiplicateurs'
-    },
-    {
-      key: SETTINGS_TABS.SUPPLIERS,
-      title: 'Gestion Fournisseurs',
-      icon: Users,
-      shortTitle: 'Fournisseurs'
-    },
-    {
-      key: SETTINGS_TABS.MAPPING,
-      title: 'Mapping SKU-Fournisseur',
-      icon: Package,
-      shortTitle: 'Mapping'
-    },
-    {
-      key: SETTINGS_TABS.WAREHOUSES,
-      title: 'Gestion Entrepôts',
-      icon: MapPin,
-      shortTitle: 'Entrepôts'
-    },
-    {
-      key: SETTINGS_TABS.INTEGRATIONS,
-      title: 'Intégrations',
-      icon: PlugZap,
-      shortTitle: 'Intégrations'
-    }
-  ];
-
   return (
     <motion.div
       key="settings"
@@ -83,108 +53,146 @@ export const SettingsTab = ({
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: -20 }}
       transition={{ duration: 0.25 }}
-      className="space-y-6"
+      className="h-full flex flex-col space-y-6"
     >
-      {/* Header avec titre et sous-titre */}
-      <div className="bg-white rounded-xl shadow-sm border border-[#E5E4DF] p-6">
-        <div className="flex items-center gap-3 mb-2">
-          <Cog className="w-8 h-8 text-[#191919]" />
-          <h1 className="text-2xl font-bold text-[#191919]">Paramètres</h1>
-        </div>
-        <p className="text-xs sm:text-sm text-[#666663]">
-          Configurez les paramètres de votre application
-        </p>
-        
-        {/* Onglets de navigation - Optimisés mobile */}
-        <div className="flex gap-2 mt-6 overflow-x-auto pb-2 -mx-2 px-2 sm:mx-0 sm:px-0">
-          {settingsSections.map(section => {
-            const Icon = section.icon;
-            return (
-              <button
-                key={section.key}
-                onClick={() => setParametersSubTab(section.key)}
-                className={`flex items-center gap-2 px-3 sm:px-4 py-2 rounded-lg font-medium text-xs sm:text-sm whitespace-nowrap transition-all ${
-                  parametersSubTab === section.key
-                    ? 'bg-black text-white'
-                    : 'bg-[#FAFAF7] text-[#666663] hover:bg-[#F0F0EB]'
-                }`}
-              >
-                <Icon className="w-4 h-4 shrink-0" />
-                <span className="hidden sm:inline">{section.title}</span>
-                <span className="sm:hidden">{section.shortTitle}</span>
-              </button>
-            );
-          })}
+      {/* Header - Style Dashboard épuré */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div>
+          <h1 className="text-xl sm:text-2xl font-semibold text-[#191919]">
+            Paramètres ⚙️
+          </h1>
+          <p className="text-sm text-[#6B7177] mt-0.5">
+            Configurez les paramètres de votre application
+          </p>
         </div>
       </div>
 
-      {/* Contenu des sous-onglets */}
-      <AnimatePresence mode="wait">
-        {settingsSections.map(section => (
-          parametersSubTab === section.key && (
-            <motion.div
+      {/* Onglets - Style pills */}
+      <div className="flex items-center gap-2 overflow-x-auto pb-1">
+        {SETTINGS_SECTIONS.map(section => {
+          const Icon = section.icon;
+          return (
+            <button
               key={section.key}
+              onClick={() => setParametersSubTab(section.key)}
+              className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all ${
+                parametersSubTab === section.key
+                  ? 'bg-[#191919] text-white shadow-sm'
+                  : 'bg-white text-[#6B7177] border border-[#E1E3E5] hover:border-[#8A8C8E] hover:text-[#191919]'
+              }`}
+            >
+              <Icon className="w-4 h-4" />
+              <span>{section.label}</span>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Contenu des sous-onglets */}
+      <div className="flex-1 min-h-0">
+        <AnimatePresence mode="wait">
+          {parametersSubTab === SETTINGS_TABS.GENERAL && (
+            <motion.div
+              key="general"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
               transition={{ duration: 0.25 }}
             >
-              {parametersSubTab === SETTINGS_TABS.GENERAL && (
-                <ParametresGeneraux
-                  parameters={parameters}
-                  setParameters={setParameters}
-                  loadData={loadData}
-                  seuilSurstock={seuilSurstockProfond}
-                  onUpdateSeuil={onUpdateSeuilSurstock}
-                  devise={deviseDefaut}
-                  onUpdateDevise={onUpdateDevise}
-                  multiplicateur={multiplicateurDefaut}
-                  onUpdateMultiplicateur={onUpdateMultiplicateur}
-                />
-              )}
-
-              {parametersSubTab === SETTINGS_TABS.SUPPLIERS && (
-                <GestionFournisseurs
-                  suppliers={suppliers}
-                  products={products}
-                  onOpenModal={handleOpenSupplierModal}
-                  onDelete={handleDeleteSupplier}
-                />
-              )}
-
-              {parametersSubTab === SETTINGS_TABS.MAPPING && (
-                <MappingSKUFournisseur
-                  products={products}
-                  suppliers={suppliers}
-                  onSaveSupplierMapping={handleSaveSupplierMapping}
-                  isSaving={isSavingSupplierMapping}
-                />
-              )}
-
-              {parametersSubTab === SETTINGS_TABS.WAREHOUSES && (
-                <GestionWarehouses
-                  warehouses={warehouses}
-                  onCreateWarehouse={onCreateWarehouse}
-                  onUpdateWarehouse={onUpdateWarehouse}
-                  onDeleteWarehouse={onDeleteWarehouse}
-                />
-              )}
-
-              {parametersSubTab === SETTINGS_TABS.MULTIPLIERS && (
-                <GestionMultiplicateurs
-                  products={products}
-                  loadData={loadData}
-                  multiplicateurDefaut={multiplicateurDefaut}
-                />
-              )}
-
-              {parametersSubTab === SETTINGS_TABS.INTEGRATIONS && (
-                <IntegrationsSettings />
-              )}
+              <ParametresGeneraux
+                parameters={parameters}
+                setParameters={setParameters}
+                loadData={loadData}
+                seuilSurstock={seuilSurstockProfond}
+                onUpdateSeuil={onUpdateSeuilSurstock}
+                devise={deviseDefaut}
+                onUpdateDevise={onUpdateDevise}
+                multiplicateur={multiplicateurDefaut}
+                onUpdateMultiplicateur={onUpdateMultiplicateur}
+              />
             </motion.div>
-          )
-        ))}
-      </AnimatePresence>
+          )}
+
+          {parametersSubTab === SETTINGS_TABS.MULTIPLIERS && (
+            <motion.div
+              key="multipliers"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.25 }}
+            >
+              <GestionMultiplicateurs
+                products={products}
+                loadData={loadData}
+                multiplicateurDefaut={multiplicateurDefaut}
+              />
+            </motion.div>
+          )}
+
+          {parametersSubTab === SETTINGS_TABS.SUPPLIERS && (
+            <motion.div
+              key="suppliers"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.25 }}
+            >
+              <GestionFournisseurs
+                suppliers={suppliers}
+                products={products}
+                onOpenModal={handleOpenSupplierModal}
+                onDelete={handleDeleteSupplier}
+              />
+            </motion.div>
+          )}
+
+          {parametersSubTab === SETTINGS_TABS.MAPPING && (
+            <motion.div
+              key="mapping"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.25 }}
+            >
+              <MappingSKUFournisseur
+                products={products}
+                suppliers={suppliers}
+                onSaveSupplierMapping={handleSaveSupplierMapping}
+                isSaving={isSavingSupplierMapping}
+              />
+            </motion.div>
+          )}
+
+          {parametersSubTab === SETTINGS_TABS.WAREHOUSES && (
+            <motion.div
+              key="warehouses"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.25 }}
+            >
+              <GestionWarehouses
+                warehouses={warehouses}
+                onCreateWarehouse={onCreateWarehouse}
+                onUpdateWarehouse={onUpdateWarehouse}
+                onDeleteWarehouse={onDeleteWarehouse}
+              />
+            </motion.div>
+          )}
+
+          {parametersSubTab === SETTINGS_TABS.INTEGRATIONS && (
+            <motion.div
+              key="integrations"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.25 }}
+            >
+              <IntegrationsSettings />
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
     </motion.div>
   );
 };

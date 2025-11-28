@@ -1,6 +1,6 @@
 import React, { useRef, useEffect } from 'react';
 import { SearchItem } from './SearchItem';
-import { Loader2, TrendingUp, AlertCircle } from 'lucide-react';
+import { Loader2, TrendingUp, AlertCircle, Flame, Clock, Sparkles } from 'lucide-react';
 import { useAuth } from '../../contexts/SupabaseAuthContext';
 
 /**
@@ -13,8 +13,9 @@ import { useAuth } from '../../contexts/SupabaseAuthContext';
  * @param {boolean} show - Si le dropdown est visible
  * @param {Function} getQuickActions - Fonction pour obtenir les actions rapides d'un item
  * @param {boolean} isMobile - Si le dropdown est affiché en mode mobile (dans un modal)
+ * @param {string} searchError - Message d'erreur de recherche (optionnel)
  */
-export const SearchDropdown = ({ results, loading, activeIndex, onItemClick, query, show, getQuickActions, isMobile = false }) => {
+export const SearchDropdown = ({ results, loading, activeIndex, onItemClick, query, show, getQuickActions, isMobile = false, searchError = null }) => {
   const { currentUser } = useAuth();
   const dropdownRef = useRef(null);
   const activeItemRef = useRef(null);
@@ -60,6 +61,14 @@ export const SearchDropdown = ({ results, loading, activeIndex, onItemClick, que
         </div>
       )}
 
+      {/* Message d'erreur de recherche */}
+      {currentUser && searchError && (
+        <div className="py-3 px-4 bg-amber-50 border-b border-amber-100 flex items-center gap-2">
+          <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
+          <p className="text-xs text-amber-700">{searchError}</p>
+        </div>
+      )}
+
       {currentUser && !loading && results.length === 0 && query.length >= 2 && (
         <div className="py-8 px-4 text-center text-neutral-500">
           <div className="text-4xl mb-2">🔍</div>
@@ -70,11 +79,27 @@ export const SearchDropdown = ({ results, loading, activeIndex, onItemClick, que
 
       {!loading && results.length > 0 && (
         <div className="py-2">
-          {results.map((group, groupIndex) => (
+          {results.map((group, groupIndex) => {
+            // Déterminer l'icône selon la catégorie
+            const getCategoryIcon = (category) => {
+              const lowerCategory = category.toLowerCase();
+              if (lowerCategory.includes('récent') || lowerCategory.includes('historique')) {
+                return <Clock className="w-4 h-4 text-neutral-500" />;
+              }
+              if (lowerCategory.includes('populaire') || lowerCategory.includes('tendance')) {
+                return <Flame className="w-4 h-4 text-orange-500" />;
+              }
+              if (lowerCategory.includes('suggestion')) {
+                return <Sparkles className="w-4 h-4 text-purple-500" />;
+              }
+              return <TrendingUp className="w-4 h-4 text-neutral-500" />;
+            };
+            
+            return (
             <div key={groupIndex} className="mb-2 last:mb-0">
               {/* En-tête de catégorie */}
               <div className="px-4 py-2 flex items-center gap-2 bg-neutral-50 border-b border-neutral-100">
-                <TrendingUp className="w-4 h-4 text-neutral-500" />
+                {getCategoryIcon(group.category)}
                 <h3 className="text-xs font-bold text-neutral-700 uppercase tracking-wider">
                   {group.category}
                 </h3>
@@ -107,7 +132,8 @@ export const SearchDropdown = ({ results, loading, activeIndex, onItemClick, que
                 );
               })}
             </div>
-          ))}
+          );
+          })}
         </div>
       )}
 

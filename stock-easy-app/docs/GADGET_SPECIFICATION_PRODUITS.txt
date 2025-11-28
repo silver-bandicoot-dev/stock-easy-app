@@ -1,0 +1,194 @@
+================================================================================
+SPÉCIFICATION TABLE PRODUITS - SYNCHRONISATION GADGET → SUPABASE
+================================================================================
+
+Date: 2025-01-27
+Table: public.produits (52 colonnes au total)
+
+================================================================================
+✅ CHAMPS QUE GADGET DOIT REMPLIR (Depuis Shopify)
+================================================================================
+
+Lors de la synchronisation Shopify → Supabase, Gadget DOIT uniquement modifier
+ces champs :
+
+1. IDENTIFIANTS (OBLIGATOIRES)
+   - sku (TEXT, NOT NULL) : SKU du variant Shopify
+   - company_id (UUID, NOT NULL) : Récupérer via get_company_by_shopify_shop_id()
+
+2. INFORMATIONS PRODUIT (Depuis Shopify)
+   - nom_produit (TEXT) : Depuis product.title ou variant.title
+   - image_url (TEXT) : Depuis product.featuredImage ou variant.image
+   - stock_actuel (NUMERIC) : Depuis inventoryLevel.available (somme tous emplacements)
+   - prix_vente (NUMERIC) : Depuis variant.price
+
+3. MÉTRIQUES DE VENTES (Calculées automatiquement depuis sales_history)
+   Note: Ces champs sont calculés automatiquement par PostgreSQL à partir de
+   la table sales_history. Gadget doit alimenter sales_history, pas ces champs.
+   - ventes_totales_30j (INTEGER) : Calculé automatiquement
+   - ventes_jour_moy_30j (NUMERIC) : Calculé automatiquement
+   - derniere_vente (TIMESTAMP) : Calculé automatiquement
+
+================================================================================
+🚫 CHAMPS QUE GADGET NE DOIT JAMAIS MODIFIER
+================================================================================
+
+Ces champs sont gérés par StockEasy (utilisateurs, calculs automatiques, triggers)
+et ne doivent JAMAIS être modifiés par Gadget :
+
+PARAMÈTRES UTILISATEUR (Gérés par l'interface StockEasy):
+- fournisseur (TEXT)
+- prix_achat (NUMERIC)
+- lead_time_days (INTEGER)
+- moq (INTEGER)
+- moq_source (TEXT)
+- stock_secu_custom_jours (INTEGER)
+- multiplicateur_prevision (NUMERIC)
+- statut (TEXT)
+
+CHAMPS CALCULÉS AUTOMATIQUEMENT (Triggers PostgreSQL):
+Ces champs sont recalculés automatiquement à chaque INSERT/UPDATE par le trigger
+trigger_calculate_advanced_metrics. NE JAMAIS LES MODIFIER MANUELLEMENT.
+
+- ventes_jour_ajustees (NUMERIC)
+- stock_securite (INTEGER)
+- point_commande (NUMERIC)
+- qte_a_commander (INTEGER)
+- marge_unitaire (NUMERIC)
+- investissement (NUMERIC)
+- inventory_value (NUMERIC)
+- autonomie_jours (INTEGER)
+- stock_max (INTEGER)
+- taux_rotation (NUMERIC)
+- cout_stockage_total (NUMERIC)
+- risque_rupture (INTEGER)
+- risque_surstock (INTEGER)
+- tendance_ventes (TEXT)
+- variation_ventes_pct (NUMERIC)
+- marge_brute (NUMERIC)
+- revenu_potentiel (NUMERIC)
+- priorite_commande (INTEGER)
+- stock_projete (INTEGER)
+- date_rupture_estimee (TIMESTAMP)
+- score_performance (INTEGER)
+- categorie_abc (TEXT)
+- notes_alertes (TEXT)
+- health_status (TEXT)
+- health_percentage (INTEGER)
+
+MÉTADONNÉES SYSTÈME:
+- created_at (TIMESTAMP) : Géré par PostgreSQL DEFAULT NOW()
+- updated_at (TIMESTAMP) : Géré automatiquement par trigger
+- derniere_commande (TIMESTAMP) : Géré par le système de commandes
+- commandes_en_cours (INTEGER) : Géré par le système de commandes
+- qte_en_transit (INTEGER) : Géré par le système de commandes
+
+PARAMÈTRES SYSTÈME:
+- coefficient_saisonnalite (NUMERIC)
+- cout_stockage_unitaire (NUMERIC)
+- fiabilite_fournisseur (INTEGER)
+
+================================================================================
+📝 EXEMPLE DE CODE SQL POUR GADGET
+================================================================================
+
+Voici le pattern UPSERT sécurisé que Gadget doit utiliser :
+
+INSERT INTO public.produits (
+  sku,
+  company_id,
+  nom_produit,
+  image_url,
+  stock_actuel,
+  prix_vente
+)
+VALUES (
+  :shopify_sku,              -- SKU du variant Shopify
+  :company_id,                -- UUID récupéré via get_company_by_shopify_shop_id()
+  :product_title,            -- product.title ou variant.title
+  :image_url,                -- product.featuredImage ou variant.image
+  :inventory_available,      -- Somme de inventoryLevel.available sur tous emplacements
+  :variant_price             -- variant.price
+)
+ON CONFLICT (sku, company_id) 
+DO UPDATE SET
+  nom_produit = EXCLUDED.nom_produit,
+  image_url = EXCLUDED.image_url,
+  stock_actuel = EXCLUDED.stock_actuel,
+  prix_vente = EXCLUDED.prix_vente
+  -- updated_at sera mis à jour automatiquement par le trigger
+
+IMPORTANT: Ne PAS inclure dans le DO UPDATE SET:
+- fournisseur
+- prix_achat
+- lead_time_days
+- moq
+- Tous les champs calculés (stock_securite, point_commande, etc.)
+- created_at, updated_at (gérés automatiquement)
+
+================================================================================
+🔄 FLUX DE SYNCHRONISATION
+================================================================================
+
+1. INSTALLATION INITIALE:
+   a. Créer company via create_shopify_company(shopify_shop_id)
+   b. Synchroniser produits Shopify → produits (UPSERT avec champs autorisés uniquement)
+   c. Créer mappings via upsert_product_mapping(company_id, shopify_variant_id, stockeasy_sku)
+   d. Synchroniser historique commandes → sales_history
+
+2. WEBHOOKS CONTINUS:
+   
+   a. products/create ou products/update:
+      - UPSERT dans produits (uniquement: sku, company_id, nom_produit, image_url, stock_actuel, prix_vente)
+      - Créer/mettre à jour mapping si nécessaire
+   
+   b. inventory_levels/update:
+      - UPDATE uniquement stock_actuel WHERE sku = :sku AND company_id = :company_id
+   
+   c. orders/create:
+      - Insérer dans sales_history (pas dans produits directement)
+      - Les métriques ventes_totales_30j, ventes_jour_moy_30j seront recalculées automatiquement
+
+================================================================================
+⚠️ RÈGLES CRITIQUES
+================================================================================
+
+1. GADGET NE DOIT JAMAIS:
+   - Modifier les champs calculés automatiquement
+   - Modifier les paramètres utilisateur (fournisseur, prix_achat, etc.)
+   - Écraser les valeurs existantes des champs utilisateur lors d'une synchronisation
+   - Modifier created_at ou updated_at manuellement
+
+2. GADGET DOIT:
+   - Utiliser UPSERT avec ON CONFLICT pour éviter les doublons
+   - Respecter le mapping via product_mapping (shopify_variant_id → stockeasy_sku)
+   - Alimenter sales_history pour les ventes (pas directement les champs produits)
+   - Laisser PostgreSQL calculer automatiquement tous les champs calculés
+
+3. MAPPING PRODUITS:
+   - Utiliser la table product_mapping pour mapper shopify_variant_id → stockeasy_sku
+   - Créer le mapping via upsert_product_mapping() si nécessaire
+   - Utiliser shopify_variant_id (PAS lineItem.id qui change à chaque commande)
+
+================================================================================
+📊 RÉSUMÉ RAPIDE
+================================================================================
+
+GADGET PEUT MODIFIER:
+✓ sku, company_id
+✓ nom_produit, image_url
+✓ stock_actuel, prix_vente
+
+GADGET NE DOIT PAS MODIFIER:
+✗ fournisseur, prix_achat, lead_time_days, moq
+✗ Tous les champs calculés (stock_securite, point_commande, qte_a_commander, etc.)
+✗ Paramètres utilisateur
+✗ Dates système (created_at, updated_at)
+✗ Métadonnées système (commandes_en_cours, qte_en_transit, etc.)
+
+================================================================================
+FIN DE LA SPÉCIFICATION
+================================================================================
+
+
+

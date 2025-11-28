@@ -8,11 +8,23 @@
 *.log
 .env
 .env.local
+.env.production
 
 # Fichiers temporaires
 *.tmp
 *.temp
 .cache/
+
+# Build et Coverage (déjà dans stock-easy-app/.gitignore mais au cas où)
+**/coverage/
+**/dist/
+**/.nyc_output/
+*.lcov
+
+# IDE
+.vscode/
+.idea/
+*.sw?
 
 # Documentation d'archive
 /docs/archive/

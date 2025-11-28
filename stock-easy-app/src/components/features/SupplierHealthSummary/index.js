@@ -1,2 +1,0 @@
-export { SupplierHealthSummary } from './SupplierHealthSummary';
-

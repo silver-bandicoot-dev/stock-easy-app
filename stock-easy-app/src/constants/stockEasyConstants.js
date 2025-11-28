@@ -68,10 +68,9 @@ export const DISCREPANCY_TYPES = {
 export const MAIN_TABS = {
   DASHBOARD: 'dashboard',
   ACTIONS: 'actions',
-  TRACK: 'track',
+  ORDERS: 'orders',
   STOCK: 'stock-level',
   ANALYTICS: 'analytics',
-  HISTORY: 'history',
   SETTINGS: 'settings',
   PROFILE: 'profile'
 };

@@ -136,30 +136,47 @@ export const calculateReorderPoint = (product) => {
 
 /**
  * Calcule la valeur de l'excédent de surstock profond pour un produit
- * Approche 2 : Valeur de l'excédent uniquement (recommandée)
  * 
- * @param {Object} product - Le produit enrichi avec daysOfStock
+ * Approche hybride :
+ * - Si salesPerDay > 0 : Calcule l'excédent au-delà du seuil (approche précise)
+ * - Si salesPerDay = 0 : Utilise la valeur totale du stock (approche fallback)
+ *   Car un produit sans ventes avec du stock est entièrement en surstock
+ * 
+ * @param {Object} product - Le produit enrichi avec daysOfStock et isDeepOverstock
  * @param {number} seuil - Seuil de surstock profond en jours (défaut: 90)
  * @returns {number} Valeur de l'excédent en surstock profond (0 si pas de surstock)
  */
 export const calculateOverstockExcessValue = (product, seuil = 90) => {
   const daysOfStock = product?.daysOfStock || 0;
   const salesPerDay = product?.salesPerDay || 0;
+  const stock = product?.stock || 0;
   const price = product?.buyPrice || product?.price || 0;
   
   // Vérifier si le produit est en surstock profond
-  if (daysOfStock < seuil || salesPerDay <= 0) {
+  // Utiliser isDeepOverstock si disponible (calculé par calculateMetrics)
+  const isOverstock = product?.isDeepOverstock === true || daysOfStock >= seuil;
+  
+  if (!isOverstock) {
     return 0;
   }
   
-  // Calculer l'excédent en jours (au-delà du seuil)
+  // CAS SPÉCIAL : Produits sans ventes (salesPerDay = 0)
+  // Un produit sans ventes avec du stock est considéré comme entièrement en surstock
+  // car il n'y a aucune perspective d'écoulement naturel
+  if (salesPerDay <= 0) {
+    // Retourner la valeur totale du stock (approche 1 - fallback)
+    const totalValue = stock * price;
+    return roundToTwoDecimals(totalValue);
+  }
+  
+  // CAS NORMAL : Calculer l'excédent en jours (au-delà du seuil)
   const excessDays = daysOfStock - seuil;
   
   if (excessDays <= 0) {
     return 0;
   }
   
-  // Calculer l'excédent en unités et sa valeur
+  // Calculer l'excédent en unités et sa valeur (approche 2 - précise)
   const excessUnits = excessDays * salesPerDay;
   const excessValue = excessUnits * price;
   

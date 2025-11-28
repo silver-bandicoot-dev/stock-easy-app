@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { 
   Package, 
-  DollarSign, 
+  Plus, 
   Activity,
   TrendingUp, 
   Truck, 
@@ -39,7 +39,7 @@ const Sidebar = ({
   mobileMenuOpen,
   setMobileMenuOpen,
   orderBadgeCount = 0,
-  trackBadgeCount = 0
+  ordersBadgeCount = 0
 }) => {
   const [analyticsExpanded, setAnalyticsExpanded] = useState(false);
   const [settingsExpanded, setSettingsExpanded] = useState(false);
@@ -47,10 +47,10 @@ const Sidebar = ({
   const location = useLocation();
 
   const menuItems = [
-    { id: 'dashboard', label: 'Dashboard', icon: Package, type: 'tab' },
-    { id: 'actions', label: 'Order', icon: DollarSign, type: 'tab' },
-    { id: 'track', label: 'Track & Manage', icon: Truck, type: 'tab' },
-    { id: 'stock-level', label: 'Stock Level', icon: Activity, type: 'tab' },
+    { id: 'dashboard', label: 'Tableau de Bord', icon: Package, type: 'tab' },
+    { id: 'actions', label: 'Passer Commande', icon: Plus, type: 'tab' },
+    { id: 'orders', label: 'Mes Commandes', icon: Truck, type: 'tab' },
+    { id: 'stock-level', label: 'Niveaux de Stock', icon: Activity, type: 'tab' },
     { 
       id: 'analytics', 
       label: 'Analytics', 
@@ -62,7 +62,6 @@ const Sidebar = ({
         { id: 'forecast', label: 'Prévisions IA', icon: Brain }
       ]
     },
-    { id: 'history', label: 'Historique', icon: FileText, type: 'tab' },
     { 
       id: 'settings', 
       label: 'Paramètres', 
@@ -160,13 +159,13 @@ const Sidebar = ({
                     {orderBadgeCount}
                   </span>
                 )}
-                {item.id === 'track' && trackBadgeCount > 0 && (
+                {item.id === 'orders' && ordersBadgeCount > 0 && (
                   <span className={`px-2.5 py-1 min-w-[24px] text-xs font-semibold rounded-full flex items-center justify-center ${
                     isActive 
                       ? 'bg-white/20 text-white' 
                       : 'bg-[#E5E4DF] text-[#191919]'
                   }`}>
-                    {trackBadgeCount}
+                    {ordersBadgeCount}
                   </span>
                 )}
                 {item.hasSubMenu && (
@@ -280,13 +279,13 @@ const Sidebar = ({
                             {orderBadgeCount}
                           </span>
                         )}
-                        {item.id === 'track' && trackBadgeCount > 0 && (
+                        {item.id === 'orders' && ordersBadgeCount > 0 && (
                           <span className={`px-2.5 py-1 min-w-[24px] text-xs font-semibold rounded-full flex items-center justify-center ${
                             isActive 
                               ? 'bg-white/20 text-white' 
                               : 'bg-[#E5E4DF] text-[#191919]'
                           }`}>
-                            {trackBadgeCount}
+                            {ordersBadgeCount}
                           </span>
                         )}
                         {item.hasSubMenu && (

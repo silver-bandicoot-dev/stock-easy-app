@@ -37,13 +37,13 @@ export const OrderBySupplier = ({
           >
             {/* Header */}
             <div className="bg-[#FAFAF7] border-b border-[#E5E4DF] p-4">
-              <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 bg-red-50 rounded-lg flex items-center justify-center border border-red-200 shrink-0">
                     <AlertCircle className="w-6 h-6 text-[#EF1C43] shrink-0" />
                   </div>
                   <div>
-                    <h2 className="text-xl font-bold text-[#191919]">{supplier}</h2>
+                    <h2 className="text-xl font-bold text-[#191919]">{supplier || 'Fournisseur non assigné'}</h2>
                     <p className="text-sm text-[#666663]">{products.length} produit(s) à commander</p>
                   </div>
                 </div>

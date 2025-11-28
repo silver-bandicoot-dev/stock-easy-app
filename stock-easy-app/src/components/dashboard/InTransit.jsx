@@ -4,12 +4,11 @@ import { Truck, Calendar } from 'lucide-react';
 import { InfoTooltip, tooltips } from '../ui/InfoTooltip';
 import { formatConfirmedDate, calculateDaysRemaining, calculateETA, formatETA } from '../../utils/dateUtils';
 
-export const InTransit = ({ orders, suppliers = {}, setActiveTab, setTrackTabSection }) => {
+export const InTransit = ({ orders, suppliers = {}, setActiveTab }) => {
   const inTransitOrders = orders.filter(order => order.status === 'in_transit');
 
   const handleViewDetails = () => {
-    setActiveTab('track');
-    setTrackTabSection('en_transit');
+    setActiveTab('orders');
   };
 
   return (

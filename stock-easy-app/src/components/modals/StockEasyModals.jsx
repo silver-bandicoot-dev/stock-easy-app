@@ -54,7 +54,7 @@ export const StockEasyModals = () => {
 
   // 3. Dérivations pour faciliter l'usage
   const { generatePONumber } = orderManagement;
-  const { setActiveTab, setTrackTabSection } = tabManagement;
+  const { setActiveTab } = tabManagement;
   
   const { 
     supplierModalOpen, 
@@ -200,7 +200,7 @@ export const StockEasyModals = () => {
           api,
           loadData,
           setDiscrepancyTypes,
-          setTrackTabSection
+          setActiveTab
         )}
         reclamationEmailModal={inlineModals.reclamationEmailModal}
       />
