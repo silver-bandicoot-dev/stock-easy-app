@@ -94,6 +94,7 @@ export const run = async ({ params, logger, api, connections }) => {
     const unsyncedItems = [];
     let totalShopifySkus = 0;
     let unsyncedCount = 0;
+    let syncedFromShopifyCount = 0; // ← Count synced SKUs from Shopify side for consistency
     
     for (const productEdge of products) {
       const product = productEdge.node;
@@ -106,8 +107,11 @@ export const run = async ({ params, logger, api, connections }) => {
         const sku = variant.sku;
         const isTracked = variant.inventoryItem?.tracked;
         
-        // Check if NOT synced
-        if (!sku || !syncedSkuSet.has(sku)) {
+        // Check if synced (has SKU and exists in Supabase)
+        if (sku && syncedSkuSet.has(sku)) {
+          syncedFromShopifyCount++;
+        } else {
+          // NOT synced
           unsyncedCount++;
           
           // Only store details for first N items (optimization)
@@ -127,16 +131,18 @@ export const run = async ({ params, logger, api, connections }) => {
     
     logger.info({ 
       companyId, 
-      totalProducts, 
+      totalProducts,
+      syncedFromShopifyCount,
       totalShopifySkus,
       unsyncedCount
     }, "Fetched sync stats");
     
+    // ✅ Use syncedFromShopifyCount for consistency: synced + unsynced = total
     return {
       success: true,
-      syncedSkus: totalProducts,
+      syncedSkus: syncedFromShopifyCount,
       totalShopifySkus,
-      totalProducts,
+      totalProducts, // Still useful to know Supabase count
       companyId,
       unsyncedItems,
       unsyncedCount // ← Total count (may be > unsyncedItems.length)
