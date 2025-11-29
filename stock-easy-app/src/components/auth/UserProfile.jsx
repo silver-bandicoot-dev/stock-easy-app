@@ -38,7 +38,7 @@ const UserProfile = () => {
       <div className="max-w-4xl mx-auto py-8">
         {/* Back Button */}
         <button
-          onClick={() => navigate('/')}
+          onClick={() => navigate('/app')}
           className="flex items-center gap-2 text-gray-600 hover:text-black transition-colors mb-6"
         >
           <ArrowLeft className="w-5 h-5" />

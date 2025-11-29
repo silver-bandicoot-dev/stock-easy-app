@@ -185,7 +185,7 @@ const NotificationsPage = () => {
                 Préférences
               </button>
               <button
-                onClick={() => navigate('/')}
+                onClick={() => navigate('/app')}
                 className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-black rounded-lg hover:bg-gray-900 transition-colors"
               >
                 Retour à la plateforme

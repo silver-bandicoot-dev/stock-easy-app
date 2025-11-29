@@ -54,7 +54,7 @@ const TopBar = ({
 
         {/* Logo - Cliquable pour retourner au dashboard */}
         <button
-          onClick={() => navigate('/')}
+          onClick={() => navigate('/app')}
           className="shrink-0 hover:opacity-80 transition-opacity"
         >
           <Logo size="small" showText={true} theme="light" />

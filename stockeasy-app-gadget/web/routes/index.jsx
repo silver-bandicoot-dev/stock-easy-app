@@ -221,7 +221,7 @@ export const DashboardPage = () => {
                   <line x1="85" y1="35" x2="50" y2="45" stroke="#191919" strokeWidth="1" opacity="0.5"/>
                 </svg>
                 <div style={{ width: '1px', height: '24px', backgroundColor: '#191919', opacity: 0.2 }} />
-                <span style={{ fontSize: '18px', fontWeight: '600', color: '#191919' }}>stockeasy</span>
+                <span className="stockeasy-logo-text">stockeasy</span>
               </div>
               
               {/* Sync button */}

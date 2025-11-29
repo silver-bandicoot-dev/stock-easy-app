@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { RefreshCw } from 'lucide-react';
 import { useAuth } from '../../contexts/SupabaseAuthContext';
@@ -6,6 +6,8 @@ import { DashboardKPIs } from './DashboardKPIs';
 import { DashboardCharts } from './DashboardCharts';
 import { RevenueComparisonChart } from './RevenueComparisonChart';
 import { useAnalytics } from '../../hooks/useAnalytics';
+import { OnboardingChecklist } from './OnboardingChecklist';
+import { MAIN_TABS, SETTINGS_TABS } from '../../constants/stockEasyConstants';
 
 /**
  * Génère un message de bienvenue dynamique basé sur l'heure, le jour et le contexte
@@ -121,15 +123,17 @@ const itemVariants = {
   }
 };
 
-export const DashboardTab = ({ productsByStatus, orders, enrichedProducts, onViewDetails, seuilSurstockProfond = 90, syncing = false }) => {
+export const DashboardTab = ({ productsByStatus, orders, enrichedProducts, onViewDetails, seuilSurstockProfond = 90, syncing = false, setActiveTab, setParametersSubTab }) => {
   const { currentUser } = useAuth();
   const [isReturningToday, setIsReturningToday] = useState(false);
+  const [showOnboarding, setShowOnboarding] = useState(true);
   
   // Utiliser useAnalytics pour récupérer les données de comparaison (7 derniers jours)
   const analyticsData = useAnalytics(enrichedProducts, orders, '7d', null, 'previous', seuilSurstockProfond);
 
   useEffect(() => {
     const STORAGE_KEY = 'stockeasy_dashboard_last_visit';
+    const ONBOARDING_KEY = 'stockeasy_onboarding_dismissed';
     const now = new Date();
     const todayKey = now.toISOString().slice(0, 10);
 
@@ -143,10 +147,25 @@ export const DashboardTab = ({ productsByStatus, orders, enrichedProducts, onVie
         }
       }
       window.localStorage.setItem(STORAGE_KEY, now.toISOString());
+      
+      // Vérifier si l'onboarding a été masqué
+      const onboardingDismissed = window.localStorage.getItem(ONBOARDING_KEY);
+      if (onboardingDismissed === 'true') {
+        setShowOnboarding(false);
+      }
     } catch (e) {
       console.warn('Impossible de lire/écrire dans localStorage pour le dashboard:', e);
     }
   }, []);
+
+  const handleDismissOnboarding = () => {
+    setShowOnboarding(false);
+    try {
+      window.localStorage.setItem('stockeasy_onboarding_dismissed', 'true');
+    } catch (e) {
+      console.warn('Impossible de sauvegarder l\'état de l\'onboarding:', e);
+    }
+  };
 
   const firstName =
     currentUser?.firstName ||
@@ -162,6 +181,54 @@ export const DashboardTab = ({ productsByStatus, orders, enrichedProducts, onVie
     getDynamicGreeting(firstName, isReturningToday, urgentCount),
     [firstName, isReturningToday, urgentCount]
   );
+
+  // Calcul de l'état de l'onboarding
+  const onboardingStatus = useMemo(() => {
+    const hasMappedProducts = enrichedProducts && enrichedProducts.some(p => p.supplierId || p.supplier_id);
+    const hasOrders = orders && orders.length > 0;
+    
+    // Approximation : si on a mappé des produits, on a forcément créé des fournisseurs
+    // Pour être plus précis, on pourrait passer la liste des fournisseurs en props
+    const hasSuppliers = hasMappedProducts; 
+
+    return {
+      hasSuppliers,
+      hasMappedProducts,
+      hasOrders
+    };
+  }, [enrichedProducts, orders]);
+
+  // Navigation depuis la checklist d'onboarding
+  const handleOnboardingNavigate = useCallback((target) => {
+    console.log('🚀 handleOnboardingNavigate called with target:', target);
+    console.log('🔍 setActiveTab available:', !!setActiveTab);
+    console.log('🔍 setParametersSubTab available:', !!setParametersSubTab);
+    
+    if (!setActiveTab) {
+      console.warn('⚠️ setActiveTab is not available!');
+      return;
+    }
+    
+    switch (target) {
+      case 'suppliers':
+        console.log('📦 Navigating to Settings > Suppliers');
+        setActiveTab(MAIN_TABS.SETTINGS);
+        if (setParametersSubTab) setParametersSubTab(SETTINGS_TABS.SUPPLIERS);
+        break;
+      case 'mapping':
+        console.log('🔗 Navigating to Settings > Mapping');
+        setActiveTab(MAIN_TABS.SETTINGS);
+        if (setParametersSubTab) setParametersSubTab(SETTINGS_TABS.MAPPING);
+        break;
+      case 'orders':
+        console.log('🛒 Navigating to Actions');
+        setActiveTab(MAIN_TABS.ACTIONS);
+        break;
+      default:
+        console.warn('⚠️ Unknown target:', target);
+        break;
+    }
+  }, [setActiveTab, setParametersSubTab]);
 
   return (
     <motion.div
@@ -200,6 +267,19 @@ export const DashboardTab = ({ productsByStatus, orders, enrichedProducts, onVie
           )}
         </div>
       </motion.div>
+
+      {/* Guide de démarrage (visible seulement si non masqué et tâches restantes) */}
+      {showOnboarding && (
+        <motion.div variants={itemVariants}>
+          <OnboardingChecklist 
+            hasSuppliers={onboardingStatus.hasSuppliers}
+            hasMappedProducts={onboardingStatus.hasMappedProducts}
+            hasOrders={onboardingStatus.hasOrders}
+            onDismiss={handleDismissOnboarding}
+            onNavigate={handleOnboardingNavigate}
+          />
+        </motion.div>
+      )}
 
       {/* Badge de statut - Discret mais informatif */}
       {urgentCount > 0 && (

@@ -218,7 +218,7 @@ const UserProfile = () => {
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center gap-4">
             <button
-              onClick={() => navigate('/')}
+              onClick={() => navigate('/app')}
               className="p-2 hover:bg-[#E5E4DF] rounded-lg transition-colors"
             >
               <ArrowLeft className="w-5 h-5" />

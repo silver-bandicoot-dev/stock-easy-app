@@ -1,1 +1,18 @@
 /** put your app's css here */
+
+/* Font TT Supermolot Neue pour le logo stockeasy */
+@font-face {
+  font-family: 'TT Supermolot Neue';
+  src: url('/web/fonts/TT Supermolot Neue Trial Expanded ExtraLight.ttf') format('truetype');
+  font-weight: 200;
+  font-style: normal;
+  font-display: swap;
+}
+
+.stockeasy-logo-text {
+  font-family: 'TT Supermolot Neue', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-weight: 200;
+  font-size: 18px;
+  color: #191919;
+  letter-spacing: 0.02em;
+}

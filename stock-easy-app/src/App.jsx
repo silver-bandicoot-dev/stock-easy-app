@@ -9,9 +9,11 @@ import SupabaseResetPassword from './components/auth/SupabaseResetPassword';
 import AcceptInvitation from './components/auth/AcceptInvitation';
 import EmailConfirmation from './components/auth/EmailConfirmation';
 import NotificationsPage from './components/notifications/NotificationsPage';
-import Stockeasy from './StockEasy';
+import Stockeasy from './Stockeasy';
 import ProfileRedirect from './components/profile/ProfileRedirect';
 import SupabaseConnectionTest from './components/debug/SupabaseConnectionTest';
+import Landing from './pages/Landing';
+import ComingSoon from './pages/Landing/ComingSoon';
 import './config/i18n';
 
 const App = () => {
@@ -26,6 +28,12 @@ const App = () => {
       <SupabaseAuthProvider>
         <ModalProvider>
         <Routes>
+          {/* Coming Soon Page - Public (temporaire avant lancement) */}
+          <Route path="/" element={<ComingSoon />} />
+          
+          {/* Landing Page Preview - Pour révision interne */}
+          <Route path="/preview" element={<Landing />} />
+          
           {/* Public Routes */}
           <Route path="/login" element={<SupabaseLogin />} />
           <Route path="/forgot-password" element={<SupabaseResetPassword />} />
@@ -41,9 +49,9 @@ const App = () => {
             }
           />
 
-          {/* Protected Routes */}
+          {/* Protected Routes - Main App */}
           <Route
-            path="/"
+            path="/app"
             element={
               <ProtectedRoute>
                 <Stockeasy />

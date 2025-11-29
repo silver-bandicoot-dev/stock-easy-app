@@ -40,7 +40,7 @@ const SupabaseLogin = () => {
         }
         toast.error(errorMessage);
       } else if (user) {
-        navigate('/');
+        navigate('/app');
       }
     } catch (error) {
       console.error('Erreur:', error);

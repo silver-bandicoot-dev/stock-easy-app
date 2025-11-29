@@ -562,9 +562,9 @@ export const HelpCenterTab = () => {
                 {[
                   getArticleById('welcome'),
                   getArticleById('initial-setup'),
-                  getArticleById('order-recommendations'),
-                  getArticleById('stock-health'),
-                  getArticleById('faq')
+                  getArticleById('order-logic'),
+                  getArticleById('stock-health-colors'),
+                  getArticleById('faq-top')
                 ].filter(Boolean).map((article) => (
                   <button
                     key={article.id}

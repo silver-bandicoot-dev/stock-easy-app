@@ -55,7 +55,7 @@ const AcceptInvitation = () => {
 
       // Rediriger vers le tableau de bord après 2 secondes
       setTimeout(() => {
-        navigate('/');
+        navigate('/app');
       }, 2000);
       
     } catch (error) {

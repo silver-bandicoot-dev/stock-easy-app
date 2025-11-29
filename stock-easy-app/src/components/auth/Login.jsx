@@ -29,7 +29,7 @@ const Login = () => {
     try {
       await login(formData.email, formData.password);
       toast.success('Connexion réussie !');
-      navigate('/');
+      navigate('/app');
     } catch (error) {
       console.error('Login error:', error);
       let errorMessage = 'Erreur lors de la connexion';
