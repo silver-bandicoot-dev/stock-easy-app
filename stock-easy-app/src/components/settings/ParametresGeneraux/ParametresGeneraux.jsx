@@ -1,28 +1,25 @@
 import React, { useState, useEffect } from 'react';
-import { CheckCircle, AlertCircle, Check, RefreshCw } from 'lucide-react';
+import { CheckCircle, AlertCircle, Check, RefreshCw, Cookie, Shield, BarChart3, Settings } from 'lucide-react';
 import { toast } from 'sonner';
+import { useTranslation } from 'react-i18next';
 import { Button } from '../../ui/Button';
+import { useCookieConsent, COOKIE_CATEGORIES } from '../../../contexts/CookieConsentContext';
 
-// Seuils prédéfinis avec recommandations (constants partagées)
-const PREDEFINED_THRESHOLDS = [
-  { value: 60, label: '60 jours', type: 'Fashion', description: 'Produits à rotation rapide, mode saisonnière' },
-  { value: 90, label: '90 jours ⭐', type: 'Standard', description: 'Recommandé pour la plupart des activités' },
-  { value: 120, label: '120 jours', type: 'Durable', description: 'Produits à longue durée de vie' },
-  { value: 180, label: '180 jours', type: 'B2B', description: 'Commerce B2B avec cycles longs' }
-];
-
-// Obtenir une recommandation selon la valeur du seuil
-const getRecommendationForValue = (value) => {
-  if (value <= 60) return { type: 'Fashion', description: 'Adapté pour les produits à rotation rapide' };
-  if (value <= 90) return { type: 'Standard', description: 'Recommandé pour la plupart des activités' };
-  if (value <= 120) return { type: 'Durable', description: 'Adapté pour les produits à longue durée de vie' };
-  if (value <= 180) return { type: 'B2B', description: 'Adapté pour le commerce B2B' };
-  return { type: 'Personnalisé', description: 'Valeur personnalisée selon vos besoins' };
+// Obtenir une recommandation selon la valeur du seuil (avec traduction)
+const getRecommendationForValue = (value, t) => {
+  if (value <= 60) return { type: 'Fashion', description: t('settings.general.thresholds.fashionDesc') };
+  if (value <= 90) return { type: 'Standard', description: t('settings.general.thresholds.standardDesc') };
+  if (value <= 120) return { type: 'Durable', description: t('settings.general.thresholds.durableDesc') };
+  if (value <= 180) return { type: 'B2B', description: t('settings.general.thresholds.b2bDesc') };
+  return { type: t('settings.general.custom'), description: t('settings.general.thresholds.customDesc') };
 };
+
+// Seuils prédéfinis (valeurs)
+const PREDEFINED_VALUES = [60, 90, 120, 180];
 
 // Vérifier si la valeur correspond à un seuil prédéfini
 const isPredefinedValue = (value) => {
-  return PREDEFINED_THRESHOLDS.some(t => t.value === value);
+  return PREDEFINED_VALUES.includes(value);
 };
 
 /**
@@ -45,7 +42,16 @@ export function ParametresGeneraux({
   onUpdateMultiplicateur,
   loadData
 }) {
+  const { t } = useTranslation();
   const [tempSeuil, setTempSeuil] = useState(seuilSurstock);
+  
+  // Seuils prédéfinis avec recommandations (traduits)
+  const PREDEFINED_THRESHOLDS = [
+    { value: 60, label: t('settings.general.thresholds.fashion'), type: 'Fashion', description: t('settings.general.thresholds.fashionDesc') },
+    { value: 90, label: t('settings.general.thresholds.standard'), type: 'Standard', description: t('settings.general.thresholds.standardDesc') },
+    { value: 120, label: t('settings.general.thresholds.durable'), type: 'Durable', description: t('settings.general.thresholds.durableDesc') },
+    { value: 180, label: t('settings.general.thresholds.b2b'), type: 'B2B', description: t('settings.general.thresholds.b2bDesc') }
+  ];
   const [tempDevise, setTempDevise] = useState(devise);
   const [tempMultiplicateur, setTempMultiplicateur] = useState(multiplicateur);
   const [hasChanges, setHasChanges] = useState(false);
@@ -96,7 +102,7 @@ export function ParametresGeneraux({
       setTimeout(() => setSaveSuccess(false), 3000);
     } catch (error) {
       console.error('Erreur sauvegarde:', error);
-      toast.error(error.message || 'Erreur lors de la sauvegarde des paramètres');
+      toast.error(error.message || t('settings.general.saveError'));
     } finally {
       setIsSaving(false);
     }
@@ -129,13 +135,13 @@ export function ParametresGeneraux({
     // Valider que c'est un nombre
     const numValue = parseInt(value, 10);
     if (isNaN(numValue)) {
-      setSeuilError('Veuillez entrer un nombre valide');
+      setSeuilError(t('settings.general.validation.invalidNumber'));
       return;
     }
     
     // Valider la plage (1-365 jours)
     if (numValue < 1 || numValue > 365) {
-      setSeuilError('Le seuil doit être entre 1 et 365 jours');
+      setSeuilError(t('settings.general.validation.rangeError'));
       return;
     }
     
@@ -160,7 +166,7 @@ export function ParametresGeneraux({
       {saveSuccess && (
         <div className="bg-green-50 border-2 border-green-500 rounded-xl p-4 flex items-center gap-3">
           <CheckCircle className="w-5 h-5 text-green-600 shrink-0" />
-          <span className="text-green-800 font-medium">✅ Paramètres sauvegardés avec succès !</span>
+          <span className="text-green-800 font-medium">{t('settings.general.savedSuccess')}</span>
         </div>
       )}
 
@@ -169,7 +175,7 @@ export function ParametresGeneraux({
         <div className="bg-yellow-50 border-2 border-yellow-400 rounded-xl p-4 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <AlertCircle className="w-5 h-5 text-yellow-600 shrink-0" />
-            <span className="text-yellow-800 font-medium">Vous avez des modifications non sauvegardées</span>
+            <span className="text-yellow-800 font-medium">{t('settings.general.unsavedChanges')}</span>
           </div>
           <div className="flex gap-2 shrink-0">
             <Button 
@@ -177,7 +183,7 @@ export function ParametresGeneraux({
               onClick={handleCancel}
               disabled={isSaving}
             >
-              Annuler
+              {t('common.cancel')}
             </Button>
             <Button 
               variant="primary" 
@@ -186,7 +192,7 @@ export function ParametresGeneraux({
               disabled={isSaving}
               className={isSaving ? 'opacity-75' : ''}
             >
-              {isSaving ? 'Sauvegarde...' : 'Sauvegarder les paramètres'}
+              {isSaving ? t('settings.general.saving') : t('settings.general.saveParameters')}
             </Button>
           </div>
         </div>
@@ -194,9 +200,9 @@ export function ParametresGeneraux({
 
       {/* Devise */}
       <div className="bg-white rounded-xl shadow-sm border border-[#E5E4DF] p-6">
-        <h3 className="text-lg font-semibold text-[#191919] mb-4">💰 Devise par défaut</h3>
+        <h3 className="text-lg font-semibold text-[#191919] mb-4">{t('settings.general.currencyTitle')}</h3>
         <p className="text-sm text-[#666663] mb-4">
-          Devise utilisée pour afficher les prix dans l'application
+          {t('settings.general.currencyHelp')}
         </p>
         
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -218,23 +224,22 @@ export function ParametresGeneraux({
         </div>
         
         <div className="mt-3 p-3 bg-[#FAFAF7] rounded-lg">
-          <span className="text-sm text-[#666663]">Devise sélectionnée : </span>
+          <span className="text-sm text-[#666663]">{t('settings.general.selectedCurrency')}: </span>
           <span className="text-sm font-bold text-[#191919]">{tempDevise}</span>
         </div>
       </div>
       
       {/* Seuil Surstock */}
       <div className="bg-white rounded-xl shadow-sm border border-[#E5E4DF] p-6">
-        <h3 className="text-lg font-semibold text-[#191919] mb-4">📊 Seuil Surstock Profond</h3>
+        <h3 className="text-lg font-semibold text-[#191919] mb-4">{t('settings.general.overstockThresholdTitle')}</h3>
         <p className="text-sm text-[#666663] mb-4">
-          Nombre de jours d'autonomie à partir duquel un produit est considéré en surstock profond. 
-          Vous pouvez choisir une recommandation ou saisir une valeur personnalisée.
+          {t('settings.general.overstockThresholdHelp')}
         </p>
         
         {/* Recommandations prédéfinies */}
         <div className="mb-4">
           <label className="block text-sm font-medium text-[#191919] mb-2">
-            Recommandations selon votre typologie :
+            {t('settings.general.recommendations')}:
           </label>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             {PREDEFINED_THRESHOLDS.map((threshold) => (
@@ -260,7 +265,7 @@ export function ParametresGeneraux({
         {/* Champ personnalisé */}
         <div className="mb-3">
           <label className="block text-sm font-medium text-[#191919] mb-2">
-            Ou saisissez une valeur personnalisée (1-365 jours) :
+            {t('settings.general.customValueLabel')}:
           </label>
           <input
             type="number"
@@ -293,19 +298,19 @@ export function ParametresGeneraux({
         }`}>
           <div className="flex items-center justify-between">
             <div>
-              <span className="text-sm text-[#666663]">Valeur sélectionnée : </span>
-              <span className="text-sm font-bold text-[#191919]">{tempSeuil} jours</span>
+              <span className="text-sm text-[#666663]">{t('settings.general.selectedValue')}: </span>
+              <span className="text-sm font-bold text-[#191919]">{tempSeuil} {t('settings.general.days')}</span>
               {!isPredefinedValue(tempSeuil) && (
-                <span className="ml-2 text-xs text-[#8B5CF6] font-medium">(Personnalisé)</span>
+                <span className="ml-2 text-xs text-[#8B5CF6] font-medium">({t('settings.general.custom')})</span>
               )}
             </div>
           </div>
           {(() => {
-            const recommendation = getRecommendationForValue(tempSeuil);
+            const recommendation = getRecommendationForValue(tempSeuil, t);
             return (
               <div className="mt-2 pt-2 border-t border-[#E5E4DF]">
                 <div className="flex items-start gap-2">
-                  <span className="text-xs text-[#666663] whitespace-nowrap">💡 Recommandation :</span>
+                  <span className="text-xs text-[#666663] whitespace-nowrap">💡 {t('settings.general.recommendationLabel')}:</span>
                   <span className="text-xs text-[#191919]">
                     <span className="font-medium">{recommendation.type}</span>
                     <span className="text-[#666663] ml-1">- {recommendation.description}</span>
@@ -319,9 +324,9 @@ export function ParametresGeneraux({
       
       {/* Multiplicateur */}
       <div className="bg-white rounded-xl shadow-sm border border-[#E5E4DF] p-6">
-        <h3 className="text-lg font-semibold text-[#191919] mb-4">📈 Multiplicateur par défaut</h3>
+        <h3 className="text-lg font-semibold text-[#191919] mb-4">{t('settings.general.multiplierTitle')}</h3>
         <p className="text-sm text-[#666663] mb-4">
-          Coefficient appliqué aux nouveaux produits pour ajuster les prévisions
+          {t('settings.general.multiplierHelp')}
         </p>
         
         <div className="flex items-center gap-4">
@@ -344,6 +349,138 @@ export function ParametresGeneraux({
           </button>
         </div>
       </div>
+
+      {/* Gestion des Cookies (RGPD) */}
+      <CookiePreferencesSection />
+    </div>
+  );
+}
+
+/**
+ * Section de gestion des préférences de cookies
+ */
+function CookiePreferencesSection() {
+  const { t } = useTranslation();
+  const { consent, openPreferences, hasConsent } = useCookieConsent();
+
+  const categories = [
+    {
+      id: COOKIE_CATEGORIES.ESSENTIAL,
+      name: t('cookies.categories.essential.name', 'Cookies Essentiels'),
+      icon: Shield,
+      color: 'text-[#16A34A]',
+      bgColor: 'bg-[#F0FDF4]',
+      borderColor: 'border-[#BBF7D0]',
+      enabled: true,
+      required: true,
+    },
+    {
+      id: COOKIE_CATEGORIES.ANALYTICS,
+      name: t('cookies.categories.analytics.name', 'Cookies Analytiques'),
+      icon: BarChart3,
+      color: 'text-[#D97706]',
+      bgColor: 'bg-[#FEF3C7]',
+      borderColor: 'border-[#FDE68A]',
+      enabled: hasConsent(COOKIE_CATEGORIES.ANALYTICS),
+      required: false,
+    },
+    {
+      id: COOKIE_CATEGORIES.PREFERENCES,
+      name: t('cookies.categories.preferences.name', 'Cookies de Préférences'),
+      icon: Settings,
+      color: 'text-[#2563EB]',
+      bgColor: 'bg-[#EFF6FF]',
+      borderColor: 'border-[#BFDBFE]',
+      enabled: hasConsent(COOKIE_CATEGORIES.PREFERENCES),
+      required: false,
+    },
+  ];
+
+  return (
+    <div className="bg-white rounded-xl shadow-sm border border-[#E5E4DF] p-6">
+      <div className="flex items-center gap-3 mb-4">
+        <div className="p-2 bg-[#FAFAF7] rounded-lg">
+          <Cookie className="w-5 h-5 text-[#191919]" />
+        </div>
+        <div>
+          <h3 className="text-lg font-semibold text-[#191919]">
+            {t('settings.general.cookiesTitle', 'Gestion des Cookies')}
+          </h3>
+          <p className="text-sm text-[#666663]">
+            {t('settings.general.cookiesSubtitle', 'Conformité RGPD')}
+          </p>
+        </div>
+      </div>
+      
+      <p className="text-sm text-[#666663] mb-4">
+        {t('settings.general.cookiesHelp', 'Gérez vos préférences de cookies pour contrôler les données que nous collectons.')}
+      </p>
+
+      {/* État actuel des cookies */}
+      <div className="space-y-2 mb-4">
+        {categories.map((cat) => {
+          const Icon = cat.icon;
+          return (
+            <div
+              key={cat.id}
+              className={`flex items-center justify-between p-3 rounded-lg ${cat.bgColor} border ${cat.borderColor}`}
+            >
+              <div className="flex items-center gap-2">
+                <Icon className={`w-4 h-4 ${cat.color}`} />
+                <span className="text-sm font-medium text-[#191919]">{cat.name}</span>
+              </div>
+              <span className={`text-xs font-medium px-2 py-1 rounded-full ${
+                cat.enabled 
+                  ? 'bg-green-100 text-green-700' 
+                  : 'bg-red-100 text-red-700'
+              }`}>
+                {cat.required 
+                  ? t('settings.general.cookiesRequired', 'Requis')
+                  : cat.enabled 
+                    ? t('settings.general.cookiesEnabled', 'Activé')
+                    : t('settings.general.cookiesDisabled', 'Désactivé')
+                }
+              </span>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Date du dernier consentement */}
+      {consent.timestamp && (
+        <p className="text-xs text-[#666663] mb-4">
+          {t('settings.general.cookiesLastUpdated', 'Dernière mise à jour')}: {' '}
+          {new Date(consent.timestamp).toLocaleDateString('fr-FR', {
+            day: 'numeric',
+            month: 'long',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+          })}
+        </p>
+      )}
+
+      {/* Bouton pour modifier */}
+      <Button
+        variant="outline"
+        onClick={openPreferences}
+        className="w-full"
+      >
+        <Settings className="w-4 h-4 mr-2" />
+        {t('settings.general.cookiesModify', 'Modifier mes préférences de cookies')}
+      </Button>
+
+      {/* Lien vers la politique */}
+      <p className="text-center text-xs text-[#666663] mt-3">
+        <a 
+          href="/legal/cookies" 
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-[#191919] underline hover:no-underline"
+        >
+          {t('settings.general.cookiesPolicyLink', 'Consulter notre Politique de Cookies')}
+        </a>
+      </p>
     </div>
   );
 }

@@ -138,7 +138,6 @@ Pour que Stockeasy soit intelligent, il a besoin de données. En connectant Shop
 | **Produits** | Pour savoir ce que vous vendez, vos prix et vos SKU. |
 | **Commandes** | Pour analyser votre rythme de vente et prédire l'avenir. |
 | **Stocks** | Pour connaître votre point de départ actuel. |
-| **Emplacements** | Pour gérer vos différents entrepôts (Fonctionnalité Pro). |
 
 ### FAQ Synchronisation
 
@@ -435,6 +434,60 @@ L'IA apprend de votre passé.
   ],
 
   // ============================================
+  // SETTINGS (CONFIGURATION)
+  // ============================================
+  settings: [
+    {
+      id: 'integrations-setup',
+      title: 'Connecter vos emails (Gmail / Outlook)',
+      summary: 'Envoyez vos commandes fournisseurs directement depuis Stockeasy.',
+      content: `
+## Simplifiez vos envois de commandes
+
+Stockeasy peut se connecter à votre compte Gmail ou Outlook pour envoyer les Purchase Orders (PO) sans quitter l'application.
+
+### Pourquoi connecter ?
+*   **Gain de temps** : Plus besoin de télécharger le PDF, ouvrir votre mail, créer un nouveau message, attacher la pièce jointe...
+*   **Professionnalisme** : Les emails partent de VOTRE adresse, avec votre signature habituelle.
+*   **Traçabilité** : Vous retrouvez les emails envoyés dans votre dossier "Messages envoyés".
+
+### Comment faire ?
+1.  Allez dans **Paramètres > Intégrations**.
+2.  Choisissez votre fournisseur (Google ou Microsoft).
+3.  Cliquez sur "Connecter" et validez les autorisations.
+4.  C'est tout ! La prochaine fois que vous créez une commande, l'option "Envoyer par email" sera active.
+      `
+    },
+    {
+      id: 'advanced-params',
+      title: 'Paramètres de Calcul Avancés',
+      summary: 'Ajustez la sensibilité de l\'algorithme.',
+      content: `
+## Devenez le maître de l'algorithme
+
+Dans **Paramètres > Généraux**, vous pouvez affiner le comportement de Stockeasy.
+
+### Les leviers principaux
+
+#### 1. Période d'analyse (Historique)
+Par défaut, nous regardons les **90 derniers jours** de ventes pour calculer votre moyenne quotidienne.
+*   *Vous vendez des produits très saisonniers ?* Réduisez à 30 jours pour être plus réactif.
+*   *Vous avez des ventes très stables ?* Augmentez à 180 jours pour lisser les pics.
+
+#### 2. Jours de Stock de Sécurité (Par défaut)
+C'est la valeur appliquée aux nouveaux fournisseurs si vous ne précisez rien.
+*   Augmentez cette valeur si vos fournisseurs sont peu fiables.
+*   Diminuez-la si vous voulez fonctionner en flux tendu (Just-in-Time).
+
+#### 3. Fréquence de commande
+À quelle fréquence aimez-vous passer commande ?
+*   Si vous commandez **toutes les semaines**, Stockeasy vous proposera de plus petites quantités.
+*   Si vous commandez **tous les mois**, les quantités recommandées seront plus importantes pour tenir la durée.
+      `
+    }
+  ],
+
+  // ============================================
   // TROUBLESHOOTING & FAQ
   // ============================================
   troubleshooting: [
@@ -458,9 +511,8 @@ C'est souvent un délai de synchronisation.
 *   **Solution temporaire** : Téléchargez le PDF de la commande et envoyez-le manuellement depuis votre boîte mail perso.
 
 ### 4. "Comment gérer plusieurs entrepôts ?"
-C'est une fonctionnalité du plan **Pro** ou **Plus**.
-*   Si vous êtes sur le plan Basic, Stockeasy additionne tous vos stocks en un seul total.
-*   Sur Pro/Plus, vous pouvez filtrer les recommandations par "Lieu de stockage".
+Pour l'instant, Stockeasy ne gère qu'un seul emplacement de stock (la somme de tous vos emplacements Shopify).
+La gestion multi-sites (entrepôts distincts) est une fonctionnalité prévue pour une prochaine mise à jour majeure.
 
 ### 5. "Puis-je annuler une réception de commande ?"
 Aïe, c'est délicat car cela a déjà modifié vos stocks Shopify.

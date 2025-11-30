@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Calendar, ChevronDown } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 export const DateRangePicker = ({ 
   value, 
@@ -8,15 +9,16 @@ export const DateRangePicker = ({
   customRange, 
   onCustomRangeChange 
 }) => {
+  const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
 
   const ranges = [
-    { value: 'yesterday', label: 'Hier' },
-    { value: '7d', label: '7 derniers jours' },
-    { value: '30d', label: '30 derniers jours' },
-    { value: '90d', label: '3 derniers mois' },
-    { value: '1y', label: '1 an' },
-    { value: 'custom', label: 'Période personnalisée' }
+    { value: 'yesterday', label: t('analytics.period.yesterday') },
+    { value: '7d', label: t('analytics.period.last7days') },
+    { value: '30d', label: t('analytics.period.last30days') },
+    { value: '90d', label: t('analytics.period.last3months') },
+    { value: '1y', label: t('analytics.period.lastYear') },
+    { value: 'custom', label: t('analytics.period.custom') }
   ];
 
   const selectedRange = ranges.find(range => range.value === value);
@@ -31,7 +33,7 @@ export const DateRangePicker = ({
       <div className="space-y-3">
         <div className="flex items-center gap-2">
           <Calendar className="w-4 h-4 text-[#191919]" />
-          <h3 className="text-sm font-semibold text-[#191919]">Période</h3>
+          <h3 className="text-sm font-semibold text-[#191919]">{t('analytics.period.title')}</h3>
         </div>
         
         <div className="relative">
@@ -39,7 +41,7 @@ export const DateRangePicker = ({
             onClick={() => setIsOpen(!isOpen)}
             className="w-full px-3 py-2 bg-white border border-[#E5E4DF] rounded-lg text-sm text-[#191919] flex items-center justify-between hover:border-[#D1D0CB] transition-colors"
           >
-            <span>{selectedRange?.label || 'Sélectionner une période'}</span>
+            <span>{selectedRange?.label || t('analytics.period.selectPeriod')}</span>
             <ChevronDown className={`w-4 h-4 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
           </button>
 
@@ -76,7 +78,7 @@ export const DateRangePicker = ({
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-medium text-[#666663] mb-1">
-                Date de début
+                {t('analytics.period.startDate')}
               </label>
               <input
                 type="date"
@@ -87,7 +89,7 @@ export const DateRangePicker = ({
             </div>
             <div>
               <label className="block text-xs font-medium text-[#666663] mb-1">
-                Date de fin
+                {t('analytics.period.endDate')}
               </label>
               <input
                 type="date"

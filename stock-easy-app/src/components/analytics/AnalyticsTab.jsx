@@ -290,44 +290,44 @@ export const AnalyticsTab = ({
       alertes.push({ 
         key: 'disponibility', 
         type: 'warning', 
-        title: 'Disponibilité des SKU', 
+        title: t('analytics.kpis.skuAvailability'), 
         value: `${analyticsData.skuAvailability.rawValue}%`, 
         icon: CheckCircle, 
-        message: "Attention ! Votre taux de disponibilité est faible. Risque de perte de ventes." 
+        message: t('analytics.insights.skuAvailabilityLow')
       });
     }
     if (analyticsData.salesLost?.rawValue >= 1000) {
       alertes.push({ 
         key: 'salesLost', 
         type: analyticsData.salesLost.rawValue < 5000 ? 'warning' : 'danger', 
-        title: 'Ventes Perdues', 
+        title: t('analytics.kpis.lostSalesReal'), 
         value: analyticsData.salesLost.value, 
         icon: TrendingDown, 
         message: analyticsData.salesLost.rawValue < 5000 
-          ? "Pertes de ventes modérées. Surveillez vos points de commande." 
-          : "Pertes de ventes importantes ! Revoyez votre stratégie de réapprovisionnement." 
+          ? t('analytics.insights.salesLostModerate')
+          : t('analytics.insights.salesLostHigh')
       });
     }
     if (analyticsData.overstockCost?.rawValue >= 2000) {
       alertes.push({ 
         key: 'overstock', 
         type: analyticsData.overstockCost.rawValue < 10000 ? 'warning' : 'danger', 
-        title: 'Valeur des Surstocks', 
+        title: t('analytics.kpis.overstockValue'), 
         value: analyticsData.overstockCost.value, 
         icon: Boxes, 
         message: analyticsData.overstockCost.rawValue < 10000 
-          ? "Surstock modéré. Surveillez vos niveaux de sécurité." 
-          : "Surstock important ! Optimisez vos points de commande et niveaux de sécurité." 
+          ? t('analytics.insights.overstockModerate')
+          : t('analytics.insights.overstockHigh')
       });
     }
     if (additionalKPIs?.healthyPercentage && additionalKPIs.healthyPercentage.rawValue < 50) {
       alertes.push({ 
         key: 'health', 
         type: 'warning', 
-        title: 'Santé des Produits', 
+        title: t('analytics.kpis.healthyPercentage'), 
         value: `${additionalKPIs.healthyPercentage.rawValue}%`, 
         icon: Heart, 
-        message: `Attention ! Seulement ${additionalKPIs.healthyPercentage.rawValue}% de vos produits sont en bonne santé. Revoyez vos stratégies de réapprovisionnement.` 
+        message: t('analytics.insights.healthLow', { percent: additionalKPIs.healthyPercentage.rawValue })
       });
     }
     
@@ -336,44 +336,44 @@ export const AnalyticsTab = ({
       performance.push({ 
         key: 'disponibility', 
         type: analyticsData.skuAvailability.rawValue > 80 ? 'success' : 'info', 
-        title: 'Disponibilité des SKU', 
+        title: t('analytics.kpis.skuAvailability'), 
         value: `${analyticsData.skuAvailability.rawValue}%`, 
         icon: CheckCircle, 
         message: analyticsData.skuAvailability.rawValue > 80 
-          ? "Excellent taux de disponibilité ! Vos clients peuvent compter sur vous." 
-          : "Bon taux de disponibilité, mais il y a de la marge d'amélioration." 
+          ? t('analytics.insights.skuAvailabilityExcellent')
+          : t('analytics.insights.skuAvailabilityGood')
       });
     }
     if (analyticsData.salesLost?.rawValue < 1000) {
       performance.push({ 
         key: 'salesLost', 
         type: 'success', 
-        title: 'Ventes Perdues', 
+        title: t('analytics.kpis.lostSalesReal'), 
         value: analyticsData.salesLost.value, 
         icon: TrendingDown, 
-        message: "Faibles pertes de ventes. Votre gestion des stocks est efficace." 
+        message: t('analytics.insights.salesLostLow')
       });
     }
     if (analyticsData.overstockCost?.rawValue < 2000) {
       performance.push({ 
         key: 'overstock', 
         type: 'success', 
-        title: 'Valeur des Surstocks', 
+        title: t('analytics.kpis.overstockValue'), 
         value: analyticsData.overstockCost.value, 
         icon: Boxes, 
-        message: "Faible niveau de surstock. Votre optimisation est efficace." 
+        message: t('analytics.insights.overstockLow')
       });
     }
     if (additionalKPIs?.healthyPercentage && additionalKPIs.healthyPercentage.rawValue >= 50) {
       performance.push({ 
         key: 'health', 
         type: additionalKPIs.healthyPercentage.rawValue > 70 ? 'success' : 'info', 
-        title: 'Santé des Produits', 
+        title: t('analytics.kpis.healthyPercentage'), 
         value: `${additionalKPIs.healthyPercentage.rawValue}%`, 
         icon: Heart, 
         message: additionalKPIs.healthyPercentage.rawValue > 70 
-          ? `Excellent ! ${additionalKPIs.healthyPercentage.rawValue}% de vos produits sont en bonne santé. Continuez sur cette voie.` 
-          : `${additionalKPIs.healthyPercentage.rawValue}% de vos produits sont en bonne santé. Il y a de la marge d'amélioration.` 
+          ? t('analytics.insights.healthExcellent', { percent: additionalKPIs.healthyPercentage.rawValue })
+          : t('analytics.insights.healthGood', { percent: additionalKPIs.healthyPercentage.rawValue })
       });
     }
     if (additionalKPIs?.fastRotatingProducts) {
@@ -382,17 +382,17 @@ export const AnalyticsTab = ({
       let message = '';
       
       if (rotationKPI.rawValue > 20) {
-        message = `${rotationKPI.rawValue} produits à rotation rapide avec une rotation moyenne de ${rotationRate} rotations/an. Excellente dynamique commerciale !`;
+        message = t('analytics.insights.rotationHigh', { count: rotationKPI.rawValue, rate: rotationRate });
       } else if (rotationKPI.rawValue > 10) {
-        message = `${rotationKPI.rawValue} produits à rotation rapide avec une rotation moyenne de ${rotationRate} rotations/an. Bonne dynamique.`;
+        message = t('analytics.insights.rotationMedium', { count: rotationKPI.rawValue, rate: rotationRate });
       } else {
-        message = `Seulement ${rotationKPI.rawValue} produits à rotation rapide. Rotation moyenne de ${rotationRate} rotations/an. Envisagez des promotions pour accélérer les rotations.`;
+        message = t('analytics.insights.rotationLow', { count: rotationKPI.rawValue, rate: rotationRate });
       }
       
       performance.push({ 
         key: 'rotation', 
         type: rotationKPI.rawValue > 20 ? 'success' : rotationKPI.rawValue > 10 ? 'info' : 'warning', 
-        title: 'Rotation Rapide', 
+        title: t('analytics.kpis.fastRotation'), 
         value: `${rotationKPI.rawValue} (${rotationRate} rot/an moy)`, 
         icon: Activity, 
         message: message
@@ -404,15 +404,15 @@ export const AnalyticsTab = ({
       financier.push({ 
         key: 'inventory', 
         type: 'info', 
-        title: "Valeur de l'Inventaire", 
+        title: t('analytics.kpis.inventoryValue'), 
         value: analyticsData.inventoryValuation.value, 
         icon: DollarSign, 
         message: analyticsData.inventoryValuation.analysis || 
           (analyticsData.inventoryValuation.rawValue > 100000
-            ? "Inventaire de grande valeur. Surveillez attentivement les rotations."
+            ? t('analytics.insights.inventoryHigh')
             : analyticsData.inventoryValuation.rawValue > 50000
-            ? "Inventaire de valeur modérée. Maintenez un bon équilibre."
-            : "Inventaire de faible valeur. Opportunité d'augmenter les stocks.") 
+            ? t('analytics.insights.inventoryMedium')
+            : t('analytics.insights.inventoryLow'))
       });
     }
     
@@ -428,15 +428,15 @@ export const AnalyticsTab = ({
       // Déterminer le message principal selon le type de calcul
       let message = '';
       if (hasML) {
-        message = `Prévisions basées sur Machine Learning (confiance: ${confidence}%). ${productsWithHistory} produits avec historique, ${totalHistoryRecords} enregistrements analysés.`;
+        message = t('analytics.insights.mlPredictions', { confidence, products: productsWithHistory, records: totalHistoryRecords });
       } else {
-        message = `Calcul statistique basé sur l'historique des ventes et la rotation (${confidence}% de confiance). Pour améliorer la précision, entraînez le modèle ML depuis l'onglet AI.`;
+        message = t('analytics.insights.statisticalCalc', { confidence });
       }
       
       financier.push({
         key: 'potentialRevenue',
         type: confidence > 70 ? 'success' : confidence > 50 ? 'info' : 'warning',
-        title: 'Revenu Potentiel (ML)',
+        title: t('analytics.kpis.potentialRevenue'),
         value: revenueKPI.value,
         icon: Brain,
         message: message
@@ -444,7 +444,7 @@ export const AnalyticsTab = ({
     }
     
     return { alertes, performance, financier };
-  }, [analyticsData, additionalKPIs]);
+  }, [analyticsData, additionalKPIs, t]);
   
   // Ouvrir la catégorie "Alertes" par défaut si elle contient des insights (une seule fois)
   useEffect(() => {

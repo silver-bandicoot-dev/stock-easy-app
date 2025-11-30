@@ -9,6 +9,11 @@
  * - Performance Tracing: Monitoring des performances
  * - Session Replay: Replay des sessions avec erreurs
  * - React Router v7 Integration: Tracing des navigations
+ * 
+ * RGPD:
+ * - Sentry est initialisé mais désactivé par défaut
+ * - L'activation dépend du consentement utilisateur (cookies analytiques)
+ * - Le consentement est vérifié via localStorage
  */
 
 import * as Sentry from "@sentry/react";
@@ -20,13 +25,54 @@ import {
   matchRoutes,
 } from "react-router-dom";
 
-// Vérifier si on est en production ou si le DSN est configuré
+// Constantes de configuration
 const SENTRY_DSN = import.meta.env.VITE_SENTRY_DSN;
 const IS_PRODUCTION = import.meta.env.PROD;
 const ENVIRONMENT = import.meta.env.VITE_ENVIRONMENT || (IS_PRODUCTION ? 'production' : 'development');
 
-// Initialiser Sentry seulement si le DSN est configuré
-if (SENTRY_DSN) {
+// Clé de stockage du consentement (doit correspondre à CookieConsentContext)
+const CONSENT_STORAGE_KEY = 'stockeasy_cookie_consent';
+
+// Routes publiques où Sentry ne doit pas être actif (landing, coming soon, pages légales)
+const PUBLIC_ROUTES = ['/', '/preview', '/legal/', '/login', '/forgot-password', '/confirm-email'];
+
+/**
+ * Vérifie si l'URL actuelle est une page publique (sans Sentry)
+ */
+const isPublicRoute = () => {
+  const path = window.location.pathname;
+  return PUBLIC_ROUTES.some(route => path === route || path.startsWith(route));
+};
+
+/**
+ * Vérifie si l'utilisateur a donné son consentement pour les cookies analytiques
+ * @returns {boolean}
+ */
+const hasAnalyticsConsent = () => {
+  try {
+    const stored = localStorage.getItem(CONSENT_STORAGE_KEY);
+    if (!stored) return false;
+    
+    const consent = JSON.parse(stored);
+    return consent.hasConsented && consent.categories?.analytics === true;
+  } catch (error) {
+    console.warn('[Sentry] Erreur lors de la vérification du consentement:', error);
+    return false;
+  }
+};
+
+/**
+ * État global pour suivre si Sentry est activé
+ */
+let isSentryEnabled = false;
+let sentryInitialized = false;
+
+/**
+ * Initialise Sentry avec la configuration complète
+ */
+const initializeSentry = () => {
+  if (sentryInitialized || !SENTRY_DSN) return;
+  
   Sentry.init({
     dsn: SENTRY_DSN,
     
@@ -39,6 +85,10 @@ if (SENTRY_DSN) {
     // Envoyer les PII (informations personnelles) pour le debugging
     sendDefaultPii: true,
 
+    // IMPORTANT: Démarrer avec un sample rate de 0 si pas de consentement
+    // Sera mis à jour dynamiquement via updateSentryConsent
+    enabled: hasAnalyticsConsent() && !isPublicRoute(),
+
     integrations: [
       // Intégration React Router v7 pour le tracing des navigations
       Sentry.reactRouterV7BrowserTracingIntegration({
@@ -49,19 +99,18 @@ if (SENTRY_DSN) {
         matchRoutes,
       }),
       
-      // Session Replay pour reproduire les erreurs
+      // Session Replay pour reproduire les erreurs (uniquement si consentement)
       Sentry.replayIntegration({
-        // Masquer tous les textes par défaut pour la confidentialité
         maskAllText: false,
-        // Bloquer tous les médias par défaut
         blockAllMedia: false,
       }),
       
-      // Feedback utilisateur - Design StockEasy (sobre et professionnel)
+      // Feedback utilisateur - Design StockEasy
       Sentry.feedbackIntegration({
+        // Ne pas injecter automatiquement le bouton sur les pages publiques
+        autoInject: hasAnalyticsConsent() && !isPublicRoute(),
         colorScheme: "light",
         showBranding: false,
-        // Bouton discret avec icône seule
         triggerLabel: "",
         // Textes en français
         formTitle: "Signaler un problème",
@@ -74,25 +123,22 @@ if (SENTRY_DSN) {
         messageLabel: "Description",
         messagePlaceholder: "Décrivez le problème rencontré...",
         successMessageText: "Merci pour votre retour !",
-        // Formulaire simplifié
         showName: false,
         showEmail: true,
         isNameRequired: false,
         isEmailRequired: false,
         // Thème StockEasy - Sobre, neutre, professionnel
         themeLight: {
-          // Bouton noir élégant
-          background: "#0F172A",          // neutral-900 (noir)
-          backgroundHover: "#1E293B",     // neutral-800
-          foreground: "#F8FAFC",          // neutral-50 (blanc)
-          border: "#0F172A",              // neutral-900
+          background: "#0F172A",
+          backgroundHover: "#1E293B",
+          foreground: "#F8FAFC",
+          border: "#0F172A",
           borderRadius: "8px",
           boxShadow: "0 2px 8px rgba(15,23,42,0.15)",
-          // Formulaire
           formBorderRadius: "12px",
           formContentBackgroundColor: "#FFFFFF",
-          submitBackground: "#4F46E5",    // primary-600 (indigo)
-          submitBackgroundHover: "#4338CA", // primary-700
+          submitBackground: "#4F46E5",
+          submitBackgroundHover: "#4338CA",
           submitForeground: "#FFFFFF",
           submitBorder: "#4F46E5",
           cancelBackground: "transparent",
@@ -100,25 +146,23 @@ if (SENTRY_DSN) {
           cancelForeground: "#64748B",
           cancelBorder: "#E2E8F0",
           inputBackground: "#FFFFFF",
-          inputForeground: "#0F172A",     // neutral-900
-          inputBorder: "#CBD5E1",         // neutral-300
-          inputBorderFocus: "#6366F1",    // primary-500
+          inputForeground: "#0F172A",
+          inputBorder: "#CBD5E1",
+          inputBorderFocus: "#6366F1",
           inputOutlineFocus: "rgba(99, 102, 241, 0.2)",
           formBorderColor: "#E2E8F0",
-          formSentryLogoColor: "#94A3B8", // neutral-400
+          formSentryLogoColor: "#94A3B8",
         },
         themeDark: {
-          // Bouton (même style sobre en dark)
-          background: "#1E293B",          // neutral-800
-          backgroundHover: "#334155",     // neutral-700
-          foreground: "#94A3B8",          // neutral-400
-          border: "#334155",              // neutral-700
+          background: "#1E293B",
+          backgroundHover: "#334155",
+          foreground: "#94A3B8",
+          border: "#334155",
           borderRadius: "8px",
           boxShadow: "0 2px 8px rgba(0,0,0,0.2)",
-          // Formulaire dark
           formBorderRadius: "12px",
           formContentBackgroundColor: "#0F172A",
-          submitBackground: "#6366F1",    // primary-500
+          submitBackground: "#6366F1",
           submitBackgroundHover: "#4F46E5",
           submitForeground: "#FFFFFF",
           submitBorder: "#6366F1",
@@ -137,8 +181,7 @@ if (SENTRY_DSN) {
       }),
     ],
 
-    // Performance Monitoring
-    // Échantillonnage des traces en production (10% pour réduire les coûts)
+    // Performance Monitoring - Échantillonnage conditionnel
     tracesSampleRate: IS_PRODUCTION ? 0.1 : 1.0,
 
     // URLs pour lesquelles propager les traces (API backend)
@@ -148,31 +191,40 @@ if (SENTRY_DSN) {
       /^https:\/\/stockeasy\./,
     ],
 
-    // Session Replay
-    // Capturer 10% des sessions normales
+    // Session Replay - Échantillonnage conditionnel
     replaysSessionSampleRate: IS_PRODUCTION ? 0.1 : 0.0,
-    // Capturer 100% des sessions avec erreur
     replaysOnErrorSampleRate: 1.0,
 
-    // Filtrer les erreurs non pertinentes
+    // Filtrer les erreurs non pertinentes et les pages publiques
     beforeSend(event, hint) {
+      // Vérifier le consentement à chaque envoi
+      if (!hasAnalyticsConsent() || isPublicRoute()) {
+        return null;
+      }
+      
       // Ignorer les erreurs de réseau temporaires
       const error = hint.originalException;
       if (error && error.message) {
-        // Ignorer les erreurs d'annulation de requête
         if (error.message.includes('AbortError') || 
             error.message.includes('cancelled') ||
             error.message.includes('The user aborted')) {
           return null;
         }
         
-        // Ignorer les erreurs de ChunkLoadError (problèmes de cache)
         if (error.message.includes('ChunkLoadError') ||
             error.message.includes('Loading chunk')) {
           return null;
         }
       }
       
+      return event;
+    },
+
+    // Filtrer les transactions (tracing) des pages publiques
+    beforeSendTransaction(event) {
+      if (!hasAnalyticsConsent() || isPublicRoute()) {
+        return null;
+      }
       return event;
     },
 
@@ -184,11 +236,58 @@ if (SENTRY_DSN) {
     },
   });
 
-  console.log(`[Sentry] Initialized in ${ENVIRONMENT} mode`);
+  sentryInitialized = true;
+  isSentryEnabled = hasAnalyticsConsent() && !isPublicRoute();
+  
+  console.log(`[Sentry] Initialized in ${ENVIRONMENT} mode (enabled: ${isSentryEnabled})`);
+};
+
+/**
+ * Met à jour l'état de Sentry en fonction du consentement
+ * Appelé lorsque l'utilisateur change ses préférences de cookies
+ */
+export const updateSentryConsent = () => {
+  const hasConsent = hasAnalyticsConsent();
+  const shouldEnable = hasConsent && !isPublicRoute();
+  
+  if (shouldEnable !== isSentryEnabled) {
+    isSentryEnabled = shouldEnable;
+    
+    // Activer ou désactiver Sentry
+    const client = Sentry.getClient();
+    if (client) {
+      if (shouldEnable) {
+        // Réactiver Sentry
+        client.getOptions().enabled = true;
+        console.log('[Sentry] Activé suite au consentement utilisateur');
+      } else {
+        // Désactiver Sentry
+        client.getOptions().enabled = false;
+        console.log('[Sentry] Désactivé - consentement retiré');
+      }
+    }
+  }
+};
+
+/**
+ * Vérifie si Sentry est actuellement activé
+ * @returns {boolean}
+ */
+export const isSentryActive = () => isSentryEnabled;
+
+// Initialiser Sentry si le DSN est configuré
+if (SENTRY_DSN) {
+  initializeSentry();
 } else {
   console.log('[Sentry] Not initialized - VITE_SENTRY_DSN not configured');
 }
 
+// Écouter les changements de consentement
+if (typeof window !== 'undefined') {
+  window.addEventListener('cookieConsentUpdated', () => {
+    updateSentryConsent();
+  });
+}
+
 // Exporter Sentry pour utilisation dans l'application
 export { Sentry };
-

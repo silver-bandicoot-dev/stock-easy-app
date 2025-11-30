@@ -192,7 +192,7 @@ export const SettingsTab = ({
               exit={{ opacity: 0, y: -20 }}
               transition={{ duration: 0.25 }}
             >
-              <IntegrationsSettings />
+              <IntegrationsSettings products={products} />
             </motion.div>
           )}
         </AnimatePresence>

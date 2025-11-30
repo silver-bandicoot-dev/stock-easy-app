@@ -20,9 +20,11 @@ import {
 } from '@shopify/polaris-icons';
 import { useState, useCallback, useEffect } from "react";
 import { useNavigate } from "react-router";
+import { useTranslations } from "../hooks/useTranslations";
 
 export const UnsyncedPage = () => {
   const navigate = useNavigate();
+  const { t } = useTranslations();
   const [selectedTab, setSelectedTab] = useState(0);
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
@@ -73,17 +75,17 @@ export const UnsyncedPage = () => {
     setSyncing(true);
     try {
       await api.enqueue(api.syncShopifyProducts, { shopId: data.shopId });
-      shopify.toast.show('🔄 Synchronisation lancée !');
+      shopify.toast.show(t('syncStarted'));
       
       setTimeout(() => {
         loadData();
         setSyncing(false);
       }, 5000);
     } catch (error) {
-      shopify.toast.show('Erreur lors de la synchronisation', { isError: true });
+      shopify.toast.show(t('syncError'), { isError: true });
       setSyncing(false);
     }
-  }, [data.shopId, loadData]);
+  }, [data.shopId, loadData, t]);
 
   // Group items by reason
   const noSkuItems = data.unsyncedItems.filter(i => i.reason === 'no_sku');
@@ -95,30 +97,30 @@ export const UnsyncedPage = () => {
   if (noSkuItems.length > 0) {
     tabs.push({
       id: 'no-sku',
-      content: `Sans SKU (${noSkuItems.length})`,
+      content: `${t('withoutSku')} (${noSkuItems.length})`,
       items: noSkuItems,
       icon: '❌',
-      solution: 'Ajoutez un SKU unique à chaque variante dans Shopify → Produits → [Produit] → Variantes',
+      solution: t('solutionNoSku'),
       tone: 'critical'
     });
   }
   if (notTrackedItems.length > 0) {
     tabs.push({
       id: 'not-tracked',
-      content: `Non suivi (${notTrackedItems.length})`,
+      content: `${t('notTrackedTab')} (${notTrackedItems.length})`,
       items: notTrackedItems,
       icon: '📦',
-      solution: 'Activez le suivi d\'inventaire dans Shopify → Produits → [Produit] → Inventaire → "Suivre la quantité"',
+      solution: t('solutionNotTracked'),
       tone: 'warning'
     });
   }
   if (notSyncedItems.length > 0) {
     tabs.push({
       id: 'not-synced',
-      content: `À synchroniser (${notSyncedItems.length})`,
+      content: `${t('toSyncTab')} (${notSyncedItems.length})`,
       items: notSyncedItems,
       icon: '⏳',
-      solution: 'Ces produits ont un SKU valide. Cliquez sur "Synchroniser" pour les importer dans Stockeasy.',
+      solution: t('solutionToSync'),
       tone: 'info'
     });
   }
@@ -132,7 +134,7 @@ export const UnsyncedPage = () => {
         <Card>
           <BlockStack gap="400" inlineAlign="center">
             <Spinner size="large" />
-            <Text as="p">Chargement...</Text>
+            <Text as="p">{t('loading')}</Text>
           </BlockStack>
         </Card>
       </Page>
@@ -141,11 +143,11 @@ export const UnsyncedPage = () => {
 
   return (
     <Page
-      backAction={{ content: 'Retour', onAction: () => navigate('/') }}
-      title="Produits non synchronisés"
-      subtitle={`${unsyncedCount} produit(s) à vérifier`}
+      backAction={{ content: t('back'), onAction: () => navigate('/') }}
+      title={t('unsyncedProducts')}
+      subtitle={t('productsToVerify', { count: unsyncedCount })}
       primaryAction={{
-        content: 'Synchroniser maintenant',
+        content: t('syncNow'),
         icon: RefreshIcon,
         loading: syncing,
         onAction: handleSync
@@ -160,7 +162,7 @@ export const UnsyncedPage = () => {
                 {data.syncedSkus}
               </Text>
               <Text as="p" tone="subdued" variant="bodySm">
-                SKUs synchronisés
+                {t('syncedSkus')}
               </Text>
             </BlockStack>
             
@@ -171,7 +173,7 @@ export const UnsyncedPage = () => {
                 {unsyncedCount}
               </Text>
               <Text as="p" tone="subdued" variant="bodySm">
-                À vérifier
+                {t('toVerify')}
               </Text>
             </BlockStack>
             
@@ -182,7 +184,7 @@ export const UnsyncedPage = () => {
                 {data.totalShopifySkus}
               </Text>
               <Text as="p" tone="subdued" variant="bodySm">
-                Total Shopify
+                {t('totalShopify')}
               </Text>
             </BlockStack>
           </InlineStack>
@@ -218,7 +220,7 @@ export const UnsyncedPage = () => {
                     >
                       <BlockStack gap="200">
                         <Text as="p" variant="bodyMd" fontWeight="semibold">
-                          💡 Comment résoudre
+                          {t('howToSolve')}
                         </Text>
                         <Text as="p" variant="bodySm">
                           {currentTab.solution}
@@ -229,7 +231,7 @@ export const UnsyncedPage = () => {
                     {/* Product list */}
                     <BlockStack gap="300">
                       <Text as="h3" variant="headingSm">
-                        {currentTab.items.length} produit(s)
+                        {currentTab.items.length} {t('products')}
                       </Text>
                       
                       {currentTab.items.map((item, idx) => (
@@ -246,22 +248,22 @@ export const UnsyncedPage = () => {
                               </Text>
                               {item.variantTitle && (
                                 <InlineStack gap="200">
-                                  <Text as="span" variant="bodySm" tone="subdued">Variante :</Text>
+                                  <Text as="span" variant="bodySm" tone="subdued">{t('variant')} :</Text>
                                   <Text as="span" variant="bodySm">{item.variantTitle}</Text>
                                 </InlineStack>
                               )}
                               {item.sku ? (
                                 <InlineStack gap="200">
-                                  <Text as="span" variant="bodySm" tone="subdued">SKU :</Text>
+                                  <Text as="span" variant="bodySm" tone="subdued">{t('sku')} :</Text>
                                   <Badge>{item.sku}</Badge>
                                 </InlineStack>
                               ) : (
-                                <Badge tone="critical">Aucun SKU</Badge>
+                                <Badge tone="critical">{t('noSkuBadge')}</Badge>
                               )}
                               <InlineStack gap="200">
-                                <Text as="span" variant="bodySm" tone="subdued">Statut :</Text>
+                                <Text as="span" variant="bodySm" tone="subdued">{t('status')} :</Text>
                                 <Badge tone={item.status === 'active' ? 'success' : 'info'}>
-                                  {item.status === 'active' ? 'Actif' : item.status === 'draft' ? 'Brouillon' : item.status}
+                                  {item.status === 'active' ? t('active') : item.status === 'draft' ? t('draft') : item.status}
                                 </Badge>
                               </InlineStack>
                             </BlockStack>
@@ -269,7 +271,7 @@ export const UnsyncedPage = () => {
                               url={`shopify://admin/products`}
                               external
                             >
-                              Modifier dans Shopify
+                              {t('editInShopify')}
                             </Button>
                           </InlineStack>
                         </Box>
@@ -284,7 +286,7 @@ export const UnsyncedPage = () => {
           <Card>
             <Banner tone="success">
               <Text as="p">
-                🎉 Tous vos produits sont synchronisés avec Stockeasy !
+                {t('allProductsSynced')}
               </Text>
             </Banner>
           </Card>

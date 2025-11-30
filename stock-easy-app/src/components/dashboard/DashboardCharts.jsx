@@ -1,10 +1,13 @@
 import React, { useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { SimpleChart } from './SimpleChart';
 
 /**
  * Composant DashboardCharts - Regroupe les graphiques du dashboard
  */
 export function DashboardCharts({ enrichedProducts = [], orders = [] }) {
+  const { t } = useTranslation();
+  
   // Données pour le graphique de distribution de santé
   const healthDistribution = useMemo(() => {
     const urgent = enrichedProducts.filter(p => p.healthStatus === 'urgent').length;
@@ -12,35 +15,43 @@ export function DashboardCharts({ enrichedProducts = [], orders = [] }) {
     const healthy = enrichedProducts.filter(p => p.healthStatus === 'healthy').length;
 
     return [
-      { name: 'Urgent', value: urgent, color: '#EF1C43' },
-      { name: 'À Surveiller', value: warning, color: '#F59E0B' },
-      { name: 'En Bonne Santé', value: healthy, color: '#10B981' }
+      { name: t('dashboard.healthDistribution.urgent'), value: urgent, color: '#EF1C43' },
+      { name: t('dashboard.healthDistribution.toWatch'), value: warning, color: '#F59E0B' },
+      { name: t('dashboard.healthDistribution.healthy'), value: healthy, color: '#10B981' }
     ].filter(item => item.value > 0);
-  }, [enrichedProducts]);
+  }, [enrichedProducts, t]);
 
   // Données pour le graphique des commandes par statut
   const ordersByStatus = useMemo(() => {
-    const statusCounts = {
-      'En Attente': orders.filter(o => o.status === 'pending_confirmation').length,
-      'En Préparation': orders.filter(o => o.status === 'preparing').length,
-      'En Transit': orders.filter(o => o.status === 'in_transit').length,
-      'Reçues': orders.filter(o => o.status === 'received').length,
-      'Réconciliation': orders.filter(o => o.status === 'reconciliation').length
+    const statusLabels = {
+      pending: t('dashboard.ordersByStatus.pending'),
+      preparing: t('dashboard.ordersByStatus.preparing'),
+      inTransit: t('dashboard.ordersByStatus.inTransit'),
+      received: t('dashboard.ordersByStatus.received'),
+      reconciliation: t('dashboard.ordersByStatus.reconciliation')
     };
+    
+    const statusCounts = [
+      { key: 'pending', count: orders.filter(o => o.status === 'pending_confirmation').length },
+      { key: 'preparing', count: orders.filter(o => o.status === 'preparing').length },
+      { key: 'inTransit', count: orders.filter(o => o.status === 'in_transit').length },
+      { key: 'received', count: orders.filter(o => o.status === 'received').length },
+      { key: 'reconciliation', count: orders.filter(o => o.status === 'reconciliation').length }
+    ];
 
     // Couleurs selon les standards de l'application
     const statusColors = {
-      'En Attente': '#F59E0B',
-      'En Préparation': '#8B5CF6',
-      'En Transit': '#8B5CF6',
-      'Reçues': '#10B981',
-      'Réconciliation': '#EF1C43'
+      pending: '#F59E0B',
+      preparing: '#8B5CF6',
+      inTransit: '#8B5CF6',
+      received: '#10B981',
+      reconciliation: '#EF1C43'
     };
 
-    return Object.entries(statusCounts)
-      .map(([name, value]) => ({ name, value, color: statusColors[name] || '#8B5CF6' }))
+    return statusCounts
+      .map(({ key, count }) => ({ name: statusLabels[key], value: count, color: statusColors[key] || '#8B5CF6' }))
       .filter(item => item.value > 0);
-  }, [orders]);
+  }, [orders, t]);
 
   // Ne pas afficher si pas de données
   if (enrichedProducts.length === 0 && orders.length === 0) {
@@ -54,7 +65,7 @@ export function DashboardCharts({ enrichedProducts = [], orders = [] }) {
         <SimpleChart
           type="pie"
           data={healthDistribution}
-          title="Distribution de Santé des Produits"
+          title={t('dashboard.healthDistribution.title')}
           height={300}
         />
       )}
@@ -64,7 +75,7 @@ export function DashboardCharts({ enrichedProducts = [], orders = [] }) {
         <SimpleChart
           type="bar"
           data={ordersByStatus}
-          title="Commandes par Statut"
+          title={t('dashboard.ordersByStatus.title')}
           height={300}
         />
       )}

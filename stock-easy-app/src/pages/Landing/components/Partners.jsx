@@ -1,13 +1,16 @@
 import { motion } from 'framer-motion';
+import { useTranslation } from 'react-i18next';
 
 const Partners = () => {
+  const { t } = useTranslation();
+  
   const trustedBy = [
-    'Entreprises e-commerce',
-    'Retailers multi-canaux',
-    'Marques DTC',
-    'Dropshippers',
-    'Grossistes',
-    'Marketplaces',
+    t('landing.partners.trustedBy.ecommerce'),
+    t('landing.partners.trustedBy.multichannel'),
+    t('landing.partners.trustedBy.dtc'),
+    t('landing.partners.trustedBy.dropshippers'),
+    t('landing.partners.trustedBy.wholesalers'),
+    t('landing.partners.trustedBy.marketplaces'),
   ];
 
   return (
@@ -21,7 +24,7 @@ const Partners = () => {
           className="flex flex-col items-center"
         >
           <p className="text-sm text-[#191919]/50 uppercase tracking-wider mb-8">
-            Intégration principale
+            {t('landing.partners.mainIntegration')}
           </p>
           
           <div className="flex items-center gap-6 mb-8">
@@ -33,10 +36,10 @@ const Partners = () => {
             <div className="text-left">
               <div className="flex items-center gap-2">
                 <span className="text-xl font-semibold text-[#191919]">Shopify</span>
-                <span className="badge badge-success">Disponible</span>
+                <span className="badge badge-success">{t('landing.partners.available')}</span>
               </div>
               <p className="text-sm text-[#191919]/50 mt-1">
-                Synchronisation bidirectionnelle complète
+                {t('landing.partners.syncDescription')}
               </p>
             </div>
           </div>
@@ -52,7 +55,7 @@ const Partners = () => {
               alt="Shopify" 
               className="w-4 h-4 object-contain"
             />
-            Voir sur Shopify App Store
+            {t('landing.partners.viewOnAppStore')}
           </a>
         </motion.div>
 

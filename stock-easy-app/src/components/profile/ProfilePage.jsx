@@ -205,7 +205,7 @@ const ProfilePage = () => {
         
       } catch (error) {
         console.error('Erreur chargement données:', error);
-        toast.error('Erreur lors du chargement du profil');
+        toast.error(t('profile.loadError'));
       } finally {
         setLoading(false);
       }
@@ -216,7 +216,7 @@ const ProfilePage = () => {
     const file = e.target.files?.[0];
     if (file) {
       if (file.size > 5 * 1024 * 1024) {
-        toast.error('L\'image ne doit pas dépasser 5 Mo');
+        toast.error(t('profile.photoMaxSize'));
         return;
       }
       
@@ -243,10 +243,10 @@ const ProfilePage = () => {
         setUploadingPhoto(true);
         try {
           photoUrl = await uploadProfilePhoto(photoFile);
-          toast.success('Photo de profil mise à jour !');
+          toast.success(t('profile.photoUpdated'));
         } catch (error) {
           console.error('Erreur upload photo:', error);
-          toast.error('Erreur lors de l\'upload de la photo');
+          toast.error(t('profile.uploadError'));
         } finally {
           setUploadingPhoto(false);
         }
@@ -261,7 +261,7 @@ const ProfilePage = () => {
 
         if (emailError) {
           console.error('Erreur mise à jour email:', emailError);
-          toast.error(emailError.message || 'Erreur lors de la mise à jour de l\'email');
+          toast.error(emailError.message || t('profile.error'));
           setEmail(originalValues.email || '');
         } else {
           setEmail(trimmedEmail);
@@ -269,7 +269,7 @@ const ProfilePage = () => {
             ...prev,
             email: trimmedEmail
           }));
-          toast.success('Adresse email mise à jour. Vérifiez votre boîte mail pour confirmer la nouvelle adresse.');
+          toast.success(t('profile.emailUpdated'));
         }
       }
 
@@ -298,11 +298,11 @@ const ProfilePage = () => {
       
       setPhotoFile(null);
       await loadData();
-      toast.success('Profil mis à jour avec succès !');
+      toast.success(t('profile.success'));
       
     } catch (error) {
       console.error('Erreur sauvegarde:', error);
-      toast.error('Erreur lors de la mise à jour');
+      toast.error(t('profile.error'));
     } finally {
       setSaving(false);
     }
@@ -313,17 +313,17 @@ const ProfilePage = () => {
     const trimmedConfirm = confirmPassword.trim();
 
     if (!trimmedPassword || !trimmedConfirm) {
-      toast.error('Veuillez saisir et confirmer le nouveau mot de passe');
+      toast.error(t('profile.passwordMissing'));
       return;
     }
 
     if (trimmedPassword.length < 8) {
-      toast.error('Le mot de passe doit contenir au moins 8 caractères');
+      toast.error(t('profile.passwordMinLength'));
       return;
     }
 
     if (trimmedPassword !== trimmedConfirm) {
-      toast.error('Les mots de passe ne correspondent pas');
+      toast.error(t('profile.passwordMismatch'));
       return;
     }
 
@@ -337,12 +337,12 @@ const ProfilePage = () => {
         throw error;
       }
 
-      toast.success('Mot de passe mis à jour avec succès');
+      toast.success(t('profile.passwordUpdated'));
       setNewPassword('');
       setConfirmPassword('');
     } catch (error) {
       console.error('Erreur mise à jour mot de passe:', error);
-      toast.error(error.message || 'Erreur lors de la mise à jour du mot de passe');
+      toast.error(error.message || t('profile.error'));
     } finally {
       setUpdatingPassword(false);
     }
@@ -350,7 +350,7 @@ const ProfilePage = () => {
 
   const handleInvite = async () => {
     if (!inviteEmail.trim()) {
-      toast.error('Veuillez entrer une adresse email');
+      toast.error(t('profile.invitations.emailAddress'));
       return;
     }
 
@@ -360,8 +360,8 @@ const ProfilePage = () => {
       
       if (error) throw error;
       
-      toast.success(`Invitation envoyée à ${inviteEmail} !`, {
-        description: 'Le collaborateur recevra un email avec un lien d\'invitation'
+      toast.success(t('profile.invitations.sent', { email: inviteEmail }), {
+        description: t('profile.invitations.sentDescription')
       });
       
       setShowInviteModal(false);
@@ -517,7 +517,7 @@ const ProfilePage = () => {
           className="text-center"
         >
           <div className="w-16 h-16 border-4 border-[#191919] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-lg font-medium text-[#191919]">Chargement...</p>
+          <p className="text-lg font-medium text-[#191919]">{t('profile.loading')}</p>
         </motion.div>
       </div>
     );
@@ -536,9 +536,9 @@ const ProfilePage = () => {
       <motion.div variants={cardVariants} className="mb-6">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className="text-xl sm:text-2xl font-semibold text-[#191919]">Mon Profil</h1>
+            <h1 className="text-xl sm:text-2xl font-semibold text-[#191919]">{t('profile.title')}</h1>
             <p className="text-sm text-[#6B7177] mt-0.5">
-              Gérez vos informations personnelles, votre entreprise et votre équipe
+              {t('profile.subtitle')}
             </p>
           </div>
           
@@ -560,7 +560,7 @@ const ProfilePage = () => {
                 ) : (
                   <Save className="w-4 h-4" />
                 )}
-                <span>{uploadingPhoto ? 'Upload...' : saving ? 'Sauvegarde...' : 'Sauvegarder les modifications'}</span>
+                <span>{uploadingPhoto ? t('profile.uploading') : saving ? t('profile.saving') : t('profile.saveChanges')}</span>
               </motion.button>
             )}
           </AnimatePresence>
@@ -575,7 +575,7 @@ const ProfilePage = () => {
             variants={cardVariants}
             className="bg-white rounded-xl shadow-sm border border-[#E5E4DF] p-5 md:p-6"
           >
-            <h2 className="text-lg font-semibold text-[#191919] mb-5">Informations personnelles</h2>
+            <h2 className="text-lg font-semibold text-[#191919] mb-5">{t('profile.personalInfo')}</h2>
             
             {/* Photo et infos principales */}
             <div className="flex flex-col sm:flex-row sm:items-center gap-5 mb-6 pb-6 border-b border-[#E5E4DF]">
@@ -605,7 +605,7 @@ const ProfilePage = () => {
               
               <div className="flex-1">
                 <h3 className="text-xl md:text-2xl font-bold text-[#191919] mb-1">
-                  {firstName && lastName ? `${firstName} ${lastName}` : 'Votre nom'}
+                  {firstName && lastName ? `${firstName} ${lastName}` : t('profile.yourName')}
                 </h3>
                 <p className="text-[#666663] flex items-center gap-2 mb-3">
                   <Mail className="w-4 h-4" />
@@ -620,28 +620,28 @@ const ProfilePage = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-[#191919] mb-2">
-                      Prénom *
+                      {t('profile.firstNameRequired')}
                     </label>
                     <input
                       type="text"
                       value={firstName}
                       onChange={(e) => setFirstName(e.target.value)}
                       className="w-full px-4 py-3 border border-[#E5E4DF] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#191919]/10 focus:border-[#191919] bg-white transition-all"
-                      placeholder="Votre prénom"
+                      placeholder={t('profile.firstNamePlaceholder')}
                       required
                     />
                   </div>
 
                   <div>
                     <label className="block text-sm font-medium text-[#191919] mb-2">
-                      Nom *
+                      {t('profile.lastNameRequired')}
                     </label>
                     <input
                       type="text"
                       value={lastName}
                       onChange={(e) => setLastName(e.target.value)}
                       className="w-full px-4 py-3 border border-[#E5E4DF] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#191919]/10 focus:border-[#191919] bg-white transition-all"
-                      placeholder="Votre nom"
+                      placeholder={t('profile.lastNamePlaceholder')}
                       required
                     />
                   </div>
@@ -650,18 +650,18 @@ const ProfilePage = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-[#191919] mb-2">
-                      Adresse email *
+                      {t('profile.emailRequired')}
                     </label>
                     <input
                       type="email"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       className="w-full px-4 py-3 border border-[#E5E4DF] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#191919]/10 focus:border-[#191919] bg-white transition-all"
-                      placeholder="email@exemple.com"
+                      placeholder={t('profile.emailPlaceholder')}
                       required
                     />
                     <p className="text-xs text-[#666663] mt-2">
-                      Toute modification nécessitera une confirmation par email.
+                      {t('profile.emailChangeNote')}
                     </p>
                   </div>
 
@@ -693,8 +693,8 @@ const ProfilePage = () => {
             >
               <div className="flex items-center justify-between gap-3 mb-5">
                 <div>
-                  <h2 className="text-lg font-semibold text-[#191919]">Sécurité</h2>
-                  <p className="text-sm text-[#666663]">Gérez votre mot de passe</p>
+                  <h2 className="text-lg font-semibold text-[#191919]">{t('profile.security')}</h2>
+                  <p className="text-sm text-[#666663]">{t('profile.managePassword')}</p>
                 </div>
                 <button
                   type="button"
@@ -706,7 +706,7 @@ const ProfilePage = () => {
                   }`}
                 >
                   <Shield className="w-4 h-4" />
-                  {showPasswordForm ? 'Annuler' : 'Modifier'}
+                  {showPasswordForm ? t('profile.cancel') : t('profile.modify')}
                 </button>
               </div>
               
@@ -721,7 +721,7 @@ const ProfilePage = () => {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
                         <label className="block text-sm font-medium text-[#191919] mb-2">
-                          Nouveau mot de passe
+                          {t('profile.newPassword')}
                         </label>
                         <input
                           type="password"
@@ -733,7 +733,7 @@ const ProfilePage = () => {
                       </div>
                       <div>
                         <label className="block text-sm font-medium text-[#191919] mb-2">
-                          Confirmer le mot de passe
+                          {t('profile.confirmPassword')}
                         </label>
                         <input
                           type="password"
@@ -762,7 +762,7 @@ const ProfilePage = () => {
                           newPassword.length >= 8 ? 'text-yellow-600' :
                           'text-red-600'
                         }`}>
-                          {newPassword.length >= 12 ? 'Fort' : newPassword.length >= 8 ? 'Moyen' : 'Faible'}
+                          {newPassword.length >= 12 ? t('profile.passwordStrength.strong') : newPassword.length >= 8 ? t('profile.passwordStrength.medium') : t('profile.passwordStrength.weak')}
                         </span>
                       </div>
                     )}
@@ -780,17 +780,17 @@ const ProfilePage = () => {
                       {updatingPassword ? (
                         <>
                           <RefreshCw className="w-4 h-4 animate-spin" />
-                          Mise à jour...
+                          {t('profile.passwordUpdating')}
                         </>
                       ) : (
                         <>
                           <Shield className="w-4 h-4" />
-                          Mettre à jour le mot de passe
+                          {t('profile.updatePassword')}
                         </>
                       )}
                     </button>
                     <p className="text-xs text-[#666663]">
-                      Utilisez au moins 8 caractères. Après modification, vous devrez vous reconnecter sur vos autres appareils.
+                      {t('profile.passwordHint')}
                     </p>
                   </motion.div>
                 ) : (
@@ -803,8 +803,8 @@ const ProfilePage = () => {
                       <Check className="w-4 h-4 text-green-600" />
                     </div>
                     <div>
-                      <p className="text-sm font-medium text-[#191919]">Mot de passe actif</p>
-                      <p className="text-xs text-[#666663]">Votre mot de passe est sécurisé</p>
+                      <p className="text-sm font-medium text-[#191919]">{t('profile.passwordActive')}</p>
+                      <p className="text-xs text-[#666663]">{t('profile.passwordSecure')}</p>
                     </div>
                   </motion.div>
                 )}
@@ -822,13 +822,13 @@ const ProfilePage = () => {
                   <div>
                     <h2 className="text-lg font-semibold text-[#191919] flex items-center gap-2">
                       <Building2 className="w-5 h-5" />
-                      Mon entreprise
+                      {t('profile.company')}
                     </h2>
-                    <p className="text-sm text-[#666663]">Informations partagées avec votre équipe</p>
+                    <p className="text-sm text-[#666663]">{t('profile.companySharedInfo')}</p>
                   </div>
                   <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#FAFAF7] border border-[#E5E4DF] text-sm text-[#191919]">
                     <Users className="w-4 h-4" />
-                    {teamMembers.length} {teamMembers.length > 1 ? 'collaborateurs' : 'collaborateur'}
+                    {teamMembers.length} {teamMembers.length > 1 ? t('profile.collaborators') : t('profile.collaborator')}
                   </div>
                 </div>
 
@@ -836,27 +836,27 @@ const ProfilePage = () => {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-[#191919] mb-2">
-                        Nom de l'entreprise *
+                        {t('profile.companyNameRequired')}
                       </label>
                       <input
                         type="text"
                         value={companyName}
                         onChange={(e) => setCompanyName(e.target.value)}
                         className="w-full px-4 py-3 border border-[#E5E4DF] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#191919]/10 focus:border-[#191919] bg-white transition-all"
-                        placeholder="Nom de votre entreprise"
+                        placeholder={t('profile.companyNamePlaceholder')}
                       />
                     </div>
 
                     <div>
                       <label className="block text-sm font-medium text-[#191919] mb-2">
-                        Secteur d'activité
+                        {t('profile.companyIndustry')}
                       </label>
                       <input
                         type="text"
                         value={companyIndustry}
                         onChange={(e) => setCompanyIndustry(e.target.value)}
                         className="w-full px-4 py-3 border border-[#E5E4DF] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#191919]/10 focus:border-[#191919] bg-white transition-all"
-                        placeholder="Ex: E-commerce, Distribution, etc."
+                        placeholder={t('profile.companyIndustryPlaceholder')}
                       />
                     </div>
                   </div>
@@ -864,18 +864,18 @@ const ProfilePage = () => {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="p-4 border border-[#E5E4DF] rounded-lg bg-[#FAFAF7]">
                       <p className="text-xs font-medium text-[#666663] uppercase tracking-wide">
-                        Nom de l'entreprise
+                        {t('profile.companyName')}
                       </p>
                       <p className="mt-2 text-sm font-semibold text-[#191919]">
-                        {companyData.name || 'Non renseigné'}
+                        {companyData.name || t('profile.notSpecified')}
                       </p>
                     </div>
                     <div className="p-4 border border-[#E5E4DF] rounded-lg bg-[#FAFAF7]">
                       <p className="text-xs font-medium text-[#666663] uppercase tracking-wide">
-                        Secteur d'activité
+                        {t('profile.companyIndustry')}
                       </p>
                       <p className="mt-2 text-sm font-semibold text-[#191919]">
-                        {companyData.description || 'Non renseigné'}
+                        {companyData.description || t('profile.notSpecified')}
                       </p>
                     </div>
                   </div>
@@ -893,15 +893,15 @@ const ProfilePage = () => {
               <div className="flex items-center justify-between mb-3">
                 <h3 className="text-base md:text-lg font-semibold text-[#191919] flex items-center gap-2">
                   <Users className="w-5 h-5" />
-                  Équipe
+                  {t('profile.team')}
                 </h3>
                 <div className="flex items-center gap-2">
-                  <span className="text-sm text-[#666663]">{teamMembers.length} {teamMembers.length > 1 ? 'membres' : 'membre'}</span>
+                  <span className="text-sm text-[#666663]">{teamMembers.length} {teamMembers.length > 1 ? t('profile.teamMembers') : t('profile.member')}</span>
                   {isAdmin && (
                     <button
                       onClick={() => setShowInviteModal(true)}
                       className="p-2 hover:bg-[#FAFAF7] rounded-lg transition-colors"
-                      title="Inviter un membre"
+                      title={t('profile.inviteMember')}
                     >
                       <UserPlus className="w-4 h-4 text-[#191919]" />
                     </button>
@@ -912,7 +912,7 @@ const ProfilePage = () => {
               <div className="space-y-3 max-h-96 overflow-y-auto pr-1">
                 {teamMembers.length === 0 ? (
                   <p className="text-sm text-[#666663] text-center py-4">
-                    Aucun membre d'équipe
+                    {t('profile.noTeamMembers')}
                   </p>
                 ) : (
                   teamMembers.map((member) => (
@@ -969,7 +969,7 @@ const ProfilePage = () => {
               >
                 <h3 className="text-base md:text-lg font-semibold text-[#191919] mb-3 flex items-center gap-2">
                   <Clock className="w-5 h-5" />
-                  Invitations en attente
+                  {t('profile.invitations.title')}
                 </h3>
                 
                 <div className="space-y-3">
@@ -997,12 +997,12 @@ const ProfilePage = () => {
                         {copiedToken === inv.id ? (
                           <>
                             <Check className="w-3 h-3 text-green-600" />
-                            Copié !
+                            {t('profile.invitations.copied')}
                           </>
                         ) : (
                           <>
                             <Copy className="w-3 h-3" />
-                            Copier le lien
+                            {t('profile.invitations.copyLink')}
                           </>
                         )}
                       </button>
@@ -1019,7 +1019,7 @@ const ProfilePage = () => {
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6">
             <div className="flex items-center justify-between mb-6">
-              <h3 className="text-xl font-bold text-[#191919]">Inviter un collaborateur</h3>
+              <h3 className="text-xl font-bold text-[#191919]">{t('profile.invitations.inviteCollaborator')}</h3>
               <button
                 onClick={() => setShowInviteModal(false)}
                 className="p-2 hover:bg-[#FAFAF7] rounded-lg transition-colors"
@@ -1031,34 +1031,34 @@ const ProfilePage = () => {
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-[#191919] mb-2">
-                  Adresse email *
+                  {t('profile.invitations.emailAddress')} *
                 </label>
                 <input
                   type="email"
                   value={inviteEmail}
                   onChange={(e) => setInviteEmail(e.target.value)}
                   className="w-full px-4 py-3 border border-[#E5E4DF] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#191919]"
-                  placeholder="email@exemple.com"
+                  placeholder={t('profile.emailPlaceholder')}
                   autoFocus
                 />
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-[#191919] mb-2">
-                  Rôle
+                  {t('profile.invitations.role')}
                 </label>
                 <select
                   value={inviteRole}
                   onChange={(e) => setInviteRole(e.target.value)}
                   className="w-full px-4 py-3 border border-[#E5E4DF] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#191919] bg-white"
                 >
-                  <option value="member">Membre</option>
-                  <option value="admin">Administrateur</option>
+                  <option value="member">{t('profile.roles.member')}</option>
+                  <option value="admin">{t('profile.roles.admin')}</option>
                 </select>
                 <p className="text-xs text-[#666663] mt-2">
                   {inviteRole === 'admin' 
-                    ? 'Les administrateurs peuvent gérer l\'équipe et inviter d\'autres membres.'
-                    : 'Les membres peuvent consulter et modifier les données de l\'entreprise.'
+                    ? t('profile.invitations.roleAdminDescription')
+                    : t('profile.invitations.roleMemberDescription')
                   }
                 </p>
               </div>
@@ -1068,7 +1068,7 @@ const ProfilePage = () => {
                   onClick={() => setShowInviteModal(false)}
                   className="flex-1 px-4 py-3 border border-[#E5E4DF] rounded-lg font-medium hover:bg-[#FAFAF7] transition-colors"
                 >
-                  Annuler
+                  {t('common.cancel')}
                 </button>
                 <button
                   onClick={handleInvite}
@@ -1078,12 +1078,12 @@ const ProfilePage = () => {
                   {inviting ? (
                     <>
                       <RefreshCw className="w-4 h-4 animate-spin" />
-                      Envoi...
+                      {t('profile.invitations.sending')}
                     </>
                   ) : (
                     <>
                       <UserPlus className="w-4 h-4" />
-                      Envoyer l'invitation
+                      {t('profile.invitations.send')}
                     </>
                   )}
                 </button>

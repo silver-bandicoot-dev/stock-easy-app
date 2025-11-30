@@ -1,6 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { Clock, Package, Truck, CheckCircle, AlertTriangle, Calendar, TrendingUp } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 // Mapping des clés KPI vers les clés d'onglet
 const KPI_TO_TAB = {
@@ -12,10 +13,12 @@ const KPI_TO_TAB = {
 };
 
 export const OrdersKPIBar = ({ kpis, formatCurrency, onKpiClick, activeTab }) => {
+  const { t } = useTranslation();
+  
   const kpiItems = [
     {
       key: 'today',
-      label: "Aujourd'hui",
+      label: t('ordersPage.kpis.today'),
       value: kpis.today,
       icon: Calendar,
       color: 'text-[#191919]',
@@ -25,7 +28,7 @@ export const OrdersKPIBar = ({ kpis, formatCurrency, onKpiClick, activeTab }) =>
     },
     {
       key: 'pending',
-      label: 'En Cours',
+      label: t('ordersPage.kpis.pending'),
       value: kpis.pending,
       icon: Clock,
       color: 'text-yellow-600',
@@ -36,7 +39,7 @@ export const OrdersKPIBar = ({ kpis, formatCurrency, onKpiClick, activeTab }) =>
     },
     {
       key: 'preparing',
-      label: 'Préparation',
+      label: t('ordersPage.kpis.preparing'),
       value: kpis.preparing,
       icon: Package,
       color: 'text-blue-600',
@@ -47,7 +50,7 @@ export const OrdersKPIBar = ({ kpis, formatCurrency, onKpiClick, activeTab }) =>
     },
     {
       key: 'inTransit',
-      label: 'En Transit',
+      label: t('ordersPage.kpis.inTransit'),
       value: kpis.inTransit,
       icon: Truck,
       color: 'text-purple-600',
@@ -58,7 +61,7 @@ export const OrdersKPIBar = ({ kpis, formatCurrency, onKpiClick, activeTab }) =>
     },
     {
       key: 'received',
-      label: 'Reçues',
+      label: t('ordersPage.kpis.received'),
       value: kpis.received,
       icon: CheckCircle,
       color: 'text-green-600',
@@ -69,7 +72,7 @@ export const OrdersKPIBar = ({ kpis, formatCurrency, onKpiClick, activeTab }) =>
     },
     {
       key: 'reconciliation',
-      label: 'À Réconcilier',
+      label: t('ordersPage.kpis.reconciliation'),
       value: kpis.reconciliation,
       icon: AlertTriangle,
       color: 'text-red-600',
@@ -81,7 +84,7 @@ export const OrdersKPIBar = ({ kpis, formatCurrency, onKpiClick, activeTab }) =>
     },
     {
       key: 'totalAmount',
-      label: 'Total Montant',
+      label: t('ordersPage.kpis.totalAmount'),
       value: formatCurrency(kpis.totalAmount),
       icon: TrendingUp,
       color: 'text-[#191919]',

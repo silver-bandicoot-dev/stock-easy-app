@@ -12,6 +12,7 @@ import {
   ArrowUpDown
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { useTranslation } from 'react-i18next';
 import { exportInventoryReport } from '../../utils/exportInventory';
 import { useCurrency } from '../../contexts/CurrencyContext';
 
@@ -53,6 +54,7 @@ const InventoryKPI = ({ icon: Icon, label, value, subValue, trend }) => (
  * Affiche un tableau complet avec toutes les informations d'inventaire
  */
 export const InventoryTab = ({ products = [], suppliers = [] }) => {
+  const { t } = useTranslation();
   const formatPrice = useFormatPrice();
   const [searchTerm, setSearchTerm] = useState('');
   const [supplierFilter, setSupplierFilter] = useState('all');
@@ -139,16 +141,16 @@ export const InventoryTab = ({ products = [], suppliers = [] }) => {
 
   // Export CSV
   const handleExportInventory = () => {
-    const toastId = toast.loading('Préparation du rapport...');
+    const toastId = toast.loading(t('inventory.preparingReport'));
     try {
       const result = exportInventoryReport(filteredProducts);
       if (result.success) {
-        toast.success(`Rapport exporté ! ${result.totalProducts} produits, ${formatPrice(result.totalStockValue)} de valeur`, { id: toastId });
+        toast.success(t('inventory.exportSuccess', { count: result.totalProducts, value: formatPrice(result.totalStockValue) }), { id: toastId });
       } else {
-        toast.error(result.message || 'Erreur lors de l\'export', { id: toastId });
+        toast.error(result.message || t('inventory.exportError'), { id: toastId });
       }
     } catch (error) {
-      toast.error('Erreur lors de l\'export', { id: toastId });
+      toast.error(t('inventory.exportError'), { id: toastId });
     }
   };
 
@@ -178,9 +180,9 @@ export const InventoryTab = ({ products = [], suppliers = [] }) => {
       {/* En-tête */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-[#191919]">Inventaire</h1>
+          <h1 className="text-2xl font-bold text-[#191919]">{t('inventory.title')}</h1>
           <p className="text-sm text-[#666663] mt-1">
-            Source de vérité de votre stock • {totals.totalProducts} références
+            {t('inventory.subtitle')} • {totals.totalProducts} {t('inventory.references')}
           </p>
         </div>
         <button
@@ -188,7 +190,7 @@ export const InventoryTab = ({ products = [], suppliers = [] }) => {
           className="flex items-center gap-2 px-4 py-2.5 bg-[#191919] text-white rounded-lg hover:bg-[#333] transition-colors font-medium shadow-sm"
         >
           <Download className="w-4 h-4" />
-          <span>Télécharger l'inventaire</span>
+          <span>{t('inventory.downloadInventory')}</span>
         </button>
       </div>
 
@@ -196,25 +198,25 @@ export const InventoryTab = ({ products = [], suppliers = [] }) => {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <InventoryKPI
           icon={Package}
-          label="Total Références"
+          label={t('inventory.totalReferences')}
           value={totals.totalProducts.toLocaleString('fr-FR')}
-          subValue={`${totals.outOfStock} en rupture`}
+          subValue={`${totals.outOfStock} ${t('inventory.outOfStock')}`}
         />
         <InventoryKPI
           icon={BarChart3}
-          label="Unités en Stock"
+          label={t('inventory.unitsInStock')}
           value={totals.totalUnits.toLocaleString('fr-FR')}
         />
         <InventoryKPI
           icon={DollarSign}
-          label="Valeur du Stock (coût)"
+          label={t('inventory.stockValueCost')}
           value={formatPrice(totals.totalStockValue)}
         />
         <InventoryKPI
           icon={DollarSign}
-          label="Valeur du Stock (vente)"
+          label={t('inventory.stockValueSale')}
           value={formatPrice(totals.totalSaleValue)}
-          subValue={`Marge potentielle: ${formatPrice(totals.potentialMargin)}`}
+          subValue={`${t('inventory.potentialMargin')}: ${formatPrice(totals.potentialMargin)}`}
         />
       </div>
 
@@ -224,7 +226,7 @@ export const InventoryTab = ({ products = [], suppliers = [] }) => {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#666663]" />
           <input
             type="text"
-            placeholder="Rechercher par SKU, nom ou fournisseur..."
+            placeholder={t('inventory.searchPlaceholder')}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full pl-10 pr-4 py-2.5 border border-[#E5E4DF] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#191919]/20 bg-white"
@@ -237,7 +239,7 @@ export const InventoryTab = ({ products = [], suppliers = [] }) => {
             onChange={(e) => setSupplierFilter(e.target.value)}
             className="pl-10 pr-8 py-2.5 border border-[#E5E4DF] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#191919]/20 bg-white appearance-none cursor-pointer min-w-[180px]"
           >
-            <option value="all">Tous les fournisseurs</option>
+            <option value="all">{t('inventory.allSuppliers')}</option>
             {uniqueSuppliers.map(supplier => (
               <option key={supplier} value={supplier}>{supplier}</option>
             ))}
@@ -256,7 +258,7 @@ export const InventoryTab = ({ products = [], suppliers = [] }) => {
                   onClick={() => handleSort('sku')}
                 >
                   <div className="flex items-center gap-1.5">
-                    SKU
+                    {t('inventory.columns.sku')}
                     <SortIcon columnKey="sku" />
                   </div>
                 </th>
@@ -265,7 +267,7 @@ export const InventoryTab = ({ products = [], suppliers = [] }) => {
                   onClick={() => handleSort('name')}
                 >
                   <div className="flex items-center gap-1.5">
-                    Nom du produit
+                    {t('inventory.columns.productName')}
                     <SortIcon columnKey="name" />
                   </div>
                 </th>
@@ -274,7 +276,7 @@ export const InventoryTab = ({ products = [], suppliers = [] }) => {
                   onClick={() => handleSort('supplier')}
                 >
                   <div className="flex items-center gap-1.5">
-                    Fournisseur
+                    {t('inventory.columns.supplier')}
                     <SortIcon columnKey="supplier" />
                   </div>
                 </th>
@@ -283,7 +285,7 @@ export const InventoryTab = ({ products = [], suppliers = [] }) => {
                   onClick={() => handleSort('stock')}
                 >
                   <div className="flex items-center justify-end gap-1.5">
-                    Quantité
+                    {t('inventory.columns.quantity')}
                     <SortIcon columnKey="stock" />
                   </div>
                 </th>
@@ -292,7 +294,7 @@ export const InventoryTab = ({ products = [], suppliers = [] }) => {
                   onClick={() => handleSort('buyPrice')}
                 >
                   <div className="flex items-center justify-end gap-1.5">
-                    Prix achat HT
+                    {t('inventory.columns.buyPrice')}
                     <SortIcon columnKey="buyPrice" />
                   </div>
                 </th>
@@ -301,15 +303,15 @@ export const InventoryTab = ({ products = [], suppliers = [] }) => {
                   onClick={() => handleSort('sellPrice')}
                 >
                   <div className="flex items-center justify-end gap-1.5">
-                    Prix vente HT
+                    {t('inventory.columns.sellPrice')}
                     <SortIcon columnKey="sellPrice" />
                   </div>
                 </th>
                 <th className="px-4 py-3 text-right text-xs font-semibold text-[#666663] uppercase tracking-wider">
-                  Valeur stock (coût)
+                  {t('inventory.columns.stockValueCost')}
                 </th>
                 <th className="px-4 py-3 text-right text-xs font-semibold text-[#666663] uppercase tracking-wider">
-                  Valeur stock (vente)
+                  {t('inventory.columns.stockValueSale')}
                 </th>
               </tr>
             </thead>
@@ -319,13 +321,13 @@ export const InventoryTab = ({ products = [], suppliers = [] }) => {
                   <td colSpan={8} className="px-4 py-12 text-center">
                     <div className="flex flex-col items-center gap-2">
                       <Package className="w-12 h-12 text-[#E5E4DF]" />
-                      <p className="text-[#666663]">Aucun produit trouvé</p>
+                      <p className="text-[#666663]">{t('inventory.noProductsFound')}</p>
                       {searchTerm && (
                         <button
                           onClick={() => setSearchTerm('')}
                           className="text-sm text-[#191919] underline hover:no-underline"
                         >
-                          Effacer la recherche
+                          {t('inventory.clearSearch')}
                         </button>
                       )}
                     </div>
@@ -397,7 +399,7 @@ export const InventoryTab = ({ products = [], suppliers = [] }) => {
               <tfoot>
                 <tr className="bg-[#FAFAF7] border-t-2 border-[#E5E4DF]">
                   <td className="px-4 py-3 font-semibold text-[#191919]" colSpan={3}>
-                    TOTAL ({filteredProducts.length} produits)
+                    {t('inventory.total')} ({filteredProducts.length} {t('inventory.products')})
                   </td>
                   <td className="px-4 py-3 text-right font-semibold text-[#191919]">
                     {filteredProducts.reduce((sum, p) => sum + (p.stock || 0), 0).toLocaleString('fr-FR')}
@@ -421,10 +423,9 @@ export const InventoryTab = ({ products = [], suppliers = [] }) => {
       <div className="flex items-start gap-3 p-4 bg-[#FAFAF7] rounded-lg border border-[#E5E4DF]">
         <Download className="w-5 h-5 text-[#666663] mt-0.5 shrink-0" />
         <div className="text-sm text-[#666663]">
-          <p className="font-medium text-[#191919]">Export CSV comptable</p>
+          <p className="font-medium text-[#191919]">{t('inventory.exportInfo.title')}</p>
           <p className="mt-1">
-            Le fichier téléchargé contient toutes les données de l'inventaire filtré, 
-            incluant les totaux de valorisation. Compatible avec Excel et tous les logiciels comptables.
+            {t('inventory.exportInfo.description')}
           </p>
         </div>
       </div>

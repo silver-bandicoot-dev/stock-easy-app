@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Mail, ShoppingBag, Check, ChevronDown, ExternalLink } from 'lucide-react';
-import { useStockContext } from '../../contexts/StockDataContext';
 
 // Options pour les emails
 const emailOptions = [
@@ -48,7 +48,8 @@ const IntegrationSelect = ({
   placeholder,
   isConnected = false,
   connectedValue = null,
-  productCount = 0
+  productCount = 0,
+  t
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const selectRef = useRef(null);
@@ -91,11 +92,11 @@ const IntegrationSelect = ({
               </span>
               <span className="flex items-center gap-1 px-2 py-0.5 bg-emerald-100 rounded-full text-[10px] uppercase tracking-wide text-emerald-700 font-medium">
                 <Check className="w-3 h-3" />
-                Connecté
+                {t('settings.integrations.ecommerce.connected')}
               </span>
             </div>
             <p className="text-sm text-emerald-600 mt-0.5">
-              {productCount} produits synchronisés
+              {t('settings.integrations.ecommerce.productsSynced', { count: productCount })}
             </p>
           </div>
         </div>
@@ -131,7 +132,7 @@ const IntegrationSelect = ({
                 {selectedOption.label}
               </span>
               <p className="text-xs text-[#666663] mt-0.5">
-                Sélectionné
+                {t('settings.integrations.ecommerce.selected')}
               </p>
             </div>
           </>
@@ -145,7 +146,7 @@ const IntegrationSelect = ({
                 {placeholder}
               </span>
               <p className="text-xs text-[#8A8A86] mt-0.5">
-                Cliquez pour choisir
+                {t('settings.integrations.ecommerce.clickToChoose')}
               </p>
             </div>
           </>
@@ -205,7 +206,7 @@ const IntegrationSelect = ({
                 className="flex items-center gap-2 p-3 rounded-lg text-sm text-[#666663] hover:bg-[#FAFAF7] hover:text-[#191919] transition-colors"
               >
                 <ExternalLink className="w-4 h-4" />
-                <span>Voir sur le store officiel</span>
+                <span>{t('settings.integrations.ecommerce.viewOnStore')}</span>
               </a>
             </div>
           )}
@@ -215,8 +216,8 @@ const IntegrationSelect = ({
   );
 };
 
-export const IntegrationsSettings = () => {
-  const { products, loading } = useStockContext();
+export const IntegrationsSettings = ({ products = [], loading = false }) => {
+  const { t } = useTranslation();
   
   // États pour les sélections
   const [selectedEmail, setSelectedEmail] = useState(null);
@@ -236,16 +237,12 @@ export const IntegrationsSettings = () => {
     <div className="space-y-6">
       {/* Header section */}
       <div className="bg-white rounded-xl shadow-sm border border-[#E5E4DF] p-6">
-        <h2 className="text-xl font-bold text-[#191919] mb-1">Intégrations</h2>
-        <p className="text-sm text-[#666663] max-w-2xl">
-          Connectez Stockeasy à vos outils existants. Choisissez <strong>une plateforme e‑commerce</strong> pour 
-          synchroniser vos produits et <strong>un service email</strong> pour envoyer des notifications directement 
-          depuis votre compte.
-        </p>
+        <h2 className="text-xl font-bold text-[#191919] mb-1">{t('settings.integrations.title')}</h2>
+        <p className="text-sm text-[#666663] max-w-2xl" dangerouslySetInnerHTML={{ __html: t('settings.integrations.subtitle') }} />
         <div className="flex items-center gap-2 mt-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
           <div className="w-2 h-2 bg-amber-400 rounded-full" />
           <p className="text-xs text-amber-700">
-            Ces intégrations sont en cours de déploiement. En attendant, vous pouvez préparer votre configuration.
+            {t('settings.integrations.deploymentNotice')}
           </p>
         </div>
       </div>
@@ -257,15 +254,15 @@ export const IntegrationsSettings = () => {
             <ShoppingBag className="w-5 h-5 text-[#191919]" />
           </div>
           <div className="flex-1">
-            <h3 className="text-base font-semibold text-[#191919]">Plateforme E-commerce</h3>
+            <h3 className="text-base font-semibold text-[#191919]">{t('settings.integrations.ecommerce.title')}</h3>
             <p className="text-xs text-[#666663]">
-              Synchronisez vos produits et commandes depuis votre boutique en ligne
+              {t('settings.integrations.ecommerce.subtitle')}
             </p>
           </div>
           {isCommerceConnected && (
             <div className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 border border-emerald-200 rounded-full">
               <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
-              <span className="text-xs font-medium text-emerald-700">Actif</span>
+              <span className="text-xs font-medium text-emerald-700">{t('settings.integrations.ecommerce.active')}</span>
             </div>
           )}
         </div>
@@ -274,10 +271,11 @@ export const IntegrationsSettings = () => {
           options={commerceOptions}
           value={selectedCommerce}
           onChange={setSelectedCommerce}
-          placeholder="Choisir une plateforme"
+          placeholder={t('settings.integrations.ecommerce.choosePlatform')}
           isConnected={isCommerceConnected}
           connectedValue="shopify"
           productCount={products?.length || 0}
+          t={t}
         />
       </section>
 
@@ -288,9 +286,9 @@ export const IntegrationsSettings = () => {
             <Mail className="w-5 h-5 text-[#191919]" />
           </div>
           <div>
-            <h3 className="text-base font-semibold text-[#191919]">Service Email</h3>
+            <h3 className="text-base font-semibold text-[#191919]">{t('settings.integrations.email.title')}</h3>
             <p className="text-xs text-[#666663]">
-              Envoyez des notifications et alertes depuis votre messagerie
+              {t('settings.integrations.email.subtitle')}
             </p>
           </div>
         </div>
@@ -299,17 +297,18 @@ export const IntegrationsSettings = () => {
           options={emailOptions}
           value={selectedEmail}
           onChange={setSelectedEmail}
-          placeholder="Choisir un service email"
+          placeholder={t('settings.integrations.ecommerce.choosePlatform')}
+          t={t}
         />
       </section>
 
       {/* Résumé de configuration */}
       {(selectedCommerce || selectedEmail) && (
         <div className="bg-[#FAFAF7] rounded-xl border border-[#E5E4DF] p-5">
-          <h4 className="text-sm font-semibold text-[#191919] mb-3">Résumé de votre configuration</h4>
+          <h4 className="text-sm font-semibold text-[#191919] mb-3">{t('settings.integrations.summary.title')}</h4>
           <div className="space-y-2">
             <div className="flex items-center justify-between text-sm">
-              <span className="text-[#666663]">Plateforme E-commerce</span>
+              <span className="text-[#666663]">{t('settings.integrations.summary.ecommercePlatform')}</span>
               <span className="font-medium text-[#191919]">
                 {selectedCommerce 
                   ? commerceOptions.find(o => o.value === selectedCommerce)?.label 
@@ -317,7 +316,7 @@ export const IntegrationsSettings = () => {
               </span>
             </div>
             <div className="flex items-center justify-between text-sm">
-              <span className="text-[#666663]">Service Email</span>
+              <span className="text-[#666663]">{t('settings.integrations.summary.emailService')}</span>
               <span className="font-medium text-[#191919]">
                 {selectedEmail 
                   ? emailOptions.find(o => o.value === selectedEmail)?.label 

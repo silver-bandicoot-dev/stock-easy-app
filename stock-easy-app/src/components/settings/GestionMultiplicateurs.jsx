@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { TrendingUp, Search, Filter, RefreshCw, CheckSquare, Square, Settings2 } from 'lucide-react';
 import { ProductMultiplierEditor } from '../product/ProductMultiplierEditor';
 import { InfoTooltip } from '../ui/InfoTooltip/InfoTooltip';
@@ -13,6 +14,7 @@ import { ImagePreview } from '../ui/ImagePreview';
  * Permet de modifier manuellement ou via ML
  */
 export function GestionMultiplicateurs({ products, loadData, multiplicateurDefaut = 1.2 }) {
+  const { t } = useTranslation();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterBy, setFilterBy] = useState('all'); // 'all', 'custom', 'default'
   const [editingProduct, setEditingProduct] = useState(null);
@@ -105,12 +107,12 @@ export function GestionMultiplicateurs({ products, loadData, multiplicateurDefau
   // Actions en masse
   const handleBulkUpdate = async () => {
     if (selectedSkus.size === 0) {
-      toast.error('Veuillez sélectionner au moins un produit');
+      toast.error(t('settings.multipliers.messages.selectProduct'));
       return;
     }
 
     if (bulkMultiplier < 0.1 || bulkMultiplier > 10) {
-      toast.error('Le multiplicateur doit être entre 0.1 et 10');
+      toast.error(t('settings.multipliers.messages.multiplierRange'));
       return;
     }
 
@@ -129,16 +131,16 @@ export function GestionMultiplicateurs({ products, loadData, multiplicateurDefau
       if (error) throw error;
 
       if (data.success) {
-        toast.success(`${data.updated_count} produit(s) mis à jour avec succès`);
+        toast.success(t('settings.multipliers.messages.updateSuccess', { count: data.updated_count }));
         setSelectedSkus(new Set());
         setShowBulkActions(false);
         await loadData();
       } else {
-        toast.error(`Erreur: ${data.message || 'Erreur lors de la mise à jour'}`);
+        toast.error(data.message || t('settings.multipliers.messages.updateError'));
       }
     } catch (error) {
       console.error('❌ Erreur mise à jour en masse:', error);
-      toast.error('Erreur lors de la mise à jour en masse');
+      toast.error(t('settings.multipliers.messages.updateError'));
     } finally {
       setIsBulkUpdating(false);
     }
@@ -146,7 +148,7 @@ export function GestionMultiplicateurs({ products, loadData, multiplicateurDefau
 
   const handleBulkReset = async () => {
     if (selectedSkus.size === 0) {
-      toast.error('Veuillez sélectionner au moins un produit');
+      toast.error(t('settings.multipliers.messages.selectProduct'));
       return;
     }
 
@@ -160,16 +162,16 @@ export function GestionMultiplicateurs({ products, loadData, multiplicateurDefau
       if (error) throw error;
 
       if (data.success) {
-        toast.success(`${data.updated_count} produit(s) réinitialisé(s) au paramètre par défaut`);
+        toast.success(t('settings.multipliers.messages.resetSuccess', { count: data.updated_count }));
         setSelectedSkus(new Set());
         setShowBulkActions(false);
         await loadData();
       } else {
-        toast.error(`Erreur: ${data.message || 'Erreur lors de la réinitialisation'}`);
+        toast.error(data.message || t('settings.multipliers.messages.resetError'));
       }
     } catch (error) {
       console.error('❌ Erreur réinitialisation en masse:', error);
-      toast.error('Erreur lors de la réinitialisation en masse');
+      toast.error(t('settings.multipliers.messages.resetError'));
     } finally {
       setIsBulkUpdating(false);
     }
@@ -178,7 +180,7 @@ export function GestionMultiplicateurs({ products, loadData, multiplicateurDefau
   // Analyse ML en masse
   const handleBulkMLAnalyze = async () => {
     if (selectedSkus.size === 0) {
-      toast.error('Veuillez sélectionner au moins un produit');
+      toast.error(t('settings.multipliers.messages.selectProduct'));
       return;
     }
 
@@ -189,7 +191,7 @@ export function GestionMultiplicateurs({ products, loadData, multiplicateurDefau
       const selectedProducts = filteredProducts.filter(p => selectedSkus.has(p.sku));
       
       console.log(`🤖 Analyse ML en cours pour ${selectedProducts.length} produit(s)...`);
-      toast.info(`Analyse ML en cours pour ${selectedProducts.length} produit(s)...`, {
+      toast.info(t('settings.multipliers.messages.mlAnalyzing', { count: selectedProducts.length }), {
         duration: 3000
       });
 
@@ -272,14 +274,14 @@ export function GestionMultiplicateurs({ products, loadData, multiplicateurDefau
       if (suggestions.length > 0) {
         setMlSuggestions(suggestions);
         setShowMLModal(true);
-        toast.success(`Analyse terminée: ${successCount} suggestion(s), ${errorCount} erreur(s) (${duration.toFixed(0)}ms)`);
+        toast.success(t('settings.multipliers.messages.mlComplete', { success: successCount, errors: errorCount }) + ` (${duration.toFixed(0)}ms)`);
       } else {
-        toast.error('Aucune suggestion générée. Vérifiez que les produits ont des données historiques.');
+        toast.error(t('settings.multipliers.messages.mlNoSuggestions'));
       }
     } catch (error) {
       const duration = performance.now() - startTime;
       console.error(`❌ Erreur analyse ML en masse (${duration.toFixed(0)}ms):`, error);
-      toast.error('Erreur lors de l\'analyse ML en masse');
+      toast.error(t('settings.multipliers.messages.mlError'));
     } finally {
       setIsAnalyzingML(false);
     }
@@ -314,7 +316,7 @@ export function GestionMultiplicateurs({ products, loadData, multiplicateurDefau
         }
 
         if (data && data.success) {
-          toast.success(`${data.updated_count} multiplicateur(s) ML appliqué(s) avec succès`);
+          toast.success(t('settings.multipliers.messages.mlApplied', { count: data.updated_count }));
           setMlSuggestions(null);
           setShowMLModal(false);
           setSelectedSkus(new Set());
@@ -322,7 +324,7 @@ export function GestionMultiplicateurs({ products, loadData, multiplicateurDefau
           await loadData();
           return;
         } else {
-          const errorMsg = data?.message || data?.error || 'Erreur lors de l\'application';
+          const errorMsg = data?.message || data?.error || t('settings.multipliers.messages.updateError');
           throw new Error(errorMsg);
         }
       } catch (bulkError) {
@@ -423,32 +425,31 @@ export function GestionMultiplicateurs({ products, loadData, multiplicateurDefau
           <div className="flex items-center gap-3">
             <TrendingUp className="w-6 h-6 text-[#8B5CF6]" />
             <h2 className="text-xl font-bold text-[#191919]">
-              Gestion des Multiplicateurs de Prévision
+              {t('settings.multipliers.title')}
             </h2>
           </div>
         </div>
 
         <p className="text-sm text-[#666663] mb-4">
-          Gérez les multiplicateurs de prévision pour chaque produit. Le multiplicateur ajuste les prévisions de ventes
-          et impacte directement le point de commande et les quantités à commander.
+          {t('settings.multipliers.subtitle')}
         </p>
 
         {/* Statistiques */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
           <div className="bg-[#FAFAF7] rounded-lg p-3">
-            <p className="text-xs text-[#666663]">Total produits</p>
+            <p className="text-xs text-[#666663]">{t('settings.multipliers.stats.totalProducts')}</p>
             <p className="text-2xl font-bold text-[#191919]">{stats.total}</p>
           </div>
           <div className="bg-purple-50 rounded-lg p-3">
-            <p className="text-xs text-[#666663]">Multiplicateurs personnalisés</p>
+            <p className="text-xs text-[#666663]">{t('settings.multipliers.stats.customMultipliers')}</p>
             <p className="text-2xl font-bold text-purple-600">{stats.withCustom}</p>
           </div>
           <div className="bg-blue-50 rounded-lg p-3">
-            <p className="text-xs text-[#666663]">Par défaut ({stats.defaultMultiplier})</p>
+            <p className="text-xs text-[#666663]">{t('settings.multipliers.stats.default')} ({stats.defaultMultiplier})</p>
             <p className="text-2xl font-bold text-blue-600">{stats.withDefault}</p>
           </div>
           <div className="bg-green-50 rounded-lg p-3">
-            <p className="text-xs text-[#666663]">Moyenne</p>
+            <p className="text-xs text-[#666663]">{t('settings.multipliers.stats.average')}</p>
             <p className="text-2xl font-bold text-green-600">{stats.avgMultiplier}</p>
           </div>
         </div>
@@ -462,7 +463,7 @@ export function GestionMultiplicateurs({ products, loadData, multiplicateurDefau
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-[#666663]" />
             <input
               type="text"
-              placeholder="Rechercher un produit (nom ou SKU)..."
+              placeholder={t('settings.multipliers.search.placeholder')}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full pl-10 pr-4 py-2 border border-[#E5E4DF] rounded-lg focus:border-[#8B5CF6] focus:outline-none"
@@ -477,9 +478,9 @@ export function GestionMultiplicateurs({ products, loadData, multiplicateurDefau
               onChange={(e) => setFilterBy(e.target.value)}
               className="px-4 py-2 border border-[#E5E4DF] rounded-lg focus:border-[#8B5CF6] focus:outline-none"
             >
-              <option value="all">Tous les produits</option>
-              <option value="custom">Multiplicateurs personnalisés</option>
-              <option value="default">Par défaut</option>
+              <option value="all">{t('settings.multipliers.filter.all')}</option>
+              <option value="custom">{t('settings.multipliers.filter.custom')}</option>
+              <option value="default">{t('settings.multipliers.filter.default')}</option>
             </select>
           </div>
 
@@ -490,9 +491,9 @@ export function GestionMultiplicateurs({ products, loadData, multiplicateurDefau
               onChange={(e) => setSortBy(e.target.value)}
               className="px-4 py-2 border border-[#E5E4DF] rounded-lg focus:border-[#8B5CF6] focus:outline-none"
             >
-              <option value="name">Trier par nom</option>
-              <option value="multiplier">Trier par multiplicateur</option>
-              <option value="sales">Trier par ventes</option>
+              <option value="name">{t('settings.multipliers.sort.name')}</option>
+              <option value="multiplier">{t('settings.multipliers.sort.multiplier')}</option>
+              <option value="sales">{t('settings.multipliers.sort.sales')}</option>
             </select>
           </div>
         </div>
@@ -505,12 +506,12 @@ export function GestionMultiplicateurs({ products, loadData, multiplicateurDefau
             <div className="flex items-center gap-3">
               <Settings2 className="w-5 h-5 text-purple-600" />
               <span className="font-semibold text-purple-900">
-                {selectedSkus.size} produit(s) sélectionné(s)
+                {t('settings.multipliers.bulk.selected', { count: selectedSkus.size })}
               </span>
             </div>
             <div className="flex items-center gap-3 flex-wrap">
               <div className="flex items-center gap-2">
-                <label className="text-sm text-purple-900 font-medium">Multiplicateur:</label>
+                <label className="text-sm text-purple-900 font-medium">{t('settings.multipliers.bulk.multiplierLabel')}</label>
                 <input
                   type="number"
                   min="0.1"
@@ -527,7 +528,7 @@ export function GestionMultiplicateurs({ products, loadData, multiplicateurDefau
                 disabled={isBulkUpdating}
                 className="px-4 py-2 bg-purple-600 text-white rounded-lg font-semibold hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {isBulkUpdating ? 'Mise à jour...' : 'Appliquer'}
+                {isBulkUpdating ? t('settings.multipliers.bulk.updating') : t('settings.multipliers.bulk.apply')}
               </button>
               <button
                 onClick={handleBulkMLAnalyze}
@@ -537,11 +538,11 @@ export function GestionMultiplicateurs({ products, loadData, multiplicateurDefau
                 {isAnalyzingML ? (
                   <>
                     <RefreshCw className="w-4 h-4 animate-spin" />
-                    Analyse ML...
+                    {t('settings.multipliers.bulk.analyzingML')}
                   </>
                 ) : (
                   <>
-                    🤖 Analyser avec ML
+                    {t('settings.multipliers.bulk.analyzeML')}
                   </>
                 )}
               </button>
@@ -550,14 +551,14 @@ export function GestionMultiplicateurs({ products, loadData, multiplicateurDefau
                 disabled={isBulkUpdating || isAnalyzingML}
                 className="px-4 py-2 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {isBulkUpdating ? 'Réinitialisation...' : 'Réinitialiser au défaut'}
+                {isBulkUpdating ? t('settings.multipliers.bulk.resetting') : t('settings.multipliers.bulk.resetToDefault')}
               </button>
               <button
                 onClick={deselectAll}
                 disabled={isBulkUpdating || isAnalyzingML}
                 className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg font-semibold hover:bg-gray-300 transition-colors disabled:opacity-50"
               >
-                Tout désélectionner
+                {t('settings.multipliers.bulk.deselectAll')}
               </button>
             </div>
           </div>
@@ -574,18 +575,18 @@ export function GestionMultiplicateurs({ products, loadData, multiplicateurDefau
               className="flex items-center gap-2 px-3 py-1.5 text-sm text-[#666663] hover:text-[#191919] hover:bg-white rounded-lg transition-colors"
             >
               <CheckSquare className="w-4 h-4" />
-              Tout sélectionner
+              {t('settings.multipliers.table.selectAll')}
             </button>
             <button
               onClick={selectByFilter}
               className="flex items-center gap-2 px-3 py-1.5 text-sm text-[#666663] hover:text-[#191919] hover:bg-white rounded-lg transition-colors"
             >
               <CheckSquare className="w-4 h-4" />
-              Sélectionner les {filteredProducts.length} filtrés
+              {t('settings.multipliers.table.selectFiltered', { count: filteredProducts.length })}
             </button>
             {selectedSkus.size > 0 && (
               <span className="text-sm text-purple-600 font-semibold">
-                {selectedSkus.size} sélectionné(s)
+                {selectedSkus.size} {t('settings.multipliers.table.selected')}
               </span>
             )}
           </div>
@@ -615,22 +616,22 @@ export function GestionMultiplicateurs({ products, loadData, multiplicateurDefau
                   </button>
                 </th>
                 <th className="px-4 py-3 text-left text-xs font-semibold text-[#666663] uppercase">
-                  Produit
+                  {t('settings.multipliers.table.product')}
                 </th>
                 <th className="px-4 py-3 text-left text-xs font-semibold text-[#666663] uppercase">
-                  SKU
+                  {t('settings.multipliers.table.sku')}
                 </th>
                 <th className="px-4 py-3 text-left text-xs font-semibold text-[#666663] uppercase">
-                  Multiplicateur
+                  {t('settings.multipliers.table.multiplier')}
                 </th>
                 <th className="px-4 py-3 text-left text-xs font-semibold text-[#666663] uppercase">
-                  Ventes/jour
+                  {t('settings.multipliers.table.salesPerDay')}
                 </th>
                 <th className="px-4 py-3 text-left text-xs font-semibold text-[#666663] uppercase">
-                  Statut
+                  {t('settings.multipliers.table.status')}
                 </th>
                 <th className="px-4 py-3 text-center text-xs font-semibold text-[#666663] uppercase">
-                  Actions
+                  {t('settings.multipliers.table.actions')}
                 </th>
               </tr>
             </thead>
@@ -638,7 +639,7 @@ export function GestionMultiplicateurs({ products, loadData, multiplicateurDefau
               {filteredProducts.length === 0 ? (
                 <tr>
                   <td colSpan="7" className="px-4 py-8 text-center text-[#666663]">
-                    Aucun produit trouvé
+                    {t('settings.multipliers.table.noResults')}
                   </td>
                 </tr>
               ) : (
@@ -667,7 +668,7 @@ export function GestionMultiplicateurs({ products, loadData, multiplicateurDefau
                           {product.imageUrl ? (
                             <ImagePreview
                               src={product.imageUrl}
-                              alt={product.name || product.nom_produit || 'Produit'}
+                              alt={product.name || product.nom_produit || t('settings.multipliers.table.noProduct')}
                               thumbClassName="w-9 h-9 rounded-md object-cover flex-shrink-0 bg-[#E5E4DF]"
                             />
                           ) : (
@@ -676,7 +677,7 @@ export function GestionMultiplicateurs({ products, loadData, multiplicateurDefau
                             </div>
                           )}
                           <div className="font-medium text-[#191919]">
-                            {product.name || product.nom_produit || 'Sans nom'}
+                            {product.name || product.nom_produit || t('settings.multipliers.table.noProduct')}
                           </div>
                         </div>
                       </td>
@@ -696,14 +697,14 @@ export function GestionMultiplicateurs({ products, loadData, multiplicateurDefau
                           </span>
                           {isCustom && (
                             <span className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded">
-                              Personnalisé
+                              {t('settings.multipliers.table.custom')}
                             </span>
                           )}
                         </div>
                       </td>
                       <td className="px-4 py-3">
                         <span className="text-sm text-[#666663]">
-                          {salesPerDay.toFixed(1)} unités/jour
+                          {salesPerDay.toFixed(1)} {t('settings.multipliers.table.unitsPerDay')}
                         </span>
                       </td>
                       <td className="px-4 py-3">
@@ -712,7 +713,7 @@ export function GestionMultiplicateurs({ products, loadData, multiplicateurDefau
                             ? 'bg-purple-100 text-purple-700' 
                             : 'bg-blue-100 text-blue-700'
                         }`}>
-                          {isCustom ? 'Personnalisé' : 'Par défaut'}
+                          {isCustom ? t('settings.multipliers.table.custom') : t('settings.multipliers.table.default')}
                         </span>
                       </td>
                       <td className="px-4 py-3">
@@ -720,7 +721,7 @@ export function GestionMultiplicateurs({ products, loadData, multiplicateurDefau
                           onClick={() => setEditingProduct(product)}
                           className="px-3 py-1.5 bg-[#8B5CF6] text-white rounded-lg text-sm font-semibold hover:bg-[#7C3AED] transition-colors"
                         >
-                          Modifier
+                          {t('settings.multipliers.table.modify')}
                         </button>
                       </td>
                     </tr>
@@ -734,7 +735,7 @@ export function GestionMultiplicateurs({ products, loadData, multiplicateurDefau
         {/* Pagination info */}
         {filteredProducts.length > 0 && (
           <div className="px-4 py-3 bg-[#FAFAF7] border-t border-[#E5E4DF] text-sm text-[#666663]">
-            Affichage de {filteredProducts.length} produit(s)
+            {t('settings.multipliers.table.showing', { count: filteredProducts.length })}
           </div>
         )}
       </div>
@@ -746,7 +747,7 @@ export function GestionMultiplicateurs({ products, loadData, multiplicateurDefau
             <div className="p-6">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-xl font-bold text-[#191919] flex items-center gap-2">
-                  🤖 Suggestions ML pour {mlSuggestions.length} produit(s)
+                  {t('settings.multipliers.ml.suggestionsTitle', { count: mlSuggestions.length })}
                 </h3>
                 <button
                   onClick={() => {
@@ -760,7 +761,7 @@ export function GestionMultiplicateurs({ products, loadData, multiplicateurDefau
               </div>
 
               <p className="text-sm text-[#666663] mb-4">
-                Voici les suggestions de multiplicateurs basées sur l'analyse ML. Vous pouvez les appliquer toutes ou individuellement.
+                {t('settings.multipliers.ml.suggestionsSubtitle')}
               </p>
 
               {/* Liste des suggestions */}
@@ -773,14 +774,14 @@ export function GestionMultiplicateurs({ products, loadData, multiplicateurDefau
                         <code className="text-xs text-[#666663]">{suggestion.sku}</code>
                       </div>
                       <div className="text-right">
-                        <div className="text-xs text-[#666663]">Actuel: <span className="font-semibold">{suggestion.currentMultiplier.toFixed(1)}</span></div>
+                        <div className="text-xs text-[#666663]">{t('settings.multipliers.ml.current')}: <span className="font-semibold">{suggestion.currentMultiplier.toFixed(1)}</span></div>
                         <div className="text-lg font-bold text-purple-600">→ {suggestion.suggestedMultiplier.toFixed(1)}</div>
                         <span className={`text-xs px-2 py-0.5 rounded ${
                           suggestion.confidence >= 70 ? 'bg-green-100 text-green-700' :
                           suggestion.confidence >= 50 ? 'bg-yellow-100 text-yellow-700' :
                           'bg-red-100 text-red-700'
                         }`}>
-                          {suggestion.confidence}% confiance
+                          {suggestion.confidence}% {t('settings.multipliers.ml.confidence')}
                         </span>
                       </div>
                     </div>
@@ -798,14 +799,14 @@ export function GestionMultiplicateurs({ products, loadData, multiplicateurDefau
                   }}
                   className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg font-semibold hover:bg-gray-300 transition-colors"
                 >
-                  Annuler
+                  {t('settings.multipliers.ml.cancel')}
                 </button>
                 <button
                   onClick={handleApplyAllMLSuggestions}
                   disabled={isBulkUpdating}
                   className="px-6 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg font-semibold hover:from-purple-700 hover:to-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {isBulkUpdating ? 'Application...' : `Appliquer toutes les suggestions (${mlSuggestions.length})`}
+                  {isBulkUpdating ? t('settings.multipliers.ml.applying') : t('settings.multipliers.ml.applyAll', { count: mlSuggestions.length })}
                 </button>
               </div>
             </div>

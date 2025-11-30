@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
 import { AlertTriangle, Eye, CheckCircle, TrendingUp, Package, RotateCw } from 'lucide-react';
 
@@ -18,12 +19,13 @@ export const StockKPIBar = ({
   onKpiClick, 
   activeTab 
 }) => {
+  const { t } = useTranslation();
   const healthScore = totalProducts > 0 ? Math.round((healthyCount / totalProducts) * 100) : 0;
 
   const kpiItems = [
     {
       key: 'total',
-      label: 'Total Produits',
+      label: t('analytics.stockKpi.totalProducts'),
       value: totalProducts,
       icon: Package,
       color: 'text-[#191919]',
@@ -33,7 +35,7 @@ export const StockKPIBar = ({
     },
     {
       key: 'urgent',
-      label: 'Action Immédiate',
+      label: t('analytics.stockKpi.immediateAction'),
       value: urgentCount,
       icon: AlertTriangle,
       color: 'text-red-600',
@@ -45,7 +47,7 @@ export const StockKPIBar = ({
     },
     {
       key: 'warning',
-      label: 'À Surveiller',
+      label: t('analytics.stockKpi.toWatch'),
       value: warningCount,
       icon: Eye,
       color: 'text-orange-600',
@@ -56,7 +58,7 @@ export const StockKPIBar = ({
     },
     {
       key: 'healthy',
-      label: 'En Bonne Santé',
+      label: t('analytics.stockKpi.healthy'),
       value: healthyCount,
       icon: CheckCircle,
       color: 'text-green-600',
@@ -67,7 +69,7 @@ export const StockKPIBar = ({
     },
     {
       key: 'healthScore',
-      label: 'Score de Santé',
+      label: t('analytics.stockKpi.healthScore'),
       value: `${healthScore}%`,
       icon: TrendingUp,
       color: healthScore >= 70 ? 'text-green-600' : healthScore >= 40 ? 'text-orange-600' : 'text-red-600',
@@ -78,7 +80,7 @@ export const StockKPIBar = ({
     },
     {
       key: 'rotation',
-      label: 'Rotation Moy.',
+      label: t('analytics.stockKpi.avgRotation'),
       value: avgRotation ? `${avgRotation.toFixed(1)}x` : 'N/A',
       icon: RotateCw,
       color: 'text-blue-600',

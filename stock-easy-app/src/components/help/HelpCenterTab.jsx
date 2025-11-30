@@ -2,13 +2,24 @@ import React, { useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Search, ChevronRight, ArrowLeft, X } from 'lucide-react';
-import { 
-  HELP_CATEGORIES, 
-  HELP_ARTICLES, 
-  searchArticles, 
-  getArticleById,
-  getCategoryById 
-} from './helpContent';
+
+// Import localized help content
+import * as helpContentFr from './helpContent';
+import * as helpContentEn from './helpContent-en';
+import * as helpContentEs from './helpContent-es';
+
+// Get help content based on language
+const getHelpContent = (language) => {
+  switch (language) {
+    case 'en':
+      return helpContentEn;
+    case 'es':
+      return helpContentEs;
+    case 'fr':
+    default:
+      return helpContentFr;
+  }
+};
 
 /**
  * Barre de recherche du centre d'aide
@@ -333,7 +344,7 @@ const HelpArticle = ({ article, category, onBack, backLabel }) => {
 /**
  * Résultats de recherche
  */
-const SearchResults = ({ results, searchTerm, onSelectArticle, onClear, resultsLabel, resultsForLabel, clearSearchLabel, noResultsLabel }) => (
+const SearchResults = ({ results, searchTerm, onSelectArticle, onClear, resultsLabel, resultsForLabel, clearSearchLabel, noResultsLabel, getCategoryById }) => (
   <div className="space-y-4">
     <div className="flex items-center justify-between">
       <p className="text-sm text-[#666663]">
@@ -399,10 +410,14 @@ const SearchResults = ({ results, searchTerm, onSelectArticle, onClear, resultsL
  * Composant principal du Centre d'Aide
  */
 export const HelpCenterTab = () => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [selectedArticle, setSelectedArticle] = useState(null);
+  
+  // Get localized help content based on current language
+  const helpContent = useMemo(() => getHelpContent(i18n.language), [i18n.language]);
+  const { HELP_CATEGORIES, HELP_ARTICLES, searchArticles, getArticleById, getCategoryById } = helpContent;
   
   // Résultats de recherche
   const searchResults = useMemo(() => {
@@ -410,7 +425,7 @@ export const HelpCenterTab = () => {
       return searchArticles(searchTerm);
     }
     return [];
-  }, [searchTerm]);
+  }, [searchTerm, searchArticles]);
   
   // Détermine la vue à afficher
   const currentView = useMemo(() => {
@@ -526,6 +541,7 @@ export const HelpCenterTab = () => {
               resultsForLabel={t('helpCenter.resultsFor')}
               clearSearchLabel={t('helpCenter.clearSearch')}
               noResultsLabel={t('helpCenter.noResults')}
+              getCategoryById={getCategoryById}
             />
           </motion.div>
         )}

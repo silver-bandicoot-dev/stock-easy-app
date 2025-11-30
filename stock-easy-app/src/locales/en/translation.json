@@ -46,6 +46,10 @@
     "required": "Required",
     "allRightsReserved": "All rights reserved."
   },
+  "seo": {
+    "title": "Stockeasy - Inventory Management & AI Forecasting for Shopify",
+    "description": "Optimize your Shopify inventory management with Stockeasy. AI forecasts, stockout alerts, and real-time multi-location sync. 14-day free trial."
+  },
   "auth": {
     "login": "Login",
     "logout": "Log out",
@@ -162,17 +166,83 @@
     "recentActivity": "Recent activity",
     "noRecentActivity": "No recent activity",
     "quickActions": "Quick actions",
+    "revenueChart": {
+      "title": "Revenue vs Targets",
+      "loading": "Loading...",
+      "error": "Error loading data",
+      "retry": "Retry",
+      "insufficientData": "Insufficient data",
+      "insufficientDataDesc": "This chart requires at least 2 months of sales history to display comparisons.",
+      "months": "12 months",
+      "ytd": "YTD",
+      "mlAccuracy": "ML Accuracy",
+      "actualRevenue": "Actual Revenue",
+      "targetDefault": "Default Target",
+      "targetML": "ML Target",
+      "variance": "Variance",
+      "inProgress": "(in progress)",
+      "defaultAccuracy": "Default Mult. Accuracy",
+      "mlAccuracyLabel": "ML Mult. Accuracy",
+      "mlMoreAccurate": "ML +{{diff}}% more accurate"
+    },
+    "healthDistribution": {
+      "title": "Product Health Distribution",
+      "urgent": "Urgent",
+      "toWatch": "To Watch",
+      "healthy": "Healthy"
+    },
+    "ordersByStatus": {
+      "title": "Orders by Status",
+      "pending": "Pending",
+      "preparing": "Preparing",
+      "inTransit": "In Transit",
+      "received": "Received",
+      "reconciliation": "Reconciliation"
+    },
     "greetings": {
-      "morning": ["Good morning", "Beautiful morning", "Ready for a great day", "Great start to the day"],
-      "afternoon": ["Good afternoon", "Afternoon going well", "Keep going", "Still rocking it"],
-      "evening": ["Good evening", "Nice end of day"],
-      "night": ["Late work", "Night session"],
-      "returning": ["Nice to see you again", "Back again", "Hello again"],
-      "urgent": ["Actions await you", "Some urgencies to handle"],
-      "monday": ["Happy Monday", "New week"],
-      "friday": ["Happy Friday", "Almost weekend"],
-      "saturday": ["Happy Saturday"],
-      "sunday": ["Happy Sunday"]
+      "morning": [
+        "Good morning",
+        "Beautiful morning",
+        "Ready for a great day",
+        "Great start to the day"
+      ],
+      "afternoon": [
+        "Good afternoon",
+        "Afternoon going well",
+        "Keep going",
+        "Still rocking it"
+      ],
+      "evening": [
+        "Good evening",
+        "Nice end of day"
+      ],
+      "night": [
+        "Late work",
+        "Night session"
+      ],
+      "returning": [
+        "Nice to see you again",
+        "Back again",
+        "Hello again"
+      ],
+      "urgent": [
+        "Actions await you",
+        "Some urgencies to handle"
+      ],
+      "monday": [
+        "Happy Monday",
+        "New week"
+      ],
+      "friday": [
+        "Happy Friday",
+        "Almost weekend"
+      ],
+      "saturday": [
+        "Happy Saturday"
+      ],
+      "sunday": [
+        "Happy Sunday"
+      ]
     },
     "kpiDescriptions": {
       "skuAvailability": "{{available}} SKUs available out of {{total}}",
@@ -298,6 +368,15 @@
       "reconciliation": "Reconciliation",
       "completed": "Archived"
     },
+    "kpis": {
+      "today": "Today",
+      "pending": "In Progress",
+      "preparing": "Preparing",
+      "inTransit": "In Transit",
+      "received": "Received",
+      "reconciliation": "To Reconcile",
+      "totalAmount": "Total Amount"
+    },
     "searchPlaceholder": "Search by PO #, supplier...",
     "allSuppliers": "All suppliers",
     "loadError": "Unable to load orders",
@@ -306,7 +385,11 @@
     "exportError": "Export error",
     "ordersCount": "{{count}} order(s)",
     "page": "Page",
-    "of": "of"
+    "of": "of",
+    "linkCopied": "Link copied to clipboard!",
+    "orderNotFound": "Order {{id}} not found",
+    "reconciliationConfirmed": "Reconciliation confirmed! The order has been archived.",
+    "reconciliationError": "Error confirming reconciliation"
   },
   "orders": {
     "title": "My Orders",
@@ -408,14 +491,46 @@
   },
   "inventory": {
     "title": "Inventory",
+    "subtitle": "Source of truth for your stock",
+    "references": "references",
     "totalProducts": "Total products",
+    "totalReferences": "Total References",
+    "outOfStock": "out of stock",
+    "unitsInStock": "Units in Stock",
+    "stockValueCost": "Stock Value (cost)",
+    "stockValueSale": "Stock Value (sale)",
+    "potentialMargin": "Potential margin",
     "totalValue": "Total value",
     "lastInventory": "Last inventory",
     "nextInventory": "Next inventory",
     "startInventory": "Start inventory",
     "categories": "Categories",
     "bySupplier": "By supplier",
-    "byWarehouse": "By warehouse"
+    "byWarehouse": "By warehouse",
+    "downloadInventory": "Download inventory",
+    "searchPlaceholder": "Search by SKU, name or supplier...",
+    "allSuppliers": "All suppliers",
+    "noProductsFound": "No products found",
+    "clearSearch": "Clear search",
+    "preparingReport": "Preparing report...",
+    "exportSuccess": "Report exported! {{count}} products, {{value}} value",
+    "exportError": "Export error",
+    "columns": {
+      "sku": "SKU",
+      "productName": "Product name",
+      "supplier": "Supplier",
+      "quantity": "Quantity",
+      "buyPrice": "Buy price (excl. tax)",
+      "sellPrice": "Sell price (excl. tax)",
+      "stockValueCost": "Stock value (cost)",
+      "stockValueSale": "Stock value (sale)"
+    },
+    "total": "TOTAL",
+    "products": "products",
+    "exportInfo": {
+      "title": "Accounting CSV Export",
+      "description": "The downloaded file contains all filtered inventory data, including valuation totals. Compatible with Excel and all accounting software."
+    }
   },
   "analytics": {
     "title": "Analytics",
@@ -428,6 +543,24 @@
     "tabs": {
       "kpis": "KPIs",
       "forecast": "AI Forecast"
+    },
+    "period": {
+      "title": "Period",
+      "yesterday": "Yesterday",
+      "last7days": "Last 7 days",
+      "last30days": "Last 30 days",
+      "last3months": "Last 3 months",
+      "lastYear": "1 year",
+      "custom": "Custom period",
+      "selectPeriod": "Select a period",
+      "startDate": "Start date",
+      "endDate": "End date"
+    },
+    "comparison": {
+      "title": "Comparison",
+      "previous": "Previous period",
+      "sameLastYear": "Same period last year",
+      "selectComparison": "Select a comparison"
     },
     "kpis": {
       "title": "Performance Indicators",
@@ -467,7 +600,65 @@
       "loadingHistory": "Loading history...",
       "loadingHistoryDesc": "Retrieving sales data from Supabase",
       "selectProductTitle": "Select a product",
-      "selectProductDesc": "Choose a product with sales history to see demand forecasts based on Machine Learning"
+      "selectProductDesc": "Choose a product with sales history to see demand forecasts based on Machine Learning",
+      "aiPowered": "AI-Powered",
+      "predictiveAnalysis": "Predictive analysis for {{product}}",
+      "forecast30Days": "30-Day Forecast",
+      "unitsForecast": "units forecast for 30 days",
+      "unitsPerDay": "That's ~{{count}} units/day",
+      "confidenceLevel": "Confidence level",
+      "confidenceHigh": "Very reliable forecast - Sufficient data",
+      "confidenceMedium": "Reliable forecast - Good data",
+      "confidenceLow": "Use forecast with caution - Limited data",
+      "algorithmDetails": "Algorithm analysis details",
+      "wma": "Weighted Moving Average (WMA)",
+      "dayAdjustment": "Day of Week Adjustment",
+      "trendFactor": "Trend Factor",
+      "seasonalCoefficient": "Seasonal Coefficient",
+      "autoCalculated": "💡 These factors are automatically calculated from your history",
+      "dataQuality": "Data Quality",
+      "scoreOutOf100": "Score out of 100",
+      "dataPoints": "Data points",
+      "variability": "Variability",
+      "historicalAccuracy": "Historical Accuracy",
+      "averageAccuracy": "Average accuracy",
+      "basedOnPredictions": "Based on {{count}} tested predictions",
+      "qualityExcellent": "Excellent",
+      "qualityGood": "Good",
+      "qualityAcceptable": "Acceptable",
+      "qualityLow": "Low",
+      "accuracyExplanation": "Explanation",
+      "accuracyFormula": "Accuracy = 100% - MAPE",
+      "mapeDescription": "MAPE (Mean Absolute Percentage Error) measures the average percentage error between predictions and reality.",
+      "accuracyExamples": "Examples:",
+      "accuracyVeryLow": "Very low accuracy",
+      "accuracyVeryLowDesc": "The average error is {{mape}}%, meaning predictions are on average {{mape}}% off from reality. This may be due to highly variable data or insufficient history.",
+      "smartRecommendations": "Smart Recommendations",
+      "forecastVisualization": "Forecast Visualization",
+      "chartComingSoon": "Chart coming soon",
+      "chartComingSoonDesc": "In the meantime, refer to the values above",
+      "errorGenerating": "Error generating forecasts",
+      "noForecastAvailable": "No forecast available. Collect more data.",
+      "recommendations": {
+        "safetyStock": "Current stock ({{current}}) is below recommended safety stock ({{recommended}})",
+        "safetyStockAction": "Order at least {{quantity}} units",
+        "stockoutWarning": "Stockout expected in {{days}} day(s)",
+        "stockoutAction": "Order immediately",
+        "optimalOrder": "Good time to order",
+        "optimalOrderAction": "Optimal quantity: {{quantity}} units for the next 30 days",
+        "lowConfidence": "Unreliable forecasts (limited history)",
+        "lowConfidenceAction": "Increase safety margin by 50%",
+        "overstock": "Potentially excess stock",
+        "overstockAction": "Consider a promotion or reduce orders"
+      }
+    },
+    "stockKpi": {
+      "totalProducts": "Total Products",
+      "immediateAction": "Immediate Action",
+      "toWatch": "To Watch",
+      "healthy": "Healthy",
+      "healthScore": "Health Score",
+      "avgRotation": "Avg. Rotation"
     },
     "charts": {
       "stockEvolution": "Stock evolution",
@@ -527,36 +718,47 @@
       "currencyTitle": "💰 Default currency",
       "currencyHelp": "Currency used to display prices in the application",
       "selectedCurrency": "Selected currency",
-      "defaultMultiplier": "Default multiplier",
       "multiplierTitle": "📈 Default multiplier",
       "multiplierHelp": "Coefficient applied to new products to adjust forecasts",
+      "cookiesTitle": "Cookie Management",
+      "cookiesSubtitle": "GDPR Compliance",
+      "cookiesHelp": "Manage your cookie preferences to control the data we collect.",
+      "cookiesRequired": "Required",
+      "cookiesEnabled": "Enabled",
+      "cookiesDisabled": "Disabled",
+      "cookiesLastUpdated": "Last updated",
+      "cookiesModify": "Modify my cookie preferences",
+      "cookiesPolicyLink": "View our Cookie Policy",
       "savedSuccess": "✅ Settings saved successfully!",
       "unsavedChanges": "You have unsaved changes",
       "saveParameters": "Save settings",
       "saving": "Saving...",
       "saveError": "Error saving settings",
       "recommendations": "Recommendations by business type",
-      "customValue": "Or enter a custom value (1-365 days)",
-      "customPlaceholder": "E.g.: 75 days",
+      "customValueLabel": "Or enter a custom value (1-365 days)",
       "selectedValue": "Selected value",
       "days": "days",
       "custom": "Custom",
-      "recommendation": "💡 Recommendation",
+      "recommendationLabel": "Recommendation",
+      "validation": {
+        "invalidNumber": "Please enter a valid number",
+        "rangeError": "Threshold must be between 1 and 365 days"
+      },
       "thresholds": {
-        "fashion": { "label": "60 days", "type": "Fashion", "description": "Fast-rotating products, seasonal fashion" },
-        "standard": { "label": "90 days ⭐", "type": "Standard", "description": "Recommended for most businesses" },
-        "durable": { "label": "120 days", "type": "Durable", "description": "Long-lasting products" },
-        "b2b": { "label": "180 days", "type": "B2B", "description": "B2B commerce with long cycles" }
+        "fashion": "60 days",
+        "fashionDesc": "Fast-rotating products, seasonal fashion",
+        "standard": "90 days ⭐",
+        "standardDesc": "Recommended for most businesses",
+        "durable": "120 days",
+        "durableDesc": "Long-lasting products",
+        "b2b": "180 days",
+        "b2bDesc": "B2B commerce with long cycles",
+        "customDesc": "Custom value according to your needs"
       },
-      "recommendationTypes": {
-        "fashion": "Suitable for fast-rotating products",
-        "standard": "Recommended for most businesses",
-        "durable": "Suitable for long-lasting products",
-        "b2b": "Suitable for B2B commerce",
-        "custom": "Custom value based on your needs"
-      },
-      "validationError": "Please enter a valid number",
-      "rangeError": "Threshold must be between 1 and 365 days"
+      "defaultMultiplier": "Default multiplier",
+      "customValue": "Or enter a custom value (1-365 days)",
+      "customPlaceholder": "E.g.: 75 days",
+      "recommendation": "💡 Recommendation"
     },
     "suppliers": {
       "title": "🏭 Supplier Management",
@@ -584,6 +786,37 @@
         "created": "Supplier created!",
         "updated": "Supplier updated!",
         "deleted": "Supplier deleted!"
+      },
+      "modal": {
+        "generalInfo": "General Information",
+        "namePlaceholder": "E.g.: France Supplier",
+        "nameCannotBeModified": "The name cannot be modified",
+        "leadTimeDays": "Lead Time (days)",
+        "moqStandard": "Standard MOQ",
+        "notesOptional": "Notes (optional)",
+        "notesPlaceholder": "Various notes...",
+        "commercialContact": "Commercial Contact",
+        "commercialContactDesc": "For orders and quotes",
+        "ordersQuotes": "Orders & Quotes",
+        "contactName": "Contact name",
+        "contactNamePlaceholder": "Full name",
+        "phone": "Phone",
+        "reclamationContact": "Claims Contact",
+        "reclamationContactDesc": "For quality, logistics and after-sales",
+        "qualityLogisticsSAV": "Quality / Logistics / After-sales",
+        "role": "Role",
+        "selectRole": "Select a role",
+        "roleQuality": "Quality",
+        "roleLogistics": "Logistics",
+        "roleCustomerService": "Customer Service",
+        "roleOther": "Other",
+        "contactNotes": "Contact Notes",
+        "contactNotesDesc": "Exchange history and observations",
+        "exchangeHistory": "Exchange history",
+        "contactNotesHint": "Examples: 'responds in 24h', 'very responsive on quality', 'prefer emails in the morning'...",
+        "contactNotesPlaceholder": "Add your observations about exchanges with this supplier here...",
+        "cancel": "Cancel",
+        "save": "Save"
       }
     },
     "mapping": {
@@ -634,27 +867,142 @@
     },
     "warehouses": {
       "title": "Warehouse Management",
-      "addWarehouse": "Add warehouse",
+      "subtitle": "Manage your different storage and receiving locations",
+      "addWarehouse": "New Warehouse",
       "editWarehouse": "Edit warehouse",
+      "createFirst": "Create the first warehouse",
       "name": "Warehouse name",
+      "namePlaceholder": "Main Warehouse",
+      "nameRequired": "Warehouse name is required",
+      "nameCannotBeModified": "The name cannot be modified",
       "address": "Address",
+      "addressPlaceholder": "123 Example Street",
+      "addressRequired": "Address is required",
+      "city": "City",
+      "cityPlaceholder": "Paris",
+      "cityRequired": "City is required",
+      "postalCode": "Postal Code",
+      "postalCodePlaceholder": "75001",
+      "postalCodeRequired": "Postal code is required",
+      "country": "Country",
+      "countryPlaceholder": "France",
+      "notes": "Notes (optional)",
+      "notesPlaceholder": "Additional information...",
       "isDefault": "Default warehouse",
       "noWarehouses": "No warehouses configured",
-      "deleteConfirm": "Are you sure you want to delete this warehouse?",
+      "deleteConfirm": "Are you sure you want to delete the warehouse \"{{name}}\"?",
+      "modify": "Modify",
+      "delete": "Delete",
+      "cancel": "Cancel",
+      "create": "Create",
       "messages": {
-        "created": "Warehouse created!",
-        "updated": "Warehouse updated!",
-        "deleted": "Warehouse deleted!"
+        "created": "Warehouse created successfully!",
+        "updated": "Warehouse modified successfully!",
+        "deleted": "Warehouse deleted successfully!",
+        "saveError": "Error saving: {{error}}"
       }
     },
     "multipliers": {
-      "title": "Multipliers",
+      "title": "Forecast Multiplier Management",
+      "subtitle": "Manage forecast multipliers for each product. The multiplier adjusts sales forecasts and directly impacts reorder points and quantities to order.",
       "global": "Global multiplier",
       "byProduct": "By product",
-      "byCategory": "By category"
+      "byCategory": "By category",
+      "stats": {
+        "totalProducts": "Total products",
+        "customMultipliers": "Custom multipliers",
+        "default": "Default",
+        "average": "Average"
+      },
+      "search": {
+        "placeholder": "Search a product (name or SKU)..."
+      },
+      "filter": {
+        "all": "All products",
+        "custom": "Custom multipliers",
+        "default": "Default"
+      },
+      "sort": {
+        "name": "Sort by name",
+        "multiplier": "Sort by multiplier",
+        "sales": "Sort by sales"
+      },
+      "bulk": {
+        "selected": "{{count}} product(s) selected",
+        "multiplierLabel": "Multiplier:",
+        "apply": "Apply",
+        "updating": "Updating...",
+        "analyzeML": "🤖 Analyze with ML",
+        "analyzingML": "ML Analysis...",
+        "resetToDefault": "Reset to default",
+        "resetting": "Resetting...",
+        "deselectAll": "Deselect all"
+      },
+      "table": {
+        "selectAll": "Select all",
+        "selectFiltered": "Select the {{count}} filtered",
+        "selected": "selected",
+        "product": "Product",
+        "sku": "SKU",
+        "multiplier": "Multiplier",
+        "salesPerDay": "Sales/day",
+        "status": "Status",
+        "actions": "Actions",
+        "custom": "Custom",
+        "default": "Default",
+        "unitsPerDay": "units/day",
+        "noProduct": "No name",
+        "noResults": "No product found",
+        "showing": "Showing {{count}} product(s)",
+        "modify": "Modify"
+      },
+      "ml": {
+        "suggestionsTitle": "🤖 ML Suggestions for {{count}} product(s)",
+        "suggestionsSubtitle": "Here are multiplier suggestions based on ML analysis. You can apply all or individually.",
+        "current": "Current",
+        "confidence": "confidence",
+        "cancel": "Cancel",
+        "applyAll": "Apply all suggestions ({{count}})",
+        "applying": "Applying..."
+      },
+      "messages": {
+        "selectProduct": "Please select at least one product",
+        "multiplierRange": "Multiplier must be between 0.1 and 10",
+        "updateSuccess": "{{count}} product(s) updated successfully",
+        "updateError": "Error during bulk update",
+        "resetSuccess": "{{count}} product(s) reset to default setting",
+        "resetError": "Error during bulk reset",
+        "mlAnalyzing": "ML analysis in progress for {{count}} product(s)...",
+        "mlComplete": "Analysis complete: {{success}} suggestion(s), {{errors}} error(s)",
+        "mlNoSuggestions": "No suggestions generated. Check that products have historical data.",
+        "mlError": "Error during bulk ML analysis",
+        "mlApplied": "{{count}} ML multiplier(s) applied successfully"
+      }
     },
     "integrations": {
       "title": "Integrations",
+      "subtitle": "Connect Stockeasy to your existing tools. Choose <strong>an e-commerce platform</strong> to sync your products and <strong>an email service</strong> to send notifications directly from your account.",
+      "deploymentNotice": "These integrations are being deployed. In the meantime, you can prepare your configuration.",
+      "ecommerce": {
+        "title": "E-commerce Platform",
+        "subtitle": "Sync your products and orders from your online store",
+        "active": "Active",
+        "choosePlatform": "Choose a platform",
+        "selected": "Selected",
+        "clickToChoose": "Click to choose",
+        "productsSynced": "{{count}} products synced",
+        "connected": "Connected",
+        "viewOnStore": "View on official store"
+      },
+      "email": {
+        "title": "Email Service",
+        "subtitle": "Send notifications and alerts from your email"
+      },
+      "summary": {
+        "title": "Configuration Summary",
+        "ecommercePlatform": "E-commerce Platform",
+        "emailService": "Email Service"
+      },
       "shopify": "Shopify",
       "connected": "Connected",
       "disconnected": "Disconnected",
@@ -667,34 +1015,59 @@
     "subtitle": "Manage your personal information, company, and team",
     "personalInfo": "Personal information",
     "preferences": "Preferences",
-    "company": "My Company",
-    "team": "My Team",
+    "company": "My company",
+    "companySharedInfo": "Information shared with your team",
+    "team": "Team",
+    "noTeamMembers": "No team members",
     "firstName": "First name",
+    "firstNameRequired": "First name *",
+    "firstNamePlaceholder": "Your first name",
     "lastName": "Last name",
+    "lastNameRequired": "Last name *",
+    "lastNamePlaceholder": "Your last name",
     "email": "Email",
+    "emailRequired": "Email address *",
+    "emailPlaceholder": "email@example.com",
+    "yourName": "Your name",
     "role": "Role",
     "language": "Interface language",
     "photo": "Profile photo",
     "changePhoto": "Change photo",
+    "photoMaxSize": "Image must not exceed 5 MB",
+    "photoUpdated": "Profile photo updated!",
     "companyName": "Company name",
+    "companyNameRequired": "Company name *",
+    "companyNamePlaceholder": "Your company name",
     "companyIndustry": "Industry",
+    "companyIndustryPlaceholder": "E.g.: E-commerce, Distribution, etc.",
+    "notSpecified": "Not specified",
     "teamMembers": "members",
+    "member": "member",
     "collaborators": "collaborators",
+    "collaborator": "collaborator",
     "inviteUser": "Invite user",
+    "inviteMember": "Invite member",
     "saveChanges": "Save changes",
     "saving": "Saving...",
     "uploading": "Uploading...",
-    "success": "Changes saved successfully",
-    "error": "Error saving changes",
+    "success": "Profile updated successfully!",
+    "error": "Error updating profile",
     "uploadError": "Error uploading photo",
+    "loadError": "Error loading profile",
     "emailChangeNote": "Any changes will require email confirmation.",
+    "emailUpdated": "Email address updated. Check your inbox to confirm the new address.",
     "security": "Security",
     "managePassword": "Manage your password",
     "modify": "Modify",
+    "cancel": "Cancel",
     "newPassword": "New password",
     "confirmPassword": "Confirm password",
     "updatePassword": "Update password",
     "passwordUpdating": "Updating...",
+    "passwordUpdated": "Password updated successfully",
+    "passwordMissing": "Please enter and confirm the new password",
+    "passwordMinLength": "Password must be at least 8 characters",
+    "passwordMismatch": "Passwords do not match",
     "passwordStrength": {
       "weak": "Weak",
       "medium": "Medium",
@@ -703,6 +1076,7 @@
     "passwordActive": "Password active",
     "passwordSecure": "Your password is secure",
     "passwordHint": "Use at least 8 characters. After changing, you'll need to log in again on your other devices.",
+    "loading": "Loading...",
     "roles": {
       "owner": "Administrator",
       "admin": "Administrator",
@@ -821,7 +1195,19 @@
       }
     },
     "partners": {
-      "title": "They trust us"
+      "title": "They trust us",
+      "mainIntegration": "Main integration",
+      "available": "Available",
+      "syncDescription": "Complete bidirectional synchronization",
+      "viewOnAppStore": "View on Shopify App Store",
+      "trustedBy": {
+        "ecommerce": "E-commerce businesses",
+        "multichannel": "Multi-channel retailers",
+        "dtc": "DTC brands",
+        "dropshippers": "Dropshippers",
+        "wholesalers": "Wholesalers",
+        "marketplaces": "Marketplaces"
+      }
     },
     "features": {
       "title": "Everything you need for your inventory",
@@ -972,22 +1358,26 @@
       }
     },
     "pricing": {
-      "title": "A plan for every stage",
-      "subtitle": "Start free, scale when you're ready",
+      "title": "Simple and transparent",
+      "subtitle": "One plan with all the features you need",
       "monthly": "Monthly",
       "yearly": "Yearly",
       "perMonth": "/month",
       "billedAnnually": "Billed annually",
       "popular": "Most popular",
+      "available": "Available now",
+      "comingSoon": "In development",
+      "guarantee": "✨ 2-minute setup • Support included • Cancel anytime",
       "faqTitle": "Frequently asked questions",
       "plans": {
         "basic": {
-          "description": "To get started",
-          "cta": "Start for free"
+          "description": "Everything you need to manage your inventory",
+          "cta": "Start now"
         },
         "pro": {
-          "description": "For growing merchants",
-          "cta": "Try 14 days free"
+          "description": "For multi-location merchants",
+          "cta": "Try 14 days free",
+          "comingSoonMessage": "Coming soon — We're working on it!"
         },
         "plus": {
           "description": "For enterprises",
@@ -995,8 +1385,8 @@
         }
       },
       "features": {
-        "oneLocation": "1 sync location",
-        "threeLocations": "3 sync locations",
+        "oneLocation": "1 stock sync location",
+        "threeLocations": "3 stock sync locations",
         "fifteenLocations": "15 sync locations",
         "skus500": "Up to 500 SKUs",
         "skus5000": "Up to 5,000 SKUs",
@@ -1011,7 +1401,9 @@
         "advancedReports": "Advanced reports",
         "customReports": "Custom reports",
         "prioritySupport": "Priority support",
-        "prioritySupport247": "24/7 priority support"
+        "prioritySupport247": "24/7 priority support",
+        "supplierOrders": "Complete supplier order management",
+        "allBasicFeatures": "All Basic Plan features"
       },
       "faqs": {
         "changePlan": {
@@ -1026,6 +1418,11 @@
           "question": "How does the free trial work?",
           "answer": "14 days access to the Pro plan, no credit card required."
         }
+      },
+      "benefits": {
+        "quickSetup": "2-minute setup",
+        "supportIncluded": "Support included",
+        "cancelAnytime": "Cancel anytime"
       }
     },
     "cta": {
@@ -1124,6 +1521,7 @@
   },
   "orderDetail": {
     "back": "Back",
+    "share": "Share link to this order",
     "productsOrdered": "Products Ordered",
     "itemsCount": "{{count}} item(s)",
     "total": "Total",
@@ -1276,6 +1674,376 @@
     },
     "popularArticles": "Popular articles",
     "back": "Back"
+  },
+  "cookies": {
+    "banner": {
+      "title": "We respect your privacy",
+      "subtitle": "Manage your cookie preferences",
+      "description": "We use cookies to improve your experience, analyze traffic, and personalize content. Essential cookies are necessary for the site to function. You can accept all cookies, reject them, or customize your choices.",
+      "acceptAll": "Accept all",
+      "rejectAll": "Reject all",
+      "customize": "Customize",
+      "learnMore": "Learn more in our",
+      "cookiePolicy": "Cookie Policy"
+    },
+    "preferences": {
+      "title": "Cookie preferences",
+      "subtitle": "Manage your choices by category",
+      "info": "Click on each category to see details. Essential cookies cannot be disabled as they are necessary for the application to function.",
+      "acceptAll": "Accept all",
+      "rejectAll": "Reject all",
+      "saveChoices": "Save my choices"
+    },
+    "categories": {
+      "essential": {
+        "name": "Essential Cookies",
+        "shortDesc": "Always active",
+        "description": "These cookies are necessary for the site to function. They allow you to stay logged in, remember your navigation choices, and ensure the security of your account.",
+        "details": {
+          "auth": "User authentication and session",
+          "security": "Security and CSRF protection",
+          "navigation": "Navigation state"
+        }
+      },
+      "analytics": {
+        "name": "Analytics Cookies",
+        "shortDesc": "Monitoring & errors",
+        "description": "These cookies help us understand how you use the application, detect errors, and improve performance. They are managed by Sentry, our monitoring tool.",
+        "details": {
+          "errors": "Error detection and reporting",
+          "performance": "Performance monitoring",
+          "replay": "Session replay (in case of error)"
+        }
+      },
+      "preferences": {
+        "name": "Preference Cookies",
+        "shortDesc": "Language & currency",
+        "description": "These cookies remember your personal preferences such as language, currency, and display settings to provide you with a personalized experience.",
+        "details": {
+          "language": "Interface language",
+          "currency": "Preferred currency",
+          "display": "Display preferences"
+        }
+      }
+    }
+  },
+  "legal": {
+    "backToHome": "Back to home",
+    "lastUpdated": "Last updated",
+    "notices": {
+      "title": "Legal Notice",
+      "subtitle": "Legal information and site publisher identification",
+      "seo": {
+        "title": "Legal Notice | StockEasy",
+        "description": "Legal notice and legal information about StockEasy, inventory management solution for Shopify."
+      },
+      "editor": {
+        "title": "1. Site Publisher",
+        "company": "Company name",
+        "legalForm": "Legal form",
+        "capital": "Share capital",
+        "address": "Registered office",
+        "rcs": "RCS number",
+        "vat": "VAT number",
+        "director": "Publication director"
+      },
+      "contact": {
+        "title": "2. Contact",
+        "email": "Email",
+        "website": "Website"
+      },
+      "hosting": {
+        "title": "3. Hosting",
+        "provider": "Host",
+        "address": "Address",
+        "website": "Website"
+      },
+      "dataProtection": {
+        "title": "4. Data Protection",
+        "dpo": "Data Protection Officer",
+        "policy": "Privacy Policy",
+        "policyLink": "See our privacy policy"
+      },
+      "intellectual": {
+        "title": "5. Intellectual Property",
+        "content": "All content on this site (structure, texts, logos, images, videos, etc.) is the exclusive property of StockEasy SAS, unless otherwise stated. Any reproduction, distribution, modification, adaptation, retransmission or publication of these elements is strictly prohibited without written consent from StockEasy SAS.",
+        "trademark": "Trademarks and logos on the site are registered trademarks of StockEasy SAS or their respective owners."
+      },
+      "credits": {
+        "title": "6. Credits",
+        "design": "Design and development: StockEasy Team",
+        "icons": "Icons: Lucide Icons"
+      }
+    },
+    "terms": {
+      "title": "Terms of Service",
+      "subtitle": "Terms and conditions for using the StockEasy platform",
+      "seo": {
+        "title": "Terms of Service | StockEasy",
+        "description": "Review the terms of service for StockEasy, inventory management platform for Shopify."
+      },
+      "notice": {
+        "title": "Important Information",
+        "content": "By using StockEasy, you agree to be bound by these terms of service. If you do not accept these terms, please do not use our service."
+      },
+      "object": {
+        "title": "1. Purpose",
+        "content": "These Terms of Service (ToS) define the terms and conditions for using the StockEasy platform and the services offered. By accessing and using our platform, you accept these ToS without reservation."
+      },
+      "access": {
+        "title": "2. Access to Services",
+        "registration": {
+          "title": "2.1. Registration",
+          "content": "Using StockEasy requires creating an account through Shopify. You agree to provide accurate information and keep it updated. You are responsible for the confidentiality of your login credentials."
+        },
+        "eligibility": {
+          "title": "2.2. Eligibility Requirements",
+          "content": "StockEasy is intended for professionals and businesses using Shopify for their e-commerce activities. You must have the legal capacity to contract and use our services."
+        },
+        "shopify": {
+          "title": "2.3. Shopify Integration",
+          "content": "Our service requires connection to your Shopify store. By installing the application, you authorize StockEasy to access data necessary for service operation (products, inventory, orders). This authorization can be revoked at any time from your Shopify interface."
+        }
+      },
+      "services": {
+        "title": "3. Service Description",
+        "features": {
+          "title": "3.1. Main Features",
+          "content": "StockEasy offers an inventory management solution including: real-time synchronization with Shopify, AI-powered stock forecasting, supplier order management, stock-out alerts, advanced reports and analytics, multi-location management (depending on your subscription plan)."
+        },
+        "availability": {
+          "title": "3.2. Availability",
+          "content": "We strive to maintain service availability 24/7. However, interruptions may occur for maintenance, updates or force majeure. We are committed to minimizing these interruptions and informing you when possible."
+        }
+      },
+      "pricing": {
+        "title": "4. Pricing and Payment",
+        "plans": {
+          "title": "4.1. Subscription Plans",
+          "content": "StockEasy offers different subscription plans (Basic, Pro, Plus) with adapted features. Prices are in USD and subject to change. Any price changes will be communicated with 30 days notice."
+        },
+        "billing": {
+          "title": "4.2. Billing",
+          "content": "Subscriptions are billed monthly through Shopify. Payment is automatically charged at the beginning of each billing period. In case of payment default, service access may be suspended."
+        },
+        "trial": {
+          "title": "4.3. Trial Period",
+          "content": "A free trial period may be offered to new users. At the end of this period, your subscription will be automatically activated unless you cancel."
+        }
+      },
+      "cancellation": {
+        "title": "5. Termination and Refunds",
+        "rights": {
+          "title": "5.1. Right to Cancel",
+          "content": "You can cancel your subscription at any time from your Shopify interface or by contacting us. Cancellation will take effect at the end of your current billing period. No pro-rata refund will be made for the current period."
+        },
+        "suspension": {
+          "title": "5.2. Suspension by StockEasy",
+          "content": "We reserve the right to suspend or terminate your access in case of violation of these ToS, fraudulent use, or non-payment."
+        },
+        "data": {
+          "title": "5.3. Data Retention",
+          "content": "After termination, your data will be retained for 30 days to allow you to recover it. After this period, your data will be permanently deleted from our systems."
+        }
+      },
+      "obligations": {
+        "title": "6. User Obligations",
+        "usage": {
+          "title": "6.1. Proper Use",
+          "content": "You agree to use StockEasy in accordance with its intended purpose and not to: attempt to access unauthorized computer systems, disrupt service operation, use the service for illegal or fraudulent purposes, transmit viruses or malicious code, resell or redistribute access to the service."
+        },
+        "data": {
+          "title": "6.2. Data Responsibility",
+          "content": "You are responsible for the accuracy and quality of data you import into StockEasy. We cannot be held responsible for errors or inaccuracies in your source data."
+        }
+      },
+      "liability": {
+        "title": "7. Limitation of Liability",
+        "service": {
+          "title": "7.1. Service \"As Is\"",
+          "content": "StockEasy is provided \"as is\" and \"as available\". We do not guarantee that the service will be error-free or uninterrupted. We strive to provide accurate forecasts, but these are algorithm-based and do not constitute a guarantee."
+        },
+        "damages": {
+          "title": "7.2. Damages Limitation",
+          "content": "To the fullest extent permitted by law, our total liability to you for any damages resulting from the use or inability to use StockEasy is limited to the amount you paid for the service in the last 12 months."
+        },
+        "indirect": {
+          "title": "7.3. Indirect Damages",
+          "content": "We will not be liable for any indirect, incidental, special or consequential damages, including but not limited to loss of profits, data, or business opportunities."
+        }
+      },
+      "intellectual": {
+        "title": "8. Intellectual Property",
+        "content": "All intellectual property rights related to StockEasy (software, algorithms, interface, content) belong exclusively to StockEasy SAS. You retain all rights to your data. By using our services, you grant us a limited license to process your data solely for providing our services."
+      },
+      "modifications": {
+        "title": "9. ToS Modifications",
+        "content": "We reserve the right to modify these ToS at any time. Modifications will be communicated by email and via our platform. Your continued use of the service after notification constitutes your acceptance of the modified ToS."
+      },
+      "law": {
+        "title": "10. Applicable Law and Jurisdiction",
+        "content": "These ToS are governed by French law. In case of dispute, and after attempting amicable resolution, French courts will have sole jurisdiction."
+      },
+      "contact": {
+        "title": "Questions?",
+        "content": "If you have questions about these terms of service, please contact us:"
+      }
+    },
+    "privacy": {
+      "title": "Privacy Policy",
+      "subtitle": "How we collect, use and protect your personal data",
+      "seo": {
+        "title": "Privacy Policy | StockEasy",
+        "description": "Learn how StockEasy protects your personal data and respects your privacy in compliance with GDPR."
+      },
+      "rgpd": {
+        "title": "GDPR Compliance",
+        "content": "This privacy policy complies with the European Union's General Data Protection Regulation (GDPR). Your data is processed transparently, securely and with respect for your rights."
+      },
+      "intro": {
+        "title": "1. Introduction",
+        "content": "At StockEasy, we take the protection of your personal data very seriously. This privacy policy explains what data we collect, why we collect it, how we use it and what your rights are. This policy applies to all users of the StockEasy platform."
+      },
+      "controller": {
+        "title": "2. Data Controller",
+        "content": "The controller of your personal data is StockEasy SAS, a simplified joint-stock company with capital of €10,000, headquartered in Paris, France. For any questions regarding the protection of your data, contact us at: contact@stockeasy.app"
+      },
+      "data": {
+        "title": "3. Data Collected",
+        "account": {
+          "title": "3.1. Account Data",
+          "items": {
+            "0": "Shopify information: store name, email, Shopify ID",
+            "1": "Profile data: first name, last name, email address, phone number (optional)",
+            "2": "Billing information: payment details managed by Shopify"
+          }
+        },
+        "business": {
+          "title": "3.2. Business Data",
+          "items": {
+            "0": "Product catalog: SKU, names, descriptions, images, prices, stock quantities",
+            "1": "Order history: order details, dates, quantities, customers",
+            "2": "Supplier data: names, contacts, delivery times, supplier SKU",
+            "3": "Management settings: alert thresholds, safety multipliers, preferences"
+          }
+        },
+        "usage": {
+          "title": "3.3. Usage Data",
+          "items": {
+            "0": "Connection logs: IP addresses, connection dates and times, browser type",
+            "1": "Interaction data: pages visited, features used, time spent",
+            "2": "Technical data: device type, operating system, screen resolution",
+            "3": "Performance data: loading times, errors, bugs"
+          }
+        },
+        "cookies": {
+          "title": "3.4. Cookies and Similar Technologies",
+          "content": "We use cookies and similar technologies to improve your experience. For more information, see our cookie policy."
+        }
+      },
+      "purposes": {
+        "title": "4. Processing Purposes",
+        "service": {
+          "title": "4.1. Service Provision",
+          "items": {
+            "0": "Synchronization with Shopify and inventory management",
+            "1": "AI-powered stock forecasting",
+            "2": "Report and analytics generation",
+            "3": "Supplier order management",
+            "4": "Alerts and notifications"
+          }
+        },
+        "improvement": {
+          "title": "4.2. Service Improvement",
+          "items": {
+            "0": "Usage analysis to improve interface and features",
+            "1": "Forecasting algorithm optimization",
+            "2": "Bug detection and correction",
+            "3": "New feature development"
+          }
+        },
+        "communication": {
+          "title": "4.3. Communication",
+          "items": {
+            "0": "Customer support and technical assistance",
+            "1": "Information about updates and new features",
+            "2": "Marketing communications (with your consent)",
+            "3": "Satisfaction surveys"
+          }
+        },
+        "legal": {
+          "title": "4.4. Legal Obligations",
+          "items": {
+            "0": "Compliance with accounting and tax obligations",
+            "1": "Response to requests from competent authorities",
+            "2": "Fraud prevention and service security"
+          }
+        }
+      },
+      "legal": {
+        "title": "5. Legal Basis for Processing",
+        "content": "We process your data on the following legal bases: Contract execution: processing necessary to provide our services. Legitimate interest: service improvement, security, fraud prevention. Consent: marketing, non-essential cookies. Legal obligations: regulatory compliance, accounting obligations."
+      },
+      "sharing": {
+        "title": "6. Data Sharing",
+        "providers": {
+          "title": "6.1. Service Providers",
+          "content": "We share your data with trusted third-party providers: Shopify (e-commerce platform), Vercel (hosting), Supabase (database), Sentry (error monitoring), Email services for notifications. These providers are contractually bound to protect your data and can only use it for the purposes we share it."
+        },
+        "transfers": {
+          "title": "6.2. International Transfers",
+          "content": "Some of our providers may be located outside the European Union. In this case, we ensure appropriate safeguards are in place (standard contractual clauses, Privacy Shield, etc.)."
+        },
+        "legal": {
+          "title": "6.3. Legal Obligations",
+          "content": "We may disclose your data if required by law or in response to a legal request (subpoena, search warrant, etc.)."
+        }
+      },
+      "security": {
+        "title": "7. Data Security",
+        "content": "We implement appropriate technical and organizational security measures to protect your data: Data encryption in transit (HTTPS/TLS) and at rest. Strict access control and multi-factor authentication for our teams. Continuous monitoring and intrusion detection. Regular backups and disaster recovery plan. Periodic security audits. Regular penetration testing."
+      },
+      "retention": {
+        "title": "8. Retention Period",
+        "active": {
+          "title": "8.1. Active Account",
+          "content": "Your data is retained while your account is active and for the duration necessary to provide our services."
+        },
+        "closed": {
+          "title": "8.2. Closed Account",
+          "content": "After closing your account, your data is retained for 30 days to allow possible recovery. After this period, your data is permanently deleted."
+        },
+        "legal": {
+          "title": "8.3. Legal Obligations",
+          "content": "Some data may be retained longer to meet our legal obligations (accounting, tax, etc.), generally 5 to 10 years depending on applicable legislation."
+        }
+      },
+      "rights": {
+        "title": "9. Your Rights",
+        "list": {
+          "title": "9.1. GDPR Rights",
+          "content": "In accordance with GDPR, you have the following rights: Right of access: obtain a copy of your personal data. Right of rectification: correct inaccurate or incomplete data. Right to erasure: request deletion of your data. Right to restriction: limit processing of your data. Right to portability: receive your data in a structured format. Right to object: object to processing of your data. Right to withdraw your consent at any time."
+        },
+        "exercise": {
+          "title": "9.2. Exercising Your Rights",
+          "content": "To exercise your rights, contact us at: contact@stockeasy.app. We will respond to your request within one month. In case of difficulty, you can file a complaint with your national data protection authority."
+        }
+      },
+      "minors": {
+        "title": "10. Minor's Data",
+        "content": "StockEasy is a service for professionals. We do not knowingly collect personal data from persons under 18. If you learn that a minor has provided us with personal data, please contact us immediately."
+      },
+      "changes": {
+        "title": "11. Policy Modifications",
+        "content": "We may modify this privacy policy at any time. Modifications will be communicated by email and via our platform. The last update date is indicated at the top of this page. Your continued use of the service after notification constitutes your acceptance of the modifications."
+      },
+      "contact": {
+        "title": "Questions about your data?",
+        "content": "For any questions about this privacy policy or to exercise your rights, contact us:"
+      },
+      "cnil": {
+        "content": "In case of dispute, you have the right to file a complaint with your national data protection authority."
+      }
+    }
   }
 }
-

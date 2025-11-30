@@ -9,7 +9,7 @@ import { useParameterState } from '../hooks/useParameterState';
 import { useReconciliation } from '../hooks/useReconciliation';
 import { useEmailGeneration } from '../hooks/useEmailGeneration';
 import { useShipOrderModal } from '../hooks/useShipOrderModal';
-import { useTabManagement } from '../hooks/useTabManagement';
+import { useAppNavigation } from '../hooks/useAppNavigation';
 import { useProductStatus } from '../hooks/useProductStatus';
 import { useAutoNotifications } from '../hooks/useAutoNotifications';
 import { useMLWeeklyNotifications } from '../hooks/useMLWeeklyNotifications';
@@ -38,8 +38,8 @@ export const StockDataProvider = ({ children }) => {
   const { currentUser } = useAuth();
   const getUserSignature = () => EmailUtils.getUserSignature(currentUser);
 
-  // 1. UI & Navigation
-  const tabManagement = useTabManagement();
+  // 1. UI & Navigation (basée sur l'URL)
+  const tabManagement = useAppNavigation();
   const { setActiveTab } = tabManagement;
 
   // 2. Chargement des données

@@ -4,7 +4,9 @@ import { supabase } from '../../lib/supabaseClient';
 import { useAuth } from '../../contexts/SupabaseAuthContext';
 import { 
   normalizeText, 
-  detectSearchType
+  detectSearchType,
+  getSearchVariants,
+  translateSearchTerm
 } from '../../utils/searchUtils';
 import { toast } from 'sonner';
 
@@ -228,29 +230,56 @@ export const useSearch = (query) => {
       // Détecter le type de recherche souhaité
       const searchType = detectSearchType(searchQuery);
       
+      // Obtenir les variantes de recherche multilingues (FR, EN, ES)
+      // Cela permet à un utilisateur américain de chercher "white shirt" 
+      // et trouver "chemise blanc" dans la base de données
+      const searchVariants = getSearchVariants(searchQuery);
+      const translatedQuery = translateSearchTerm(searchQuery);
+      
+      // Utiliser la query traduite pour la recherche principale
+      // et inclure l'originale comme fallback
+      const primarySearchTerm = translatedQuery || searchQuery;
+      
+      console.log('🔍 Recherche multilingue:', {
+        original: searchQuery,
+        translated: translatedQuery,
+        variants: searchVariants
+      });
+      
       // Construire les requêtes - On lance TOUTES les recherches pour ne rien rater
       const promises = [
-        // Produits
+        // Produits - recherche avec le terme traduit
         supabase.rpc('search_products_fuzzy', {
-          search_term: searchQuery,
+          search_term: primarySearchTerm,
           limit_count: 20
         }),
         // Fournisseurs
         supabase.rpc('search_suppliers_fuzzy', {
-          search_term: searchQuery,
+          search_term: primarySearchTerm,
           limit_count: 10
         }),
         // Commandes
         supabase.rpc('search_orders_fuzzy', {
-          search_term: searchQuery,
+          search_term: primarySearchTerm,
           limit_count: 10
         }),
         // Entrepôts
         supabase.rpc('search_warehouses_fuzzy', {
-          search_term: searchQuery,
+          search_term: primarySearchTerm,
           limit_count: 5
         })
       ];
+      
+      // Si la query traduite est différente de l'originale, 
+      // faire aussi une recherche avec l'originale pour ne rien manquer
+      if (translatedQuery !== searchQuery && translatedQuery !== normalizedQuery) {
+        promises.push(
+          supabase.rpc('search_products_fuzzy', {
+            search_term: searchQuery,
+            limit_count: 10
+          })
+        );
+      }
 
       // Utiliser allSettled pour qu'une erreur ne bloque pas tout
       const resultsSettled = await Promise.allSettled(promises);
@@ -293,6 +322,20 @@ export const useSearch = (query) => {
       let fournisseursRes = results[resultIndex++];
       let commandesRes = results[resultIndex++];
       let warehousesRes = results[resultIndex++];
+      
+      // Fusionner les résultats de produits supplémentaires (recherche originale)
+      // si une recherche secondaire a été effectuée
+      if (results.length > 4 && results[4]?.data) {
+        const additionalProducts = results[4].data;
+        if (produitsRes?.data) {
+          // Fusionner en évitant les doublons (par SKU)
+          const existingSkus = new Set(produitsRes.data.map(p => p.sku));
+          const newProducts = additionalProducts.filter(p => !existingSkus.has(p.sku));
+          produitsRes.data = [...produitsRes.data, ...newProducts];
+        } else {
+          produitsRes = results[4];
+        }
+      }
 
       // Structurer les résultats par catégorie
       const groupedResults = [];

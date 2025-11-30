@@ -1,17 +1,19 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { BarChart3, TrendingUp, TrendingDown, ChevronDown } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 export const ComparisonSelector = ({ 
   value, 
   onChange, 
   disabled = false 
 }) => {
+  const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
 
   const comparisons = [
-    { value: 'previous', label: 'Période précédente', icon: TrendingUp },
-    { value: 'same_last_year', label: 'Même période l\'an dernier', icon: TrendingDown }
+    { value: 'previous', label: t('analytics.comparison.previous'), icon: TrendingUp },
+    { value: 'same_last_year', label: t('analytics.comparison.sameLastYear'), icon: TrendingDown }
   ];
 
   const selectedComparison = comparisons.find(comparison => comparison.value === value);
@@ -26,7 +28,7 @@ export const ComparisonSelector = ({
       <div className="space-y-3">
         <div className="flex items-center gap-2">
           <BarChart3 className="w-4 h-4 text-[#191919]" />
-          <h3 className="text-sm font-semibold text-[#191919]">Comparaison</h3>
+          <h3 className="text-sm font-semibold text-[#191919]">{t('analytics.comparison.title')}</h3>
         </div>
         
         <div className="relative">
@@ -39,7 +41,7 @@ export const ComparisonSelector = ({
                 : 'text-[#191919] hover:border-[#D1D0CB]'
             }`}
           >
-            <span>{selectedComparison?.label || 'Sélectionner une comparaison'}</span>
+            <span>{selectedComparison?.label || t('analytics.comparison.selectComparison')}</span>
             <ChevronDown className={`w-4 h-4 transition-transform ${isOpen ? 'rotate-180' : ''} ${disabled ? 'text-gray-400' : ''}`} />
           </button>
 

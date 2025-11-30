@@ -8,6 +8,7 @@
  */
 
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Brain,
   TrendingUp,
@@ -43,6 +44,7 @@ export function ForecastDashboard({
   reorderPoint,
   className = '' 
 }) {
+  const { t } = useTranslation();
   const { forecast, isLoading, error, refresh } = useSmartForecast(
     product?.id || 'default',
     salesHistory,
@@ -62,7 +64,7 @@ export function ForecastDashboard({
     return (
       <Alert variant="destructive">
         <AlertDescription>
-          Erreur lors de la génération des prévisions: {error}
+          {t('analytics.forecast.errorGenerating')}: {error}
         </AlertDescription>
       </Alert>
     );
@@ -74,10 +76,10 @@ export function ForecastDashboard({
         <CardContent className="pt-6 text-center">
           <Package className="w-12 h-12 mx-auto text-gray-400 mb-3" />
           <p className="text-gray-600 mb-4">
-            Aucune prévision disponible. Collectez plus de données.
+            {t('analytics.forecast.noForecastAvailable')}
           </p>
           <Button onClick={refresh} variant="outline">
-            Réessayer
+            {t('common.retry') || t('dashboard.revenueChart.retry')}
           </Button>
         </CardContent>
       </Card>
@@ -94,17 +96,17 @@ export function ForecastDashboard({
           </div>
           <div>
             <h2 className="text-2xl font-bold text-gray-900">
-              Prévisions IA
+              {t('analytics.forecast.title')}
             </h2>
             <p className="text-sm text-gray-600">
-              Analyse prédictive pour {product?.name || 'Produit'}
+              {t('analytics.forecast.predictiveAnalysis', { product: product?.name || 'Produit' })}
             </p>
           </div>
         </div>
         <div className="flex items-center gap-2">
           <Badge variant="secondary" className="bg-purple-100 text-purple-700">
             <Sparkles className="w-3 h-3 mr-1" />
-            AI-Powered
+            {t('analytics.forecast.aiPowered')}
           </Badge>
           <Button
             variant="outline"
@@ -124,7 +126,7 @@ export function ForecastDashboard({
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Calendar className="w-5 h-5 text-purple-600" />
-              Prévision 30 Jours
+              {t('analytics.forecast.forecast30Days')}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -138,19 +140,19 @@ export function ForecastDashboard({
                     {forecast?.total?.toLocaleString() || '—'}
                   </div>
                   <p className="text-gray-600">
-                    unités prévues sur 30 jours
+                    {t('analytics.forecast.unitsForecast')}
                   </p>
                   <p className="text-sm text-gray-500 mt-1">
-                    Soit ~{Math.round(forecast?.average || 0)} unités/jour
+                    {t('analytics.forecast.unitsPerDay', { count: Math.round(forecast?.average || 0) })}
                   </p>
                 </div>
 
                 {/* Score de confiance */}
-                <ConfidenceScore confidence={forecast?.avgConfidence || 0} />
+                <ConfidenceScore confidence={forecast?.avgConfidence || 0} t={t} />
 
                 {/* Breakdown technique */}
                 {forecast?.predictions?.[0] && (
-                  <ForecastBreakdown breakdown={forecast.predictions[0].breakdown} />
+                  <ForecastBreakdown breakdown={forecast.predictions[0].breakdown} t={t} />
                 )}
               </>
             )}
@@ -160,20 +162,20 @@ export function ForecastDashboard({
         {/* Sidebar - Qualité & Précision */}
         <div className="space-y-6">
           {/* Qualité des Données */}
-          <DataQualityCard quality={dataQuality} />
+          <DataQualityCard quality={dataQuality} t={t} />
 
           {/* Précision Historique */}
-          {accuracyResult && <AccuracyCard accuracy={accuracyResult} />}
+          {accuracyResult && <AccuracyCard accuracy={accuracyResult} t={t} />}
         </div>
       </div>
 
       {/* Recommandations */}
       {recommendations && recommendations.length > 0 && (
-        <RecommendationsSection recommendations={recommendations} />
+        <RecommendationsSection recommendations={recommendations} t={t} />
       )}
 
       {/* Graphique de prévisions (optionnel) */}
-      <ForecastChart forecast={forecast} salesHistory={salesHistory} />
+      <ForecastChart forecast={forecast} salesHistory={salesHistory} t={t} />
     </div>
   );
 }
@@ -181,7 +183,7 @@ export function ForecastDashboard({
 /**
  * Score de confiance avec barre de progression
  */
-function ConfidenceScore({ confidence }) {
+function ConfidenceScore({ confidence, t }) {
   const percentage = (confidence * 100).toFixed(0);
   const color = confidence > 0.7 ? 'text-green-600' : confidence > 0.5 ? 'text-yellow-600' : 'text-orange-600';
   const bgColor = confidence > 0.7 ? 'bg-green-100' : confidence > 0.5 ? 'bg-yellow-100' : 'bg-orange-100';
@@ -190,7 +192,7 @@ function ConfidenceScore({ confidence }) {
     <div className={`p-4 rounded-lg ${bgColor} mb-6`}>
       <div className="flex items-center justify-between mb-2">
         <span className="text-sm font-medium text-gray-700">
-          Niveau de confiance
+          {t('analytics.forecast.confidenceLevel')}
         </span>
         <span className={`text-lg font-bold ${color}`}>
           {percentage}%
@@ -198,9 +200,9 @@ function ConfidenceScore({ confidence }) {
       </div>
       <Progress value={percentage} className="h-2" />
       <p className="text-xs text-gray-600 mt-2">
-        {confidence > 0.7 && 'Prévision très fiable - Données suffisantes'}
-        {confidence > 0.5 && confidence <= 0.7 && 'Prévision fiable - Données correctes'}
-        {confidence <= 0.5 && 'Prévision à utiliser avec prudence - Données limitées'}
+        {confidence > 0.7 && t('analytics.forecast.confidenceHigh')}
+        {confidence > 0.5 && confidence <= 0.7 && t('analytics.forecast.confidenceMedium')}
+        {confidence <= 0.5 && t('analytics.forecast.confidenceLow')}
       </p>
     </div>
   );
@@ -209,43 +211,43 @@ function ConfidenceScore({ confidence }) {
 /**
  * Détails techniques du calcul (pour crédibilité)
  */
-function ForecastBreakdown({ breakdown }) {
+function ForecastBreakdown({ breakdown, t }) {
   if (!breakdown) return null;
 
   return (
     <details className="text-sm border-t pt-4">
       <summary className="cursor-pointer text-gray-700 hover:text-gray-900 font-medium flex items-center gap-2">
         <BarChart3 className="w-4 h-4" />
-        Détails de l'analyse algorithmique
+        {t('analytics.forecast.algorithmDetails')}
       </summary>
       <div className="mt-3 space-y-2 pl-6 border-l-2 border-purple-200">
         <div className="flex justify-between items-center">
-          <span className="text-gray-600">Moyenne Mobile Pondérée (WMA)</span>
+          <span className="text-gray-600">{t('analytics.forecast.wma')}</span>
           <span className="font-mono text-purple-700 font-medium">
             {breakdown.base}
           </span>
         </div>
         <div className="flex justify-between items-center">
-          <span className="text-gray-600">Ajustement Jour de Semaine</span>
+          <span className="text-gray-600">{t('analytics.forecast.dayAdjustment')}</span>
           <span className="font-mono text-purple-700 font-medium">
             ×{breakdown.dayMultiplier}
           </span>
         </div>
         <div className="flex justify-between items-center">
-          <span className="text-gray-600">Facteur de Tendance</span>
+          <span className="text-gray-600">{t('analytics.forecast.trendFactor')}</span>
           <span className="font-mono text-purple-700 font-medium">
             {(breakdown.trend * 100).toFixed(1)}%
           </span>
         </div>
         <div className="flex justify-between items-center">
-          <span className="text-gray-600">Coefficient Saisonnier</span>
+          <span className="text-gray-600">{t('analytics.forecast.seasonalCoefficient')}</span>
           <span className="font-mono text-purple-700 font-medium">
             ×{breakdown.seasonality}
           </span>
         </div>
       </div>
       <div className="mt-3 p-2 bg-purple-50 rounded text-xs text-gray-600">
-        💡 Ces facteurs sont calculés automatiquement à partir de votre historique
+        {t('analytics.forecast.autoCalculated')}
       </div>
     </details>
   );
@@ -254,7 +256,7 @@ function ForecastBreakdown({ breakdown }) {
 /**
  * Carte de qualité des données
  */
-function DataQualityCard({ quality }) {
+function DataQualityCard({ quality, t }) {
   if (!quality) return null;
 
   const scoreColor = quality.score > 75 ? 'text-green-600' : quality.score > 50 ? 'text-yellow-600' : 'text-red-600';
@@ -264,7 +266,7 @@ function DataQualityCard({ quality }) {
       <CardHeader>
         <CardTitle className="text-base flex items-center gap-2">
           <Info className="w-4 h-4" />
-          Qualité des Données
+          {t('analytics.forecast.dataQuality')}
         </CardTitle>
       </CardHeader>
       <CardContent>
@@ -272,17 +274,17 @@ function DataQualityCard({ quality }) {
           <div className={`text-4xl font-bold ${scoreColor}`}>
             {quality.score}
           </div>
-          <p className="text-xs text-gray-600">Score sur 100</p>
+          <p className="text-xs text-gray-600">{t('analytics.forecast.scoreOutOf100')}</p>
         </div>
 
         {quality.metrics && (
           <div className="space-y-2 text-sm">
             <div className="flex justify-between">
-              <span className="text-gray-600">Points de données</span>
+              <span className="text-gray-600">{t('analytics.forecast.dataPoints')}</span>
               <span className="font-medium">{quality.metrics.dataPoints}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-gray-600">Variabilité</span>
+              <span className="text-gray-600">{t('analytics.forecast.variability')}</span>
               <span className="font-medium">{quality.metrics.variability}</span>
             </div>
           </div>
@@ -295,7 +297,7 @@ function DataQualityCard({ quality }) {
 /**
  * Carte de précision historique
  */
-function AccuracyCard({ accuracy }) {
+function AccuracyCard({ accuracy, t }) {
   // Vérifier que accuracy existe et a les bonnes propriétés
   if (!accuracy || accuracy === null || typeof accuracy.accuracy !== 'number') {
     return null;
@@ -309,19 +311,19 @@ function AccuracyCard({ accuracy }) {
   
   if (accuracy.quality === 'excellent') {
     accuracyColor = 'text-green-600';
-    qualityLabel = 'Excellente';
+    qualityLabel = t('analytics.forecast.qualityExcellent');
     qualityIcon = '✨';
   } else if (accuracy.quality === 'good') {
     accuracyColor = 'text-green-500';
-    qualityLabel = 'Bonne';
+    qualityLabel = t('analytics.forecast.qualityGood');
     qualityIcon = '👍';
   } else if (accuracy.quality === 'acceptable') {
     accuracyColor = 'text-yellow-600';
-    qualityLabel = 'Acceptable';
+    qualityLabel = t('analytics.forecast.qualityAcceptable');
     qualityIcon = '⚠️';
   } else {
     accuracyColor = 'text-orange-600';
-    qualityLabel = 'Faible';
+    qualityLabel = t('analytics.forecast.qualityLow');
     qualityIcon = '📉';
   }
 
@@ -333,7 +335,7 @@ function AccuracyCard({ accuracy }) {
       <CardHeader>
         <CardTitle className="text-base flex items-center gap-2">
           <CheckCircle className="w-4 h-4" />
-          Précision Historique
+          {t('analytics.forecast.historicalAccuracy')}
         </CardTitle>
       </CardHeader>
       <CardContent>
@@ -341,12 +343,12 @@ function AccuracyCard({ accuracy }) {
           <div className={`text-4xl font-bold ${accuracyColor}`}>
             {accuracyValue.toFixed(1)}%
             {hasNegativeAccuracy && (
-              <span className="text-xs text-orange-600 ml-2" title={`Précision brute: ${accuracy.rawAccuracy.toFixed(1)}%`}>
+              <span className="text-xs text-orange-600 ml-2" title={`${t('analytics.forecast.averageAccuracy')}: ${accuracy.rawAccuracy.toFixed(1)}%`}>
                 *
               </span>
             )}
           </div>
-          <p className="text-xs text-gray-600 mb-1">Précision moyenne</p>
+          <p className="text-xs text-gray-600 mb-1">{t('analytics.forecast.averageAccuracy')}</p>
           {accuracy.quality && (
             <p className="text-xs text-gray-500">
               {qualityIcon} {qualityLabel} (MAPE: {mapeValue.toFixed(1)}%)
@@ -356,39 +358,36 @@ function AccuracyCard({ accuracy }) {
         
         {hasNegativeAccuracy && (
           <div className="mb-3 p-2 bg-orange-50 border border-orange-200 rounded text-xs text-orange-800">
-            <p className="font-medium mb-1">⚠️ Précision très faible</p>
+            <p className="font-medium mb-1">⚠️ {t('analytics.forecast.accuracyVeryLow')}</p>
             <p className="text-orange-700">
-              L'erreur moyenne est de {mapeValue.toFixed(1)}%, ce qui signifie que les prédictions 
-              sont en moyenne {mapeValue.toFixed(0)}% éloignées de la réalité. 
-              Cela peut être dû à des données très variables ou un historique insuffisant.
+              {t('analytics.forecast.accuracyVeryLowDesc', { mape: mapeValue.toFixed(1) })}
             </p>
           </div>
         )}
         
         <p className="text-xs text-gray-500 text-center">
-          Basé sur {accuracy.tested || 0} prédictions testées
+          {t('analytics.forecast.basedOnPredictions', { count: accuracy.tested || 0 })}
         </p>
         
         <details className="mt-3 text-xs">
           <summary className="cursor-pointer text-gray-600 hover:text-gray-900 font-medium">
-            ℹ️ Explication
+            ℹ️ {t('analytics.forecast.accuracyExplanation')}
           </summary>
           <div className="mt-2 p-2 bg-gray-50 rounded text-gray-700">
             <p className="mb-1">
-              <strong>Précision = 100% - MAPE</strong>
+              <strong>{t('analytics.forecast.accuracyFormula')}</strong>
             </p>
             <p className="mb-1">
-              <strong>MAPE</strong> (Mean Absolute Percentage Error) mesure l'erreur moyenne 
-              en pourcentage entre les prédictions et la réalité.
+              {t('analytics.forecast.mapeDescription')}
             </p>
             <p className="mb-1">
-              <strong>Exemples :</strong>
+              <strong>{t('analytics.forecast.accuracyExamples')}</strong>
             </p>
             <ul className="list-disc list-inside ml-2 space-y-1">
-              <li>MAPE 10% → Précision 90% (excellente)</li>
-              <li>MAPE 20% → Précision 80% (bonne)</li>
-              <li>MAPE 50% → Précision 50% (acceptable)</li>
-              <li>MAPE 100%+ → Précision 0% (très faible)</li>
+              <li>MAPE 10% → 90% ({t('analytics.forecast.qualityExcellent').toLowerCase()})</li>
+              <li>MAPE 20% → 80% ({t('analytics.forecast.qualityGood').toLowerCase()})</li>
+              <li>MAPE 50% → 50% ({t('analytics.forecast.qualityAcceptable').toLowerCase()})</li>
+              <li>MAPE 100%+ → 0% ({t('analytics.forecast.qualityLow').toLowerCase()})</li>
             </ul>
           </div>
         </details>
@@ -400,7 +399,7 @@ function AccuracyCard({ accuracy }) {
 /**
  * Section des recommandations
  */
-function RecommendationsSection({ recommendations }) {
+function RecommendationsSection({ recommendations, t }) {
   const priorityColors = {
     critical: 'border-red-200 bg-red-50',
     high: 'border-orange-200 bg-orange-50',
@@ -409,12 +408,27 @@ function RecommendationsSection({ recommendations }) {
     info: 'border-gray-200 bg-gray-50'
   };
 
+  // Helper function to get translated message or fallback
+  const getMessage = (rec) => {
+    if (rec.messageKey) {
+      return t(rec.messageKey, rec.messageParams || {});
+    }
+    return rec.message;
+  };
+
+  const getAction = (rec) => {
+    if (rec.actionKey) {
+      return t(rec.actionKey, rec.actionParams || {});
+    }
+    return rec.action;
+  };
+
   return (
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Sparkles className="w-5 h-5 text-purple-600" />
-          Recommandations Intelligentes
+          {t('analytics.forecast.smartRecommendations')}
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
@@ -427,10 +441,10 @@ function RecommendationsSection({ recommendations }) {
               <span className="text-2xl">{rec.icon}</span>
               <div className="flex-1">
                 <p className="font-medium text-gray-900 mb-1">
-                  {rec.message}
+                  {getMessage(rec)}
                 </p>
                 <p className="text-sm text-gray-700">
-                  {rec.action}
+                  {getAction(rec)}
                 </p>
               </div>
             </div>
@@ -444,7 +458,7 @@ function RecommendationsSection({ recommendations }) {
 /**
  * Graphique simple de prévisions
  */
-function ForecastChart({ forecast, salesHistory }) {
+function ForecastChart({ forecast, salesHistory, t }) {
   // Pour l'instant, un placeholder
   // Tu peux intégrer Recharts ou Chart.js ici plus tard
   return (
@@ -452,16 +466,16 @@ function ForecastChart({ forecast, salesHistory }) {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <TrendingUp className="w-5 h-5 text-purple-600" />
-          Visualisation des Prévisions
+          {t('analytics.forecast.forecastVisualization')}
         </CardTitle>
       </CardHeader>
       <CardContent>
         <div className="h-64 flex items-center justify-center bg-gray-50 rounded-lg">
           <div className="text-center text-gray-500">
             <BarChart3 className="w-12 h-12 mx-auto mb-2 text-gray-400" />
-            <p className="text-sm">Graphique disponible prochainement</p>
+            <p className="text-sm">{t('analytics.forecast.chartComingSoon')}</p>
             <p className="text-xs mt-1">
-              En attendant, consultez les valeurs ci-dessus
+              {t('analytics.forecast.chartComingSoonDesc')}
             </p>
           </div>
         </div>

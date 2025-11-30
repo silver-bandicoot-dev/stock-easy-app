@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { Modal, ModalFooter, ModalSection } from '../../ui/Modal';
 import { Button } from '../../ui/Button';
 import { UserPlus, Pencil, Save, Briefcase, AlertCircle, MessageSquare } from 'lucide-react';
@@ -22,51 +23,53 @@ export function SupplierModal({
   onSave, 
   isEditing 
 }) {
+  const { t } = useTranslation();
+  
   return (
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title={isEditing ? 'Modifier le fournisseur' : 'Nouveau fournisseur'}
+      title={isEditing ? t('settings.suppliers.editSupplier') : t('settings.suppliers.newSupplier')}
       icon={isEditing ? Pencil : UserPlus}
       size="lg"
       footer={
         <ModalFooter>
           <Button variant="secondary" onClick={onClose}>
-            Annuler
+            {t('settings.suppliers.modal.cancel')}
           </Button>
           <Button variant="primary" onClick={onSave} icon={Save}>
-            Sauvegarder
+            {t('settings.suppliers.modal.save')}
           </Button>
         </ModalFooter>
       }
     >
       <div className="space-y-6">
         {/* Informations principales */}
-        <ModalSection title="Informations générales">
+        <ModalSection title={t('settings.suppliers.modal.generalInfo')}>
           <div className="space-y-4">
             <div>
               <label className="label-base">
-                Nom du fournisseur <span className="text-danger-500">*</span>
+                {t('settings.suppliers.name')} <span className="text-danger-500">*</span>
               </label>
               <input
                 type="text"
                 value={formData.name}
                 onChange={(e) => onChange('name', e.target.value)}
                 disabled={isEditing}
-                placeholder="Ex: Fournisseur France"
+                placeholder={t('settings.suppliers.modal.namePlaceholder')}
                 className="input-base"
               />
               {isEditing && (
                 <p className="helper-text flex items-center gap-1">
                   <AlertCircle className="w-3 h-3" />
-                  Le nom ne peut pas être modifié
+                  {t('settings.suppliers.modal.nameCannotBeModified')}
                 </p>
               )}
             </div>
 
             <div>
               <label className="label-base">
-                Email <span className="text-danger-500">*</span>
+                {t('settings.suppliers.email')} <span className="text-danger-500">*</span>
               </label>
               <input
                 type="email"
@@ -80,7 +83,7 @@ export function SupplierModal({
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="label-base">
-                  Délai (jours) <span className="text-danger-500">*</span>
+                  {t('settings.suppliers.modal.leadTimeDays')} <span className="text-danger-500">*</span>
                 </label>
                 <input
                   type="number"
@@ -93,7 +96,7 @@ export function SupplierModal({
               
               <div>
                 <label className="label-base">
-                  MOQ Standard <span className="text-danger-500">*</span>
+                  {t('settings.suppliers.modal.moqStandard')} <span className="text-danger-500">*</span>
                 </label>
                 <input
                   type="number"
@@ -107,13 +110,13 @@ export function SupplierModal({
 
             <div>
               <label className="label-base">
-                Notes (optionnel)
+                {t('settings.suppliers.modal.notesOptional')}
               </label>
               <textarea
                 value={formData.notes}
                 onChange={(e) => onChange('notes', e.target.value)}
                 rows={2}
-                placeholder="Notes diverses..."
+                placeholder={t('settings.suppliers.modal.notesPlaceholder')}
                 className="textarea-base"
               />
             </div>
@@ -122,32 +125,32 @@ export function SupplierModal({
 
         {/* Contact Commercial */}
         <ModalSection 
-          title="Contact Commercial" 
-          description="Pour les commandes et devis"
+          title={t('settings.suppliers.modal.commercialContact')} 
+          description={t('settings.suppliers.modal.commercialContactDesc')}
         >
           <div className="flex items-center gap-2 mb-3">
             <div className="w-8 h-8 bg-primary-100 rounded-lg flex items-center justify-center">
               <Briefcase className="w-4 h-4 text-primary-600" />
             </div>
-            <span className="text-sm font-medium text-neutral-700">Commandes & Devis</span>
+            <span className="text-sm font-medium text-neutral-700">{t('settings.suppliers.modal.ordersQuotes')}</span>
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <label className="label-base">
-                Nom du contact
+                {t('settings.suppliers.modal.contactName')}
               </label>
               <input
                 type="text"
                 value={formData.commercialContactName}
                 onChange={(e) => onChange('commercialContactName', e.target.value)}
-                placeholder="Nom et prénom"
+                placeholder={t('settings.suppliers.modal.contactNamePlaceholder')}
                 className="input-base"
               />
             </div>
             <div>
               <label className="label-base">
-                Email
+                {t('settings.suppliers.email')}
               </label>
               <input
                 type="email"
@@ -159,7 +162,7 @@ export function SupplierModal({
             </div>
             <div>
               <label className="label-base">
-                Téléphone
+                {t('settings.suppliers.modal.phone')}
               </label>
               <input
                 type="tel"
@@ -174,32 +177,32 @@ export function SupplierModal({
 
         {/* Contact Réclamations */}
         <ModalSection 
-          title="Contact Réclamations"
-          description="Pour la qualité, logistique et SAV"
+          title={t('settings.suppliers.modal.reclamationContact')}
+          description={t('settings.suppliers.modal.reclamationContactDesc')}
         >
           <div className="flex items-center gap-2 mb-3">
             <div className="w-8 h-8 bg-warning-100 rounded-lg flex items-center justify-center">
               <AlertCircle className="w-4 h-4 text-warning-600" />
             </div>
-            <span className="text-sm font-medium text-neutral-700">Qualité / Logistique / SAV</span>
+            <span className="text-sm font-medium text-neutral-700">{t('settings.suppliers.modal.qualityLogisticsSAV')}</span>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <label className="label-base">
-                Nom du contact
+                {t('settings.suppliers.modal.contactName')}
               </label>
               <input
                 type="text"
                 value={formData.reclamationContactName}
                 onChange={(e) => onChange('reclamationContactName', e.target.value)}
-                placeholder="Nom et prénom"
+                placeholder={t('settings.suppliers.modal.contactNamePlaceholder')}
                 className="input-base"
               />
             </div>
             <div>
               <label className="label-base">
-                Email
+                {t('settings.suppliers.email')}
               </label>
               <input
                 type="email"
@@ -211,7 +214,7 @@ export function SupplierModal({
             </div>
             <div>
               <label className="label-base">
-                Téléphone
+                {t('settings.suppliers.modal.phone')}
               </label>
               <input
                 type="tel"
@@ -225,42 +228,42 @@ export function SupplierModal({
           
           <div className="mt-4 max-w-xs">
             <label className="label-base">
-              Rôle
+              {t('settings.suppliers.modal.role')}
             </label>
             <select
               value={formData.reclamationContactRole || ''}
               onChange={(e) => onChange('reclamationContactRole', e.target.value)}
               className="select-base"
             >
-              <option value="">Sélectionner un rôle</option>
-              <option value="Qualité">Qualité</option>
-              <option value="Logistique">Logistique</option>
-              <option value="Service Client">Service Client</option>
-              <option value="Autre">Autre</option>
+              <option value="">{t('settings.suppliers.modal.selectRole')}</option>
+              <option value="Qualité">{t('settings.suppliers.modal.roleQuality')}</option>
+              <option value="Logistique">{t('settings.suppliers.modal.roleLogistics')}</option>
+              <option value="Service Client">{t('settings.suppliers.modal.roleCustomerService')}</option>
+              <option value="Autre">{t('settings.suppliers.modal.roleOther')}</option>
             </select>
           </div>
         </ModalSection>
 
         {/* Notes de contact / historique */}
         <ModalSection 
-          title="Notes de Contact"
-          description="Historique des échanges et observations"
+          title={t('settings.suppliers.modal.contactNotes')}
+          description={t('settings.suppliers.modal.contactNotesDesc')}
         >
           <div className="flex items-center gap-2 mb-3">
             <div className="w-8 h-8 bg-neutral-100 rounded-lg flex items-center justify-center">
               <MessageSquare className="w-4 h-4 text-neutral-600" />
             </div>
-            <span className="text-sm font-medium text-neutral-700">Historique des échanges</span>
+            <span className="text-sm font-medium text-neutral-700">{t('settings.suppliers.modal.exchangeHistory')}</span>
           </div>
           
           <p className="text-xs text-neutral-500 mb-2">
-            Exemples : "répond en 24h", "très réactif sur qualité", "préférer les emails le matin"...
+            {t('settings.suppliers.modal.contactNotesHint')}
           </p>
           <textarea
             value={formData.contactNotes}
             onChange={(e) => onChange('contactNotes', e.target.value)}
             rows={3}
-            placeholder="Ajoutez ici vos observations sur les échanges avec ce fournisseur..."
+            placeholder={t('settings.suppliers.modal.contactNotesPlaceholder')}
             className="textarea-base"
           />
         </ModalSection>

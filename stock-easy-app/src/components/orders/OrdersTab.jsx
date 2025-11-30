@@ -7,7 +7,9 @@ import {
   Filter,
   ChevronLeft,
   ChevronRight,
-  X
+  X,
+  Share2,
+  Check
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { OrdersKPIBar } from './OrdersKPIBar';
@@ -16,6 +18,7 @@ import { OrderDetailPanel } from './OrderDetailPanel';
 import { OrderFilters } from './OrderFilters';
 import api from '../../services/apiAdapter';
 import { useCurrency } from '../../contexts/CurrencyContext';
+import { useAppNavigation } from '../../hooks/useAppNavigation';
 
 export const OrdersTab = ({
   orders: initialOrders = [],
@@ -37,6 +40,7 @@ export const OrdersTab = ({
 }) => {
   const { t } = useTranslation();
   const { format: formatCurrency } = useCurrency();
+  const { resourceParams, clearResourceParams, getShareableUrl, navigateToOrder } = useAppNavigation();
 
   // Onglets de statut style Shopify
   const STATUS_TABS = [
@@ -106,6 +110,26 @@ export const OrdersTab = ({
   useEffect(() => {
     setPage(1);
   }, [activeTab, supplierFilter, dateStart, dateEnd, searchQuery]);
+
+  // Auto-sélectionner une commande depuis l'URL (ex: /app/orders?order=PO-2024-001)
+  useEffect(() => {
+    if (resourceParams.orderId && initialOrders.length > 0) {
+      const orderFromUrl = initialOrders.find(
+        o => o.id === resourceParams.orderId || 
+             o.id?.toLowerCase() === resourceParams.orderId.toLowerCase()
+      );
+      
+      if (orderFromUrl) {
+        setSelectedOrder(orderFromUrl);
+        // Effacer le paramètre URL après avoir sélectionné
+        clearResourceParams();
+      } else {
+        // Commande non trouvée
+        toast.error(t('ordersPage.orderNotFound', { id: resourceParams.orderId }));
+        clearResourceParams();
+      }
+    }
+  }, [resourceParams.orderId, initialOrders, clearResourceParams, t]);
 
   // Calculer les KPIs toujours à partir des données locales (initialOrders)
   // pour garantir la cohérence avec le filtrage côté client
@@ -238,6 +262,24 @@ export const OrdersTab = ({
   const handleClosePanel = () => {
     setSelectedOrder(null);
   };
+
+  // Copier le lien partageable d'une commande
+  const handleShareOrder = useCallback(async (orderId) => {
+    const url = getShareableUrl('order', orderId);
+    try {
+      await navigator.clipboard.writeText(url);
+      toast.success(t('ordersPage.linkCopied'));
+    } catch (err) {
+      // Fallback pour les navigateurs qui ne supportent pas clipboard API
+      const textArea = document.createElement('textarea');
+      textArea.value = url;
+      document.body.appendChild(textArea);
+      textArea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textArea);
+      toast.success(t('ordersPage.linkCopied'));
+    }
+  }, [getShareableUrl, t]);
 
   const handleSelectAll = (checked) => {
     if (checked) {
@@ -545,6 +587,7 @@ export const OrdersTab = ({
               onShip={handleShipOrder}
               onReceive={handleReceiveOrder}
               onStartReconciliation={handleStartReconciliation}
+              onShare={handleShareOrder}
               formatCurrency={formatCurrency}
             />
           )}

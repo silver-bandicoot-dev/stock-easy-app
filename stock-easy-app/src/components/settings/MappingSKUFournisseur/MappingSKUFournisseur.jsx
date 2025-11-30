@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Users,
   Package,
@@ -41,24 +42,27 @@ const buildAssignmentsFromProducts = (products = [], suppliers = {}) => {
 
 const getFirstSupplierKey = (suppliers = {}) => Object.keys(suppliers)[0] ?? '';
 
-const formatDateTime = (date) => {
-  if (!date) return 'Jamais';
-  try {
-    return new Intl.DateTimeFormat('fr-FR', {
-      dateStyle: 'medium',
-      timeStyle: 'short'
-    }).format(date);
-  } catch (error) {
-    return date.toLocaleString();
-  }
-};
-
 export function MappingSKUFournisseur({
   products = [],
   suppliers = {},
   onSaveSupplierMapping,
   isSaving = false
 }) {
+  const { t, i18n } = useTranslation();
+  
+  const formatDateTime = (date) => {
+    if (!date) return t('settings.mapping.never');
+    try {
+      const locale = i18n.language === 'es' ? 'es-ES' : i18n.language === 'en' ? 'en-US' : 'fr-FR';
+      return new Intl.DateTimeFormat(locale, {
+        dateStyle: 'medium',
+        timeStyle: 'short'
+      }).format(date);
+    } catch (error) {
+      return date.toLocaleString();
+    }
+  };
+
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [supplierSearch, setSupplierSearch] = useState('');
@@ -374,11 +378,10 @@ export function MappingSKUFournisseur({
         <Users className="w-8 h-8 mx-auto text-neutral-400" />
         <div className="space-y-1">
           <h3 className="text-lg font-semibold text-neutral-800">
-            Aucun fournisseur disponible
+            {t('settings.mapping.noSuppliers')}
           </h3>
           <p className="text-sm text-neutral-500">
-            Ajoutez des fournisseurs dans l’onglet dédié pour commencer le mapping des
-            produits.
+            {t('settings.mapping.noSuppliersHelp')}
           </p>
         </div>
       </div>
@@ -391,17 +394,16 @@ export function MappingSKUFournisseur({
         <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
           <div className="space-y-2">
             <h3 className="text-xl font-semibold text-neutral-900">
-              Mapping Produits ↔ Fournisseurs
+              {t('settings.mapping.title')}
             </h3>
             <p className="text-sm text-neutral-500">
-              Organisez vos catalogues à grande échelle : recherche avancée, filtres et
-              glisser-déposer pour assister rapidement vos équipes.
+              {t('settings.mapping.subtitle')}
             </p>
           </div>
 
           <div className="flex flex-col items-start gap-3 md:items-end">
             <div className="text-xs text-neutral-500">
-              Dernière sauvegarde :{' '}
+              {t('settings.mapping.lastSaved')} :{' '}
               <span className="font-medium text-neutral-700">{formatDateTime(lastSavedAt)}</span>
             </div>
           </div>
@@ -409,19 +411,19 @@ export function MappingSKUFournisseur({
 
         <div className="grid gap-4 mt-6 sm:grid-cols-4">
           <div className="bg-neutral-50 border border-neutral-200 rounded-lg p-4">
-            <div className="text-sm text-neutral-500">Total produits</div>
+            <div className="text-sm text-neutral-500">{t('settings.mapping.totalProducts')}</div>
             <div className="text-2xl font-bold text-neutral-900">{stats.total}</div>
           </div>
           <div className="bg-neutral-50 border border-neutral-200 rounded-lg p-4">
-            <div className="text-sm text-neutral-500">Assignés</div>
+            <div className="text-sm text-neutral-500">{t('settings.mapping.assigned')}</div>
             <div className="text-2xl font-bold text-emerald-600">{stats.assigned}</div>
           </div>
           <div className="bg-neutral-50 border border-neutral-200 rounded-lg p-4">
-            <div className="text-sm text-neutral-500">À assigner</div>
+            <div className="text-sm text-neutral-500">{t('settings.mapping.toAssign')}</div>
             <div className="text-2xl font-bold text-amber-600">{stats.unassigned}</div>
           </div>
           <div className="bg-neutral-50 border border-neutral-200 rounded-lg p-4">
-            <div className="text-sm text-neutral-500">Modifs en attente</div>
+            <div className="text-sm text-neutral-500">{t('settings.mapping.pendingChanges')}</div>
             <div
               className={`text-2xl font-bold ${
                 globalChangeSummary.hasChanges ? 'text-amber-600' : 'text-neutral-400'
@@ -445,23 +447,23 @@ export function MappingSKUFournisseur({
             type="search"
             value={searchTerm}
             onChange={(event) => setSearchTerm(event.target.value)}
-            placeholder="Rechercher un produit par SKU ou nom…"
+            placeholder={t('settings.mapping.searchProduct')}
             className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-neutral-200 focus:border-neutral-900 focus:outline-none focus:ring-2 focus:ring-neutral-900/10"
           />
         </div>
 
         <div className="flex items-center gap-2">
           <span className="text-xs font-medium uppercase tracking-wide text-neutral-500">
-            Statut
+            {t('settings.mapping.status')}
           </span>
           <select
             value={statusFilter}
             onChange={(event) => setStatusFilter(event.target.value)}
             className="h-10 px-3 rounded-lg border border-neutral-200 bg-white text-sm text-neutral-700 focus:outline-none focus:ring-2 focus:ring-neutral-900/10 focus:border-neutral-900"
           >
-            <option value="all">Assignés & disponibles</option>
-            <option value="assigned">Assignés uniquement</option>
-            <option value="unassigned">Disponibles uniquement</option>
+            <option value="all">{t('settings.mapping.statusOptions.all')}</option>
+            <option value="assigned">{t('settings.mapping.statusOptions.assigned')}</option>
+            <option value="unassigned">{t('settings.mapping.statusOptions.unassigned')}</option>
           </select>
         </div>
 
@@ -471,7 +473,7 @@ export function MappingSKUFournisseur({
           onClick={handleResetFilters}
           disabled={!hasActiveFilters}
         >
-          Réinitialiser les filtres
+          {t('settings.mapping.resetFilters')}
         </Button>
       </div>
 
@@ -481,7 +483,7 @@ export function MappingSKUFournisseur({
             <div className="flex items-center justify-between px-4 py-3 border-b border-neutral-100">
               <div className="flex items-center gap-2 text-sm font-semibold text-neutral-600 uppercase tracking-wide">
                 <Users className="w-4 h-4" />
-                Fournisseurs
+                {t('settings.mapping.suppliers')}
               </div>
               <span className="text-xs text-neutral-400">
                 {filteredSuppliers.length}/{suppliersList.length}
@@ -495,7 +497,7 @@ export function MappingSKUFournisseur({
                   type="search"
                   value={supplierSearch}
                   onChange={(event) => setSupplierSearch(event.target.value)}
-                  placeholder="Filtrer les fournisseurs…"
+                  placeholder={t('settings.mapping.filterSuppliers')}
                   className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-neutral-200 focus:border-neutral-900 focus:outline-none focus:ring-2 focus:ring-neutral-900/10"
                 />
               </div>
@@ -507,7 +509,7 @@ export function MappingSKUFournisseur({
             >
               {filteredSuppliers.length === 0 ? (
                 <li className="px-4 py-10 text-sm text-neutral-400 text-center">
-                  Aucun fournisseur ne correspond à votre recherche.
+                  {t('settings.mapping.noSupplierMatch')}
                 </li>
               ) : (
                 filteredSuppliers.map((supplier) => {
@@ -540,7 +542,7 @@ export function MappingSKUFournisseur({
                                 }`}
                               >
                                 <span className="w-1.5 h-1.5 rounded-full bg-current" />
-                                À sauvegarder
+                                {t('settings.mapping.toSave')}
                               </span>
                             )}
                             <span
@@ -580,7 +582,7 @@ export function MappingSKUFournisseur({
                   <div className="flex items-center gap-2">
                     <Package className="w-5 h-5 text-neutral-600" />
                     <h4 className="text-base font-semibold text-neutral-900">
-                      Produits attribués à {selectedSupplier}
+                      {t('settings.mapping.productsAssignedTo', { supplier: selectedSupplier })}
                     </h4>
                   </div>
                   <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-xs text-neutral-500">
@@ -612,7 +614,7 @@ export function MappingSKUFournisseur({
                     onClick={handleReset}
                     disabled={!hasUnsavedChangesForSupplier}
                   >
-                    Réinitialiser
+                    {t('settings.mapping.reset')}
                   </Button>
                   <Button
                     variant="primary"
@@ -622,7 +624,7 @@ export function MappingSKUFournisseur({
                     loading={savingSupplier === selectedSupplier || isSaving}
                     disabled={!hasUnsavedChangesForSupplier}
                   >
-                    Sauvegarder
+                    {t('settings.mapping.save')}
                   </Button>
                   <Button
                     variant="primary"
@@ -630,7 +632,7 @@ export function MappingSKUFournisseur({
                     onClick={handleBulkSyncMoqFromSupplier}
                     disabled={!selectedSupplier}
                   >
-                    Synchroniser les MOQ depuis le fournisseur
+                    {t('settings.mapping.syncMoq')}
                   </Button>
                 </div>
               </header>
@@ -656,7 +658,7 @@ export function MappingSKUFournisseur({
                       <div className="flex items-center gap-2">
                         <PackagePlus className="w-4 h-4 text-neutral-600" />
                         <span className="text-sm font-semibold text-neutral-700">
-                          Produits assignés ({filteredAssignedProducts.length})
+                          {t('settings.mapping.assignedProducts')} ({filteredAssignedProducts.length})
                         </span>
                       </div>
                     </div>
@@ -666,7 +668,7 @@ export function MappingSKUFournisseur({
                     >
                       {filteredAssignedProducts.length === 0 ? (
                         <li className="px-4 py-6 text-sm text-neutral-400 text-center">
-                          Aucun produit n’est assigné à ce fournisseur pour le moment.
+                          {t('settings.mapping.noAssignedProducts')}
                         </li>
                       ) : (
                         filteredAssignedProducts.map((product) => (
@@ -691,19 +693,19 @@ export function MappingSKUFournisseur({
                               )}
                               <div>
                                 <div className="text-sm font-semibold text-neutral-800">
-                                  {product.name ?? 'Produit sans nom'}
+                                  {product.name ?? t('settings.mapping.productNoName')}
                                 </div>
                                 <div className="text-xs text-neutral-500">
                                   {product.sku}
                                 </div>
                                 <div className="text-xs text-neutral-400 mt-1">
-                                  Stock actuel : {product.stock ?? 0}
+                                  {t('settings.mapping.currentStock')} : {product.stock ?? 0}
                                 </div>
                               </div>
                             </div>
                             <div className="flex flex-col items-end gap-2">
                               <div className="text-xs text-neutral-500">
-                                MOQ produit
+                                {t('settings.mapping.productMoq')}
                               </div>
                               <input
                                 type="number"
@@ -715,7 +717,7 @@ export function MappingSKUFournisseur({
                                 className="w-20 px-2 py-1 border border-neutral-200 rounded text-right text-sm"
                               />
                               <div className="text-[10px] text-neutral-400">
-                                Source : {product.moqSource || 'non défini'}
+                                {t('settings.mapping.source')} : {product.moqSource || t('settings.mapping.notDefined')}
                               </div>
                             </div>
                             <Button
@@ -723,9 +725,9 @@ export function MappingSKUFournisseur({
                               variant="ghost"
                               icon={PackageMinus}
                               onClick={() => handleUnassignSku(product.sku)}
-                              aria-label={`Retirer ${product.sku} de ${selectedSupplier}`}
+                              aria-label={`${t('settings.mapping.remove')} ${product.sku}`}
                             >
-                              Retirer
+                              {t('settings.mapping.remove')}
                             </Button>
                           </li>
                         ))
@@ -748,7 +750,7 @@ export function MappingSKUFournisseur({
                       <div className="flex items-center gap-2">
                         <PackageMinus className="w-4 h-4 text-neutral-600" />
                         <span className="text-sm font-semibold text-neutral-700">
-                          Produits disponibles ({filteredAvailableProducts.length})
+                          {t('settings.mapping.availableProducts')} ({filteredAvailableProducts.length})
                         </span>
                       </div>
                     </div>
@@ -758,8 +760,7 @@ export function MappingSKUFournisseur({
                     >
                       {filteredAvailableProducts.length === 0 ? (
                         <li className="px-4 py-6 text-sm text-neutral-400 text-center">
-                          Tous les produits sont assignés. Glissez un produit depuis la
-                          liste voisine pour le libérer.
+                          {t('settings.mapping.allProductsAssigned')}
                         </li>
                       ) : (
                         filteredAvailableProducts.map((product) => (
@@ -784,13 +785,13 @@ export function MappingSKUFournisseur({
                               )}
                               <div>
                                 <div className="text-sm font-semibold text-neutral-800">
-                                  {product.name ?? 'Produit sans nom'}
+                                  {product.name ?? t('settings.mapping.productNoName')}
                                 </div>
                                 <div className="text-xs text-neutral-500">
                                   {product.sku}
                                 </div>
                                 <div className="text-xs text-neutral-400 mt-1">
-                                  Stock actuel : {product.stock ?? 0}
+                                  {t('settings.mapping.currentStock')} : {product.stock ?? 0}
                                 </div>
                               </div>
                             </div>
@@ -799,10 +800,10 @@ export function MappingSKUFournisseur({
                               variant="ghost"
                               icon={PackagePlus}
                               onClick={() => handleAssignSku(product.sku)}
-                              aria-label={`Assigner ${product.sku} à ${selectedSupplier}`}
+                              aria-label={`${t('settings.mapping.assign')} ${product.sku}`}
                               disabled={!selectedSupplier}
                             >
-                              Assigner
+                              {t('settings.mapping.assign')}
                             </Button>
                           </li>
                         ))
@@ -816,11 +817,10 @@ export function MappingSKUFournisseur({
             <div className="bg-white border border-neutral-200 rounded-xl shadow-sm p-12 text-center space-y-3">
               <Package className="w-8 h-8 text-neutral-400 mx-auto" />
               <h4 className="text-lg font-semibold text-neutral-800">
-                Sélectionnez un fournisseur pour commencer
+                {t('settings.mapping.selectSupplier')}
               </h4>
               <p className="text-sm text-neutral-500">
-                Utilisez la colonne de gauche pour choisir un fournisseur et gérer son
-                catalogue.
+                {t('settings.mapping.selectSupplierHelp')}
               </p>
             </div>
           )}
@@ -832,11 +832,10 @@ export function MappingSKUFournisseur({
           <div className="bg-white border border-neutral-200 rounded-xl shadow-lg px-5 py-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
             <div className="space-y-1">
               <p className="text-sm font-medium text-neutral-800">
-                Modifications en attente : {globalChangeSummary.added} ajout(s) ·{' '}
-                {globalChangeSummary.removed} retrait(s)
+                {t('settings.mapping.pendingSummary', { added: globalChangeSummary.added, removed: globalChangeSummary.removed })}
               </p>
               <p className="text-xs text-neutral-500">
-              Pensez à sauvegarder chaque fournisseur modifié.
+                {t('settings.mapping.saveReminder')}
               </p>
             </div>
             <div className="flex flex-col sm:flex-row gap-2">
@@ -848,7 +847,7 @@ export function MappingSKUFournisseur({
                 loading={savingSupplier === selectedSupplier || isSaving}
                 disabled={!selectedSupplier || !hasUnsavedChangesForSupplier}
               >
-                Sauvegarder {selectedSupplier ? `(${selectedSupplier})` : ''}
+                {t('settings.mapping.save')} {selectedSupplier ? `(${selectedSupplier})` : ''}
               </Button>
             </div>
           </div>

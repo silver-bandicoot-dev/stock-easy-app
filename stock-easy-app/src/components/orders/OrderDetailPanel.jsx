@@ -21,7 +21,8 @@ import {
   MapPin,
   Tag,
   FileText,
-  MessageSquare
+  MessageSquare,
+  Share2
 } from 'lucide-react';
 import { ImagePreview } from '../ui/ImagePreview';
 import CommentSection from '../comments/CommentSection';
@@ -40,6 +41,7 @@ export const OrderDetailPanel = ({
   onShip,
   onReceive,
   onStartReconciliation,
+  onShare,
   formatCurrency
 }) => {
   const { t } = useTranslation();
@@ -208,6 +210,16 @@ export const OrderDetailPanel = ({
             <span className="hidden sm:inline">{t('orderDetail.back')}</span>
           </button>
           <div className="flex items-center gap-2">
+            {/* Bouton Partager */}
+            {onShare && (
+              <button 
+                onClick={() => onShare(order.id)}
+                className="p-2 hover:bg-[#E5E4DF] rounded-lg transition-colors group"
+                title={t('orderDetail.share')}
+              >
+                <Share2 className="w-4 h-4 text-[#666663] group-hover:text-[#191919]" />
+              </button>
+            )}
             <button className="p-2 hover:bg-[#E5E4DF] rounded-lg transition-colors">
               <Edit className="w-4 h-4 text-[#666663]" />
             </button>

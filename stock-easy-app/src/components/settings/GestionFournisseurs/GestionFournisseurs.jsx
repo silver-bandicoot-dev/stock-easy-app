@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Plus, Mail, Clock, Package, FileText, Info, Edit2, X } from 'lucide-react';
 import { Button } from '../../ui/Button';
 
@@ -17,6 +18,7 @@ export function GestionFournisseurs({
   onOpenModal, 
   onDelete 
 }) {
+  const { t } = useTranslation();
   const [searchTerm, setSearchTerm] = useState('');
   
   const suppliersList = useMemo(() => Object.values(suppliers), [suppliers]);
@@ -62,9 +64,9 @@ export function GestionFournisseurs({
       {/* Header */}
       <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
         <div>
-          <h3 className="text-lg font-semibold text-[#191919]">🏭 Gestion des Fournisseurs</h3>
+          <h3 className="text-lg font-semibold text-[#191919]">{t('settings.suppliers.title')}</h3>
           <p className="text-sm text-[#666663] mt-1">
-            {suppliersList.length} fournisseur(s) actif(s)
+            {t('settings.suppliers.activeSuppliers', { count: suppliersList.length })}
           </p>
         </div>
         
@@ -73,7 +75,7 @@ export function GestionFournisseurs({
           icon={Plus}
           variant="primary"
         >
-          Nouveau fournisseur
+          {t('settings.suppliers.newSupplier')}
         </Button>
       </div>
       
@@ -81,7 +83,7 @@ export function GestionFournisseurs({
       <div className="relative">
         <input
           type="text"
-          placeholder="🔍 Rechercher un fournisseur..."
+          placeholder={t('settings.suppliers.searchPlaceholder')}
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           className="w-full px-4 py-3 pl-10 border-2 border-[#E5E4DF] rounded-lg focus:outline-none focus:border-[#8B5CF6] transition-all"
@@ -93,7 +95,7 @@ export function GestionFournisseurs({
         {filteredSuppliers.length === 0 ? (
           <div className="text-center py-12 bg-[#FAFAF7] rounded-xl">
             <p className="text-[#666663]">
-              {searchTerm ? 'Aucun fournisseur trouvé' : 'Aucun fournisseur créé'}
+              {searchTerm ? t('settings.suppliers.noSuppliersFound') : t('settings.suppliers.noSuppliers')}
             </p>
           </div>
         ) : (
@@ -121,12 +123,12 @@ export function GestionFournisseurs({
                       <div className="flex items-center gap-4">
                       <div className="flex items-center gap-2">
                         <Clock className="w-4 h-4 shrink-0" />
-                        <span>Délai: {supplier.leadTimeDays ?? 'N/A'}j</span>
+                        <span>{t('settings.suppliers.delay')}: {supplier.leadTimeDays ?? t('settings.suppliers.na')}{t('settings.suppliers.leadTimeDays')}</span>
                       </div>
                       
                       <div className="flex items-center gap-2">
                         <Package className="w-4 h-4 shrink-0" />
-                        <span>MOQ: {supplierMoq ?? 'N/A'} unités</span>
+                        <span>{t('settings.suppliers.moq')}: {supplierMoq ?? t('settings.suppliers.na')} {t('settings.suppliers.moqUnits')}</span>
                       </div>
                       </div>
                       
@@ -140,7 +142,7 @@ export function GestionFournisseurs({
                       <div className="flex items-center gap-2 mt-2">
                         <Info className="w-4 h-4 shrink-0" />
                         <span className="font-medium">
-                          {productsCount} produit(s) assigné(s)
+                          {t('settings.suppliers.assignedProducts', { count: productsCount })}
                         </span>
                       </div>
                     </div>

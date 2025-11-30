@@ -1,4 +1,5 @@
 import React, { useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   ComposedChart,
   Bar,
@@ -24,6 +25,7 @@ import { useCurrency } from '../../contexts/CurrencyContext';
  * - Objectif avec multiplicateur ML moyen (ligne continue)
  */
 export function RevenueComparisonChart({ className = '' }) {
+  const { t } = useTranslation();
   const { data, summary, loading, error, hasEnoughData, hasAnyRevenue, refetch } = useRevenueComparison(12);
   const { format: formatCurrency } = useCurrency();
 
@@ -61,13 +63,13 @@ export function RevenueComparisonChart({ className = '' }) {
         <p className="font-semibold text-[#191919] mb-3 pb-2 border-b border-[#E1E3E5]">
           {dataPoint.label}
           {dataPoint.isCurrentMonth && (
-            <span className="ml-2 text-xs font-normal text-[#6B7177]">(en cours)</span>
+            <span className="ml-2 text-xs font-normal text-[#6B7177]">{t('dashboard.revenueChart.inProgress')}</span>
           )}
         </p>
         
         {/* CA Réalisé */}
         <div className="flex justify-between items-center mb-2">
-          <span className="text-sm text-[#6B7177]">CA Réalisé</span>
+          <span className="text-sm text-[#6B7177]">{t('dashboard.revenueChart.actualRevenue')}</span>
           <span className="font-semibold text-[#191919]">
             {formatCurrency ? formatCurrency(dataPoint.actualRevenue) : formatAmount(dataPoint.actualRevenue)}
           </span>
@@ -76,13 +78,13 @@ export function RevenueComparisonChart({ className = '' }) {
         <div className="border-t border-[#E1E3E5] my-2 pt-2">
           {/* Objectif Défaut */}
           <div className="flex justify-between items-center mb-1">
-            <span className="text-sm text-[#6B7177]">Obj. Défaut (×{dataPoint.defaultMultiplier})</span>
+            <span className="text-sm text-[#6B7177]">{t('dashboard.revenueChart.targetDefault')} (×{dataPoint.defaultMultiplier})</span>
             <span className="text-sm text-[#6B7177]">
               {formatCurrency ? formatCurrency(dataPoint.targetDefault) : formatAmount(dataPoint.targetDefault)}
             </span>
           </div>
           <div className="flex justify-between items-center mb-2">
-            <span className="text-xs text-[#6B7177]">Écart</span>
+            <span className="text-xs text-[#6B7177]">{t('dashboard.revenueChart.variance')}</span>
             <span className={`text-xs font-medium ${dataPoint.varianceDefaultPct >= 0 ? 'text-emerald-600' : 'text-red-500'}`}>
               {dataPoint.varianceDefaultPct >= 0 ? '+' : ''}{dataPoint.varianceDefaultPct}%
               {dataPoint.varianceDefaultPct >= 0 ? ' ▲' : ' ▼'}
@@ -91,13 +93,13 @@ export function RevenueComparisonChart({ className = '' }) {
           
           {/* Objectif ML */}
           <div className="flex justify-between items-center mb-1">
-            <span className="text-sm text-[#6B7177]">Obj. ML (×{dataPoint.avgMLMultiplier})</span>
+            <span className="text-sm text-[#6B7177]">{t('dashboard.revenueChart.targetML')} (×{dataPoint.avgMLMultiplier})</span>
             <span className="text-sm text-[#6B7177]">
               {formatCurrency ? formatCurrency(dataPoint.targetML) : formatAmount(dataPoint.targetML)}
             </span>
           </div>
           <div className="flex justify-between items-center">
-            <span className="text-xs text-[#6B7177]">Écart</span>
+            <span className="text-xs text-[#6B7177]">{t('dashboard.revenueChart.variance')}</span>
             <span className={`text-xs font-medium ${dataPoint.varianceMLPct >= 0 ? 'text-emerald-600' : 'text-red-500'}`}>
               {dataPoint.varianceMLPct >= 0 ? '+' : ''}{dataPoint.varianceMLPct}%
               {dataPoint.varianceMLPct >= 0 ? ' ▲' : ' ▼'}
@@ -113,15 +115,15 @@ export function RevenueComparisonChart({ className = '' }) {
     <div className="flex flex-wrap items-center justify-center gap-4 mt-2 text-xs">
       <div className="flex items-center gap-1.5">
         <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: colors.actualRevenue }} />
-        <span className="text-[#6B7177]">CA Réalisé</span>
+        <span className="text-[#6B7177]">{t('dashboard.revenueChart.actualRevenue')}</span>
       </div>
       <div className="flex items-center gap-1.5">
         <div className="w-6 h-0.5 border-t-2 border-dashed" style={{ borderColor: colors.targetDefault }} />
-        <span className="text-[#6B7177]">Obj. Défaut</span>
+        <span className="text-[#6B7177]">{t('dashboard.revenueChart.targetDefault')}</span>
       </div>
       <div className="flex items-center gap-1.5">
         <div className="w-6 h-0.5" style={{ backgroundColor: colors.targetML }} />
-        <span className="text-[#6B7177]">Obj. ML</span>
+        <span className="text-[#6B7177]">{t('dashboard.revenueChart.targetML')}</span>
       </div>
     </div>
   );
@@ -136,7 +138,7 @@ export function RevenueComparisonChart({ className = '' }) {
         <div className="p-4">
           <div className="h-[300px] flex items-center justify-center">
             <RefreshCw className="w-6 h-6 text-[#6B7177] animate-spin" />
-            <span className="ml-2 text-sm text-[#6B7177]">Chargement...</span>
+            <span className="ml-2 text-sm text-[#6B7177]">{t('dashboard.revenueChart.loading')}</span>
           </div>
         </div>
       </div>
@@ -148,17 +150,17 @@ export function RevenueComparisonChart({ className = '' }) {
     return (
       <div className={`bg-white rounded-lg border border-[#E1E3E5] overflow-hidden ${className}`}>
         <div className="border-b border-[#E1E3E5] px-4 py-3">
-          <h3 className="text-xs font-medium text-[#6B7177]">Chiffre d'Affaires vs Objectifs</h3>
+          <h3 className="text-xs font-medium text-[#6B7177]">{t('dashboard.revenueChart.title')}</h3>
         </div>
         <div className="p-4">
           <div className="h-[200px] flex flex-col items-center justify-center text-center">
             <AlertCircle className="w-10 h-10 text-red-400 mb-3" />
-            <p className="text-sm text-[#6B7177] mb-3">Erreur lors du chargement des données</p>
+            <p className="text-sm text-[#6B7177] mb-3">{t('dashboard.revenueChart.error')}</p>
             <button
               onClick={refetch}
               className="text-xs text-[#8B5CF6] hover:underline"
             >
-              Réessayer
+              {t('dashboard.revenueChart.retry')}
             </button>
           </div>
         </div>
@@ -171,14 +173,14 @@ export function RevenueComparisonChart({ className = '' }) {
     return (
       <div className={`bg-white rounded-lg border border-[#E1E3E5] overflow-hidden ${className}`}>
         <div className="border-b border-[#E1E3E5] px-4 py-3">
-          <h3 className="text-xs font-medium text-[#6B7177]">Chiffre d'Affaires vs Objectifs</h3>
+          <h3 className="text-xs font-medium text-[#6B7177]">{t('dashboard.revenueChart.title')}</h3>
         </div>
         <div className="p-4">
           <div className="h-[200px] flex flex-col items-center justify-center text-center">
             <BarChart3 className="w-10 h-10 text-[#D1D5DB] mb-3" />
-            <p className="text-sm font-medium text-[#191919] mb-1">Données insuffisantes</p>
+            <p className="text-sm font-medium text-[#191919] mb-1">{t('dashboard.revenueChart.insufficientData')}</p>
             <p className="text-xs text-[#6B7177] max-w-[280px]">
-              Ce graphique nécessite au moins 2 mois d'historique de ventes pour afficher des comparaisons.
+              {t('dashboard.revenueChart.insufficientDataDesc')}
             </p>
           </div>
         </div>
@@ -192,10 +194,10 @@ export function RevenueComparisonChart({ className = '' }) {
       <div className="border-b border-[#E1E3E5] px-4 py-3 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <h3 className="text-xs font-medium text-[#6B7177]">
-            Chiffre d'Affaires vs Objectifs
+            {t('dashboard.revenueChart.title')}
           </h3>
           <span className="text-[10px] text-[#9CA3AF] bg-[#F6F6F7] px-1.5 py-0.5 rounded">
-            12 mois
+            {t('dashboard.revenueChart.months')}
           </span>
         </div>
         
@@ -203,13 +205,13 @@ export function RevenueComparisonChart({ className = '' }) {
         {summary && (
           <div className="hidden sm:flex items-center gap-4 text-[10px]">
             <div className="flex items-center gap-1">
-              <span className="text-[#6B7177]">YTD:</span>
+              <span className="text-[#6B7177]">{t('dashboard.revenueChart.ytd')}:</span>
               <span className="font-semibold text-[#191919]">
                 {formatCurrency ? formatCurrency(summary.ytdRevenue) : formatAmount(summary.ytdRevenue)}
               </span>
             </div>
             <div className="flex items-center gap-1">
-              <span className="text-[#6B7177]">Précision ML:</span>
+              <span className="text-[#6B7177]">{t('dashboard.revenueChart.mlAccuracy')}:</span>
               <span className={`font-semibold ${summary.mlIsBetter ? 'text-emerald-600' : 'text-[#191919]'}`}>
                 {summary.mlAccuracyPct.toFixed(1)}%
                 {summary.mlIsBetter && ' ✓'}
@@ -302,11 +304,11 @@ export function RevenueComparisonChart({ className = '' }) {
           <div className="flex flex-wrap items-center justify-between gap-2 text-[10px]">
             <div className="flex items-center gap-4">
               <div>
-                <span className="text-[#6B7177]">Précision Mult. Défaut: </span>
+                <span className="text-[#6B7177]">{t('dashboard.revenueChart.defaultAccuracy')}: </span>
                 <span className="font-medium text-[#191919]">±{(100 - summary.defaultAccuracyPct).toFixed(1)}%</span>
               </div>
               <div>
-                <span className="text-[#6B7177]">Précision Mult. ML: </span>
+                <span className="text-[#6B7177]">{t('dashboard.revenueChart.mlAccuracyLabel')}: </span>
                 <span className={`font-medium ${summary.mlIsBetter ? 'text-emerald-600' : 'text-[#191919]'}`}>
                   ±{(100 - summary.mlAccuracyPct).toFixed(1)}%
                 </span>
@@ -315,7 +317,7 @@ export function RevenueComparisonChart({ className = '' }) {
             {summary.mlIsBetter && (
               <div className="flex items-center gap-1 text-emerald-600">
                 <TrendingUp className="w-3 h-3" />
-                <span className="font-medium">ML +{summary.accuracyDiff}% plus précis</span>
+                <span className="font-medium">{t('dashboard.revenueChart.mlMoreAccurate', { diff: summary.accuracyDiff })}</span>
               </div>
             )}
           </div>

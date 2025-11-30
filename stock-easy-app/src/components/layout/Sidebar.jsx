@@ -87,6 +87,7 @@ const Sidebar = ({
   const handleMenuItemClick = (item) => {
     if (item.type === 'route') {
       navigate(item.path);
+      setMobileMenuOpen(false);
     } else if (item.hasSubMenu && item.id === 'analytics') {
       // Si on clique sur Analytics, basculer l'expansion
       if (activeTab === 'analytics') {
@@ -95,6 +96,7 @@ const Sidebar = ({
         setActiveTab(item.id);
         setAnalyticsExpanded(true);
       }
+      // Ne pas fermer le menu mobile pour les éléments avec sous-menu
     } else if (item.hasSubMenu && item.id === 'settings') {
       // Si on clique sur Paramètres, basculer l'expansion
       if (activeTab === 'settings') {
@@ -103,13 +105,15 @@ const Sidebar = ({
         setActiveTab(item.id);
         setSettingsExpanded(true);
       }
+      // Ne pas fermer le menu mobile pour les éléments avec sous-menu
     } else {
       setActiveTab(item.id);
       // Fermer les sous-menus si on quitte
       if (item.id !== 'analytics') setAnalyticsExpanded(false);
       if (item.id !== 'settings') setSettingsExpanded(false);
+      // Fermer le menu mobile uniquement pour les items sans sous-menu
+      setMobileMenuOpen(false);
     }
-    setMobileMenuOpen(false);
   };
   
   const handleSubMenuClick = (parentId, subItem) => {
@@ -204,7 +208,7 @@ const Sidebar = ({
                         style={{ fontSize: '0.8125rem' }}
                       >
                         <SubIcon className="w-4 h-4 shrink-0" />
-                        <span>{subItem.label}</span>
+                        <span className="truncate">{subItem.label}</span>
                       </button>
                     );
                   })}
@@ -342,7 +346,7 @@ const Sidebar = ({
                                 style={{ fontSize: '0.8125rem' }}
                               >
                                 <SubIcon className="w-4 h-4 shrink-0" />
-                                <span>{subItem.label}</span>
+                                <span className="truncate">{subItem.label}</span>
                               </button>
                             );
                           })}

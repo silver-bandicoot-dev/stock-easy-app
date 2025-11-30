@@ -197,6 +197,7 @@ export function useForecastAccuracy(salesHistory) {
 
 /**
  * Hook pour obtenir des recommandations basées sur les prévisions
+ * Retourne des clés de traduction pour permettre l'internationalisation
  */
 export function useForecastRecommendations(forecast, currentStock, reorderPoint) {
   return useMemo(() => {
@@ -213,6 +214,11 @@ export function useForecastRecommendations(forecast, currentStock, reorderPoint)
       recommendations.push({
         type: 'safety_stock',
         priority: 'high',
+        messageKey: 'analytics.forecast.recommendations.safetyStock',
+        messageParams: { current: currentStock, recommended: safetyStock },
+        actionKey: 'analytics.forecast.recommendations.safetyStockAction',
+        actionParams: { quantity: safetyStock - currentStock },
+        // Fallback messages pour la compatibilité
         message: `Stock actuel (${currentStock}) en dessous du stock de sécurité recommandé (${safetyStock})`,
         action: `Commander au moins ${safetyStock - currentStock} unités`,
         icon: '⚠️'
@@ -225,6 +231,10 @@ export function useForecastRecommendations(forecast, currentStock, reorderPoint)
       recommendations.push({
         type: 'stockout_warning',
         priority: 'critical',
+        messageKey: 'analytics.forecast.recommendations.stockoutWarning',
+        messageParams: { days: daysUntilStockout },
+        actionKey: 'analytics.forecast.recommendations.stockoutAction',
+        actionParams: {},
         message: `Rupture de stock prévue dans ${daysUntilStockout} jour(s)`,
         action: 'Commander immédiatement',
         icon: '🚨'
@@ -237,6 +247,10 @@ export function useForecastRecommendations(forecast, currentStock, reorderPoint)
       recommendations.push({
         type: 'optimal_order',
         priority: 'medium',
+        messageKey: 'analytics.forecast.recommendations.optimalOrder',
+        messageParams: {},
+        actionKey: 'analytics.forecast.recommendations.optimalOrderAction',
+        actionParams: { quantity: optimalOrder },
         message: 'Bon moment pour commander',
         action: `Quantité optimale: ${optimalOrder} unités pour les 30 prochains jours`,
         icon: '💡'
@@ -248,6 +262,10 @@ export function useForecastRecommendations(forecast, currentStock, reorderPoint)
       recommendations.push({
         type: 'low_confidence',
         priority: 'info',
+        messageKey: 'analytics.forecast.recommendations.lowConfidence',
+        messageParams: {},
+        actionKey: 'analytics.forecast.recommendations.lowConfidenceAction',
+        actionParams: {},
         message: 'Prévisions peu fiables (historique limité)',
         action: 'Augmenter la marge de sécurité de 50%',
         icon: 'ℹ️'
@@ -259,6 +277,10 @@ export function useForecastRecommendations(forecast, currentStock, reorderPoint)
       recommendations.push({
         type: 'overstock',
         priority: 'low',
+        messageKey: 'analytics.forecast.recommendations.overstock',
+        messageParams: {},
+        actionKey: 'analytics.forecast.recommendations.overstockAction',
+        actionParams: {},
         message: 'Stock potentiellement excessif',
         action: 'Envisager une promotion ou réduire les commandes',
         icon: '📦'

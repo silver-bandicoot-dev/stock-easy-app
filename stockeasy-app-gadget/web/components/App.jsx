@@ -17,11 +17,13 @@ import {
 import { api } from "../api";
 import { DashboardPage } from "../routes/index";
 import { UnsyncedPage } from "../routes/unsynced";
+import { useTranslations } from "../hooks/useTranslations";
 import "./App.css";
 
 function Error404() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { t } = useTranslations();
 
   useEffect(() => {
     const appURL = process.env.GADGET_PUBLIC_SHOPIFY_APP_URL;
@@ -33,7 +35,7 @@ function Error404() {
   return (
     <Page>
       <Card>
-        <Text as="p">Page non trouvée. Redirection...</Text>
+        <Text as="p">{t('pageNotFound')}</Text>
       </Card>
     </Page>
   );
@@ -67,12 +69,13 @@ function Layout() {
 
 function AuthenticatedApp() {
   const { isAuthenticated, loading } = useGadget();
+  const { t } = useTranslations();
 
   if (loading) {
     return (
       <Box padding="800">
         <div style={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: "200px" }}>
-          <Spinner accessibilityLabel="Chargement" size="large" />
+          <Spinner accessibilityLabel={t('loading')} size="large" />
         </div>
       </Box>
     );
@@ -82,11 +85,13 @@ function AuthenticatedApp() {
 }
 
 function EmbeddedApp() {
+  const { t } = useTranslations();
+  
   return (
     <>
       <ui-nav-menu>
-        <a href="/" rel="home">Accueil</a>
-        <a href="/unsynced">Produits à vérifier</a>
+        <a href="/" rel="home">{t('home')}</a>
+        <a href="/unsynced">{t('productsToCheck')}</a>
       </ui-nav-menu>
       <Outlet />
     </>
@@ -94,6 +99,8 @@ function EmbeddedApp() {
 }
 
 function UnauthenticatedApp() {
+  const { t } = useTranslations();
+  
   return (
     <Page>
       <Card>
@@ -103,7 +110,7 @@ function UnauthenticatedApp() {
           </Text>
           <Box paddingBlockStart="200">
             <Text as="p" tone="subdued">
-              Veuillez ouvrir cette application depuis votre admin Shopify.
+              {t('openFromShopify')}
             </Text>
           </Box>
         </Box>

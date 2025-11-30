@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Warehouse, Plus, Edit2, Trash2, MapPin } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -44,6 +45,7 @@ export const GestionWarehouses = ({
   onUpdateWarehouse, 
   onDeleteWarehouse 
 }) => {
+  const { t } = useTranslation();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingWarehouse, setEditingWarehouse] = useState(null);
   const [formData, setFormData] = useState({
@@ -98,19 +100,19 @@ export const GestionWarehouses = ({
 
     // Validation
     if (!formData.name.trim()) {
-      toast.error('Le nom de l\'entrepôt est obligatoire');
+      toast.error(t('settings.warehouses.nameRequired'));
       return;
     }
     if (!formData.address.trim()) {
-      toast.error('L\'adresse est obligatoire');
+      toast.error(t('settings.warehouses.addressRequired'));
       return;
     }
     if (!formData.city.trim()) {
-      toast.error('La ville est obligatoire');
+      toast.error(t('settings.warehouses.cityRequired'));
       return;
     }
     if (!formData.postalCode.trim()) {
-      toast.error('Le code postal est obligatoire');
+      toast.error(t('settings.warehouses.postalCodeRequired'));
       return;
     }
 
@@ -119,24 +121,24 @@ export const GestionWarehouses = ({
         // Utiliser l'ID si disponible, sinon utiliser le nom
         const warehouseId = editingWarehouse.id || editingWarehouse.name;
         await onUpdateWarehouse(warehouseId, formData);
-        toast.success('Entrepôt modifié avec succès !');
+        toast.success(t('settings.warehouses.messages.updated'));
       } else {
         await onCreateWarehouse(formData);
-        toast.success('Entrepôt créé avec succès !');
+        toast.success(t('settings.warehouses.messages.created'));
       }
       handleCloseModal();
     } catch (error) {
-      toast.error('Erreur lors de la sauvegarde: ' + error.message);
+      toast.error(t('settings.warehouses.messages.saveError', { error: error.message }));
     }
   };
 
   const handleDelete = async (warehouse) => {
-    if (window.confirm(`Êtes-vous sûr de vouloir supprimer l'entrepôt "${warehouse.name}" ?`)) {
+    if (window.confirm(t('settings.warehouses.deleteConfirm', { name: warehouse.name }))) {
       try {
         await onDeleteWarehouse(warehouse);
-        toast.success('Entrepôt supprimé avec succès !');
+        toast.success(t('settings.warehouses.messages.deleted'));
       } catch (error) {
-        toast.error('Erreur lors de la suppression: ' + error.message);
+        toast.error(t('settings.warehouses.messages.saveError', { error: error.message }));
       }
     }
   };
@@ -163,15 +165,15 @@ export const GestionWarehouses = ({
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-[#191919]">Gestion des Entrepôts</h2>
-          <p className="text-[#666663] mt-1">Gérez vos différents lieux de stockage et de réception</p>
+          <h2 className="text-2xl font-bold text-[#191919]">{t('settings.warehouses.title')}</h2>
+          <p className="text-[#666663] mt-1">{t('settings.warehouses.subtitle')}</p>
         </div>
         <Button
           variant="primary"
           icon={Plus}
           onClick={() => handleOpenModal()}
         >
-          Nouvel Entrepôt
+          {t('settings.warehouses.addWarehouse')}
         </Button>
       </div>
 
@@ -180,13 +182,13 @@ export const GestionWarehouses = ({
         {warehousesList.length === 0 ? (
           <div className="p-8 text-center">
             <Warehouse className="w-12 h-12 text-[#666663] mx-auto mb-3" />
-            <p className="text-[#666663] mb-4">Aucun entrepôt configuré</p>
+            <p className="text-[#666663] mb-4">{t('settings.warehouses.noWarehouses')}</p>
             <Button
               variant="secondary"
               icon={Plus}
               onClick={() => handleOpenModal()}
             >
-              Créer le premier entrepôt
+              {t('settings.warehouses.createFirst')}
             </Button>
           </div>
         ) : (
@@ -217,7 +219,7 @@ export const GestionWarehouses = ({
                       icon={Edit2}
                       onClick={() => handleOpenModal(warehouse)}
                     >
-                      Modifier
+                      {t('settings.warehouses.modify')}
                     </Button>
                     <Button
                       variant="danger"
@@ -225,7 +227,7 @@ export const GestionWarehouses = ({
                       icon={Trash2}
                       onClick={() => handleDelete(warehouse)}
                     >
-                      Supprimer
+                      {t('settings.warehouses.delete')}
                     </Button>
                   </div>
                 </div>
@@ -241,7 +243,7 @@ export const GestionWarehouses = ({
           <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <div className="p-6 border-b border-[#E5E4DF]">
               <h3 className="text-xl font-bold text-[#191919]">
-                {editingWarehouse ? 'Modifier l\'entrepôt' : 'Nouvel entrepôt'}
+                {editingWarehouse ? t('settings.warehouses.editWarehouse') : t('settings.warehouses.addWarehouse')}
               </h3>
             </div>
 
@@ -249,31 +251,31 @@ export const GestionWarehouses = ({
               {/* Nom */}
               <div>
                 <label className="block text-sm font-medium text-[#191919] mb-2">
-                  Nom de l'entrepôt *
+                  {t('settings.warehouses.name')} *
                 </label>
                 <input
                   type="text"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  placeholder="Entrepôt Principal"
+                  placeholder={t('settings.warehouses.namePlaceholder')}
                   className="w-full px-4 py-2.5 border border-[#E5E4DF] rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
                   disabled={!!editingWarehouse}
                 />
                 {editingWarehouse && (
-                  <p className="text-xs text-[#666663] mt-1">Le nom ne peut pas être modifié</p>
+                  <p className="text-xs text-[#666663] mt-1">{t('settings.warehouses.nameCannotBeModified')}</p>
                 )}
               </div>
 
               {/* Adresse */}
               <div>
                 <label className="block text-sm font-medium text-[#191919] mb-2">
-                  Adresse *
+                  {t('settings.warehouses.address')} *
                 </label>
                 <input
                   type="text"
                   value={formData.address}
                   onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                  placeholder="123 Rue Example"
+                  placeholder={t('settings.warehouses.addressPlaceholder')}
                   className="w-full px-4 py-2.5 border border-[#E5E4DF] rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
                 />
               </div>
@@ -282,25 +284,25 @@ export const GestionWarehouses = ({
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-[#191919] mb-2">
-                    Code Postal *
+                    {t('settings.warehouses.postalCode')} *
                   </label>
                   <input
                     type="text"
                     value={formData.postalCode}
                     onChange={(e) => setFormData({ ...formData, postalCode: e.target.value })}
-                    placeholder="75001"
+                    placeholder={t('settings.warehouses.postalCodePlaceholder')}
                     className="w-full px-4 py-2.5 border border-[#E5E4DF] rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
                   />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-[#191919] mb-2">
-                    Ville *
+                    {t('settings.warehouses.city')} *
                   </label>
                   <input
                     type="text"
                     value={formData.city}
                     onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-                    placeholder="Paris"
+                    placeholder={t('settings.warehouses.cityPlaceholder')}
                     className="w-full px-4 py-2.5 border border-[#E5E4DF] rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
                   />
                 </div>
@@ -309,13 +311,13 @@ export const GestionWarehouses = ({
               {/* Pays */}
               <div>
                 <label className="block text-sm font-medium text-[#191919] mb-2">
-                  Pays *
+                  {t('settings.warehouses.country')} *
                 </label>
                 <input
                   type="text"
                   value={formData.country}
                   onChange={(e) => setFormData({ ...formData, country: e.target.value })}
-                  placeholder="France"
+                  placeholder={t('settings.warehouses.countryPlaceholder')}
                   className="w-full px-4 py-2.5 border border-[#E5E4DF] rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
                 />
               </div>
@@ -323,12 +325,12 @@ export const GestionWarehouses = ({
               {/* Notes */}
               <div>
                 <label className="block text-sm font-medium text-[#191919] mb-2">
-                  Notes (optionnel)
+                  {t('settings.warehouses.notes')}
                 </label>
                 <textarea
                   value={formData.notes}
                   onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                  placeholder="Informations supplémentaires..."
+                  placeholder={t('settings.warehouses.notesPlaceholder')}
                   rows={3}
                   className="w-full px-4 py-2.5 border border-[#E5E4DF] rounded-lg focus:outline-none focus:ring-2 focus:ring-black resize-none"
                 />
@@ -341,13 +343,13 @@ export const GestionWarehouses = ({
                   variant="ghost"
                   onClick={handleCloseModal}
                 >
-                  Annuler
+                  {t('settings.warehouses.cancel')}
                 </Button>
                 <Button
                   type="submit"
                   variant="primary"
                 >
-                  {editingWarehouse ? 'Modifier' : 'Créer'}
+                  {editingWarehouse ? t('settings.warehouses.modify') : t('settings.warehouses.create')}
                 </Button>
               </div>
             </form>

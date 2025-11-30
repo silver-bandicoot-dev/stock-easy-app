@@ -21,9 +21,12 @@ import {
 } from '@shopify/polaris-icons';
 import { useState, useCallback, useEffect } from "react";
 import { useNavigate } from "react-router";
+import { useTranslations } from "../hooks/useTranslations";
+import { LanguageSelector } from "../components/LanguageSelector";
 
 export const DashboardPage = () => {
   const navigate = useNavigate();
+  const { t, formatTimeAgo, language, changeLanguage } = useTranslations();
   const [connecting, setConnecting] = useState(false);
   const [disconnecting, setDisconnecting] = useState(false);
   const [syncing, setSyncing] = useState(false);
@@ -99,20 +102,10 @@ export const DashboardPage = () => {
   const unsyncedCount = supabaseStats.unsyncedCount || unsyncedItems.length; // Use server count if available
   const lastSync = lastLogs?.[0]?.createdAt;
 
-  // Format time ago
-  const formatTimeAgo = (date) => {
-    if (!date) return 'Jamais';
-    const seconds = Math.floor((new Date() - new Date(date)) / 1000);
-    if (seconds < 60) return 'À l\'instant';
-    if (seconds < 3600) return `Il y a ${Math.floor(seconds / 60)} min`;
-    if (seconds < 86400) return `Il y a ${Math.floor(seconds / 3600)}h`;
-    return `Il y a ${Math.floor(seconds / 86400)} jour(s)`;
-  };
-
   // Handle connect
   const handleConnect = useCallback(async () => {
     if (!shop?.id) {
-      shopify.toast.show('Boutique non trouvée', { isError: true });
+      shopify.toast.show(t('shopNotFound'), { isError: true });
       return;
     }
     
@@ -122,22 +115,22 @@ export const DashboardPage = () => {
       const result = response?.data || response;
       
       if (result?.success || result?.companyId) {
-        shopify.toast.show('🎉 Connexion réussie !');
+        shopify.toast.show(t('connectionSuccess'));
         refetchShop();
       } else {
-        const errorMsg = result?.message || 'Erreur de connexion';
+        const errorMsg = result?.message || t('connectionError');
         shopify.toast.show(errorMsg, { isError: true });
       }
     } catch (error) {
-      shopify.toast.show('Erreur de connexion', { isError: true });
+      shopify.toast.show(t('connectionError'), { isError: true });
     } finally {
       setConnecting(false);
     }
-  }, [shop?.id, connectShopToCompany, refetchShop]);
+  }, [shop?.id, connectShopToCompany, refetchShop, t]);
 
   // Handle disconnect
   const handleDisconnect = useCallback(async () => {
-    if (!confirm('Êtes-vous sûr de vouloir déconnecter Stockeasy ? Vos données resteront sur Stockeasy mais ne seront plus synchronisées.')) {
+    if (!confirm(t('disconnectConfirm'))) {
       return;
     }
     
@@ -147,19 +140,19 @@ export const DashboardPage = () => {
         id: shop?.id,
         stockEasyCompanyId: null
       });
-      shopify.toast.show('Déconnexion réussie');
+      shopify.toast.show(t('disconnectSuccess'));
       refetchShop();
     } catch (error) {
-      shopify.toast.show('Erreur lors de la déconnexion', { isError: true });
+      shopify.toast.show(t('disconnectError'), { isError: true });
     } finally {
       setDisconnecting(false);
     }
-  }, [shop?.id, updateShop, refetchShop]);
+  }, [shop?.id, updateShop, refetchShop, t]);
 
   // Handle manual sync (enqueue to run in background)
   const handleSync = useCallback(async () => {
     if (!shop?.id) {
-      shopify.toast.show('Erreur: boutique non trouvée', { isError: true });
+      shopify.toast.show(t('shopNotFound'), { isError: true });
       return;
     }
     
@@ -167,7 +160,7 @@ export const DashboardPage = () => {
     
     try {
       await api.enqueue(api.syncShopifyProducts, { shopId: shop.id });
-      shopify.toast.show('🔄 Synchronisation lancée !');
+      shopify.toast.show(t('syncStarted'));
       
       // Refetch data after sync completes
       setTimeout(() => {
@@ -175,10 +168,10 @@ export const DashboardPage = () => {
         setSyncing(false);
       }, 5000);
     } catch (error) {
-      shopify.toast.show('Erreur lors de la synchronisation', { isError: true });
+      shopify.toast.show(t('syncError'), { isError: true });
       setSyncing(false);
     }
-  }, [shop?.id, loadSupabaseStats]);
+  }, [shop?.id, loadSupabaseStats, t]);
 
   // Build Stockeasy dashboard URL
   const stockeasyUrl = 'https://stock-easy-app.vercel.app';
@@ -190,7 +183,7 @@ export const DashboardPage = () => {
         <Card>
           <BlockStack gap="400" inlineAlign="center">
             <Spinner size="large" />
-            <Text as="p">Chargement...</Text>
+            <Text as="p">{t('loading')}</Text>
           </BlockStack>
         </Card>
       </Page>
@@ -252,7 +245,7 @@ export const DashboardPage = () => {
                   ) : (
                     <Icon source={RefreshIcon} tone="inherit" />
                   )}
-                  Synchroniser
+                  {t('sync')}
                 </button>
               )}
             </InlineStack>
@@ -271,7 +264,7 @@ export const DashboardPage = () => {
                     backgroundColor: '#22c55e',
                     display: 'inline-block'
                   }} />
-                  <Text as="span" variant="bodySm" tone="subdued">connecté</Text>
+                  <Text as="span" variant="bodySm" tone="subdued">{t('connected')}</Text>
                 </div>
               ) : (
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -282,7 +275,7 @@ export const DashboardPage = () => {
                     backgroundColor: '#f59e0b',
                     display: 'inline-block'
                   }} />
-                  <Text as="span" variant="bodySm" tone="subdued">non connecté</Text>
+                  <Text as="span" variant="bodySm" tone="subdued">{t('notConnected')}</Text>
                 </div>
               )}</InlineStack>
 
@@ -302,7 +295,7 @@ export const DashboardPage = () => {
                       </Text>
                     </Text>
                     <Text as="p" tone="subdued" variant="bodySm">
-                      SKUs synchronisés
+                      {t('syncedSkus')}
                     </Text>
                   </BlockStack>
                   
@@ -313,7 +306,7 @@ export const DashboardPage = () => {
                       {formatTimeAgo(lastSync)}
                     </Text>
                     <Text as="p" tone="subdued" variant="bodySm">
-                      dernière synchronisation des SKUs
+                      {t('lastSkuSync')}
                     </Text>
                   </BlockStack>
                 </InlineStack>
@@ -342,10 +335,10 @@ export const DashboardPage = () => {
                         </Box>
                         <BlockStack gap="050">
                           <Text as="h2" variant="headingMd">
-                            {unsyncedCount} produit(s) à vérifier
+                            {t('productsToVerify', { count: unsyncedCount })}
                           </Text>
                           <Text as="p" variant="bodySm" tone="subdued">
-                            Ces produits ne peuvent pas être synchronisés
+                            {t('cannotSync')}
                           </Text>
                         </BlockStack>
                       </InlineStack>
@@ -353,7 +346,7 @@ export const DashboardPage = () => {
                         onClick={() => navigate('/unsynced')}
                         variant="secondary"
                       >
-                        Voir les détails
+                        {t('viewDetails')}
                       </Button>
                     </InlineStack>
                     
@@ -361,17 +354,17 @@ export const DashboardPage = () => {
                     <InlineStack gap="200" wrap>
                       {noSkuCount > 0 && (
                         <Box background="bg-fill-critical-secondary" paddingInline="200" paddingBlock="100" borderRadius="full">
-                          <Text as="span" variant="bodySm">❌ {noSkuCount} sans SKU</Text>
+                          <Text as="span" variant="bodySm">❌ {noSkuCount} {t('noSku')}</Text>
                         </Box>
                       )}
                       {notTrackedCount > 0 && (
                         <Box background="bg-fill-warning-secondary" paddingInline="200" paddingBlock="100" borderRadius="full">
-                          <Text as="span" variant="bodySm">📦 {notTrackedCount} non suivi</Text>
+                          <Text as="span" variant="bodySm">📦 {notTrackedCount} {t('notTracked')}</Text>
                         </Box>
                       )}
                       {notSyncedOnlyCount > 0 && (
                         <Box background="bg-fill-info-secondary" paddingInline="200" paddingBlock="100" borderRadius="full">
-                          <Text as="span" variant="bodySm">⏳ {notSyncedOnlyCount} à synchroniser</Text>
+                          <Text as="span" variant="bodySm">⏳ {notSyncedOnlyCount} {t('toSync')}</Text>
                         </Box>
                       )}
                     </InlineStack>
@@ -384,7 +377,7 @@ export const DashboardPage = () => {
             {isConnected && unsyncedCount <= 0 && syncedCount > 0 && (
               <Banner tone="success">
                 <Text as="p">
-                  ✅ Tous vos SKUs Shopify sont synchronisés avec Stockeasy !
+                  {t('allSynced')}
                 </Text>
               </Banner>
             )}
@@ -392,7 +385,7 @@ export const DashboardPage = () => {
             {/* Info about real-time sync */}
             {isConnected && (
               <Text as="p" variant="bodySm" tone="subdued" alignment="center">
-                Les modifications Shopify sont synchronisées automatiquement
+                {t('autoSyncInfo')}
               </Text>
             )}
 
@@ -408,7 +401,7 @@ export const DashboardPage = () => {
                     external
                     fullWidth
                   >
-                    Ouvrir Stockeasy
+                    {t('openStockeasy')}
                   </Button>
                   <Button
                     variant="plain"
@@ -416,7 +409,7 @@ export const DashboardPage = () => {
                     onClick={handleDisconnect}
                     loading={disconnecting}
                   >
-                    Déconnecter Stockeasy
+                    {t('disconnectStockeasy')}
                   </Button>
                 </>
               ) : (
@@ -427,7 +420,7 @@ export const DashboardPage = () => {
                   loading={connecting}
                   fullWidth
                 >
-                  Connecter à Stockeasy
+                  {t('connectToStockeasy')}
                 </Button>
               )}
             </BlockStack>
@@ -436,22 +429,37 @@ export const DashboardPage = () => {
 
         {/* Help Card */}
         <Card>
-          <InlineStack align="space-between" blockAlign="center">
-            <BlockStack gap="050">
-              <Text as="h2" variant="headingMd">Besoin d'aide ?</Text>
-              <Text as="p" tone="subdued" variant="bodySm">
-                Documentation et support
-              </Text>
-            </BlockStack>
-            <InlineStack gap="200">
-              <Button url="https://stock-easy-app.vercel.app/docs" external variant="plain">
-                Docs
-              </Button>
-              <Button url="https://stock-easy-app.vercel.app/support" external variant="plain">
-                Support
-              </Button>
+          <BlockStack gap="400">
+            <InlineStack align="space-between" blockAlign="center">
+              <BlockStack gap="050">
+                <Text as="h2" variant="headingMd">{t('needHelp')}</Text>
+                <Text as="p" tone="subdued" variant="bodySm">
+                  {t('docsAndSupport')}
+                </Text>
+              </BlockStack>
+              <InlineStack gap="200">
+                <Button url="https://stock-easy-app.vercel.app/docs" external variant="plain">
+                  {t('docs')}
+                </Button>
+                <Button url="https://stock-easy-app.vercel.app/support" external variant="plain">
+                  {t('support')}
+                </Button>
+              </InlineStack>
             </InlineStack>
-          </InlineStack>
+            
+            {/* Language selector */}
+            <Box borderBlockStartWidth="025" borderColor="border" paddingBlockStart="400">
+              <InlineStack align="space-between" blockAlign="center">
+                <Text as="p" variant="bodySm" tone="subdued">
+                  {t('language')}
+                </Text>
+                <LanguageSelector 
+                  currentLanguage={language} 
+                  onChangeLanguage={changeLanguage} 
+                />
+              </InlineStack>
+            </Box>
+          </BlockStack>
         </Card>
       </BlockStack>
     </Page>
