@@ -5,7 +5,7 @@ const Hero = () => {
   const stats = [
     { value: '40%', label: 'réduction des ruptures' },
     { value: '3h', label: 'économisées / semaine' },
-    { value: '99.9%', label: 'précision IA' },
+    { value: '500+', label: 'marchands actifs' },
   ];
 
   return (
@@ -55,7 +55,7 @@ const Hero = () => {
                 className="btn-primary text-base px-6 py-3"
               >
                 <img 
-                  src="/logos/shopify.png" 
+                  src="/logos/shopify-white.svg" 
                   alt="Shopify" 
                   className="w-5 h-5 object-contain"
                 />
@@ -113,7 +113,7 @@ const Hero = () => {
               {/* Badge */}
               <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-[#FCA5A5] bg-[#FEF2F2] mb-6">
                 <span className="w-1.5 h-1.5 rounded-full bg-[#EF4444]" />
-                <span className="text-xs text-[#DC2626] font-medium">3 à commander</span>
+                <span className="text-xs text-[#DC2626] font-medium">3 SKU à commander</span>
               </div>
 
               {/* KPI Cards - Matching app pastel style */}
@@ -179,7 +179,7 @@ const Hero = () => {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.4 }}
-          className="grid grid-cols-3 gap-8 mt-20 pt-10 border-t border-[#E5E4DF]"
+          className="grid grid-cols-3 gap-8 mt-12 pt-8 border-t border-[#E5E4DF]"
         >
           {stats.map((stat) => (
             <div key={stat.label} className="text-center">

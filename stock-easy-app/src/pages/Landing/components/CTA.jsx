@@ -4,7 +4,7 @@ import { ArrowRight, Check } from 'lucide-react';
 const CTA = () => {
   const benefits = [
     "14 jours d'essai gratuit",
-    "Pas de carte bancaire",
+    "Support FR, EN, ES",
     "Annulation en 1 clic",
   ];
 
@@ -32,7 +32,7 @@ const CTA = () => {
 
           {/* Subheadline */}
           <p className="text-lg text-[#191919]/60 mb-8 max-w-md mx-auto">
-            Commencez votre essai gratuit aujourd'hui. Aucune carte bancaire requise.
+            Commencez votre essai gratuit aujourd'hui.
           </p>
 
           {/* CTA Buttons */}
@@ -46,7 +46,7 @@ const CTA = () => {
               className="btn-primary text-base px-8 py-4"
             >
               <img 
-                src="/logos/shopify.png" 
+                src="/logos/shopify-white.svg" 
                 alt="Shopify" 
                 className="w-5 h-5 object-contain"
               />

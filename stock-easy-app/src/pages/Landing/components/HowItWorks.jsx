@@ -34,9 +34,8 @@ const HowItWorks = () => {
   ];
 
   const benefits = [
-    "Pas de carte bancaire requise",
     "14 jours d'essai gratuit",
-    "Support en français",
+    "Support en français, anglais et espagnol",
   ];
 
   return (
@@ -130,7 +129,7 @@ const HowItWorks = () => {
             className="btn-primary whitespace-nowrap"
           >
             <img 
-              src="/logos/shopify.png" 
+              src="/logos/shopify-white.svg" 
               alt="Shopify" 
               className="w-4 h-4 object-contain"
             />

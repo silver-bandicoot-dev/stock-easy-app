@@ -11,7 +11,7 @@ const Partners = () => {
   ];
 
   return (
-    <section className="py-16 bg-white border-y border-[#E5E4DF]">
+    <section className="py-10 bg-white border-y border-[#E5E4DF]">
       <div className="landing-container">
         {/* Main Integration - Shopify */}
         <motion.div
@@ -48,7 +48,7 @@ const Partners = () => {
             className="btn-primary"
           >
             <img 
-              src="/logos/shopify.png" 
+              src="/logos/shopify-white.svg" 
               alt="Shopify" 
               className="w-4 h-4 object-contain"
             />
@@ -56,28 +56,8 @@ const Partners = () => {
           </a>
         </motion.div>
 
-        {/* Coming Soon */}
-        <div className="flex justify-center gap-8 mt-12 pt-12 border-t border-[#E5E4DF]">
-          {[
-            { name: 'WooCommerce', logo: '/logos/woocommerce.png' },
-            { name: 'BigCommerce', logo: '/logos/bigcommerce.png' },
-          ].map((platform) => (
-            <div key={platform.name} className="flex items-center gap-3 opacity-50">
-              <img 
-                src={platform.logo} 
-                alt={platform.name} 
-                className="w-10 h-10 object-contain grayscale"
-              />
-              <div>
-                <span className="text-sm font-medium text-[#191919]">{platform.name}</span>
-                <span className="badge badge-neutral ml-2">Bientôt</span>
-              </div>
-            </div>
-          ))}
-        </div>
-
         {/* Trusted By Marquee */}
-        <div className="relative mt-12 pt-12 border-t border-[#E5E4DF]">
+        <div className="relative mt-8 pt-8 border-t border-[#E5E4DF]">
           <div className="absolute left-0 top-12 bottom-0 w-24 bg-gradient-to-r from-white to-transparent z-10" />
           <div className="absolute right-0 top-12 bottom-0 w-24 bg-gradient-to-l from-white to-transparent z-10" />
           

@@ -286,7 +286,7 @@ export const DashboardTab = ({ productsByStatus, orders, enrichedProducts, onVie
         <motion.div variants={itemVariants} className="flex items-center gap-2">
           <span className="inline-flex items-center gap-1.5 px-2 py-1 text-xs font-medium text-[#191919] bg-[#FFF4F4] border border-[#FED3D1] rounded">
             <span className="w-1.5 h-1.5 bg-[#D72C0D] rounded-full" />
-            {urgentCount} à commander
+            {urgentCount} SKU à commander
           </span>
         </motion.div>
       )}

@@ -1,5 +1,6 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import * as Sentry from '@sentry/react';
 import { SupabaseAuthProvider } from './contexts/SupabaseAuthContext';
 import { ModalProvider } from './contexts/ModalContext';
 import { Toaster } from 'sonner';
@@ -14,83 +15,98 @@ import ProfileRedirect from './components/profile/ProfileRedirect';
 import SupabaseConnectionTest from './components/debug/SupabaseConnectionTest';
 import Landing from './pages/Landing';
 import ComingSoon from './pages/Landing/ComingSoon';
+import TermsOfService from './pages/Legal/TermsOfService';
+import PrivacyPolicy from './pages/Legal/PrivacyPolicy';
+import LegalNotice from './pages/Legal/LegalNotice';
+import CookiePolicy from './pages/Legal/CookiePolicy';
+import SentryErrorBoundary from './components/common/SentryErrorBoundary';
 import './config/i18n';
+
+// Wrapper Routes avec Sentry pour le tracing des navigations
+const SentryRoutes = Sentry.withSentryReactRouterV7Routing(Routes);
 
 const App = () => {
   return (
-    <Router>
-      <Toaster
-        position="top-right"
-        richColors
-        expand={false}
-        duration={3000}
-      />
-      <SupabaseAuthProvider>
-        <ModalProvider>
-        <Routes>
-          {/* Coming Soon Page - Public (temporaire avant lancement) */}
-          <Route path="/" element={<ComingSoon />} />
-          
-          {/* Landing Page Preview - Pour révision interne */}
-          <Route path="/preview" element={<Landing />} />
-          
-          {/* Public Routes */}
-          <Route path="/login" element={<SupabaseLogin />} />
-          <Route path="/forgot-password" element={<SupabaseResetPassword />} />
-          <Route path="/confirm-email" element={<EmailConfirmation />} />
-          
-          {/* Invitation Route - Protected */}
-          <Route
-            path="/accept-invitation"
-            element={
-              <ProtectedRoute>
-                <AcceptInvitation />
-              </ProtectedRoute>
-            }
-          />
+    <SentryErrorBoundary>
+      <Router>
+        <Toaster
+          position="top-right"
+          richColors
+          expand={false}
+          duration={3000}
+        />
+        <SupabaseAuthProvider>
+          <ModalProvider>
+          <SentryRoutes>
+            {/* Coming Soon Page - Public (temporaire avant lancement) */}
+            <Route path="/" element={<ComingSoon />} />
+            
+            {/* Landing Page Preview - Pour révision interne */}
+            <Route path="/preview" element={<Landing />} />
 
-          {/* Protected Routes - Main App */}
-          <Route
-            path="/app"
-            element={
-              <ProtectedRoute>
-                <Stockeasy />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/profile"
-            element={
-              <ProtectedRoute>
-                <ProfileRedirect />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/notifications"
-            element={
-              <ProtectedRoute>
-                <NotificationsPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/test-supabase"
-            element={
-              <ProtectedRoute>
-                <SupabaseConnectionTest />
-              </ProtectedRoute>
-            }
-          />
+            {/* Pages Légales */}
+            <Route path="/legal/terms" element={<TermsOfService />} />
+            <Route path="/legal/privacy" element={<PrivacyPolicy />} />
+            <Route path="/legal/notices" element={<LegalNotice />} />
+            <Route path="/legal/cookies" element={<CookiePolicy />} />
+            
+            {/* Public Routes */}
+            <Route path="/login" element={<SupabaseLogin />} />
+            <Route path="/forgot-password" element={<SupabaseResetPassword />} />
+            <Route path="/confirm-email" element={<EmailConfirmation />} />
+            
+            {/* Invitation Route - Protected */}
+            <Route
+              path="/accept-invitation"
+              element={
+                <ProtectedRoute>
+                  <AcceptInvitation />
+                </ProtectedRoute>
+              }
+            />
 
-          {/* Catch all - redirect to home */}
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-        </ModalProvider>
-      </SupabaseAuthProvider>
-    </Router>
+            {/* Protected Routes - Main App */}
+            <Route
+              path="/app"
+              element={
+                <ProtectedRoute>
+                  <Stockeasy />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/profile"
+              element={
+                <ProtectedRoute>
+                  <ProfileRedirect />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/notifications"
+              element={
+                <ProtectedRoute>
+                  <NotificationsPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/test-supabase"
+              element={
+                <ProtectedRoute>
+                  <SupabaseConnectionTest />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Catch all - redirect to home */}
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </SentryRoutes>
+          </ModalProvider>
+        </SupabaseAuthProvider>
+      </Router>
+    </SentryErrorBoundary>
   );
 };
 
 export default App;
-

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Menu, X, ChevronRight, LogIn } from 'lucide-react';
 
-const Navbar = () => {
+const Navbar = ({ isLegalPage = false }) => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
@@ -13,6 +13,13 @@ const Navbar = () => {
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
+
+  const getHref = (href) => {
+    if (isLegalPage && href.startsWith('#')) {
+      return `/preview${href}`;
+    }
+    return href;
+  };
 
   const navLinks = [
     { name: 'Fonctionnalités', href: '#features' },
@@ -84,7 +91,7 @@ const Navbar = () => {
         <div className="landing-container">
           <div className="flex items-center justify-between h-16">
             {/* Logo */}
-            <a href="#" className="flex items-center">
+            <a href={isLegalPage ? "/preview" : "#"} className="flex items-center">
               <Logo size={40} />
             </a>
 
@@ -93,7 +100,7 @@ const Navbar = () => {
               {navLinks.map((link) => (
                 <a
                   key={link.name}
-                  href={link.href}
+                  href={getHref(link.href)}
                   className="text-sm text-[#191919]/70 hover:text-[#191919] transition-colors duration-200"
                 >
                   {link.name}
@@ -113,7 +120,7 @@ const Navbar = () => {
                 className="btn-primary"
               >
                 <img 
-                  src="/logos/shopify.png" 
+                  src="/logos/shopify-white.svg" 
                   alt="Shopify" 
                   className="w-4 h-4 object-contain"
                 />
@@ -146,7 +153,7 @@ const Navbar = () => {
               {navLinks.map((link, index) => (
                 <motion.a
                   key={link.name}
-                  href={link.href}
+                  href={getHref(link.href)}
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: index * 0.05 }}
@@ -169,7 +176,7 @@ const Navbar = () => {
                   className="btn-primary w-full justify-center"
                 >
                   <img 
-                    src="/logos/shopify.png" 
+                    src="/logos/shopify-white.svg" 
                     alt="Shopify" 
                     className="w-4 h-4 object-contain"
                   />
