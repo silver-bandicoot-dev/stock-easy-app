@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Search, ChevronRight, ArrowLeft, X } from 'lucide-react';
 import { 
@@ -12,12 +13,12 @@ import {
 /**
  * Barre de recherche du centre d'aide
  */
-const HelpSearchBar = ({ searchTerm, setSearchTerm, onClear }) => (
+const HelpSearchBar = ({ searchTerm, setSearchTerm, onClear, placeholder }) => (
   <div className="relative">
     <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[#666663]" />
     <input
       type="text"
-      placeholder="Rechercher dans l'aide..."
+      placeholder={placeholder}
       value={searchTerm}
       onChange={(e) => setSearchTerm(e.target.value)}
       className="w-full pl-12 pr-12 py-3.5 bg-white border-2 border-[#E5E4DF] rounded-xl text-base focus:outline-none focus:border-[#191919] focus:ring-2 focus:ring-[#191919]/10 transition-all"
@@ -36,7 +37,7 @@ const HelpSearchBar = ({ searchTerm, setSearchTerm, onClear }) => (
 /**
  * Carte de catégorie
  */
-const HelpCategoryCard = ({ category, onClick, articleCount }) => {
+const HelpCategoryCard = ({ category, onClick, articleCount, articlesLabel }) => {
   const Icon = category.icon;
   
   return (
@@ -59,7 +60,7 @@ const HelpCategoryCard = ({ category, onClick, articleCount }) => {
           </p>
           <div className="mt-2 flex items-center gap-2">
             <span className="text-xs text-[#666663] bg-[#FAFAF7] px-2 py-1 rounded-full">
-              {articleCount} article{articleCount > 1 ? 's' : ''}
+              {articleCount} {articlesLabel}
             </span>
             <ChevronRight className="w-4 h-4 text-[#666663] group-hover:text-[#191919] group-hover:translate-x-1 transition-all" />
           </div>
@@ -72,7 +73,7 @@ const HelpCategoryCard = ({ category, onClick, articleCount }) => {
 /**
  * Liste des articles d'une catégorie
  */
-const HelpArticleList = ({ category, articles, onSelectArticle, onBack }) => {
+const HelpArticleList = ({ category, articles, onSelectArticle, onBack, articlesLabel }) => {
   const Icon = category.icon;
   
   return (
@@ -91,7 +92,7 @@ const HelpArticleList = ({ category, articles, onSelectArticle, onBack }) => {
           </div>
           <div>
             <h2 className="text-xl font-bold text-[#191919]">{category.title}</h2>
-            <p className="text-sm text-[#666663]">{articles.length} article{articles.length > 1 ? 's' : ''}</p>
+            <p className="text-sm text-[#666663]">{articles.length} {articlesLabel}</p>
           </div>
         </div>
       </div>
@@ -128,7 +129,7 @@ const HelpArticleList = ({ category, articles, onSelectArticle, onBack }) => {
 /**
  * Affichage d'un article
  */
-const HelpArticle = ({ article, category, onBack }) => {
+const HelpArticle = ({ article, category, onBack, backLabel }) => {
   const Icon = category?.icon;
   
   // Parser le markdown de base
@@ -293,7 +294,7 @@ const HelpArticle = ({ article, category, onBack }) => {
           className="flex items-center gap-1 text-[#666663] hover:text-[#191919] transition-colors"
         >
           <ArrowLeft className="w-4 h-4" />
-          <span>Retour</span>
+          <span>{backLabel}</span>
         </button>
         <ChevronRight className="w-4 h-4 text-[#E5E4DF]" />
         <span className="text-[#666663]">{category?.title}</span>
@@ -332,23 +333,23 @@ const HelpArticle = ({ article, category, onBack }) => {
 /**
  * Résultats de recherche
  */
-const SearchResults = ({ results, searchTerm, onSelectArticle, onClear }) => (
+const SearchResults = ({ results, searchTerm, onSelectArticle, onClear, resultsLabel, resultsForLabel, clearSearchLabel, noResultsLabel }) => (
   <div className="space-y-4">
     <div className="flex items-center justify-between">
       <p className="text-sm text-[#666663]">
-        {results.length} résultat{results.length > 1 ? 's' : ''} pour "<span className="font-medium text-[#191919]">{searchTerm}</span>"
+        {results.length} {resultsLabel} {resultsForLabel} "<span className="font-medium text-[#191919]">{searchTerm}</span>"
       </p>
       <button
         onClick={onClear}
         className="text-sm text-[#666663] hover:text-[#191919] transition-colors"
       >
-        Effacer la recherche
+        {clearSearchLabel}
       </button>
     </div>
     
     {results.length === 0 ? (
       <div className="bg-white rounded-xl border-2 border-[#E5E4DF] p-8 text-center">
-        <p className="text-[#666663]">Aucun article trouvé. Essayez d'autres mots-clés.</p>
+        <p className="text-[#666663]">{noResultsLabel}</p>
       </div>
     ) : (
       <div className="space-y-3">
@@ -398,6 +399,7 @@ const SearchResults = ({ results, searchTerm, onSelectArticle, onClear }) => (
  * Composant principal du Centre d'Aide
  */
 export const HelpCenterTab = () => {
+  const { t } = useTranslation();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [selectedArticle, setSelectedArticle] = useState(null);
@@ -457,10 +459,10 @@ export const HelpCenterTab = () => {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
           <h1 className="text-xl sm:text-2xl font-semibold text-[#191919]">
-            Centre d'Aide
+            {t('helpCenter.title')}
           </h1>
           <p className="text-sm text-[#6B7177] mt-0.5">
-            Documentation et guides pour utiliser Stockeasy
+            {t('helpCenter.subtitle')}
           </p>
         </div>
       </div>
@@ -470,6 +472,7 @@ export const HelpCenterTab = () => {
         searchTerm={searchTerm}
         setSearchTerm={setSearchTerm}
         onClear={handleClearSearch}
+        placeholder={t('helpCenter.searchPlaceholder')}
       />
       
       {/* Contenu principal */}
@@ -485,6 +488,7 @@ export const HelpCenterTab = () => {
               article={selectedArticle}
               category={selectedCategory}
               onBack={handleBack}
+              backLabel={t('helpCenter.back')}
             />
           </motion.div>
         )}
@@ -501,6 +505,7 @@ export const HelpCenterTab = () => {
               articles={HELP_ARTICLES[selectedCategory.id] || []}
               onSelectArticle={handleSelectArticle}
               onBack={handleBack}
+              articlesLabel={t('helpCenter.articles')}
             />
           </motion.div>
         )}
@@ -517,6 +522,10 @@ export const HelpCenterTab = () => {
               searchTerm={searchTerm}
               onSelectArticle={handleSelectArticle}
               onClear={handleClearSearch}
+              resultsLabel={t('helpCenter.results')}
+              resultsForLabel={t('helpCenter.resultsFor')}
+              clearSearchLabel={t('helpCenter.clearSearch')}
+              noResultsLabel={t('helpCenter.noResults')}
             />
           </motion.div>
         )}
@@ -531,9 +540,9 @@ export const HelpCenterTab = () => {
           >
             {/* Message d'accueil */}
             <div className="bg-gradient-to-br from-[#191919] to-[#333] rounded-xl p-6 text-white">
-              <h2 className="text-xl font-bold mb-2">Comment pouvons-nous vous aider ?</h2>
+              <h2 className="text-xl font-bold mb-2">{t('helpCenter.welcome.title')}</h2>
               <p className="text-white/80 text-sm">
-                Parcourez nos guides ou utilisez la recherche pour trouver rapidement des réponses.
+                {t('helpCenter.welcome.description')}
               </p>
             </div>
             
@@ -550,6 +559,7 @@ export const HelpCenterTab = () => {
                     category={category}
                     articleCount={HELP_ARTICLES[category.id]?.length || 0}
                     onClick={() => handleSelectCategory(category)}
+                    articlesLabel={t('helpCenter.articles')}
                   />
                 </motion.div>
               ))}
@@ -557,7 +567,7 @@ export const HelpCenterTab = () => {
             
             {/* Articles populaires */}
             <div className="bg-white rounded-xl border-2 border-[#E5E4DF] p-6">
-              <h3 className="text-lg font-semibold text-[#191919] mb-4">Articles populaires</h3>
+              <h3 className="text-lg font-semibold text-[#191919] mb-4">{t('helpCenter.popularArticles')}</h3>
               <div className="space-y-2">
                 {[
                   getArticleById('welcome'),

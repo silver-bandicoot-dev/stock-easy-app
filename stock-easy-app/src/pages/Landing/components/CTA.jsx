@@ -1,11 +1,14 @@
 import { motion } from 'framer-motion';
 import { ArrowRight, Check } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 const CTA = () => {
+  const { t } = useTranslation();
+  
   const benefits = [
-    "14 jours d'essai gratuit",
-    "Support FR, EN, ES",
-    "Annulation en 1 clic",
+    t('landing.cta.benefits.freeTrial', "14 jours d'essai gratuit"),
+    t('landing.cta.benefits.multilingualSupport', "Support FR, EN, ES"),
+    t('landing.cta.benefits.easyCancel', "Annulation en 1 clic"),
   ];
 
   return (
@@ -21,18 +24,18 @@ const CTA = () => {
           <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#FAFAF7] border border-[#E5E4DF] mb-6">
             <span className="w-2 h-2 rounded-full bg-[#10B981]" />
             <span className="text-sm text-[#191919]/70">
-              Rejoignez 500+ marchands Shopify
+              {t('landing.cta.badge', 'Rejoignez 500+ marchands Shopify')}
             </span>
           </div>
 
           {/* Headline */}
           <h2 className="text-3xl md:text-4xl font-semibold text-[#191919] mb-4">
-            Prêt à optimiser votre gestion de stock ?
+            {t('landing.cta.title', 'Prêt à optimiser votre gestion de stock ?')}
           </h2>
 
           {/* Subheadline */}
           <p className="text-lg text-[#191919]/60 mb-8 max-w-md mx-auto">
-            Commencez votre essai gratuit aujourd'hui.
+            {t('landing.cta.subtitle', "Commencez votre essai gratuit aujourd'hui.")}
           </p>
 
           {/* CTA Buttons */}
@@ -50,14 +53,14 @@ const CTA = () => {
                 alt="Shopify" 
                 className="w-5 h-5 object-contain"
               />
-              Installer sur Shopify
+              {t('landing.cta.installButton', 'Installer sur Shopify')}
               <ArrowRight size={18} />
             </motion.a>
             <a
               href="mailto:contact@stockeasy.app"
               className="btn-secondary text-base px-8 py-4"
             >
-              Nous contacter
+              {t('landing.cta.contactButton', 'Nous contacter')}
             </a>
           </div>
 

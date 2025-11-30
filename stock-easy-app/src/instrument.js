@@ -57,21 +57,83 @@ if (SENTRY_DSN) {
         blockAllMedia: false,
       }),
       
-      // Feedback utilisateur intégré (optionnel)
+      // Feedback utilisateur - Design StockEasy (sobre et professionnel)
       Sentry.feedbackIntegration({
-        colorScheme: "system",
+        colorScheme: "light",
         showBranding: false,
-        buttonLabel: "Signaler un bug",
+        // Bouton discret avec icône seule
+        triggerLabel: "",
+        // Textes en français
+        formTitle: "Signaler un problème",
         submitButtonLabel: "Envoyer",
         cancelButtonLabel: "Annuler",
-        formTitle: "Signaler un problème",
         nameLabel: "Nom",
-        namePlaceholder: "Votre nom",
-        emailLabel: "Email",
+        namePlaceholder: "Votre nom (optionnel)",
+        emailLabel: "Email", 
         emailPlaceholder: "votre@email.com",
-        messageLabel: "Décrivez le problème",
-        messagePlaceholder: "Que s'est-il passé ?",
+        messageLabel: "Description",
+        messagePlaceholder: "Décrivez le problème rencontré...",
         successMessageText: "Merci pour votre retour !",
+        // Formulaire simplifié
+        showName: false,
+        showEmail: true,
+        isNameRequired: false,
+        isEmailRequired: false,
+        // Thème StockEasy - Sobre, neutre, professionnel
+        themeLight: {
+          // Bouton noir élégant
+          background: "#0F172A",          // neutral-900 (noir)
+          backgroundHover: "#1E293B",     // neutral-800
+          foreground: "#F8FAFC",          // neutral-50 (blanc)
+          border: "#0F172A",              // neutral-900
+          borderRadius: "8px",
+          boxShadow: "0 2px 8px rgba(15,23,42,0.15)",
+          // Formulaire
+          formBorderRadius: "12px",
+          formContentBackgroundColor: "#FFFFFF",
+          submitBackground: "#4F46E5",    // primary-600 (indigo)
+          submitBackgroundHover: "#4338CA", // primary-700
+          submitForeground: "#FFFFFF",
+          submitBorder: "#4F46E5",
+          cancelBackground: "transparent",
+          cancelBackgroundHover: "#F1F5F9",
+          cancelForeground: "#64748B",
+          cancelBorder: "#E2E8F0",
+          inputBackground: "#FFFFFF",
+          inputForeground: "#0F172A",     // neutral-900
+          inputBorder: "#CBD5E1",         // neutral-300
+          inputBorderFocus: "#6366F1",    // primary-500
+          inputOutlineFocus: "rgba(99, 102, 241, 0.2)",
+          formBorderColor: "#E2E8F0",
+          formSentryLogoColor: "#94A3B8", // neutral-400
+        },
+        themeDark: {
+          // Bouton (même style sobre en dark)
+          background: "#1E293B",          // neutral-800
+          backgroundHover: "#334155",     // neutral-700
+          foreground: "#94A3B8",          // neutral-400
+          border: "#334155",              // neutral-700
+          borderRadius: "8px",
+          boxShadow: "0 2px 8px rgba(0,0,0,0.2)",
+          // Formulaire dark
+          formBorderRadius: "12px",
+          formContentBackgroundColor: "#0F172A",
+          submitBackground: "#6366F1",    // primary-500
+          submitBackgroundHover: "#4F46E5",
+          submitForeground: "#FFFFFF",
+          submitBorder: "#6366F1",
+          cancelBackground: "transparent",
+          cancelBackgroundHover: "#1E293B",
+          cancelForeground: "#94A3B8",
+          cancelBorder: "#334155",
+          inputBackground: "#1E293B",
+          inputForeground: "#F8FAFC",
+          inputBorder: "#334155",
+          inputBorderFocus: "#818CF8",
+          inputOutlineFocus: "rgba(129, 140, 248, 0.2)",
+          formBorderColor: "#334155",
+          formSentryLogoColor: "#475569",
+        },
       }),
     ],
 

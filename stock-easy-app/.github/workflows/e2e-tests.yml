@@ -1,0 +1,170 @@
+# Tests E2E StockEasy avec Playwright
+# Ce workflow exécute les tests end-to-end automatiquement
+
+name: Tests E2E
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - 'src/**'
+      - 'e2e/**'
+      - 'package.json'
+      - 'playwright.config.ts'
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - 'src/**'
+      - 'e2e/**'
+      - 'package.json'
+      - 'playwright.config.ts'
+  # Exécution manuelle
+  workflow_dispatch:
+  # Exécution planifiée (tests de régression quotidiens)
+  schedule:
+    - cron: '0 6 * * *' # Tous les jours à 6h UTC
+
+env:
+  CI: true
+
+jobs:
+  # Job de tests E2E
+  e2e-tests:
+    name: Tests E2E (${{ matrix.browser }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [chromium, firefox, webkit]
+    
+    steps:
+      - name: Checkout du code
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      
+      - name: Installation des dépendances
+        run: npm ci
+      
+      - name: Installation des navigateurs Playwright
+        run: npx playwright install --with-deps ${{ matrix.browser }}
+      
+      - name: Exécution des tests E2E
+        run: npm run test:e2e:${{ matrix.browser }}
+        env:
+          PLAYWRIGHT_BASE_URL: http://localhost:5173
+          # Variables d'environnement pour les tests (optionnel)
+          # TEST_USER_EMAIL: ${{ secrets.TEST_USER_EMAIL }}
+          # TEST_USER_PASSWORD: ${{ secrets.TEST_USER_PASSWORD }}
+      
+      - name: Upload des rapports de test
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-report-${{ matrix.browser }}
+          path: playwright-report/
+          retention-days: 30
+      
+      - name: Upload des résultats de test
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-results-${{ matrix.browser }}
+          path: playwright-results/
+          retention-days: 7
+
+  # Job de tests mobiles
+  e2e-mobile:
+    name: Tests E2E Mobile
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    
+    steps:
+      - name: Checkout du code
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      
+      - name: Installation des dépendances
+        run: npm ci
+      
+      - name: Installation des navigateurs Playwright
+        run: npx playwright install --with-deps chromium webkit
+      
+      - name: Exécution des tests mobiles
+        run: npm run test:e2e:mobile
+        env:
+          PLAYWRIGHT_BASE_URL: http://localhost:5173
+      
+      - name: Upload des rapports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-report-mobile
+          path: playwright-report/
+          retention-days: 30
+
+  # Job de régression visuelle
+  visual-regression:
+    name: Tests de Régression Visuelle
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    
+    steps:
+      - name: Checkout du code
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      
+      - name: Installation des dépendances
+        run: npm ci
+      
+      - name: Installation de Playwright
+        run: npx playwright install --with-deps chromium
+      
+      - name: Tests de régression visuelle
+        run: npx playwright test --grep "Régression Visuelle" --project=chromium
+        env:
+          PLAYWRIGHT_BASE_URL: http://localhost:5173
+      
+      - name: Upload des snapshots
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: visual-regression-snapshots
+          path: |
+            playwright-results/
+            e2e/**/*.png
+          retention-days: 7
+
+  # Résumé des tests
+  test-summary:
+    name: Résumé des Tests
+    runs-on: ubuntu-latest
+    needs: [e2e-tests, e2e-mobile]
+    if: always()
+    
+    steps:
+      - name: Résumé
+        run: |
+          echo "## Résumé des Tests E2E" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Job | Statut |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Tests Desktop | ${{ needs.e2e-tests.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Tests Mobile | ${{ needs.e2e-mobile.result }} |" >> $GITHUB_STEP_SUMMARY
+

@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import * as Sentry from '@sentry/react';
 import { SupabaseAuthProvider } from './contexts/SupabaseAuthContext';
 import { ModalProvider } from './contexts/ModalContext';
+import { LanguageProvider } from './contexts/LanguageContext';
 import { Toaster } from 'sonner';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import SupabaseLogin from './components/auth/SupabaseLogin';
@@ -28,15 +29,16 @@ const SentryRoutes = Sentry.withSentryReactRouterV7Routing(Routes);
 const App = () => {
   return (
     <SentryErrorBoundary>
-      <Router>
-        <Toaster
-          position="top-right"
-          richColors
-          expand={false}
-          duration={3000}
-        />
-        <SupabaseAuthProvider>
-          <ModalProvider>
+      <LanguageProvider>
+        <Router>
+          <Toaster
+            position="top-right"
+            richColors
+            expand={false}
+            duration={3000}
+          />
+          <SupabaseAuthProvider>
+            <ModalProvider>
           <SentryRoutes>
             {/* Coming Soon Page - Public (temporaire avant lancement) */}
             <Route path="/" element={<ComingSoon />} />
@@ -102,9 +104,10 @@ const App = () => {
             {/* Catch all - redirect to home */}
             <Route path="*" element={<Navigate to="/" replace />} />
           </SentryRoutes>
-          </ModalProvider>
-        </SupabaseAuthProvider>
-      </Router>
+            </ModalProvider>
+          </SupabaseAuthProvider>
+        </Router>
+      </LanguageProvider>
     </SentryErrorBoundary>
   );
 };

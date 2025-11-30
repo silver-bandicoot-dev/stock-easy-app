@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../contexts/SupabaseAuthContext';
 import { toast } from 'sonner';
 import { Logo } from '../ui/Logo';
 
 const SupabaseLogin = () => {
+  const { t } = useTranslation();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -31,12 +33,11 @@ const SupabaseLogin = () => {
       const { user, error } = await login(email, password);
 
       if (error) {
-        // Messages d'erreur en français
-        let errorMessage = 'Erreur de connexion';
+        let errorMessage = t('auth.loginError');
         if (error.message.includes('Invalid login credentials')) {
-          errorMessage = 'Email ou mot de passe incorrect';
+          errorMessage = t('auth.invalidCredentials');
         } else if (error.message.includes('Email not confirmed')) {
-          errorMessage = 'Veuillez confirmer votre email avant de vous connecter';
+          errorMessage = t('auth.emailNotConfirmed');
         }
         toast.error(errorMessage);
       } else if (user) {
@@ -44,7 +45,7 @@ const SupabaseLogin = () => {
       }
     } catch (error) {
       console.error('Erreur:', error);
-      toast.error('Une erreur est survenue lors de la connexion');
+      toast.error(t('auth.genericError'));
     } finally {
       setLoading(false);
     }
@@ -57,13 +58,13 @@ const SupabaseLogin = () => {
           <div className="flex justify-center mb-4">
             <Logo size="large" showText={true} theme="light" />
           </div>
-          <p className="text-[#6B7280]">Connectez-vous à votre compte</p>
+          <p className="text-[#6B7280]">{t('auth.loginSubtitle')}</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
             <label htmlFor="email" className="block text-sm font-medium text-[#191919] mb-2">
-              Email
+              {t('auth.email')}
             </label>
             <input
               id="email"
@@ -72,13 +73,13 @@ const SupabaseLogin = () => {
               onChange={(e) => setEmail(e.target.value)}
               required
               className="w-full px-4 py-3 border border-[#E5E7EB] rounded-lg focus:ring-2 focus:ring-[#191919] focus:border-transparent outline-none transition"
-              placeholder="vous@exemple.com"
+              placeholder={t('auth.emailPlaceholder')}
             />
           </div>
 
           <div>
             <label htmlFor="password" className="block text-sm font-medium text-[#191919] mb-2">
-              Mot de passe
+              {t('auth.password')}
             </label>
             <input
               id="password"
@@ -96,7 +97,7 @@ const SupabaseLogin = () => {
               to="/forgot-password"
               className="text-sm text-[#191919] hover:underline"
             >
-              Mot de passe oublié ?
+              {t('auth.forgotPassword')}
             </Link>
           </div>
 
@@ -105,7 +106,7 @@ const SupabaseLogin = () => {
             disabled={loading}
             className="w-full bg-[#191919] text-white py-3 rounded-lg font-medium hover:bg-[#2D2D2D] transition disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {loading ? 'Connexion...' : 'Se connecter'}
+            {loading ? t('auth.loggingIn') : t('auth.loginButton')}
           </button>
         </form>
 

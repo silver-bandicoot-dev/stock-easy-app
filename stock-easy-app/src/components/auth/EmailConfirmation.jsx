@@ -1,10 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { supabase } from '../../lib/supabaseClient';
 import { toast } from 'sonner';
 import { Logo } from '../ui/Logo';
 
 const EmailConfirmation = () => {
+  const { t } = useTranslation();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const [status, setStatus] = useState('loading'); // 'loading', 'success', 'error'
@@ -42,24 +44,24 @@ const EmailConfirmation = () => {
                 // Si l'email est déjà confirmé, c'est OK
                 if (error.message?.includes('already confirmed') || error.message?.includes('already verified')) {
                   setStatus('success');
-                  setMessage('Votre adresse email est déjà confirmée.');
+                  setMessage('emailAlreadyConfirmed');
                 } else {
                   throw error;
                 }
               } else {
                 setStatus('success');
-                setMessage('Votre adresse email a été confirmée avec succès !');
+                setMessage('emailConfirmedSuccess');
               }
             } catch (verifyError) {
               // Si la vérification échoue mais que l'utilisateur est déjà confirmé, c'est OK
               if (verifyError.message?.includes('already confirmed') || verifyError.message?.includes('already verified')) {
                 setStatus('success');
-                setMessage('Votre adresse email est déjà confirmée.');
+                setMessage('emailAlreadyConfirmed');
               } else {
                 // Vérifier si l'utilisateur est déjà connecté et confirmé
                 if (session?.user?.email_confirmed_at) {
                   setStatus('success');
-                  setMessage('Votre adresse email est déjà confirmée.');
+                  setMessage('emailAlreadyConfirmed');
                 } else {
                   throw verifyError;
                 }
@@ -69,29 +71,29 @@ const EmailConfirmation = () => {
             // Pas de token dans l'URL, vérifier si l'utilisateur est déjà confirmé
             if (session?.user?.email_confirmed_at) {
               setStatus('success');
-              setMessage('Votre adresse email est déjà confirmée.');
+              setMessage('emailAlreadyConfirmed');
             } else {
               // Attendre un peu pour voir si Supabase met à jour la session
               await new Promise(resolve => setTimeout(resolve, 1000));
               const { data: { session: newSession } } = await supabase.auth.getSession();
               if (newSession?.user?.email_confirmed_at) {
                 setStatus('success');
-                setMessage('Votre adresse email a été confirmée avec succès !');
+                setMessage('emailConfirmedSuccess');
               } else {
                 setStatus('error');
-                setMessage('Impossible de confirmer votre email. Le lien peut être invalide ou expiré.');
+                setMessage('confirmationErrorMessage');
               }
             }
           }
         } else {
           // Type de confirmation non reconnu
           setStatus('error');
-          setMessage('Type de confirmation non reconnu.');
+          setMessage('unknownConfirmationType');
         }
       } catch (error) {
         console.error('❌ Erreur lors de la confirmation:', error);
         setStatus('error');
-        setMessage('Une erreur est survenue lors de la confirmation de votre email.');
+        setMessage('confirmationGenericError');
       }
     };
 
@@ -104,14 +106,14 @@ const EmailConfirmation = () => {
       const timer = setTimeout(() => {
         navigate('/login', { 
           state: { 
-            message: 'Votre adresse email a été confirmée. Vous pouvez maintenant vous connecter.' 
+            message: t('auth.emailConfirmedRedirect')
           } 
         });
       }, 3000);
 
       return () => clearTimeout(timer);
     }
-  }, [status, navigate]);
+  }, [status, navigate, t]);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-[#FAFAF7] px-4">
@@ -125,7 +127,7 @@ const EmailConfirmation = () => {
         {status === 'loading' && (
           <div className="text-center">
             <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-[#191919] mb-4"></div>
-            <p className="text-[#6B7280]">Vérification de votre email en cours...</p>
+            <p className="text-[#6B7280]">{t('auth.verifyingEmail')}</p>
           </div>
         )}
 
@@ -147,11 +149,11 @@ const EmailConfirmation = () => {
               </svg>
             </div>
             <h2 className="text-xl font-semibold text-[#191919] mb-2">
-              Email confirmé !
+              {t('auth.emailConfirmed')}
             </h2>
-            <p className="text-[#6B7280] mb-6">{message}</p>
+            <p className="text-[#6B7280] mb-6">{t(`auth.${message}`)}</p>
             <p className="text-sm text-[#6B7280]">
-              Redirection vers la page de connexion dans quelques secondes...
+              {t('auth.redirectingToLogin')}
             </p>
           </div>
         )}
@@ -174,14 +176,14 @@ const EmailConfirmation = () => {
               </svg>
             </div>
             <h2 className="text-xl font-semibold text-[#191919] mb-2">
-              Erreur de confirmation
+              {t('auth.confirmationError')}
             </h2>
-            <p className="text-[#6B7280] mb-6">{message}</p>
+            <p className="text-[#6B7280] mb-6">{t(`auth.${message}`)}</p>
             <button
               onClick={() => navigate('/login')}
               className="w-full bg-[#191919] text-white py-3 rounded-lg font-medium hover:bg-[#2D2D2D] transition"
             >
-              Aller à la page de connexion
+              {t('auth.goToLogin')}
             </button>
           </div>
         )}

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
+import { useTranslation } from 'react-i18next';
 import { 
   X, 
   ChevronLeft,
@@ -41,6 +42,7 @@ export const OrderDetailPanel = ({
   onStartReconciliation,
   formatCurrency
 }) => {
+  const { t } = useTranslation();
   const [showShippingForm, setShowShippingForm] = useState(false);
   const [trackingNumber, setTrackingNumber] = useState('');
   const [trackingUrl, setTrackingUrl] = useState('');
@@ -94,7 +96,7 @@ export const OrderDetailPanel = ({
             className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-[#191919] text-white rounded-lg font-medium hover:bg-[#333333] transition-colors"
           >
             <CheckCircle className="w-4 h-4" />
-            Confirmer la Commande
+            {t('orderDetail.buttons.confirmOrder')}
           </button>
         );
       
@@ -104,14 +106,14 @@ export const OrderDetailPanel = ({
             <div className="space-y-3">
               <input
                 type="text"
-                placeholder="Numéro de suivi"
+                placeholder={t('orderDetail.form.trackingNumberPlaceholder')}
                 value={trackingNumber}
                 onChange={(e) => setTrackingNumber(e.target.value)}
                 className="w-full px-3 py-2 border border-[#E5E4DF] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#191919]"
               />
               <input
                 type="text"
-                placeholder="URL de tracking (optionnel)"
+                placeholder={t('orderDetail.form.trackingUrlPlaceholder')}
                 value={trackingUrl}
                 onChange={(e) => setTrackingUrl(e.target.value)}
                 className="w-full px-3 py-2 border border-[#E5E4DF] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#191919]"
@@ -121,7 +123,7 @@ export const OrderDetailPanel = ({
                   onClick={() => setShowShippingForm(false)}
                   className="flex-1 px-4 py-2.5 border border-[#E5E4DF] rounded-lg font-medium hover:bg-[#FAFAF7] transition-colors"
                 >
-                  Annuler
+                  {t('orderDetail.form.cancel')}
                 </button>
                 <button
                   onClick={() => {
@@ -131,7 +133,7 @@ export const OrderDetailPanel = ({
                   className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-purple-600 text-white rounded-lg font-medium hover:bg-purple-700 transition-colors"
                 >
                   <Truck className="w-4 h-4" />
-                  Confirmer Expédition
+                  {t('orderDetail.form.confirmShipment')}
                 </button>
               </div>
             </div>
@@ -143,7 +145,7 @@ export const OrderDetailPanel = ({
             className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-purple-600 text-white rounded-lg font-medium hover:bg-purple-700 transition-colors"
           >
             <Truck className="w-4 h-4" />
-            Marquer comme Expédiée
+            {t('orderDetail.buttons.markAsShipped')}
           </button>
         );
       
@@ -154,7 +156,7 @@ export const OrderDetailPanel = ({
             className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors"
           >
             <CheckCircle className="w-4 h-4" />
-            Marquer comme Reçue
+            {t('orderDetail.buttons.markAsReceived')}
           </button>
         );
       
@@ -165,7 +167,7 @@ export const OrderDetailPanel = ({
             className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
           >
             <FileText className="w-4 h-4" />
-            Démarrer la Réconciliation
+            {t('orderDetail.buttons.startReconciliation')}
           </button>
         );
       
@@ -174,10 +176,10 @@ export const OrderDetailPanel = ({
           <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
             <div className="flex items-center gap-2 text-red-700 font-medium mb-1">
               <AlertTriangle className="w-4 h-4" />
-              Réconciliation en cours
+              {t('orderDetail.reconciliation.inProgress')}
             </div>
             <p className="text-sm text-red-600">
-              Vérifiez les écarts et traitez les réclamations si nécessaire.
+              {t('orderDetail.reconciliation.checkDiscrepancies')}
             </p>
           </div>
         );
@@ -203,7 +205,7 @@ export const OrderDetailPanel = ({
             className="flex items-center gap-1 text-sm text-[#666663] hover:text-[#191919] transition-colors"
           >
             <ChevronLeft className="w-4 h-4" />
-            <span className="hidden sm:inline">Retour</span>
+            <span className="hidden sm:inline">{t('orderDetail.back')}</span>
           </button>
           <div className="flex items-center gap-2">
             <button className="p-2 hover:bg-[#E5E4DF] rounded-lg transition-colors">
@@ -241,9 +243,9 @@ export const OrderDetailPanel = ({
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <Package className="w-5 h-5 text-[#191919]" />
-                  <h3 className="font-semibold text-[#191919]">Produits Commandés</h3>
+                  <h3 className="font-semibold text-[#191919]">{t('orderDetail.productsOrdered')}</h3>
                 </div>
-                <span className="text-sm text-[#666663]">{order.items?.length || 0} article(s)</span>
+                <span className="text-sm text-[#666663]">{t('orderDetail.itemsCount', { count: order.items?.length || 0 })}</span>
               </div>
             </div>
             
@@ -277,12 +279,12 @@ export const OrderDetailPanel = ({
                         <div className="mt-2 space-y-1">
                           {order.missingQuantitiesBySku?.[item.sku] > 0 && (
                             <span className="inline-flex items-center text-xs px-2 py-0.5 bg-red-100 text-red-700 rounded">
-                              -{order.missingQuantitiesBySku[item.sku]} manquant
+                              -{order.missingQuantitiesBySku[item.sku]} {t('orderDetail.reconciliation.missing')}
                             </span>
                           )}
                           {order.damagedQuantitiesBySku?.[item.sku] > 0 && (
                             <span className="inline-flex items-center text-xs px-2 py-0.5 bg-orange-100 text-orange-700 rounded ml-1">
-                              {order.damagedQuantitiesBySku[item.sku]} endommagé
+                              {order.damagedQuantitiesBySku[item.sku]} {t('orderDetail.reconciliation.damaged')}
                             </span>
                           )}
                         </div>
@@ -305,7 +307,7 @@ export const OrderDetailPanel = ({
             {/* Total et actions */}
             <div className="p-4 bg-[#FAFAF7] border-t border-[#E5E4DF]">
               <div className="flex justify-between items-center mb-4">
-                <span className="font-medium text-[#666663]">Total</span>
+                <span className="font-medium text-[#666663]">{t('orderDetail.total')}</span>
                 <span className="text-xl font-bold text-[#191919]">
                   {formatCurrency(roundToTwoDecimals(order.total))}
                 </span>
@@ -322,7 +324,7 @@ export const OrderDetailPanel = ({
           <div className="bg-white border border-[#E5E4DF] rounded-xl p-4">
             <div className="flex items-center gap-2 mb-3">
               <User className="w-5 h-5 text-[#191919]" />
-              <h3 className="font-semibold text-[#191919]">Fournisseur</h3>
+              <h3 className="font-semibold text-[#191919]">{t('orderDetail.supplier')}</h3>
             </div>
             <div className="space-y-2">
               <p className="text-sm font-medium text-[#191919]">{order.supplier}</p>
@@ -348,7 +350,7 @@ export const OrderDetailPanel = ({
             <div className="bg-white border border-[#E5E4DF] rounded-xl p-4">
               <div className="flex items-center gap-2 mb-3">
                 <Building2 className="w-5 h-5 text-[#191919]" />
-                <h3 className="font-semibold text-[#191919]">Entrepôt de Destination</h3>
+                <h3 className="font-semibold text-[#191919]">{t('orderDetail.destinationWarehouse')}</h3>
               </div>
               <p className="text-sm font-medium text-[#191919]">{warehouseName}</p>
             </div>
@@ -359,12 +361,12 @@ export const OrderDetailPanel = ({
             <div className="bg-white border border-[#E5E4DF] rounded-xl p-4">
               <div className="flex items-center gap-2 mb-3">
                 <Truck className="w-5 h-5 text-[#191919]" />
-                <h3 className="font-semibold text-[#191919]">Suivi de Livraison</h3>
+                <h3 className="font-semibold text-[#191919]">{t('orderDetail.deliveryTracking')}</h3>
               </div>
               <div className="space-y-2">
                 {order.trackingNumber && (
                   <p className="text-sm text-[#666663]">
-                    N° de suivi: <span className="font-mono font-medium text-[#191919]">{order.trackingNumber}</span>
+                    {t('orderDetail.trackingNumber')}: <span className="font-mono font-medium text-[#191919]">{order.trackingNumber}</span>
                   </p>
                 )}
                 {order.trackingUrl && isValidUrl(formatTrackingUrl(order.trackingUrl)) && (
@@ -387,7 +389,7 @@ export const OrderDetailPanel = ({
             <div className="bg-white border border-[#E5E4DF] rounded-xl p-4">
               <div className="flex items-center gap-2 mb-3">
                 <Calendar className="w-5 h-5 text-[#191919]" />
-                <h3 className="font-semibold text-[#191919]">Livraison Estimée</h3>
+                <h3 className="font-semibold text-[#191919]">{t('orderDetail.estimatedDelivery')}</h3>
               </div>
               <div className="flex items-center gap-2">
                 <span className={`text-lg font-bold ${
@@ -403,10 +405,10 @@ export const OrderDetailPanel = ({
                     etaInfo.isUrgent ? 'bg-orange-100 text-orange-700' :
                     'bg-blue-100 text-blue-700'
                   }`}>
-                    {etaInfo.isPast ? `${Math.abs(etaInfo.daysRemaining)}j de retard` :
-                     etaInfo.daysRemaining === 0 ? 'Aujourd\'hui' :
-                     etaInfo.daysRemaining === 1 ? 'Demain' :
-                     `dans ${etaInfo.daysRemaining}j`}
+                    {etaInfo.isPast ? t('orderDetail.daysLate', { count: Math.abs(etaInfo.daysRemaining) }) :
+                     etaInfo.daysRemaining === 0 ? t('orderDetail.today') :
+                     etaInfo.daysRemaining === 1 ? t('orderDetail.tomorrow') :
+                     t('orderDetail.inDays', { count: etaInfo.daysRemaining })}
                   </span>
                 )}
               </div>
@@ -418,7 +420,7 @@ export const OrderDetailPanel = ({
             <div className="p-4 border-b border-[#E5E4DF] bg-[#FAFAF7]">
               <div className="flex items-center gap-2">
                 <MessageSquare className="w-5 h-5 text-[#191919]" />
-                <h3 className="font-semibold text-[#191919]">Timeline & Commentaires</h3>
+                <h3 className="font-semibold text-[#191919]">{t('orderDetail.timelineComments')}</h3>
               </div>
             </div>
             <div className="p-4">

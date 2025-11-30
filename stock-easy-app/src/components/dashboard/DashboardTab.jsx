@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { RefreshCw } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../contexts/SupabaseAuthContext';
 import { DashboardKPIs } from './DashboardKPIs';
 import { DashboardCharts } from './DashboardCharts';
@@ -12,59 +13,59 @@ import { MAIN_TABS, SETTINGS_TABS } from '../../constants/stockEasyConstants';
 /**
  * Génère un message de bienvenue dynamique basé sur l'heure, le jour et le contexte
  */
-const getDynamicGreeting = (firstName, isReturningToday, urgentCount = 0) => {
+const getDynamicGreeting = (firstName, isReturningToday, urgentCount = 0, t) => {
   const now = new Date();
   const hour = now.getHours();
   const dayOfWeek = now.getDay(); // 0 = dimanche, 6 = samedi
   const name = firstName ? ` ${firstName}` : '';
   
-  // Messages du matin (5h - 12h)
+  // Messages traduits du matin (5h - 12h)
   const morningGreetings = [
-    { text: `Bonjour${name}`, emoji: '☀️' },
-    { text: `Belle matinée${name}`, emoji: '🌅' },
-    { text: `Prêt pour une belle journée${name ? `, ${firstName}` : ''}`, emoji: '💪' },
-    { text: `Bon début de journée${name}`, emoji: '✨' },
+    { text: `${t('dashboard.greetings.morning.0')}${name}`, emoji: '☀️' },
+    { text: `${t('dashboard.greetings.morning.1')}${name}`, emoji: '🌅' },
+    { text: `${t('dashboard.greetings.morning.2')}${name ? `, ${firstName}` : ''}`, emoji: '💪' },
+    { text: `${t('dashboard.greetings.morning.3')}${name}`, emoji: '✨' },
   ];
   
   // Messages de l'après-midi (12h - 18h)
   const afternoonGreetings = [
-    { text: `Bon après-midi${name}`, emoji: '👋' },
-    { text: `L'après-midi avance bien${name ? `, ${firstName}` : ''}`, emoji: '📊' },
-    { text: `On continue${name ? `, ${firstName}` : ''}`, emoji: '🚀' },
-    { text: `Toujours au top${name}`, emoji: '⭐' },
+    { text: `${t('dashboard.greetings.afternoon.0')}${name}`, emoji: '👋' },
+    { text: `${t('dashboard.greetings.afternoon.1')}${name ? `, ${firstName}` : ''}`, emoji: '📊' },
+    { text: `${t('dashboard.greetings.afternoon.2')}${name ? `, ${firstName}` : ''}`, emoji: '🚀' },
+    { text: `${t('dashboard.greetings.afternoon.3')}${name}`, emoji: '⭐' },
   ];
   
   // Messages du soir (18h - 22h)
   const eveningGreetings = [
-    { text: `Bonsoir${name}`, emoji: '🌙' },
-    { text: `Belle fin de journée${name}`, emoji: '🌆' },
+    { text: `${t('dashboard.greetings.evening.0')}${name}`, emoji: '🌙' },
+    { text: `${t('dashboard.greetings.evening.1')}${name}`, emoji: '🌆' },
   ];
   
   // Messages de nuit (22h - 5h)
   const nightGreetings = [
-    { text: `Travail tardif${name ? `, ${firstName}` : ''}`, emoji: '🦉' },
-    { text: `Session nocturne${name}`, emoji: '🌙' },
+    { text: `${t('dashboard.greetings.night.0')}${name ? `, ${firstName}` : ''}`, emoji: '🦉' },
+    { text: `${t('dashboard.greetings.night.1')}${name}`, emoji: '🌙' },
   ];
   
   // Messages pour retour dans la journée
   const returningGreetings = [
-    { text: `Content de vous revoir${name}`, emoji: '👋' },
-    { text: `Encore vous${name ? `, ${firstName}` : ''}`, emoji: '😊' },
-    { text: `Re-bonjour${name}`, emoji: '✌️' },
+    { text: `${t('dashboard.greetings.returning.0')}${name}`, emoji: '👋' },
+    { text: `${t('dashboard.greetings.returning.1')}${name ? `, ${firstName}` : ''}`, emoji: '😊' },
+    { text: `${t('dashboard.greetings.returning.2')}${name}`, emoji: '✌️' },
   ];
   
   // Messages spéciaux par jour
   const specialDayGreetings = {
-    1: [{ text: `Bon lundi${name}`, emoji: '💪' }, { text: `Nouvelle semaine${name ? `, ${firstName}` : ''}`, emoji: '🚀' }], // Lundi
-    5: [{ text: `Bon vendredi${name}`, emoji: '🎉' }, { text: `Presque le weekend${name ? `, ${firstName}` : ''}`, emoji: '🙌' }], // Vendredi
-    6: [{ text: `Bon samedi${name}`, emoji: '☀️' }], // Samedi
-    0: [{ text: `Bon dimanche${name}`, emoji: '🌿' }], // Dimanche
+    1: [{ text: `${t('dashboard.greetings.monday.0')}${name}`, emoji: '💪' }, { text: `${t('dashboard.greetings.monday.1')}${name ? `, ${firstName}` : ''}`, emoji: '🚀' }], // Lundi
+    5: [{ text: `${t('dashboard.greetings.friday.0')}${name}`, emoji: '🎉' }, { text: `${t('dashboard.greetings.friday.1')}${name ? `, ${firstName}` : ''}`, emoji: '🙌' }], // Vendredi
+    6: [{ text: `${t('dashboard.greetings.saturday.0')}${name}`, emoji: '☀️' }], // Samedi
+    0: [{ text: `${t('dashboard.greetings.sunday.0')}${name}`, emoji: '🌿' }], // Dimanche
   };
   
   // Messages si beaucoup de produits urgents
   const urgentGreetings = [
-    { text: `Des actions vous attendent${name}`, emoji: '⚡' },
-    { text: `Quelques urgences à gérer${name ? `, ${firstName}` : ''}`, emoji: '📋' },
+    { text: `${t('dashboard.greetings.urgent.0')}${name}`, emoji: '⚡' },
+    { text: `${t('dashboard.greetings.urgent.1')}${name ? `, ${firstName}` : ''}`, emoji: '📋' },
   ];
   
   let greetingPool;
@@ -124,6 +125,7 @@ const itemVariants = {
 };
 
 export const DashboardTab = ({ productsByStatus, orders, enrichedProducts, onViewDetails, seuilSurstockProfond = 90, syncing = false, setActiveTab, setParametersSubTab }) => {
+  const { t } = useTranslation();
   const { currentUser } = useAuth();
   const [isReturningToday, setIsReturningToday] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(true);
@@ -178,8 +180,8 @@ export const DashboardTab = ({ productsByStatus, orders, enrichedProducts, onVie
   
   // Message de bienvenue dynamique
   const greeting = useMemo(() => 
-    getDynamicGreeting(firstName, isReturningToday, urgentCount),
-    [firstName, isReturningToday, urgentCount]
+    getDynamicGreeting(firstName, isReturningToday, urgentCount, t),
+    [firstName, isReturningToday, urgentCount, t]
   );
 
   // Calcul de l'état de l'onboarding
@@ -248,7 +250,7 @@ export const DashboardTab = ({ productsByStatus, orders, enrichedProducts, onVie
             {greeting.text} {greeting.emoji}
           </h1>
           <p className="text-sm text-[#6B7177] mt-0.5">
-            Vue d'ensemble de votre inventaire
+            {t('dashboard.overview')}
           </p>
         </div>
         
@@ -257,12 +259,12 @@ export const DashboardTab = ({ productsByStatus, orders, enrichedProducts, onVie
           {syncing ? (
             <div className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-[#E1E3E5] rounded-full shadow-sm">
               <RefreshCw className="w-3 h-3 animate-spin text-[#6B7177]" />
-              <span>Synchronisation...</span>
+              <span>{t('dashboard.syncing')}</span>
             </div>
           ) : (
             <div className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-[#E1E3E5] rounded-full shadow-sm">
               <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
-              <span>Données synchronisées</span>
+              <span>{t('dashboard.dataSynced')}</span>
             </div>
           )}
         </div>
@@ -286,7 +288,7 @@ export const DashboardTab = ({ productsByStatus, orders, enrichedProducts, onVie
         <motion.div variants={itemVariants} className="flex items-center gap-2">
           <span className="inline-flex items-center gap-1.5 px-2 py-1 text-xs font-medium text-[#191919] bg-[#FFF4F4] border border-[#FED3D1] rounded">
             <span className="w-1.5 h-1.5 bg-[#D72C0D] rounded-full" />
-            {urgentCount} SKU à commander
+            {urgentCount} {t('dashboard.skuToOrder')}
           </span>
         </motion.div>
       )}
@@ -298,7 +300,7 @@ export const DashboardTab = ({ productsByStatus, orders, enrichedProducts, onVie
 
       {/* KPIs Principaux */}
       <motion.section variants={itemVariants}>
-        <SectionHeader title="Indicateurs clés" />
+        <SectionHeader title={t('dashboard.keyIndicators')} />
         <DashboardKPIs 
           enrichedProducts={enrichedProducts || []}
           orders={orders || []}
@@ -310,7 +312,7 @@ export const DashboardTab = ({ productsByStatus, orders, enrichedProducts, onVie
 
       {/* Graphiques */}
       <motion.section variants={itemVariants}>
-        <SectionHeader title="Analyses" />
+        <SectionHeader title={t('dashboard.analyses')} />
         <DashboardCharts 
           enrichedProducts={enrichedProducts || []}
           orders={orders || []}

@@ -1,5 +1,6 @@
 import React, { useMemo, useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useTranslation } from 'react-i18next';
 import { 
   Package, 
   Search, 
@@ -17,14 +18,6 @@ import { StockDetailPanel } from './StockDetailPanel';
 import { formatUnits, formatSalesPerDay } from '../../utils/decimalUtils';
 import { formatETA } from '../../utils/dateUtils';
 
-// Onglets de statut style Shopify
-const STATUS_TABS = [
-  { key: 'all', label: 'Tous', status: null },
-  { key: 'urgent', label: 'Urgents', status: 'urgent' },
-  { key: 'warning', label: 'À Surveiller', status: 'warning' },
-  { key: 'healthy', label: 'En Bonne Santé', status: 'healthy' }
-];
-
 export const StockTab = ({
   products,
   suppliers,
@@ -38,6 +31,16 @@ export const StockTab = ({
   onViewDetails,
   onCreateOrder
 }) => {
+  const { t } = useTranslation();
+
+  // Onglets de statut style Shopify
+  const STATUS_TABS = [
+    { key: 'all', label: t('stockPage.tabs.all'), status: null },
+    { key: 'urgent', label: t('stockPage.tabs.urgent'), status: 'urgent' },
+    { key: 'warning', label: t('stockPage.tabs.warning'), status: 'warning' },
+    { key: 'healthy', label: t('stockPage.tabs.healthy'), status: 'healthy' }
+  ];
+
   // États locaux
   const [activeTab, setActiveTab] = useState('all');
   const [selectedProduct, setSelectedProduct] = useState(null);
@@ -267,10 +270,10 @@ export const StockTab = ({
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
           <h1 className="text-xl sm:text-2xl font-semibold text-[#191919]">
-            Niveaux de Stock
+            {t('stockPage.title')}
           </h1>
           <p className="text-sm text-[#6B7177] mt-0.5">
-            Gérez la santé de votre inventaire
+            {t('stockPage.subtitle')}
           </p>
         </div>
       </div>
@@ -317,7 +320,7 @@ export const StockTab = ({
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#6B7177]" />
           <input
             type="text"
-            placeholder="Rechercher par nom, SKU, fournisseur..."
+            placeholder={t('stockPage.searchPlaceholder')}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full pl-10 pr-4 py-2 bg-white border border-[#E1E3E5] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#191919] focus:border-transparent"
@@ -339,9 +342,9 @@ export const StockTab = ({
             onChange={(e) => setStockLevelSupplierFilter(e.target.value)}
             className="px-3 py-2 bg-white border border-[#E1E3E5] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#191919]"
           >
-            <option value="all">Tous les fournisseurs</option>
+            <option value="all">{t('stockPage.allSuppliers')}</option>
             {hasUnassignedProducts && (
-              <option value="none">Non assigné</option>
+              <option value="none">{t('stockPage.unassigned')}</option>
             )}
             {supplierOptions.map(supplier => (
               <option key={supplier} value={supplier}>
@@ -359,7 +362,7 @@ export const StockTab = ({
             }`}
           >
             <Filter className="w-4 h-4" />
-            <span className="hidden sm:inline">Filtres</span>
+            <span className="hidden sm:inline">{t('stockPage.filters')}</span>
             {hasActiveFilters && (
               <span className="w-2 h-2 rounded-full bg-white" />
             )}
@@ -370,14 +373,14 @@ export const StockTab = ({
         {showFilters && (
           <div className="flex flex-wrap items-center gap-3 w-full mt-2">
             <div className="text-sm text-[#6B7177]">
-              {sortedProducts.length} produit{sortedProducts.length > 1 ? 's' : ''} affiché{sortedProducts.length > 1 ? 's' : ''}
+              {t('stockPage.productsShown', { count: sortedProducts.length })}
             </div>
             {hasActiveFilters && (
               <button
                 onClick={handleClearFilters}
                 className="text-sm text-red-600 hover:text-red-700 font-medium"
               >
-                Réinitialiser les filtres
+                {t('stockPage.resetFilters')}
               </button>
             )}
           </div>
@@ -393,27 +396,27 @@ export const StockTab = ({
               <thead className="bg-[#F6F6F7] border-b border-[#E1E3E5] sticky top-0">
                 <tr>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-[#666663] uppercase tracking-wider">
-                    Produit
+                    {t('stockPage.columns.product')}
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-[#666663] uppercase tracking-wider">
-                    Fournisseur
+                    {t('stockPage.columns.supplier')}
                   </th>
                   <th 
                     className="px-4 py-3 text-left text-xs font-semibold text-[#666663] uppercase tracking-wider cursor-pointer hover:text-[#191919]"
                     onClick={() => handleSort('stock')}
                   >
-                    Stock {sortConfig.key === 'stock' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
+                    {t('stockPage.columns.stock')} {sortConfig.key === 'stock' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
                   </th>
                   <th 
                     className="px-4 py-3 text-left text-xs font-semibold text-[#666663] uppercase tracking-wider cursor-pointer hover:text-[#191919]"
                     onClick={() => handleSort('daysOfStock')}
                   >
-                    Autonomie {sortConfig.key === 'daysOfStock' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
+                    {t('stockPage.columns.autonomy')} {sortConfig.key === 'daysOfStock' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-[#666663] uppercase tracking-wider">
                     <div className="flex items-center gap-1.5">
-                      <span>En transit</span>
-                      <InfoTooltip content="Quantités en cours de réapprovisionnement" />
+                      <span>{t('stockPage.columns.inTransit')}</span>
+                      <InfoTooltip content={t('stock.columns.inTransitTooltip') || 'Quantities being restocked'} />
                     </div>
                   </th>
                   <th 
@@ -421,8 +424,8 @@ export const StockTab = ({
                     onClick={() => handleSort('rotationRate')}
                   >
                     <div className="flex items-center gap-1.5">
-                      <span>Rotation</span>
-                      <InfoTooltip content="Nombre de fois que le stock se renouvelle par an" />
+                      <span>{t('stockPage.columns.rotation')}</span>
+                      <InfoTooltip content={t('stock.columns.rotationTooltip') || 'Stock turnover rate per year'} />
                       {sortConfig.key === 'rotationRate' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
                     </div>
                   </th>
@@ -430,7 +433,7 @@ export const StockTab = ({
                     className="px-4 py-3 text-left text-xs font-semibold text-[#666663] uppercase tracking-wider cursor-pointer hover:text-[#191919]"
                     onClick={() => handleSort('healthPercentage')}
                   >
-                    Santé {sortConfig.key === 'healthPercentage' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
+                    {t('stockPage.columns.health')} {sortConfig.key === 'healthPercentage' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
                   </th>
                 </tr>
               </thead>
@@ -462,7 +465,7 @@ export const StockTab = ({
                           <div className="font-bold text-[#191919] text-sm truncate">{product.name}</div>
                           <div className="text-xs text-[#666663]">{product.sku}</div>
                           <div className="text-xs text-[#666663] mt-0.5">
-                            {formatSalesPerDay(product.salesPerDay ?? 0)} ventes/jour
+                            {formatSalesPerDay(product.salesPerDay ?? 0)} {t('stockPage.salesPerDay')}
                           </div>
                         </div>
                       </div>
@@ -471,9 +474,9 @@ export const StockTab = ({
                     {/* Fournisseur */}
                     <td className="px-4 py-4">
                       <div className="flex flex-col">
-                        <div className="font-medium text-[#191919] text-sm">{product.supplier || 'Non assigné'}</div>
+                        <div className="font-medium text-[#191919] text-sm">{product.supplier || t('stockPage.unassigned')}</div>
                         <div className="text-xs text-[#666663]">
-                          Délai: {product.leadTimeDays || 0}j
+                          {t('stockPage.delay')}: {product.leadTimeDays || 0}{t('stockPage.days')}
                         </div>
                       </div>
                     </td>
@@ -483,7 +486,7 @@ export const StockTab = ({
                       <div className="flex flex-col">
                         <div className="font-bold text-[#191919] text-sm">{formatUnits(product.stock)}</div>
                         <div className="text-xs text-[#666663]">
-                          Seuil: {product.reorderPoint || 0}
+                          {t('stockPage.threshold')}: {product.reorderPoint || 0}
                         </div>
                       </div>
                     </td>
@@ -501,7 +504,7 @@ export const StockTab = ({
                         {product.isDeepOverstock && (
                           <div className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded border border-[#D1D5DB] bg-[#F9FAFB] text-[#6B7280] text-[10px] font-medium w-fit">
                             <AlertTriangle className="w-2.5 h-2.5" />
-                            Surstock
+                            {t('stockPage.overstock')}
                           </div>
                         )}
                         {product.qtyToOrder > 0 && (
@@ -529,7 +532,7 @@ export const StockTab = ({
                             )}
                             {productOrderQuantities[product.sku].ordered > 0 && (
                               <div className="text-sm font-medium text-yellow-600">
-                                +{formatUnits(productOrderQuantities[product.sku].ordered)} cmd
+                                +{formatUnits(productOrderQuantities[product.sku].ordered)} {t('stockPage.cmd')}
                               </div>
                             )}
                           </>
@@ -574,16 +577,16 @@ export const StockTab = ({
             {paginatedProducts.length === 0 && (
               <div className="flex flex-col items-center justify-center py-12 text-center">
                 <Package className="w-12 h-12 text-[#E1E3E5] mb-4" />
-                <h3 className="text-lg font-medium text-[#191919] mb-2">Aucun produit trouvé</h3>
+                <h3 className="text-lg font-medium text-[#191919] mb-2">{t('stockPage.noProductsFound')}</h3>
                 <p className="text-sm text-[#6B7177] mb-4">
-                  Essayez de modifier vos filtres ou votre recherche
+                  {t('stockPage.tryModifyFilters')}
                 </p>
                 {hasActiveFilters && (
                   <button
                     onClick={handleClearFilters}
                     className="text-sm text-[#191919] font-medium underline"
                   >
-                    Réinitialiser les filtres
+                    {t('stockPage.resetFilters')}
                   </button>
                 )}
               </div>
@@ -594,7 +597,7 @@ export const StockTab = ({
           {totalPages > 1 && (
             <div className="border-t border-[#E1E3E5] px-4 py-3 flex items-center justify-between bg-[#F6F6F7]">
               <span className="text-sm text-[#6B7177]">
-                {sortedProducts.length} produit{sortedProducts.length > 1 ? 's' : ''} • Page {page} sur {totalPages}
+                {sortedProducts.length} {t('stockPage.products')} • {t('stockPage.page')} {page} {t('stockPage.of')} {totalPages}
               </span>
               <div className="flex items-center gap-2">
                 <button

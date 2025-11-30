@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useTranslation } from 'react-i18next';
 import { 
   CheckCircle2, 
   Circle, 
@@ -23,6 +24,7 @@ export const OnboardingChecklist = ({
   onDismiss,
   onNavigate // Fonction de navigation: (tab, subTab?) => void
 }) => {
+  const { t } = useTranslation();
   const [isExpanded, setIsExpanded] = useState(true);
   const [isVisible, setIsVisible] = useState(true);
   const [completionPercentage, setCompletionPercentage] = useState(0);
@@ -31,38 +33,38 @@ export const OnboardingChecklist = ({
   const steps = [
     {
       id: 'connect',
-      title: 'Boutique connectée',
-      description: 'Synchronisation Shopify active',
+      title: t('onboarding.steps.connect.title'),
+      description: t('onboarding.steps.connect.description'),
       icon: Store,
       isCompleted: true, // Toujours vrai si on est là
-      actionLabel: 'Connecté',
+      actionLabel: t('onboarding.steps.connect.action'),
       link: null
     },
     {
       id: 'suppliers',
-      title: 'Ajouter un fournisseur',
-      description: 'Créez votre premier fournisseur',
+      title: t('onboarding.steps.suppliers.title'),
+      description: t('onboarding.steps.suppliers.description'),
       icon: Truck,
       isCompleted: hasSuppliers,
-      actionLabel: 'Gérer les fournisseurs',
+      actionLabel: t('onboarding.steps.suppliers.action'),
       link: 'suppliers' // ID de l'onglet à ouvrir (à gérer par le parent)
     },
     {
       id: 'mapping',
-      title: 'Lier les produits',
-      description: 'Assignez des produits aux fournisseurs',
+      title: t('onboarding.steps.mapping.title'),
+      description: t('onboarding.steps.mapping.description'),
       icon: LinkIcon,
       isCompleted: hasMappedProducts,
-      actionLabel: 'Aller au mapping',
+      actionLabel: t('onboarding.steps.mapping.action'),
       link: 'mapping'
     },
     {
       id: 'order',
-      title: 'Créer une commande',
-      description: 'Testez la création de commande',
+      title: t('onboarding.steps.order.title'),
+      description: t('onboarding.steps.order.description'),
       icon: ShoppingBag,
       isCompleted: hasOrders,
-      actionLabel: 'Passer commande',
+      actionLabel: t('onboarding.steps.order.action'),
       link: 'orders'
     }
   ];
@@ -110,12 +112,12 @@ export const OnboardingChecklist = ({
           </div>
           <div>
             <h3 className="font-semibold text-[#191919]">
-              {allCompleted ? "Bravo ! Vous êtes opérationnel 🎉" : "Guide de démarrage"}
+              {allCompleted ? t('onboarding.titleCompleted') : t('onboarding.title')}
             </h3>
             <p className="text-xs text-[#666663]">
               {allCompleted 
-                ? "Vous maîtrisez maintenant les bases de Stockeasy."
-                : "Complétez ces étapes pour tirer le meilleur parti de l'application."}
+                ? t('onboarding.descriptionCompleted')
+                : t('onboarding.description')}
             </p>
           </div>
         </div>
@@ -196,7 +198,7 @@ export const OnboardingChecklist = ({
               <div className="p-4 bg-green-50 flex items-center gap-3 text-green-800 text-sm">
                 <PartyPopper className="w-5 h-5" />
                 <span>
-                  Félicitations ! Vous pouvez masquer ce guide en cliquant sur la croix.
+                  {t('onboarding.congratulations')}
                 </span>
               </div>
             )}

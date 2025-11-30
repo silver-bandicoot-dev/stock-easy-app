@@ -1,123 +1,77 @@
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
 
-const resources = {
-  fr: {
-    translation: {
-      profile: {
-        title: 'Mon Profil',
-        personalInfo: 'Informations personnelles',
-        preferences: 'Préférences',
-        company: 'Mon Entreprise',
-        team: 'Mon Équipe',
-        firstName: 'Prénom',
-        lastName: 'Nom',
-        email: 'Email',
-        role: 'Rôle',
-        language: 'Langue',
-        photo: 'Photo de profil',
-        changePhoto: 'Changer la photo',
-        companyName: 'Nom de l\'entreprise',
-        teamMembers: 'membres',
-        inviteUser: 'Inviter un utilisateur',
-        saveChanges: 'Sauvegarder les modifications',
-        saving: 'Enregistrement...',
-        success: 'Modifications enregistrées avec succès',
-        error: 'Erreur lors de l\'enregistrement',
-        uploadError: 'Erreur lors du téléchargement de la photo'
-      }
-    }
-  },
-  en: {
-    translation: {
-      profile: {
-        title: 'My Profile',
-        personalInfo: 'Personal Information',
-        preferences: 'Preferences',
-        company: 'My Company',
-        team: 'My Team',
-        firstName: 'First Name',
-        lastName: 'Last Name',
-        email: 'Email',
-        role: 'Role',
-        language: 'Language',
-        photo: 'Profile Photo',
-        changePhoto: 'Change Photo',
-        companyName: 'Company Name',
-        teamMembers: 'members',
-        inviteUser: 'Invite User',
-        saveChanges: 'Save Changes',
-        saving: 'Saving...',
-        success: 'Changes saved successfully',
-        error: 'Error saving changes',
-        uploadError: 'Error uploading photo'
-      }
-    }
-  },
-  es: {
-    translation: {
-      profile: {
-        title: 'Mi Perfil',
-        personalInfo: 'Información Personal',
-        preferences: 'Preferencias',
-        company: 'Mi Empresa',
-        team: 'Mi Equipo',
-        firstName: 'Nombre',
-        lastName: 'Apellido',
-        email: 'Correo',
-        role: 'Rol',
-        language: 'Idioma',
-        photo: 'Foto de Perfil',
-        changePhoto: 'Cambiar Foto',
-        companyName: 'Nombre de la Empresa',
-        teamMembers: 'miembros',
-        inviteUser: 'Invitar Usuario',
-        saveChanges: 'Guardar Cambios',
-        saving: 'Guardando...',
-        success: 'Cambios guardados exitosamente',
-        error: 'Error al guardar cambios',
-        uploadError: 'Error al subir la foto'
-      }
-    }
-  },
-  de: {
-    translation: {
-      profile: {
-        title: 'Mein Profil',
-        personalInfo: 'Persönliche Informationen',
-        preferences: 'Einstellungen',
-        company: 'Meine Firma',
-        team: 'Mein Team',
-        firstName: 'Vorname',
-        lastName: 'Nachname',
-        email: 'E-Mail',
-        role: 'Rolle',
-        language: 'Sprache',
-        photo: 'Profilbild',
-        changePhoto: 'Foto Ändern',
-        companyName: 'Firmenname',
-        teamMembers: 'Mitglieder',
-        inviteUser: 'Benutzer Einladen',
-        saveChanges: 'Änderungen Speichern',
-        saving: 'Speichern...',
-        success: 'Änderungen erfolgreich gespeichert',
-        error: 'Fehler beim Speichern',
-        uploadError: 'Fehler beim Hochladen des Fotos'
-      }
-    }
+// Import des fichiers de traduction
+import frTranslation from '../locales/fr/translation.json';
+import enTranslation from '../locales/en/translation.json';
+import esTranslation from '../locales/es/translation.json';
+
+// Langues supportées
+export const SUPPORTED_LANGUAGES = [
+  { code: 'fr', name: 'Français', flag: '🇫🇷' },
+  { code: 'en', name: 'English', flag: '🇬🇧' },
+  { code: 'es', name: 'Español', flag: '🇪🇸' }
+];
+
+// Clé de stockage local pour la langue
+const LANGUAGE_STORAGE_KEY = 'stockeasy_language';
+
+// Récupérer la langue sauvegardée ou détecter automatiquement
+const getInitialLanguage = () => {
+  // 1. Vérifier le localStorage (préférence utilisateur)
+  const savedLanguage = localStorage.getItem(LANGUAGE_STORAGE_KEY);
+  if (savedLanguage && SUPPORTED_LANGUAGES.some(l => l.code === savedLanguage)) {
+    return savedLanguage;
   }
+
+  // 2. Détecter la langue du navigateur
+  const browserLanguage = navigator.language?.split('-')[0] || 'fr';
+  if (SUPPORTED_LANGUAGES.some(l => l.code === browserLanguage)) {
+    return browserLanguage;
+  }
+
+  // 3. Langue par défaut
+  return 'fr';
+};
+
+const resources = {
+  fr: { translation: frTranslation },
+  en: { translation: enTranslation },
+  es: { translation: esTranslation }
 };
 
 i18n
   .use(initReactI18next)
   .init({
     resources,
-    lng: 'fr',
+    lng: getInitialLanguage(),
     fallbackLng: 'fr',
     interpolation: {
       escapeValue: false
+    },
+    react: {
+      useSuspense: false
     }
   });
 
-export default i18n;
+// Fonction pour changer la langue et la persister
+export const changeLanguage = (languageCode) => {
+  if (SUPPORTED_LANGUAGES.some(l => l.code === languageCode)) {
+    i18n.changeLanguage(languageCode);
+    localStorage.setItem(LANGUAGE_STORAGE_KEY, languageCode);
+    // Mettre à jour l'attribut lang du document HTML
+    document.documentElement.lang = languageCode;
+    return true;
+  }
+  return false;
+};
 
+// Fonction pour obtenir la langue actuelle
+export const getCurrentLanguage = () => i18n.language;
+
+// Fonction pour obtenir les infos de la langue actuelle
+export const getCurrentLanguageInfo = () => {
+  return SUPPORTED_LANGUAGES.find(l => l.code === i18n.language) || SUPPORTED_LANGUAGES[0];
+};
+
+export default i18n;

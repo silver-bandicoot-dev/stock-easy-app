@@ -27,6 +27,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import NotificationBell from '../notifications/NotificationBell';
 import { Logo } from '../ui/Logo';
 
@@ -43,41 +44,42 @@ const Sidebar = ({
   orderBadgeCount = 0,
   ordersBadgeCount = 0
 }) => {
+  const { t } = useTranslation();
   const [analyticsExpanded, setAnalyticsExpanded] = useState(false);
   const [settingsExpanded, setSettingsExpanded] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
 
   const menuItems = [
-    { id: 'dashboard', label: 'Tableau de Bord', icon: Package, type: 'tab' },
-    { id: 'actions', label: 'Passer Commande', icon: Plus, type: 'tab' },
-    { id: 'orders', label: 'Mes Commandes', icon: Truck, type: 'tab' },
-    { id: 'stock-level', label: 'Niveaux de Stock', icon: Activity, type: 'tab' },
-    { id: 'inventory', label: 'Inventaire', icon: ClipboardList, type: 'tab' },
+    { id: 'dashboard', label: t('navigation.dashboard'), icon: Package, type: 'tab' },
+    { id: 'actions', label: t('navigation.placeOrder'), icon: Plus, type: 'tab' },
+    { id: 'orders', label: t('navigation.myOrders'), icon: Truck, type: 'tab' },
+    { id: 'stock-level', label: t('navigation.stockLevels'), icon: Activity, type: 'tab' },
+    { id: 'inventory', label: t('navigation.inventory'), icon: ClipboardList, type: 'tab' },
     { 
       id: 'analytics', 
-      label: 'Analytics', 
+      label: t('navigation.analytics'), 
       icon: TrendingUp, 
       type: 'tab',
       hasSubMenu: true,
       subItems: [
-        { id: 'kpis', label: 'KPIs', icon: BarChart3 },
-        { id: 'forecast', label: 'Prévisions IA', icon: Brain }
+        { id: 'kpis', label: t('navigation.kpis'), icon: BarChart3 },
+        { id: 'forecast', label: t('navigation.aiForecast'), icon: Brain }
       ]
     },
     { 
       id: 'settings', 
-      label: 'Paramètres', 
+      label: t('navigation.settings'), 
       icon: Cog, 
       type: 'tab',
       hasSubMenu: true,
       subItems: [
-        { id: 'general', label: 'Paramètres Généraux', icon: Sliders },
-        { id: 'multipliers', label: 'Multiplicateurs', icon: TrendingUp },
-        { id: 'suppliers', label: 'Gestion Fournisseurs', icon: Users },
-        { id: 'mapping', label: 'Mapping', icon: Package },
-        { id: 'warehouses', label: 'Gestion Entrepôts', icon: Warehouse },
-        { id: 'integrations', label: 'Intégrations', icon: PlugZap }
+        { id: 'general', label: t('navigation.generalSettings'), icon: Sliders },
+        { id: 'multipliers', label: t('navigation.multipliers'), icon: TrendingUp },
+        { id: 'suppliers', label: t('navigation.supplierManagement'), icon: Users },
+        { id: 'mapping', label: t('navigation.mapping'), icon: Package },
+        { id: 'warehouses', label: t('navigation.warehouseManagement'), icon: Warehouse },
+        { id: 'integrations', label: t('navigation.integrations'), icon: PlugZap }
       ]
     },
   ];
@@ -228,7 +230,7 @@ const Sidebar = ({
           }`}
         >
           <HelpCircle className="w-5 h-5 shrink-0" />
-          <span className="flex-1 text-left">Centre d'aide</span>
+          <span className="flex-1 text-left">{t('navigation.helpCenter')}</span>
         </button>
       </div>
     </aside>
@@ -367,7 +369,7 @@ const Sidebar = ({
                   }`}
                 >
                   <HelpCircle className="w-5 h-5 shrink-0" />
-                  <span className="flex-1 text-left">Centre d'aide</span>
+                  <span className="flex-1 text-left">{t('navigation.helpCenter')}</span>
                 </button>
               </div>
             </motion.div>

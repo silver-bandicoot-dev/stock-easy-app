@@ -1,37 +1,40 @@
 import { Linkedin, Mail, Heart } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 const Footer = () => {
+  const { t } = useTranslation();
+  
   const footerLinks = {
     product: {
-      title: "Produit",
+      title: t('landing.footer.product', "Produit"),
       links: [
-        { name: "Fonctionnalités", href: "#features" },
-        { name: "Tarifs", href: "#pricing" },
-        { name: "Intégrations", href: "#" },
+        { name: t('landing.footer.links.features', "Fonctionnalités"), href: "#features" },
+        { name: t('landing.footer.links.pricing', "Tarifs"), href: "#pricing" },
+        { name: t('landing.footer.links.integrations', "Intégrations"), href: "#" },
       ]
     },
     resources: {
-      title: "Ressources",
+      title: t('landing.footer.resources', "Ressources"),
       links: [
-        { name: "Documentation", href: "#" },
-        { name: "Guide de démarrage", href: "#" },
-        { name: "Blog", href: "#" },
+        { name: t('landing.footer.links.documentation', "Documentation"), href: "#" },
+        { name: t('landing.footer.links.gettingStarted', "Guide de démarrage"), href: "#" },
+        { name: t('landing.footer.links.blog', "Blog"), href: "#" },
       ]
     },
     company: {
-      title: "Entreprise",
+      title: t('landing.footer.company', "Entreprise"),
       links: [
-        { name: "À propos", href: "#" },
-        { name: "Contact", href: "mailto:contact@stockeasy.app" },
+        { name: t('landing.footer.links.about', "À propos"), href: "#" },
+        { name: t('landing.footer.links.contact', "Contact"), href: "mailto:contact@stockeasy.app" },
       ]
     },
     legal: {
-      title: "Légal",
+      title: t('landing.footer.legal', "Légal"),
       links: [
-        { name: "Confidentialité", href: "/legal/privacy" },
-        { name: "CGU", href: "/legal/terms" },
-        { name: "Mentions légales", href: "/legal/notices" },
-        { name: "Cookies", href: "/legal/cookies" },
+        { name: t('landing.footer.links.privacy', "Confidentialité"), href: "/legal/privacy" },
+        { name: t('landing.footer.links.terms', "CGU"), href: "/legal/terms" },
+        { name: t('landing.footer.links.legalNotice', "Mentions légales"), href: "/legal/notices" },
+        { name: t('landing.footer.links.cookies', "Cookies"), href: "/legal/cookies" },
       ]
     },
   };
@@ -75,14 +78,14 @@ const Footer = () => {
             <div className="flex flex-col items-start">
               <Logo />
               <p className="text-sm text-[#191919]/50 mt-4 max-w-xs">
-                La gestion de stock intelligente pour les marchands Shopify.
+                {t('landing.footer.description', 'La gestion de stock intelligente pour les marchands Shopify.')}
               </p>
             </div>
             
             {/* Shopify Partner */}
             <div className="flex items-center gap-2 mt-4 px-3 py-2 rounded-lg bg-white border border-[#E5E4DF] w-fit">
               <img src="/logos/shopify-black.png" alt="Shopify" className="w-5 h-5 object-contain" />
-              <span className="text-xs text-[#191919]/60">Shopify Partner</span>
+              <span className="text-xs text-[#191919]/60">{t('landing.footer.shopifyPartner', 'Shopify Partner')}</span>
             </div>
           </div>
 
@@ -109,7 +112,7 @@ const Footer = () => {
             <span>© {new Date().getFullYear()} stockeasy</span>
             <span>•</span>
             <span className="flex items-center gap-1">
-              Fait avec <Heart size={12} className="text-rose-500" fill="currentColor" /> en France
+              {t('landing.footer.madeWith', 'Fait avec')} <Heart size={12} className="text-rose-500" fill="currentColor" /> {t('landing.footer.inFrance', 'en France')}
             </span>
           </div>
 

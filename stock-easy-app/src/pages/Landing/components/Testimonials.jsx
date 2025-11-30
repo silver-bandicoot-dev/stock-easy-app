@@ -1,46 +1,49 @@
 import { motion } from 'framer-motion';
 import { Star, ExternalLink } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 const Testimonials = () => {
+  const { t } = useTranslation();
+  
   const testimonials = [
     {
-      quote: "stockeasy a transformé notre gestion de stock. Nous avons réduit nos ruptures de 40% dès le premier mois.",
+      quote: t('landing.testimonials.items.marc.quote', "stockeasy a transformé notre gestion de stock. Nous avons réduit nos ruptures de 40% dès le premier mois."),
       author: "Marc Dubois",
       role: "CEO",
       company: "FashionStore.fr",
       avatar: "M",
-      stats: "-40% ruptures",
+      stats: t('landing.testimonials.items.marc.stats', "-40% ruptures"),
     },
     {
-      quote: "La synchronisation avec Shopify est parfaite. Je gagne 3 heures par semaine que je consacrais avant aux mises à jour manuelles.",
+      quote: t('landing.testimonials.items.sophie.quote', "La synchronisation avec Shopify est parfaite. Je gagne 3 heures par semaine que je consacrais avant aux mises à jour manuelles."),
       author: "Sophie Martin",
-      role: "Fondatrice",
+      role: t('landing.testimonials.items.sophie.role', "Fondatrice"),
       company: "BeautéBio",
       avatar: "S",
-      stats: "3h/sem gagnées",
+      stats: t('landing.testimonials.items.sophie.stats', "3h/sem gagnées"),
     },
     {
-      quote: "Le support est exceptionnel. Une question à 23h, réponse en 10 minutes.",
+      quote: t('landing.testimonials.items.thomas.quote', "Le support est exceptionnel. Une question à 23h, réponse en 10 minutes."),
       author: "Thomas Leroy",
-      role: "Directeur E-commerce",
+      role: t('landing.testimonials.items.thomas.role', "Directeur E-commerce"),
       company: "SportMax",
       avatar: "T",
       stats: "Support 24/7",
     },
     {
-      quote: "J'ai testé plusieurs solutions. stockeasy est de loin la plus intuitive. Mes équipes l'ont adoptée en moins d'une journée.",
+      quote: t('landing.testimonials.items.julie.quote', "J'ai testé plusieurs solutions. stockeasy est de loin la plus intuitive. Mes équipes l'ont adoptée en moins d'une journée."),
       author: "Julie Chen",
       role: "COO",
       company: "TechGadgets",
       avatar: "J",
-      stats: "Setup < 1 jour",
+      stats: t('landing.testimonials.items.julie.stats', "Setup < 1 jour"),
     },
   ];
 
   const metrics = [
-    { value: "500+", label: "Marchands actifs" },
-    { value: "2M+", label: "SKUs gérés" },
-    { value: "4.9/5", label: "Note moyenne" },
+    { value: "500+", label: t('landing.testimonials.metrics.merchants', "Marchands actifs") },
+    { value: "2M+", label: t('landing.testimonials.metrics.skus', "SKUs gérés") },
+    { value: "4.9/5", label: t('landing.testimonials.metrics.rating', "Note moyenne") },
   ];
 
   return (
@@ -53,9 +56,9 @@ const Testimonials = () => {
           viewport={{ once: true }}
           className="text-center mb-12"
         >
-          <span className="badge badge-neutral mb-4">Témoignages</span>
+          <span className="badge badge-neutral mb-4">{t('landing.navbar.testimonials', 'Témoignages')}</span>
           <h2 className="text-3xl md:text-4xl font-semibold mb-4">
-            Ils nous font confiance
+            {t('landing.testimonials.title', 'Ils nous font confiance')}
           </h2>
         </motion.div>
 
@@ -130,7 +133,7 @@ const Testimonials = () => {
             className="inline-flex items-center gap-3 px-5 py-2.5 rounded-lg card hover:border-[#191919]/20 transition-colors"
           >
             <span className="text-amber-500">★★★★★</span>
-            <span className="text-sm text-[#191919]/70">Voir les avis sur Shopify App Store</span>
+            <span className="text-sm text-[#191919]/70">{t('landing.testimonials.viewReviews', 'Voir les avis sur Shopify App Store')}</span>
             <ExternalLink size={14} className="text-[#191919]/40" />
           </a>
         </motion.div>

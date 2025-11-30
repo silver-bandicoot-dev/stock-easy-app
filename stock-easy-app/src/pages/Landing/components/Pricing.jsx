@@ -1,79 +1,81 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Check, X, ArrowRight, HelpCircle } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 const Pricing = () => {
+  const { t } = useTranslation();
   const [isAnnual, setIsAnnual] = useState(true);
 
   const plans = [
     {
       name: "Basic",
-      description: "Pour débuter",
+      description: t('landing.pricing.plans.basic.description', "Pour débuter"),
       monthlyPrice: 0,
       annualPrice: 0,
       features: [
-        { text: "1 emplacement de sync", included: true },
-        { text: "Jusqu'à 500 SKUs", included: true },
-        { text: "Alertes par email", included: true },
-        { text: "Sync Shopify temps réel", included: true },
-        { text: "Dashboard basique", included: true },
-        { text: "Prédictions IA", included: false },
-        { text: "Rapports avancés", included: false },
-        { text: "Support prioritaire", included: false },
+        { text: t('landing.pricing.features.oneLocation', "1 emplacement de sync"), included: true },
+        { text: t('landing.pricing.features.skus500', "Jusqu'à 500 SKUs"), included: true },
+        { text: t('landing.pricing.features.emailAlerts', "Alertes par email"), included: true },
+        { text: t('landing.pricing.features.realTimeSync', "Sync Shopify temps réel"), included: true },
+        { text: t('landing.pricing.features.basicDashboard', "Dashboard basique"), included: true },
+        { text: t('landing.pricing.features.aiPredictions', "Prédictions IA"), included: false },
+        { text: t('landing.pricing.features.advancedReports', "Rapports avancés"), included: false },
+        { text: t('landing.pricing.features.prioritySupport', "Support prioritaire"), included: false },
       ],
-      cta: "Commencer gratuitement",
+      cta: t('landing.pricing.plans.basic.cta', "Commencer gratuitement"),
       popular: false,
     },
     {
       name: "Pro",
-      description: "Pour les marchands en croissance",
+      description: t('landing.pricing.plans.pro.description', "Pour les marchands en croissance"),
       monthlyPrice: 29,
       annualPrice: 24,
       features: [
-        { text: "3 emplacements de sync", included: true },
-        { text: "Jusqu'à 5,000 SKUs", included: true },
-        { text: "Alertes multi-canaux", included: true },
-        { text: "Sync Shopify temps réel", included: true },
-        { text: "Dashboard complet", included: true },
-        { text: "Prédictions IA", included: true },
-        { text: "Rapports avancés", included: true },
-        { text: "Support prioritaire", included: false },
+        { text: t('landing.pricing.features.threeLocations', "3 emplacements de sync"), included: true },
+        { text: t('landing.pricing.features.skus5000', "Jusqu'à 5,000 SKUs"), included: true },
+        { text: t('landing.pricing.features.multiChannelAlerts', "Alertes multi-canaux"), included: true },
+        { text: t('landing.pricing.features.realTimeSync', "Sync Shopify temps réel"), included: true },
+        { text: t('landing.pricing.features.fullDashboard', "Dashboard complet"), included: true },
+        { text: t('landing.pricing.features.aiPredictions', "Prédictions IA"), included: true },
+        { text: t('landing.pricing.features.advancedReports', "Rapports avancés"), included: true },
+        { text: t('landing.pricing.features.prioritySupport', "Support prioritaire"), included: false },
       ],
-      cta: "Essayer 14 jours gratuit",
+      cta: t('landing.pricing.plans.pro.cta', "Essayer 14 jours gratuit"),
       popular: true,
     },
     {
       name: "Plus",
-      description: "Pour les entreprises",
+      description: t('landing.pricing.plans.plus.description', "Pour les entreprises"),
       monthlyPrice: 79,
       annualPrice: 66,
       features: [
-        { text: "15 emplacements de sync", included: true },
-        { text: "SKUs illimités", included: true },
-        { text: "Alertes multi-canaux", included: true },
-        { text: "Sync Shopify temps réel", included: true },
-        { text: "Dashboard complet", included: true },
-        { text: "Prédictions IA avancées", included: true },
-        { text: "Rapports personnalisés", included: true },
-        { text: "Support prioritaire 24/7", included: true },
+        { text: t('landing.pricing.features.fifteenLocations', "15 emplacements de sync"), included: true },
+        { text: t('landing.pricing.features.unlimitedSkus', "SKUs illimités"), included: true },
+        { text: t('landing.pricing.features.multiChannelAlerts', "Alertes multi-canaux"), included: true },
+        { text: t('landing.pricing.features.realTimeSync', "Sync Shopify temps réel"), included: true },
+        { text: t('landing.pricing.features.fullDashboard', "Dashboard complet"), included: true },
+        { text: t('landing.pricing.features.advancedAiPredictions', "Prédictions IA avancées"), included: true },
+        { text: t('landing.pricing.features.customReports', "Rapports personnalisés"), included: true },
+        { text: t('landing.pricing.features.prioritySupport247', "Support prioritaire 24/7"), included: true },
       ],
-      cta: "Contacter les ventes",
+      cta: t('landing.pricing.plans.plus.cta', "Contacter les ventes"),
       popular: false,
     },
   ];
 
   const faqs = [
     {
-      question: "Puis-je changer de plan à tout moment ?",
-      answer: "Oui, vous pouvez upgrader ou downgrader à tout moment."
+      question: t('landing.pricing.faqs.changePlan.question', "Puis-je changer de plan à tout moment ?"),
+      answer: t('landing.pricing.faqs.changePlan.answer', "Oui, vous pouvez upgrader ou downgrader à tout moment.")
     },
     {
-      question: "Y a-t-il des frais cachés ?",
-      answer: "Non, le prix affiché est le prix final."
+      question: t('landing.pricing.faqs.hiddenFees.question', "Y a-t-il des frais cachés ?"),
+      answer: t('landing.pricing.faqs.hiddenFees.answer', "Non, le prix affiché est le prix final.")
     },
     {
-      question: "Comment fonctionne l'essai gratuit ?",
-      answer: "14 jours d'accès au plan Pro, sans carte bancaire."
+      question: t('landing.pricing.faqs.freeTrial.question', "Comment fonctionne l'essai gratuit ?"),
+      answer: t('landing.pricing.faqs.freeTrial.answer', "14 jours d'accès au plan Pro, sans carte bancaire.")
     },
   ];
 
@@ -87,12 +89,12 @@ const Pricing = () => {
           viewport={{ once: true }}
           className="text-center mb-12"
         >
-          <span className="badge badge-neutral mb-4">Tarifs</span>
+          <span className="badge badge-neutral mb-4">{t('landing.navbar.pricing', 'Tarifs')}</span>
           <h2 className="text-3xl md:text-4xl font-semibold mb-4">
-            Un plan pour chaque étape
+            {t('landing.pricing.title', 'Un plan pour chaque étape')}
           </h2>
           <p className="text-[#191919]/60 max-w-lg mx-auto mb-8">
-            Commencez gratuitement, évoluez quand vous êtes prêt
+            {t('landing.pricing.subtitle', "Commencez gratuitement, évoluez quand vous êtes prêt")}
           </p>
 
           {/* Toggle */}
@@ -103,7 +105,7 @@ const Pricing = () => {
                 !isAnnual ? 'bg-[#191919] text-white' : 'text-[#191919]/60'
               }`}
             >
-              Mensuel
+              {t('landing.pricing.monthly', 'Mensuel')}
             </button>
             <button
               onClick={() => setIsAnnual(true)}
@@ -111,7 +113,7 @@ const Pricing = () => {
                 isAnnual ? 'bg-[#191919] text-white' : 'text-[#191919]/60'
               }`}
             >
-              Annuel
+              {t('landing.pricing.yearly', 'Annuel')}
               <span className={`text-xs px-1.5 py-0.5 rounded ${
                 isAnnual ? 'bg-white/20' : 'bg-[#ECFDF5] text-[#059669]'
               }`}>
@@ -136,7 +138,7 @@ const Pricing = () => {
               {plan.popular && (
                 <div className="absolute -top-3 left-1/2 transform -translate-x-1/2 z-10">
                   <div className="px-3 py-1 bg-[#191919] text-white text-xs font-medium rounded-full">
-                    Le plus populaire
+                    {t('landing.pricing.popular', 'Le plus populaire')}
                   </div>
                 </div>
               )}
@@ -154,11 +156,11 @@ const Pricing = () => {
                     <span className="text-4xl font-semibold text-[#191919]">
                       {isAnnual ? plan.annualPrice : plan.monthlyPrice}€
                     </span>
-                    <span className="text-[#191919]/50 mb-1">/mois</span>
+                    <span className="text-[#191919]/50 mb-1">{t('landing.pricing.perMonth', '/mois')}</span>
                   </div>
                   {isAnnual && plan.monthlyPrice > 0 && (
                     <p className="text-xs text-[#191919]/40 mt-1">
-                      Facturé annuellement
+                      {t('landing.pricing.billedAnnually', 'Facturé annuellement')}
                     </p>
                   )}
                 </div>
@@ -206,7 +208,7 @@ const Pricing = () => {
           className="max-w-2xl mx-auto"
         >
           <h3 className="text-lg font-semibold text-[#191919] text-center mb-6">
-            Questions fréquentes
+            {t('landing.pricing.faqTitle', 'Questions fréquentes')}
           </h3>
           <div className="space-y-3">
             {faqs.map((faq, index) => (

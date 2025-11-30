@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Filter, Search, Check, X, Package, AlertCircle, ArrowUpDown, ArrowUp, ArrowDown, ChevronLeft, ChevronRight, Hash } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '../../shared/Button';
@@ -6,6 +7,7 @@ import { useCurrency } from '../../../contexts/CurrencyContext';
 import { ImagePreview } from '../../ui/ImagePreview';
 
 export function ProductSelectionTable({ products, suppliers, onCreateOrder }) {
+  const { t } = useTranslation();
   const { format: formatCurrency } = useCurrency();
   const [selectedProducts, setSelectedProducts] = useState(new Map());
   const [searchTerm, setSearchTerm] = useState('');
@@ -166,14 +168,14 @@ export function ProductSelectionTable({ products, suppliers, onCreateOrder }) {
       }
     });
     setSelectedProducts(newMap);
-    toast.success(`${newMap.size} produits à commander sélectionnés`);
+    toast.success(t('productSelection.bulkActions.selectedSuccess', { count: newMap.size }));
   };
 
   // Appliquer quantité en masse
   const applyBulkQuantity = () => {
     const qty = parseInt(bulkQuantity);
     if (isNaN(qty) || qty <= 0) {
-      toast.error('Veuillez entrer une quantité valide');
+      toast.error(t('productSelection.bulkActions.invalidQuantity'));
       return;
     }
 
@@ -183,7 +185,7 @@ export function ProductSelectionTable({ products, suppliers, onCreateOrder }) {
     });
     setSelectedProducts(newMap);
     setBulkQuantity('');
-    toast.success(`Quantité ${qty} appliquée à ${selectedProducts.size} produits`);
+    toast.success(t('productSelection.bulkActions.quantityApplied', { qty, count: selectedProducts.size }));
   };
 
   // Mettre à jour la quantité
@@ -231,7 +233,7 @@ export function ProductSelectionTable({ products, suppliers, onCreateOrder }) {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#666663]" />
             <input
               type="text"
-              placeholder="Rechercher par SKU ou nom..."
+              placeholder={t('productSelection.searchPlaceholder')}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full pl-10 pr-4 py-2 border border-[#E5E4DF] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#8B5CF6] text-[#191919]"
@@ -246,7 +248,7 @@ export function ProductSelectionTable({ products, suppliers, onCreateOrder }) {
               onChange={(e) => setSupplierFilter(e.target.value)}
               className="w-full pl-10 pr-4 py-2 border border-[#E5E4DF] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#8B5CF6] text-[#191919] appearance-none bg-white"
             >
-              <option value="all">Tous les fournisseurs</option>
+              <option value="all">{t('productSelection.allSuppliers')}</option>
               {Object.keys(suppliers).map(supplierName => (
                 <option key={supplierName} value={supplierName}>
                   {supplierName}
@@ -263,10 +265,10 @@ export function ProductSelectionTable({ products, suppliers, onCreateOrder }) {
               onChange={(e) => setStatusFilter(e.target.value)}
               className="w-full pl-10 pr-4 py-2 border border-[#E5E4DF] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#8B5CF6] text-[#191919] appearance-none bg-white"
             >
-              <option value="all">Tous les statuts</option>
-              <option value="to_order">À commander</option>
-              <option value="watch">À surveiller</option>
-              <option value="ok">Stock OK</option>
+              <option value="all">{t('productSelection.statusFilter.all')}</option>
+              <option value="to_order">{t('productSelection.statusFilter.toOrder')}</option>
+              <option value="watch">{t('productSelection.statusFilter.watch')}</option>
+              <option value="ok">{t('productSelection.statusFilter.ok')}</option>
             </select>
           </div>
         </div>
@@ -274,11 +276,11 @@ export function ProductSelectionTable({ products, suppliers, onCreateOrder }) {
         {/* Compteur de résultats */}
         <div className="mt-3 flex items-center justify-between text-sm text-[#666663]">
           <span>
-            {sortedAndFilteredProducts.length} produit{sortedAndFilteredProducts.length > 1 ? 's' : ''} affiché{sortedAndFilteredProducts.length > 1 ? 's' : ''}
+            {t('productSelection.productsShown', { count: sortedAndFilteredProducts.length })}
           </span>
           {selectedProducts.size > 0 && (
             <span className="font-semibold text-[#8B5CF6]">
-              {selectedProducts.size} sélectionné{selectedProducts.size > 1 ? 's' : ''}
+              {t('productSelection.selected', { count: selectedProducts.size })}
             </span>
           )}
         </div>
@@ -286,7 +288,7 @@ export function ProductSelectionTable({ products, suppliers, onCreateOrder }) {
 
       {/* Actions en masse */}
       <div className="bg-white rounded-xl shadow-sm border border-[#E5E4DF] p-4">
-        <h3 className="text-sm font-semibold text-[#191919] mb-3">Actions en masse</h3>
+        <h3 className="text-sm font-semibold text-[#191919] mb-3">{t('productSelection.bulkActions.title')}</h3>
         <div className="flex flex-wrap gap-3">
           {/* Sélectionner tous à commander */}
           <button
@@ -294,7 +296,7 @@ export function ProductSelectionTable({ products, suppliers, onCreateOrder }) {
             className="px-4 py-2 bg-[#8B5CF6] text-white rounded-lg hover:bg-[#7C3AED] transition-colors flex items-center gap-2 text-sm font-medium"
           >
             <Check className="w-4 h-4" />
-            Sélectionner tous à commander
+            {t('productSelection.bulkActions.selectAllToOrder')}
           </button>
 
           {/* Appliquer quantité */}
@@ -303,7 +305,7 @@ export function ProductSelectionTable({ products, suppliers, onCreateOrder }) {
               <input
                 type="number"
                 min="1"
-                placeholder="Quantité"
+                placeholder={t('productSelection.bulkActions.quantityPlaceholder')}
                 value={bulkQuantity}
                 onChange={(e) => setBulkQuantity(e.target.value)}
                 className="w-24 px-3 py-2 border border-[#E5E4DF] rounded-lg text-center focus:outline-none focus:ring-2 focus:ring-[#8B5CF6]"
@@ -313,7 +315,7 @@ export function ProductSelectionTable({ products, suppliers, onCreateOrder }) {
                 className="px-4 py-2 bg-[#40403E] text-white rounded-lg hover:bg-[#666663] transition-colors flex items-center gap-2 text-sm font-medium"
               >
                 <Hash className="w-4 h-4" />
-                Appliquer à la sélection
+                {t('productSelection.bulkActions.applyToSelection')}
               </button>
             </div>
           )}
@@ -339,14 +341,14 @@ export function ProductSelectionTable({ products, suppliers, onCreateOrder }) {
                     className="w-4 h-4 rounded border-[#E5E4DF] text-[#8B5CF6] focus:ring-2 focus:ring-[#8B5CF6] cursor-pointer"
                   />
                 </th>
-                <SortableHeader column="sku">SKU</SortableHeader>
-                <SortableHeader column="name">Nom</SortableHeader>
-                <SortableHeader column="supplier">Fournisseur</SortableHeader>
-                <SortableHeader column="stock" align="center">Stock</SortableHeader>
-                <SortableHeader column="qtyToOrder" align="center">Recommandé</SortableHeader>
-                <SortableHeader column="price" align="right">Prix</SortableHeader>
+                <SortableHeader column="sku">{t('productSelection.columns.sku')}</SortableHeader>
+                <SortableHeader column="name">{t('productSelection.columns.name')}</SortableHeader>
+                <SortableHeader column="supplier">{t('productSelection.columns.supplier')}</SortableHeader>
+                <SortableHeader column="stock" align="center">{t('productSelection.columns.stock')}</SortableHeader>
+                <SortableHeader column="qtyToOrder" align="center">{t('productSelection.columns.recommended')}</SortableHeader>
+                <SortableHeader column="price" align="right">{t('productSelection.columns.price')}</SortableHeader>
                 <th className="px-4 py-3 text-center text-xs font-semibold text-[#666663] uppercase tracking-wider">
-                  Quantité
+                  {t('productSelection.columns.quantity')}
                 </th>
               </tr>
             </thead>
@@ -357,7 +359,7 @@ export function ProductSelectionTable({ products, suppliers, onCreateOrder }) {
                 <tr>
                   <td colSpan="8" className="px-4 py-12 text-center">
                     <Package className="w-12 h-12 text-[#666663] mx-auto mb-3" />
-                    <p className="text-[#666663]">Aucun produit trouvé</p>
+                    <p className="text-[#666663]">{t('productSelection.empty')}</p>
                   </td>
                 </tr>
               ) : (
@@ -498,7 +500,7 @@ export function ProductSelectionTable({ products, suppliers, onCreateOrder }) {
             <div className="flex items-center justify-between">
               {/* Info pagination */}
               <div className="text-sm text-[#666663]">
-                Page {currentPage} sur {totalPages} • {sortedAndFilteredProducts.length} produits au total
+                {t('productSelection.pagination.page')} {currentPage} {t('productSelection.pagination.of')} {totalPages} • {sortedAndFilteredProducts.length} {t('productSelection.pagination.total')}
               </div>
 
               {/* Contrôles pagination */}
@@ -564,7 +566,7 @@ export function ProductSelectionTable({ products, suppliers, onCreateOrder }) {
             onClick={handleCreateOrder}
             className="shadow-2xl"
           >
-            <span>Créer une commande</span>
+            <span>{t('productSelection.createOrder')}</span>
             <span className="bg-white/20 px-3 py-1 rounded-full text-sm">
               {selectedProducts.size}
             </span>
@@ -578,11 +580,11 @@ export function ProductSelectionTable({ products, suppliers, onCreateOrder }) {
           <div className="flex items-start gap-3">
             <AlertCircle className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
             <div className="text-sm text-blue-700">
-              <p className="font-semibold text-blue-900 mb-1">Guide d'utilisation</p>
+              <p className="font-semibold text-blue-900 mb-1">{t('productSelection.guide.title')}</p>
               <ul className="space-y-1 list-disc list-inside">
-                <li><strong>Sélection :</strong> Cochez les produits ou utilisez "Sélectionner tous à commander"</li>
-                <li><strong>Quantités :</strong> Ajustez individuellement ou en masse</li>
-                <li><strong>Tri :</strong> Cliquez sur les en-têtes de colonnes pour trier</li>
+                <li><strong>{t('productSelection.guide.selection')} :</strong> {t('productSelection.guide.selectionDesc')}</li>
+                <li><strong>{t('productSelection.guide.quantities')} :</strong> {t('productSelection.guide.quantitiesDesc')}</li>
+                <li><strong>{t('productSelection.guide.sorting')} :</strong> {t('productSelection.guide.sortingDesc')}</li>
               </ul>
             </div>
           </div>

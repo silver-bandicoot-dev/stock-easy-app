@@ -1,8 +1,11 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Menu, X, ChevronRight, LogIn } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
+import LanguageSwitcher from '../../../components/ui/LanguageSwitcher';
 
 const Navbar = ({ isLegalPage = false }) => {
+  const { t } = useTranslation();
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
@@ -22,10 +25,10 @@ const Navbar = ({ isLegalPage = false }) => {
   };
 
   const navLinks = [
-    { name: 'Fonctionnalités', href: '#features' },
-    { name: 'Comment ça marche', href: '#how-it-works' },
-    { name: 'Témoignages', href: '#testimonials' },
-    { name: 'Tarifs', href: '#pricing' },
+    { name: t('landing.navbar.features'), href: '#features' },
+    { name: t('landing.navbar.howItWorks'), href: '#how-it-works' },
+    { name: t('landing.navbar.testimonials'), href: '#testimonials' },
+    { name: t('landing.navbar.pricing'), href: '#pricing' },
   ];
 
   // Logo component matching the app's Logo.jsx
@@ -108,10 +111,11 @@ const Navbar = ({ isLegalPage = false }) => {
               ))}
             </div>
 
-            {/* CTA Buttons */}
+            {/* CTA Buttons + Language Switcher */}
             <div className="hidden md:flex items-center gap-3">
+              <LanguageSwitcher variant="compact" theme="light" showFlag={false} />
               <a href="/login" className="btn-ghost">
-                Log In
+                {t('landing.navbar.login')}
               </a>
               <a
                 href="https://apps.shopify.com/stockeasy"
@@ -124,7 +128,7 @@ const Navbar = ({ isLegalPage = false }) => {
                   alt="Shopify" 
                   className="w-4 h-4 object-contain"
                 />
-                Installer sur Shopify
+                {t('landing.navbar.installShopify')}
               </a>
             </div>
 
@@ -165,9 +169,14 @@ const Navbar = ({ isLegalPage = false }) => {
                 </motion.a>
               ))}
               
-              <div className="pt-6 space-y-3">
+              {/* Language Switcher Mobile */}
+              <div className="pt-4 pb-2">
+                <LanguageSwitcher variant="buttons" theme="light" showFlag={true} />
+              </div>
+              
+              <div className="pt-4 space-y-3">
                 <a href="/login" className="btn-secondary w-full justify-center">
-                  Log In
+                  {t('landing.navbar.login')}
                 </a>
                 <a
                   href="https://apps.shopify.com/stockeasy"
@@ -180,7 +189,7 @@ const Navbar = ({ isLegalPage = false }) => {
                     alt="Shopify" 
                     className="w-4 h-4 object-contain"
                   />
-                  Installer sur Shopify
+                  {t('landing.navbar.installShopify')}
                 </a>
               </div>
             </div>

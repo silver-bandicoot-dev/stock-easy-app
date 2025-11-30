@@ -1,6 +1,7 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Sliders, Users, Package, Warehouse, TrendingUp, PlugZap } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { ParametresGeneraux } from '../settings/ParametresGeneraux';
 import { GestionFournisseurs } from '../settings/GestionFournisseurs';
 import { MappingSKUFournisseur } from '../settings/MappingSKUFournisseur';
@@ -9,14 +10,14 @@ import { GestionMultiplicateurs } from '../settings/GestionMultiplicateurs';
 import { IntegrationsSettings } from '../settings/IntegrationsSettings';
 import { SETTINGS_TABS } from '../../constants/stockEasyConstants';
 
-// Onglets de paramètres style Shopify
-const SETTINGS_SECTIONS = [
-  { key: SETTINGS_TABS.GENERAL, label: 'Généraux', icon: Sliders },
-  { key: SETTINGS_TABS.MULTIPLIERS, label: 'Multiplicateurs', icon: TrendingUp },
-  { key: SETTINGS_TABS.SUPPLIERS, label: 'Fournisseurs', icon: Users },
-  { key: SETTINGS_TABS.MAPPING, label: 'Mapping', icon: Package },
-  { key: SETTINGS_TABS.WAREHOUSES, label: 'Entrepôts', icon: Warehouse },
-  { key: SETTINGS_TABS.INTEGRATIONS, label: 'Intégrations', icon: PlugZap }
+// Settings tabs configuration
+const getSettingsSections = (t) => [
+  { key: SETTINGS_TABS.GENERAL, label: t('settings.tabs.general'), icon: Sliders },
+  { key: SETTINGS_TABS.MULTIPLIERS, label: t('settings.tabs.multipliers'), icon: TrendingUp },
+  { key: SETTINGS_TABS.SUPPLIERS, label: t('settings.tabs.suppliers'), icon: Users },
+  { key: SETTINGS_TABS.MAPPING, label: t('settings.tabs.mapping'), icon: Package },
+  { key: SETTINGS_TABS.WAREHOUSES, label: t('settings.tabs.warehouses'), icon: Warehouse },
+  { key: SETTINGS_TABS.INTEGRATIONS, label: t('settings.tabs.integrations'), icon: PlugZap }
 ];
 
 export const SettingsTab = ({
@@ -46,6 +47,9 @@ export const SettingsTab = ({
   onUpdateWarehouse,
   onDeleteWarehouse
 }) => {
+  const { t } = useTranslation();
+  const settingsSections = getSettingsSections(t);
+
   return (
     <motion.div
       key="settings"
@@ -59,17 +63,17 @@ export const SettingsTab = ({
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
           <h1 className="text-xl sm:text-2xl font-semibold text-[#191919]">
-            Paramètres
+            {t('settings.title')}
           </h1>
           <p className="text-sm text-[#6B7177] mt-0.5">
-            Configurez les paramètres de votre application
+            {t('settings.subtitle')}
           </p>
         </div>
       </div>
 
       {/* Onglets - Style pills */}
       <div className="flex items-center gap-2 overflow-x-auto pb-1">
-        {SETTINGS_SECTIONS.map(section => {
+        {settingsSections.map(section => {
           const Icon = section.icon;
           return (
             <button

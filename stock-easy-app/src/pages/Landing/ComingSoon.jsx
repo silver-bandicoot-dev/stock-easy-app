@@ -1,10 +1,13 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Mail, Bell, Check, ArrowRight, Sparkles, AlertCircle } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { supabase } from '../../lib/supabaseClient';
+import LanguageSwitcher from '../../components/ui/LanguageSwitcher';
 import './Landing.css';
 
 const ComingSoon = () => {
+  const { t } = useTranslation();
   const [email, setEmail] = useState('');
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -43,7 +46,7 @@ const ComingSoon = () => {
       }
     } catch (err) {
       console.error('Waitlist signup error:', err);
-      setError('Une erreur est survenue. Veuillez réessayer.');
+      setError(t('comingSoon.errorMessage'));
     } finally {
       setIsLoading(false);
     }
@@ -74,13 +77,18 @@ const ComingSoon = () => {
   );
 
   const features = [
-    "Prévisions de stock par IA",
-    "Synchronisation Shopify temps réel",
-    "Alertes anti-rupture intelligentes",
+    t('comingSoon.features.aiPredictions'),
+    t('comingSoon.features.realTimeSync'),
+    t('comingSoon.features.smartAlerts'),
   ];
 
   return (
     <div className="landing-page min-h-screen flex flex-col">
+      {/* Language Switcher - Top Right */}
+      <div className="absolute top-4 right-4 z-10">
+        <LanguageSwitcher variant="compact" theme="light" showFlag={true} />
+      </div>
+
       {/* Background decoration */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-1/4 -left-32 w-96 h-96 bg-gradient-to-br from-[#E5E4DF]/40 to-transparent rounded-full blur-3xl" />
@@ -109,7 +117,7 @@ const ComingSoon = () => {
           >
             <Sparkles size={16} className="text-amber-500" />
             <span className="text-sm font-medium text-[#191919]">
-              Lancement imminent
+              {t('comingSoon.badge')}
             </span>
           </motion.div>
 
@@ -120,9 +128,9 @@ const ComingSoon = () => {
             transition={{ duration: 0.6, delay: 0.3 }}
             className="text-4xl md:text-5xl font-semibold text-[#191919] leading-tight mb-6"
           >
-            La gestion de stock Shopify,{' '}
+            {t('comingSoon.title')}{' '}
             <span className="relative">
-              réinventée
+              {t('comingSoon.titleHighlight')}
               <svg className="absolute -bottom-1 left-0 w-full" viewBox="0 0 200 8" fill="none">
                 <path d="M2 6C50 2 150 2 198 6" stroke="#191919" strokeWidth="3" strokeLinecap="round" opacity="0.2"/>
               </svg>
@@ -136,8 +144,7 @@ const ComingSoon = () => {
             transition={{ duration: 0.6, delay: 0.4 }}
             className="text-lg text-[#191919]/60 mb-8 max-w-md mx-auto"
           >
-            Soyez parmi les premiers à découvrir stockeasy. 
-            Inscrivez-vous pour un accès prioritaire.
+            {t('comingSoon.subtitle')}
           </motion.p>
 
           {/* Email Form */}
@@ -156,7 +163,7 @@ const ComingSoon = () => {
                       type="email"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      placeholder="votre@email.com"
+                      placeholder={t('comingSoon.emailPlaceholder')}
                       required
                       className="w-full pl-11 pr-4 py-3.5 rounded-xl border border-[#E5E4DF] bg-white text-[#191919] placeholder:text-[#191919]/40 focus:outline-none focus:border-[#191919]/30 focus:ring-2 focus:ring-[#191919]/5 transition-all"
                     />
@@ -172,11 +179,11 @@ const ComingSoon = () => {
                           <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
                           <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
                         </svg>
-                        Envoi...
+                        {t('comingSoon.subscribing')}
                       </span>
                     ) : (
                       <>
-                        M'inscrire
+                        {t('comingSoon.subscribe')}
                         <ArrowRight size={18} />
                       </>
                     )}
@@ -203,8 +210,8 @@ const ComingSoon = () => {
                   <Check size={18} className="text-white" />
                 </div>
                 <div className="text-left">
-                  <p className="font-medium text-[#059669]">Vous êtes inscrit !</p>
-                  <p className="text-sm text-[#059669]/70">Nous vous préviendrons au lancement.</p>
+                  <p className="font-medium text-[#059669]">{t('comingSoon.subscribed')}</p>
+                  <p className="text-sm text-[#059669]/70">{t('comingSoon.subscribedMessage')}</p>
                 </div>
               </motion.div>
             )}
@@ -218,7 +225,7 @@ const ComingSoon = () => {
             className="space-y-3"
           >
             <p className="text-xs text-[#191919]/40 uppercase tracking-wider mb-4">
-              Ce qui vous attend
+              {t('comingSoon.comingFeatures')}
             </p>
             <div className="flex flex-wrap justify-center gap-3">
               {features.map((feature, index) => (
@@ -244,7 +251,7 @@ const ComingSoon = () => {
             className="mt-12 flex items-center justify-center gap-2"
           >
             <img src="/logos/shopify.png" alt="Shopify" className="w-5 h-5 object-contain opacity-50" />
-            <span className="text-xs text-[#191919]/40">Shopify Partner</span>
+            <span className="text-xs text-[#191919]/40">{t('comingSoon.shopifyPartner')}</span>
           </motion.div>
         </div>
       </main>
@@ -252,7 +259,7 @@ const ComingSoon = () => {
       {/* Footer */}
       <footer className="py-6 text-center border-t border-[#E5E4DF]">
         <p className="text-sm text-[#191919]/40">
-          © {new Date().getFullYear()} stockeasy • contact@stockeasy.app
+          © {new Date().getFullYear()} stockeasy • {t('comingSoon.contact')}
         </p>
       </footer>
     </div>
@@ -260,4 +267,3 @@ const ComingSoon = () => {
 };
 
 export default ComingSoon;
-

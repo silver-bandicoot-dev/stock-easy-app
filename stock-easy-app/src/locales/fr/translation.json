@@ -1,0 +1,1281 @@
+{
+  "common": {
+    "loading": "Chargement...",
+    "save": "Sauvegarder",
+    "cancel": "Annuler",
+    "delete": "Supprimer",
+    "edit": "Modifier",
+    "create": "Créer",
+    "close": "Fermer",
+    "confirm": "Confirmer",
+    "yes": "Oui",
+    "no": "Non",
+    "search": "Rechercher",
+    "filter": "Filtrer",
+    "all": "Tous",
+    "none": "Aucun",
+    "back": "Retour",
+    "next": "Suivant",
+    "previous": "Précédent",
+    "export": "Exporter",
+    "import": "Importer",
+    "refresh": "Actualiser",
+    "more": "Plus",
+    "less": "Moins",
+    "actions": "Actions",
+    "details": "Détails",
+    "status": "Statut",
+    "date": "Date",
+    "name": "Nom",
+    "email": "Email",
+    "phone": "Téléphone",
+    "address": "Adresse",
+    "notes": "Notes",
+    "total": "Total",
+    "quantity": "Quantité",
+    "price": "Prix",
+    "unit": "Unité",
+    "viewAll": "Voir tout",
+    "noResults": "Aucun résultat",
+    "error": "Erreur",
+    "success": "Succès",
+    "warning": "Attention",
+    "info": "Information",
+    "selectOption": "Sélectionner une option",
+    "optional": "Optionnel",
+    "required": "Requis",
+    "allRightsReserved": "Tous droits réservés."
+  },
+  "auth": {
+    "login": "Connexion",
+    "logout": "Se déconnecter",
+    "register": "S'inscrire",
+    "forgotPassword": "Mot de passe oublié ?",
+    "resetPassword": "Réinitialiser le mot de passe",
+    "email": "Email",
+    "password": "Mot de passe",
+    "confirmPassword": "Confirmer le mot de passe",
+    "rememberMe": "Se souvenir de moi",
+    "loginTitle": "Connexion à StockEasy",
+    "loginSubtitle": "Gérez votre inventaire en toute simplicité",
+    "noAccount": "Pas encore de compte ?",
+    "hasAccount": "Déjà un compte ?",
+    "createAccount": "Créer un compte",
+    "orContinueWith": "Ou continuer avec",
+    "emailRequired": "L'email est requis",
+    "passwordRequired": "Le mot de passe est requis",
+    "invalidCredentials": "Identifiants incorrects",
+    "passwordMinLength": "Le mot de passe doit contenir au moins 8 caractères",
+    "passwordsDoNotMatch": "Les mots de passe ne correspondent pas",
+    "checkEmail": "Vérifiez votre boîte mail",
+    "resetEmailSent": "Un email de réinitialisation vous a été envoyé",
+    "newPassword": "Nouveau mot de passe",
+    "updatePassword": "Mettre à jour le mot de passe",
+    "tagline": "Gestion intelligente de votre stock",
+    "loginSuccess": "Connexion réussie !",
+    "loginError": "Erreur lors de la connexion",
+    "userNotFound": "Aucun compte trouvé avec cet email",
+    "wrongPassword": "Mot de passe incorrect",
+    "invalidEmail": "Email invalide",
+    "emailNotConfirmed": "Veuillez confirmer votre email avant de vous connecter",
+    "tooManyRequests": "Trop de tentatives. Veuillez réessayer plus tard",
+    "emailPlaceholder": "vous@exemple.com",
+    "loggingIn": "Connexion en cours...",
+    "loginButton": "Se connecter",
+    "sendResetLink": "Envoyer le lien de réinitialisation",
+    "sending": "Envoi...",
+    "emailSent": "Email envoyé !",
+    "checkYourInbox": "Vérifiez votre boîte email. Nous vous avons envoyé un lien pour réinitialiser votre mot de passe.",
+    "backToLogin": "Retour à la connexion",
+    "forgotPasswordTitle": "Mot de passe oublié ?",
+    "forgotPasswordDescription": "Entrez votre email et nous vous enverrons un lien pour réinitialiser votre mot de passe.",
+    "resetError": "Erreur lors de l'envoi de l'email de réinitialisation",
+    "genericError": "Une erreur est survenue",
+    "verifyingEmail": "Vérification de votre email en cours...",
+    "emailConfirmed": "Email confirmé !",
+    "emailAlreadyConfirmed": "Votre adresse email est déjà confirmée.",
+    "emailConfirmedSuccess": "Votre adresse email a été confirmée avec succès !",
+    "redirectingToLogin": "Redirection vers la page de connexion dans quelques secondes...",
+    "confirmationError": "Erreur de confirmation",
+    "confirmationErrorMessage": "Impossible de confirmer votre email. Le lien peut être invalide ou expiré.",
+    "confirmationGenericError": "Une erreur est survenue lors de la confirmation de votre email.",
+    "unknownConfirmationType": "Type de confirmation non reconnu.",
+    "goToLogin": "Aller à la page de connexion",
+    "emailConfirmedRedirect": "Votre adresse email a été confirmée. Vous pouvez maintenant vous connecter.",
+    "verifyingInvitation": "Vérification de l'invitation...",
+    "invitationReceived": "Invitation reçue",
+    "loginToAccept": "Connectez-vous ou créez un compte pour rejoindre l'équipe",
+    "noInvitationToken": "Aucun token d'invitation fourni",
+    "invalidInvitation": "Invitation invalide",
+    "invalidInvitationMessage": "Cette invitation n'est plus valide ou a expiré.",
+    "backToHome": "Retour à l'accueil",
+    "welcome": "Bienvenue ! 🎉",
+    "welcomeMessage": "Vous faites maintenant partie de l'équipe. Redirection en cours...",
+    "welcomeToast": "Bienvenue dans l'équipe ! 🎉",
+    "welcomeToastDescription": "Vous faites maintenant partie de l'entreprise",
+    "acceptingError": "Erreur lors de l'acceptation",
+    "joinTeam": "Rejoindre l'équipe",
+    "invitedToJoin": "Vous avez été invité(e) à rejoindre une équipe sur Stock Easy",
+    "connectedAccount": "Compte connecté",
+    "acceptInvitation": "Accepter l'invitation",
+    "acceptingInvitation": "Acceptation en cours...",
+    "acceptNote": "En acceptant, vous aurez accès aux données et aux fonctionnalités de l'entreprise"
+  },
+  "navigation": {
+    "dashboard": "Tableau de Bord",
+    "placeOrder": "Passer Commande",
+    "myOrders": "Mes Commandes",
+    "stockLevels": "Niveaux de Stock",
+    "inventory": "Inventaire",
+    "analytics": "Analytics",
+    "settings": "Paramètres",
+    "profile": "Mon Profil",
+    "helpCenter": "Centre d'aide",
+    "kpis": "KPIs",
+    "aiForecast": "Prévisions IA",
+    "generalSettings": "Paramètres Généraux",
+    "multipliers": "Multiplicateurs",
+    "supplierManagement": "Gestion Fournisseurs",
+    "mapping": "Mapping",
+    "warehouseManagement": "Gestion Entrepôts",
+    "integrations": "Intégrations"
+  },
+  "dashboard": {
+    "welcomeBack": "Content de vous revoir 👋",
+    "overview": "Vue d'ensemble de votre inventaire",
+    "dataSynced": "Données synchronisées",
+    "syncing": "Synchronisation...",
+    "skuToOrder": "SKU à commander",
+    "keyIndicators": "Indicateurs clés",
+    "analyses": "Analyses",
+    "skuAvailability": "Taux de Disponibilité des SKU",
+    "inventoryValue": "Valeur de l'Inventaire",
+    "lostSales": "Ventes Perdues - Rupture de Stock",
+    "lostSalesReal": "Ventes Perdues - Ruptures Réelles",
+    "lostSalesEstimated": "Ventes Perdues Estimées",
+    "overstockValue": "Valeur Surstocks Profonds",
+    "investmentRequired": "Investissement Requis",
+    "toOrder": "À Commander",
+    "activeOrders": "Commandes en Cours",
+    "vsLastWeek": "vs semaine dernière",
+    "vsLastMonth": "vs mois dernier",
+    "recentActivity": "Activité récente",
+    "noRecentActivity": "Aucune activité récente",
+    "quickActions": "Actions rapides",
+    "greetings": {
+      "morning": ["Bonjour", "Belle matinée", "Prêt pour une belle journée", "Bon début de journée"],
+      "afternoon": ["Bon après-midi", "L'après-midi avance bien", "On continue", "Toujours au top"],
+      "evening": ["Bonsoir", "Belle fin de journée"],
+      "night": ["Travail tardif", "Session nocturne"],
+      "returning": ["Content de vous revoir", "Encore vous", "Re-bonjour"],
+      "urgent": ["Des actions vous attendent", "Quelques urgences à gérer"],
+      "monday": ["Bon lundi", "Nouvelle semaine"],
+      "friday": ["Bon vendredi", "Presque le weekend"],
+      "saturday": ["Bon samedi"],
+      "sunday": ["Bon dimanche"]
+    },
+    "kpiDescriptions": {
+      "skuAvailability": "{{available}} SKUs disponibles sur {{total}}",
+      "inventoryValue": "Valeur totale du stock actuel (prix d'achat)",
+      "investmentRequired": "Montant total à investir pour les produits à commander",
+      "toOrder": "Nombre de produits nécessitant une commande urgente",
+      "activeOrders": "Nombre de commandes en attente, préparation ou transit",
+      "lostSalesReal": "Compte UNIQUEMENT les produits EN RUPTURE TOTALE (stock = 0)",
+      "lostSalesEstimated": "Inclut TOUS les produits à risque (ruptures actuelles + produits qui vont manquer bientôt)",
+      "overstockValue": "{{count}} SKU(s) en surstock profond",
+      "waitingHistory": "En attente de données historiques",
+      "noHistory": "pas d'historique disponible"
+    }
+  },
+  "onboarding": {
+    "title": "Guide de démarrage",
+    "titleCompleted": "Bravo ! Vous êtes opérationnel 🎉",
+    "description": "Complétez ces étapes pour tirer le meilleur parti de l'application.",
+    "descriptionCompleted": "Vous maîtrisez maintenant les bases de Stockeasy.",
+    "congratulations": "Félicitations ! Vous pouvez masquer ce guide en cliquant sur la croix.",
+    "steps": {
+      "connect": {
+        "title": "Boutique connectée",
+        "description": "Synchronisation Shopify active",
+        "action": "Connecté"
+      },
+      "suppliers": {
+        "title": "Ajouter un fournisseur",
+        "description": "Créez votre premier fournisseur",
+        "action": "Gérer les fournisseurs"
+      },
+      "mapping": {
+        "title": "Lier les produits",
+        "description": "Assignez des produits aux fournisseurs",
+        "action": "Aller au mapping"
+      },
+      "order": {
+        "title": "Créer une commande",
+        "description": "Testez la création de commande",
+        "action": "Passer commande"
+      }
+    }
+  },
+  "search": {
+    "placeholder": "Rechercher un produit, fournisseur, commande...",
+    "clear": "Effacer la recherche",
+    "noResults": "Aucun résultat",
+    "actions": {
+      "order": "Commander",
+      "viewStock": "Voir stock",
+      "analytics": "Analytics",
+      "email": "Email",
+      "products": "Produits",
+      "stats": "Stats",
+      "details": "Détails",
+      "tracking": "Tracking",
+      "contact": "Contacter",
+      "viewStocks": "Voir stocks",
+      "locate": "Localiser",
+      "edit": "Éditer"
+    }
+  },
+  "actions": {
+    "title": "Passer Commande",
+    "manageSupplierOrders": "Gérez vos commandes fournisseurs",
+    "recommendations": "Recommandations",
+    "custom": "Personnalisée",
+    "selectAtLeastOneProduct": "Veuillez sélectionner au moins un produit",
+    "invalidQuantity": "Veuillez définir une quantité positive pour chaque produit sélectionné",
+    "noSupplierFound": "Aucun fournisseur trouvé pour les produits sélectionnés",
+    "multipleSuppliers": "{{count}} fournisseurs détectés. Sélectionner des produits d'un seul fournisseur.",
+    "invalidWarehouse": "Entrepôt invalide, veuillez réessayer",
+    "orderCreationError": "Erreur lors de la création de la commande",
+    "exportSuccess": "Export CSV réussi !",
+    "exportError": "Erreur lors de l'export"
+  },
+  "stockPage": {
+    "title": "Niveaux de Stock",
+    "subtitle": "Gérez la santé de votre inventaire",
+    "tabs": {
+      "all": "Tous",
+      "urgent": "Urgents",
+      "warning": "À Surveiller",
+      "healthy": "En Bonne Santé"
+    },
+    "searchPlaceholder": "Rechercher par nom, SKU, fournisseur...",
+    "allSuppliers": "Tous les fournisseurs",
+    "unassigned": "Non assigné",
+    "filters": "Filtres",
+    "resetFilters": "Réinitialiser les filtres",
+    "productsShown": "{{count}} produit(s) affiché(s)",
+    "columns": {
+      "product": "Produit",
+      "supplier": "Fournisseur",
+      "stock": "Stock",
+      "autonomy": "Autonomie",
+      "inTransit": "En transit",
+      "rotation": "Rotation",
+      "health": "Santé"
+    },
+    "salesPerDay": "ventes/jour",
+    "delay": "Délai",
+    "days": "j",
+    "threshold": "Seuil",
+    "overstock": "Surstock",
+    "cmd": "cmd",
+    "noProductsFound": "Aucun produit trouvé",
+    "tryModifyFilters": "Essayez de modifier vos filtres ou votre recherche",
+    "products": "produit(s)",
+    "page": "Page",
+    "of": "sur"
+  },
+  "ordersPage": {
+    "title": "Commandes Fournisseurs",
+    "subtitle": "Gérez et suivez toutes vos commandes",
+    "export": "Exporter",
+    "tabs": {
+      "all": "Toutes",
+      "pending": "En Cours",
+      "preparing": "Préparation",
+      "inTransit": "Transit",
+      "received": "Reçues",
+      "reconciliation": "Réconciliation",
+      "completed": "Archivées"
+    },
+    "searchPlaceholder": "Rechercher par N° PO, fournisseur...",
+    "allSuppliers": "Tous les fournisseurs",
+    "loadError": "Impossible de charger les commandes",
+    "exportPreparing": "Préparation de l'export...",
+    "exportSuccess": "Export CSV réussi !",
+    "exportError": "Erreur lors de l'export",
+    "ordersCount": "{{count}} commande(s)",
+    "page": "Page",
+    "of": "sur"
+  },
+  "orders": {
+    "title": "Mes Commandes",
+    "createOrder": "Créer une commande",
+    "orderNumber": "N° de commande",
+    "supplier": "Fournisseur",
+    "warehouse": "Entrepôt",
+    "createdAt": "Créée le",
+    "expectedDate": "Date prévue",
+    "deliveredAt": "Livrée le",
+    "items": "Articles",
+    "totalValue": "Valeur totale",
+    "status": {
+      "pending_confirmation": "En attente",
+      "preparing": "En traitement",
+      "in_transit": "En transit",
+      "received": "Reçue",
+      "completed": "Complétée",
+      "reconciliation": "À réconcilier"
+    },
+    "actions": {
+      "confirm": "Confirmer",
+      "ship": "Expédier",
+      "receive": "Réceptionner",
+      "complete": "Compléter",
+      "reconcile": "Réconcilier",
+      "cancel": "Annuler",
+      "viewDetails": "Voir les détails",
+      "sendEmail": "Envoyer email",
+      "duplicate": "Dupliquer"
+    },
+    "filters": {
+      "all": "Toutes",
+      "pending": "En attente",
+      "active": "Actives",
+      "completed": "Complétées"
+    },
+    "empty": {
+      "title": "Aucune commande",
+      "description": "Vous n'avez pas encore de commandes. Créez votre première commande pour commencer."
+    },
+    "reconciliation": {
+      "title": "Réconciliation",
+      "expected": "Attendu",
+      "received": "Reçu",
+      "damaged": "Endommagé",
+      "missing": "Manquant",
+      "noIssue": "Aucun problème",
+      "completeReconciliation": "Terminer la réconciliation",
+      "claimEmail": "Email de réclamation"
+    },
+    "messages": {
+      "created": "Commande créée avec succès !",
+      "confirmed": "Commande confirmée !",
+      "shipped": "Commande expédiée !",
+      "received": "Commande reçue !",
+      "completed": "Commande complétée !",
+      "cancelled": "Commande annulée",
+      "emailSent": "Email envoyé au fournisseur"
+    }
+  },
+  "stock": {
+    "title": "Niveaux de Stock",
+    "currentStock": "Stock actuel",
+    "minStock": "Stock minimum",
+    "maxStock": "Stock maximum",
+    "reorderPoint": "Seuil de réapprovisionnement",
+    "safetyStock": "Stock de sécurité",
+    "averageSales": "Ventes moyennes",
+    "daysOfStock": "Jours de stock",
+    "coverage": "Couverture",
+    "filters": {
+      "all": "Tous les produits",
+      "lowStock": "Stock faible",
+      "toReorder": "À commander",
+      "overstock": "Surstock",
+      "critical": "Critique"
+    },
+    "status": {
+      "healthy": "Optimal",
+      "low": "Faible",
+      "critical": "Critique",
+      "overstock": "Surstock",
+      "outOfStock": "Rupture"
+    },
+    "columns": {
+      "product": "Produit",
+      "sku": "SKU",
+      "stock": "Stock",
+      "supplier": "Fournisseur",
+      "status": "Statut",
+      "toOrder": "À commander",
+      "value": "Valeur"
+    },
+    "messages": {
+      "stockUpdated": "Stock mis à jour !",
+      "bulkUpdateSuccess": "Mise à jour groupée effectuée"
+    }
+  },
+  "inventory": {
+    "title": "Inventaire",
+    "totalProducts": "Total produits",
+    "totalValue": "Valeur totale",
+    "lastInventory": "Dernier inventaire",
+    "nextInventory": "Prochain inventaire",
+    "startInventory": "Démarrer un inventaire",
+    "categories": "Catégories",
+    "bySupplier": "Par fournisseur",
+    "byWarehouse": "Par entrepôt"
+  },
+  "analytics": {
+    "title": "Analytics",
+    "subtitle": "KPIs et indicateurs clés de votre inventaire",
+    "forecastTitle": "Prévisions IA",
+    "forecastSubtitle": "Prévisions de demande basées sur le Machine Learning",
+    "loading": "Chargement des analytics...",
+    "error": "Erreur",
+    "mlCalculating": "Calcul ML en cours...",
+    "tabs": {
+      "kpis": "KPIs",
+      "forecast": "Prévisions IA"
+    },
+    "kpis": {
+      "title": "Indicateurs de Performance",
+      "main": "KPIs Principaux",
+      "advanced": "Analyse Approfondie",
+      "period": "Période",
+      "daily": "Jour",
+      "weekly": "Semaine",
+      "monthly": "Mois",
+      "quarterly": "Trimestre",
+      "yearly": "Année",
+      "skuAvailability": "Taux de Disponibilité des SKU",
+      "inventoryValue": "Valeur de l'Inventaire",
+      "lostSalesReal": "Ventes Perdues - Ruptures Réelles",
+      "overstockValue": "Valeur Surstocks Profonds",
+      "mappingPercentage": "Mapping Produits ↔ Fournisseurs",
+      "totalProducts": "Total Produits",
+      "healthyPercentage": "En Bonne Santé",
+      "totalGrossMargin": "Marge Brute Totale",
+      "potentialRevenue": "Revenu Potentiel (ML)",
+      "fastRotation": "Rotation Rapide"
+    },
+    "forecast": {
+      "title": "Prévisions IA",
+      "predictedDemand": "Demande prévue",
+      "confidence": "Niveau de confiance",
+      "recommendation": "Recommandation",
+      "trend": "Tendance",
+      "seasonality": "Saisonnalité",
+      "selectProduct": "Sélectionner un produit pour analyser...",
+      "productsWithHistory": "📊 Produits avec historique de ventes",
+      "productsInStock": "📦 Produits en stock (sans historique)",
+      "salesPerDay": "ventes/jour",
+      "stock": "Stock",
+      "withHistory": "avec historique",
+      "total": "total",
+      "loadingHistory": "Chargement de l'historique...",
+      "loadingHistoryDesc": "Récupération des données de ventes depuis Supabase",
+      "selectProductTitle": "Sélectionnez un produit",
+      "selectProductDesc": "Choisissez un produit avec historique de ventes pour voir ses prévisions de demande basées sur le Machine Learning"
+    },
+    "charts": {
+      "stockEvolution": "Évolution du stock",
+      "salesTrend": "Tendance des ventes",
+      "turnoverRate": "Taux de rotation",
+      "categoryBreakdown": "Répartition par catégorie"
+    },
+    "insights": {
+      "title": "Insights Actionnables",
+      "subtitle": "Recommandations basées sur vos indicateurs clés de performance",
+      "categories": {
+        "alerts": "Alertes",
+        "performance": "Performance",
+        "financial": "Financier"
+      },
+      "insight": "insight",
+      "insights": "insights",
+      "skuAvailabilityLow": "Attention ! Votre taux de disponibilité est faible. Risque de perte de ventes.",
+      "skuAvailabilityGood": "Bon taux de disponibilité, mais il y a de la marge d'amélioration.",
+      "skuAvailabilityExcellent": "Excellent taux de disponibilité ! Vos clients peuvent compter sur vous.",
+      "salesLostModerate": "Pertes de ventes modérées. Surveillez vos points de commande.",
+      "salesLostHigh": "Pertes de ventes importantes ! Revoyez votre stratégie de réapprovisionnement.",
+      "salesLostLow": "Faibles pertes de ventes. Votre gestion des stocks est efficace.",
+      "overstockModerate": "Surstock modéré. Surveillez vos niveaux de sécurité.",
+      "overstockHigh": "Surstock important ! Optimisez vos points de commande et niveaux de sécurité.",
+      "overstockLow": "Faible niveau de surstock. Votre optimisation est efficace.",
+      "healthLow": "Attention ! Seulement {{percent}}% de vos produits sont en bonne santé. Revoyez vos stratégies de réapprovisionnement.",
+      "healthGood": "{{percent}}% de vos produits sont en bonne santé. Il y a de la marge d'amélioration.",
+      "healthExcellent": "Excellent ! {{percent}}% de vos produits sont en bonne santé. Continuez sur cette voie.",
+      "rotationHigh": "{{count}} produits à rotation rapide avec une rotation moyenne de {{rate}} rotations/an. Excellente dynamique commerciale !",
+      "rotationMedium": "{{count}} produits à rotation rapide avec une rotation moyenne de {{rate}} rotations/an. Bonne dynamique.",
+      "rotationLow": "Seulement {{count}} produits à rotation rapide. Rotation moyenne de {{rate}} rotations/an. Envisagez des promotions pour accélérer les rotations.",
+      "inventoryHigh": "Inventaire de grande valeur. Surveillez attentivement les rotations.",
+      "inventoryMedium": "Inventaire de valeur modérée. Maintenez un bon équilibre.",
+      "inventoryLow": "Inventaire de faible valeur. Opportunité d'augmenter les stocks.",
+      "mlPredictions": "Prévisions basées sur Machine Learning (confiance: {{confidence}}%). {{products}} produits avec historique, {{records}} enregistrements analysés.",
+      "statisticalCalc": "Calcul statistique basé sur l'historique des ventes et la rotation ({{confidence}}% de confiance). Pour améliorer la précision, entraînez le modèle ML depuis l'onglet AI."
+    }
+  },
+  "settings": {
+    "title": "Paramètres",
+    "subtitle": "Configurez les paramètres de votre application",
+    "tabs": {
+      "general": "Généraux",
+      "multipliers": "Multiplicateurs",
+      "suppliers": "Fournisseurs",
+      "mapping": "Mapping",
+      "warehouses": "Entrepôts",
+      "integrations": "Intégrations"
+    },
+    "general": {
+      "title": "Paramètres Généraux",
+      "overstockThreshold": "Seuil de surstock profond",
+      "overstockThresholdTitle": "📊 Seuil Surstock Profond",
+      "overstockThresholdHelp": "Nombre de jours d'autonomie à partir duquel un produit est considéré en surstock profond. Vous pouvez choisir une recommandation ou saisir une valeur personnalisée.",
+      "defaultCurrency": "Devise par défaut",
+      "currencyTitle": "💰 Devise par défaut",
+      "currencyHelp": "Devise utilisée pour afficher les prix dans l'application",
+      "selectedCurrency": "Devise sélectionnée",
+      "defaultMultiplier": "Multiplicateur par défaut",
+      "multiplierTitle": "📈 Multiplicateur par défaut",
+      "multiplierHelp": "Coefficient appliqué aux nouveaux produits pour ajuster les prévisions",
+      "savedSuccess": "✅ Paramètres sauvegardés avec succès !",
+      "unsavedChanges": "Vous avez des modifications non sauvegardées",
+      "saveParameters": "Sauvegarder les paramètres",
+      "saving": "Sauvegarde...",
+      "saveError": "Erreur lors de la sauvegarde des paramètres",
+      "recommendations": "Recommandations selon votre typologie",
+      "customValue": "Ou saisissez une valeur personnalisée (1-365 jours)",
+      "customPlaceholder": "Ex : 75 jours",
+      "selectedValue": "Valeur sélectionnée",
+      "days": "jours",
+      "custom": "Personnalisé",
+      "recommendation": "💡 Recommandation",
+      "thresholds": {
+        "fashion": { "label": "60 jours", "type": "Fashion", "description": "Produits à rotation rapide, mode saisonnière" },
+        "standard": { "label": "90 jours ⭐", "type": "Standard", "description": "Recommandé pour la plupart des activités" },
+        "durable": { "label": "120 jours", "type": "Durable", "description": "Produits à longue durée de vie" },
+        "b2b": { "label": "180 jours", "type": "B2B", "description": "Commerce B2B avec cycles longs" }
+      },
+      "recommendationTypes": {
+        "fashion": "Adapté pour les produits à rotation rapide",
+        "standard": "Recommandé pour la plupart des activités",
+        "durable": "Adapté pour les produits à longue durée de vie",
+        "b2b": "Adapté pour le commerce B2B",
+        "custom": "Valeur personnalisée selon vos besoins"
+      },
+      "validationError": "Veuillez entrer un nombre valide",
+      "rangeError": "Le seuil doit être entre 1 et 365 jours"
+    },
+    "suppliers": {
+      "title": "🏭 Gestion des Fournisseurs",
+      "addSupplier": "Ajouter un fournisseur",
+      "newSupplier": "Nouveau fournisseur",
+      "editSupplier": "Modifier le fournisseur",
+      "name": "Nom du fournisseur",
+      "email": "Email",
+      "leadTime": "Délai de livraison",
+      "leadTimeDays": "jours",
+      "delay": "Délai",
+      "moq": "Quantité minimum de commande (MOQ)",
+      "moqUnits": "unités",
+      "notes": "Notes",
+      "noSuppliers": "Aucun fournisseur créé",
+      "noSuppliersFound": "Aucun fournisseur trouvé",
+      "activeSuppliers": "{{count}} fournisseur(s) actif(s)",
+      "assignedProducts": "{{count}} produit(s) assigné(s)",
+      "searchPlaceholder": "🔍 Rechercher un fournisseur...",
+      "deleteConfirm": "Êtes-vous sûr de vouloir supprimer ce fournisseur ?",
+      "modify": "Modifier",
+      "delete": "Supprimer",
+      "na": "N/A",
+      "messages": {
+        "created": "Fournisseur créé !",
+        "updated": "Fournisseur modifié !",
+        "deleted": "Fournisseur supprimé !"
+      }
+    },
+    "mapping": {
+      "title": "Mapping Produits ↔ Fournisseurs",
+      "subtitle": "Organisez vos catalogues à grande échelle : recherche avancée, filtres et glisser-déposer pour assister rapidement vos équipes.",
+      "assignSupplier": "Assigner un fournisseur",
+      "bulkAssign": "Assignation groupée",
+      "noMapping": "Aucun mapping configuré",
+      "noSuppliers": "Aucun fournisseur disponible",
+      "noSuppliersHelp": "Ajoutez des fournisseurs dans l'onglet dédié pour commencer le mapping des produits.",
+      "lastSaved": "Dernière sauvegarde",
+      "never": "Jamais",
+      "totalProducts": "Total produits",
+      "assigned": "Assignés",
+      "toAssign": "À assigner",
+      "pendingChanges": "Modifs en attente",
+      "searchProduct": "Rechercher un produit par SKU ou nom…",
+      "status": "Statut",
+      "statusOptions": {
+        "all": "Assignés & disponibles",
+        "assigned": "Assignés uniquement",
+        "unassigned": "Disponibles uniquement"
+      },
+      "resetFilters": "Réinitialiser les filtres",
+      "suppliers": "Fournisseurs",
+      "filterSuppliers": "Filtrer les fournisseurs…",
+      "noSupplierMatch": "Aucun fournisseur ne correspond à votre recherche.",
+      "toSave": "À sauvegarder",
+      "productsAssignedTo": "Produits attribués à {{supplier}}",
+      "reset": "Réinitialiser",
+      "save": "Sauvegarder",
+      "syncMoq": "Synchroniser les MOQ depuis le fournisseur",
+      "assignedProducts": "Produits assignés",
+      "availableProducts": "Produits disponibles",
+      "noAssignedProducts": "Aucun produit n'est assigné à ce fournisseur pour le moment.",
+      "allProductsAssigned": "Tous les produits sont assignés. Glissez un produit depuis la liste voisine pour le libérer.",
+      "productNoName": "Produit sans nom",
+      "currentStock": "Stock actuel",
+      "productMoq": "MOQ produit",
+      "source": "Source",
+      "notDefined": "non défini",
+      "remove": "Retirer",
+      "assign": "Assigner",
+      "selectSupplier": "Sélectionnez un fournisseur pour commencer",
+      "selectSupplierHelp": "Utilisez la colonne de gauche pour choisir un fournisseur et gérer son catalogue.",
+      "pendingSummary": "Modifications en attente : {{added}} ajout(s) · {{removed}} retrait(s)",
+      "saveReminder": "Pensez à sauvegarder chaque fournisseur modifié."
+    },
+    "warehouses": {
+      "title": "Gestion Entrepôts",
+      "addWarehouse": "Ajouter un entrepôt",
+      "editWarehouse": "Modifier l'entrepôt",
+      "name": "Nom de l'entrepôt",
+      "address": "Adresse",
+      "isDefault": "Entrepôt par défaut",
+      "noWarehouses": "Aucun entrepôt configuré",
+      "deleteConfirm": "Êtes-vous sûr de vouloir supprimer cet entrepôt ?",
+      "messages": {
+        "created": "Entrepôt créé !",
+        "updated": "Entrepôt modifié !",
+        "deleted": "Entrepôt supprimé !"
+      }
+    },
+    "multipliers": {
+      "title": "Multiplicateurs",
+      "global": "Multiplicateur global",
+      "byProduct": "Par produit",
+      "byCategory": "Par catégorie"
+    },
+    "integrations": {
+      "title": "Intégrations",
+      "shopify": "Shopify",
+      "connected": "Connecté",
+      "disconnected": "Déconnecté",
+      "lastSync": "Dernière synchronisation",
+      "syncNow": "Synchroniser maintenant"
+    }
+  },
+  "profile": {
+    "title": "Mon Profil",
+    "subtitle": "Gérez vos informations personnelles, votre entreprise et votre équipe",
+    "personalInfo": "Informations personnelles",
+    "preferences": "Préférences",
+    "company": "Mon Entreprise",
+    "team": "Mon Équipe",
+    "firstName": "Prénom",
+    "lastName": "Nom",
+    "email": "Email",
+    "role": "Rôle",
+    "language": "Langue de l'interface",
+    "photo": "Photo de profil",
+    "changePhoto": "Changer la photo",
+    "companyName": "Nom de l'entreprise",
+    "companyIndustry": "Secteur d'activité",
+    "teamMembers": "membres",
+    "collaborators": "collaborateurs",
+    "inviteUser": "Inviter un utilisateur",
+    "saveChanges": "Sauvegarder les modifications",
+    "saving": "Enregistrement...",
+    "uploading": "Upload...",
+    "success": "Modifications enregistrées avec succès",
+    "error": "Erreur lors de l'enregistrement",
+    "uploadError": "Erreur lors du téléchargement de la photo",
+    "emailChangeNote": "Toute modification nécessitera une confirmation par email.",
+    "security": "Sécurité",
+    "managePassword": "Gérez votre mot de passe",
+    "modify": "Modifier",
+    "newPassword": "Nouveau mot de passe",
+    "confirmPassword": "Confirmer le mot de passe",
+    "updatePassword": "Mettre à jour le mot de passe",
+    "passwordUpdating": "Mise à jour...",
+    "passwordStrength": {
+      "weak": "Faible",
+      "medium": "Moyen",
+      "strong": "Fort"
+    },
+    "passwordActive": "Mot de passe actif",
+    "passwordSecure": "Votre mot de passe est sécurisé",
+    "passwordHint": "Utilisez au moins 8 caractères. Après modification, vous devrez vous reconnecter sur vos autres appareils.",
+    "roles": {
+      "owner": "Administrateur",
+      "admin": "Administrateur",
+      "member": "Membre"
+    },
+    "invitations": {
+      "title": "Invitations en attente",
+      "inviteCollaborator": "Inviter un collaborateur",
+      "emailAddress": "Adresse email",
+      "role": "Rôle",
+      "roleAdminDescription": "Les administrateurs peuvent gérer l'équipe et inviter d'autres membres.",
+      "roleMemberDescription": "Les membres peuvent consulter et modifier les données de l'entreprise.",
+      "send": "Envoyer l'invitation",
+      "sending": "Envoi...",
+      "copyLink": "Copier le lien",
+      "copied": "Copié !",
+      "revoke": "Révoquer",
+      "sent": "Invitation envoyée à {{email}} !",
+      "sentDescription": "Le collaborateur recevra un email avec un lien d'invitation"
+    },
+    "deleteTeamMember": {
+      "title": "Confirmation de suppression",
+      "finalTitle": "Dernière confirmation",
+      "message": "Vous êtes sur le point de supprimer définitivement le compte de",
+      "warning": "Cette action est irréversible et supprimera :",
+      "item1": "Le profil utilisateur",
+      "item2": "Toutes les données associées",
+      "item3": "L'accès à l'application",
+      "confirm": "Êtes-vous absolument sûr de vouloir continuer ?",
+      "finalConfirm": "Cette action ne peut pas être annulée.",
+      "continue": "Continuer",
+      "deleteForever": "Supprimer définitivement",
+      "success": "{{name}} a été supprimé définitivement de l'équipe",
+      "successDescription": "Le compte utilisateur a été supprimé avec succès"
+    }
+  },
+  "help": {
+    "title": "Centre d'aide",
+    "search": "Rechercher dans l'aide...",
+    "categories": {
+      "gettingStarted": "Démarrage",
+      "orders": "Commandes",
+      "inventory": "Inventaire",
+      "integrations": "Intégrations",
+      "billing": "Facturation"
+    },
+    "faq": "Questions fréquentes",
+    "contact": "Contactez-nous",
+    "documentation": "Documentation"
+  },
+  "notifications": {
+    "title": "Notifications",
+    "markAllRead": "Tout marquer comme lu",
+    "noNotifications": "Aucune notification",
+    "types": {
+      "lowStock": "Stock faible",
+      "orderReceived": "Commande reçue",
+      "orderShipped": "Commande expédiée",
+      "alert": "Alerte"
+    }
+  },
+  "errors": {
+    "loadingFailed": "Erreur lors du chargement des données",
+    "saveFailed": "Erreur lors de la sauvegarde",
+    "deleteFailed": "Erreur lors de la suppression",
+    "networkError": "Problème de connexion. Vérifiez votre connexion Internet.",
+    "notFound": "Élément introuvable",
+    "unknownError": "Erreur inconnue",
+    "sessionExpired": "Votre session a expiré. Veuillez vous reconnecter.",
+    "unauthorized": "Vous n'êtes pas autorisé à effectuer cette action"
+  },
+  "validation": {
+    "required": "Ce champ est obligatoire",
+    "invalidEmail": "Email invalide",
+    "invalidNumber": "Nombre invalide",
+    "minValue": "La valeur doit être supérieure à {{min}}",
+    "maxValue": "La valeur doit être inférieure à {{max}}",
+    "duplicateName": "Ce nom existe déjà",
+    "minLength": "Minimum {{count}} caractères requis",
+    "maxLength": "Maximum {{count}} caractères autorisés"
+  },
+  "landing": {
+    "navbar": {
+      "features": "Fonctionnalités",
+      "howItWorks": "Comment ça marche",
+      "testimonials": "Témoignages",
+      "pricing": "Tarifs",
+      "login": "Se connecter",
+      "installShopify": "Installer sur Shopify"
+    },
+    "hero": {
+      "badge": "Disponible sur Shopify App Store",
+      "title": "Gérez votre stock Shopify",
+      "titleHighlight": "intelligemment",
+      "subtitle": "Prédictions IA, synchronisation temps réel, et alertes intelligentes. Évitez les ruptures de stock et maximisez vos ventes.",
+      "cta": "Essayer gratuitement",
+      "demo": "Voir la démo",
+      "merchants": "500+ marchands",
+      "stats": {
+        "reduction": "réduction des ruptures",
+        "timeSaved": "économisées / semaine",
+        "activeMerchants": "marchands actifs"
+      },
+      "dashboardPreview": {
+        "welcome": "Content de vous revoir 👋",
+        "overview": "Vue d'ensemble de votre inventaire",
+        "synced": "Données synchronisées",
+        "skuToOrder": "SKU à commander",
+        "indicators": "Indicateurs clés",
+        "skuAvailability": "Taux de Disponibilité des SKU",
+        "inventoryValue": "Valeur de l'Inventaire",
+        "investmentRequired": "Investissement Requis",
+        "toOrder": "À Commander",
+        "vsLastWeek": "vs semaine dernière",
+        "aiActive": "IA Active"
+      }
+    },
+    "partners": {
+      "title": "Ils nous font confiance"
+    },
+    "features": {
+      "title": "Tout ce dont vous avez besoin pour votre inventaire",
+      "subtitle": "Des outils puissants de gestion de stock conçus pour les marchands Shopify exigeants",
+      "main": {
+        "aiPredictions": {
+          "title": "Prévisions de stock IA",
+          "description": "Notre algorithme analyse votre historique de vente pour prédire les ruptures de stock et le surstock avant qu'ils n'arrivent.",
+          "highlight": "Prédictions intelligentes"
+        },
+        "realTimeSync": {
+          "title": "Sync Shopify temps réel",
+          "description": "Synchronisation bidirectionnelle automatique avec votre boutique Shopify et vos entrepôts. Vos stocks sont toujours à jour.",
+          "highlight": "< 2 sec de latence"
+        },
+        "smartAlerts": {
+          "title": "Alertes anti-rupture",
+          "description": "Recevez des alertes de stock bas personnalisées au bon moment pour réapprovisionner. Email, SMS ou in-app.",
+          "highlight": "100% personnalisables"
+        }
+      },
+      "secondary": {
+        "analytics": "Analytics avancés",
+        "analyticsDesc": "Tableaux de bord visuels avec KPIs",
+        "multiLocation": "Multi-emplacements",
+        "multiLocationDesc": "Gérez plusieurs entrepôts",
+        "supplierOrders": "Commandes fournisseurs",
+        "supplierOrdersDesc": "Créez vos bons de commande en 1 clic",
+        "orderTracking": "Suivi des commandes",
+        "orderTrackingDesc": "Suivez vos réceptions fournisseurs",
+        "collaboration": "Travail collaboratif",
+        "collaborationDesc": "Invitez votre équipe sur l'app",
+        "comments": "Commentaires",
+        "commentsDesc": "Annotez vos produits en équipe",
+        "security": "Sécurité maximale",
+        "securityDesc": "Conformité RGPD garantie",
+        "multilingual": "Multilingue",
+        "multilingualDesc": "Support FR, EN, ES",
+        "autoThresholds": "Seuils automatiques",
+        "autoThresholdsDesc": "Calcul intelligent des stocks min/max"
+      },
+      "supplierSection": {
+        "badge": "Nouveau",
+        "title": "Gestion des commandes fournisseurs",
+        "description": "Créez, suivez et gérez vos commandes fournisseurs directement depuis l'application. Plus besoin de jongler entre Excel et votre boutique.",
+        "items": {
+          "autoGeneration": "Génération automatique des bons de commande",
+          "deliveryTracking": "Suivi des livraisons en temps réel",
+          "oneClickReceive": "Réception et mise à jour du stock en 1 clic",
+          "orderHistory": "Historique complet des commandes"
+        },
+        "mockup": {
+          "title": "Commandes fournisseurs",
+          "subtitle": "3 commandes en cours",
+          "newOrder": "Nouvelle commande",
+          "items": "articles",
+          "status": {
+            "inTransit": "En transit",
+            "delivered": "Livrée",
+            "pending": "En attente"
+          },
+          "deliveryTomorrow": "Livraison demain"
+        }
+      },
+      "teamSection": {
+        "badge": "Collaboratif",
+        "title": "Travaillez en équipe, efficacement",
+        "description": "Invitez vos collaborateurs, partagez des commentaires sur les produits et coordonnez vos actions de réapprovisionnement en temps réel.",
+        "items": {
+          "inviteMembers": "Invitez des membres avec différents rôles",
+          "commentProducts": "Commentez directement sur les produits",
+          "mentionColleagues": "Mentionnez vos collègues pour les notifier",
+          "trackActivity": "Suivez l'activité de votre équipe"
+        },
+        "mockup": {
+          "title": "Équipe & Commentaires",
+          "subtitle": "Collaborez en temps réel",
+          "invite": "Inviter",
+          "teamMembers": "Membres de l'équipe",
+          "memberCount": "4 membres",
+          "recentComments": "Commentaires récents",
+          "comment1": "Stock critique sur le SKU-1234, j'ai passé commande ✓",
+          "comment2": "@Marie bien reçu, livraison prévue jeudi",
+          "time2h": "Il y a 2h",
+          "time1h": "Il y a 1h",
+          "addComment": "Ajouter un commentaire...",
+          "newComment": "Nouveau commentaire"
+        }
+      },
+      "quote": {
+        "text": "\"Nous avons réduit nos ruptures de stock de",
+        "textEnd": "le premier mois.\""
+      }
+    },
+    "howItWorks": {
+      "title": "Connecté à votre boutique Shopify en 2 min",
+      "subtitle": "Simple, rapide, efficace. Pas besoin d'être technique.",
+      "cta": "Commencer maintenant",
+      "steps": {
+        "install": {
+          "title": "Installez l'app",
+          "description": "Installez stockeasy depuis le Shopify App Store en un clic."
+        },
+        "connect": {
+          "title": "Connectez votre boutique",
+          "description": "Autorisez l'accès à votre boutique Shopify. Nous importons votre catalogue produits automatiquement."
+        },
+        "configure": {
+          "title": "Configurez vos alertes",
+          "description": "Définissez vos seuils et canaux de notification."
+        },
+        "launch": {
+          "title": "Laissez l'IA travailler",
+          "description": "Recevez vos premières recommandations sous 24h."
+        }
+      },
+      "benefits": {
+        "freeTrial": "14 jours d'essai gratuit",
+        "multilingualSupport": "Support en français, anglais et espagnol"
+      }
+    },
+    "testimonials": {
+      "title": "Ils nous font confiance",
+      "viewReviews": "Voir les avis sur Shopify App Store",
+      "metrics": {
+        "merchants": "Marchands actifs",
+        "skus": "SKUs gérés",
+        "rating": "Note moyenne"
+      },
+      "items": {
+        "marc": {
+          "quote": "stockeasy a transformé notre gestion de stock. Nous avons réduit nos ruptures de 40% dès le premier mois.",
+          "stats": "-40% ruptures"
+        },
+        "sophie": {
+          "quote": "La synchronisation avec Shopify est parfaite. Je gagne 3 heures par semaine que je consacrais avant aux mises à jour manuelles.",
+          "role": "Fondatrice",
+          "stats": "3h/sem gagnées"
+        },
+        "thomas": {
+          "quote": "Le support est exceptionnel. Une question à 23h, réponse en 10 minutes.",
+          "role": "Directeur E-commerce"
+        },
+        "julie": {
+          "quote": "J'ai testé plusieurs solutions. stockeasy est de loin la plus intuitive. Mes équipes l'ont adoptée en moins d'une journée.",
+          "stats": "Setup < 1 jour"
+        }
+      }
+    },
+    "pricing": {
+      "title": "Un plan pour chaque étape",
+      "subtitle": "Commencez gratuitement, évoluez quand vous êtes prêt",
+      "monthly": "Mensuel",
+      "yearly": "Annuel",
+      "perMonth": "/mois",
+      "billedAnnually": "Facturé annuellement",
+      "popular": "Le plus populaire",
+      "faqTitle": "Questions fréquentes",
+      "plans": {
+        "basic": {
+          "description": "Pour débuter",
+          "cta": "Commencer gratuitement"
+        },
+        "pro": {
+          "description": "Pour les marchands en croissance",
+          "cta": "Essayer 14 jours gratuit"
+        },
+        "plus": {
+          "description": "Pour les entreprises",
+          "cta": "Contacter les ventes"
+        }
+      },
+      "features": {
+        "oneLocation": "1 emplacement de sync",
+        "threeLocations": "3 emplacements de sync",
+        "fifteenLocations": "15 emplacements de sync",
+        "skus500": "Jusqu'à 500 SKUs",
+        "skus5000": "Jusqu'à 5,000 SKUs",
+        "unlimitedSkus": "SKUs illimités",
+        "emailAlerts": "Alertes par email",
+        "multiChannelAlerts": "Alertes multi-canaux",
+        "realTimeSync": "Sync Shopify temps réel",
+        "basicDashboard": "Dashboard basique",
+        "fullDashboard": "Dashboard complet",
+        "aiPredictions": "Prédictions IA",
+        "advancedAiPredictions": "Prédictions IA avancées",
+        "advancedReports": "Rapports avancés",
+        "customReports": "Rapports personnalisés",
+        "prioritySupport": "Support prioritaire",
+        "prioritySupport247": "Support prioritaire 24/7"
+      },
+      "faqs": {
+        "changePlan": {
+          "question": "Puis-je changer de plan à tout moment ?",
+          "answer": "Oui, vous pouvez upgrader ou downgrader à tout moment."
+        },
+        "hiddenFees": {
+          "question": "Y a-t-il des frais cachés ?",
+          "answer": "Non, le prix affiché est le prix final."
+        },
+        "freeTrial": {
+          "question": "Comment fonctionne l'essai gratuit ?",
+          "answer": "14 jours d'accès au plan Pro, sans carte bancaire."
+        }
+      }
+    },
+    "cta": {
+      "badge": "Rejoignez 500+ marchands Shopify",
+      "title": "Prêt à optimiser votre gestion de stock ?",
+      "subtitle": "Commencez votre essai gratuit aujourd'hui.",
+      "installButton": "Installer sur Shopify",
+      "contactButton": "Nous contacter",
+      "benefits": {
+        "freeTrial": "14 jours d'essai gratuit",
+        "multilingualSupport": "Support FR, EN, ES",
+        "easyCancel": "Annulation en 1 clic"
+      }
+    },
+    "footer": {
+      "description": "La gestion de stock intelligente pour les marchands Shopify.",
+      "product": "Produit",
+      "resources": "Ressources",
+      "company": "Entreprise",
+      "legal": "Légal",
+      "madeWith": "Fait avec",
+      "inFrance": "en France",
+      "links": {
+        "features": "Fonctionnalités",
+        "pricing": "Tarifs",
+        "integrations": "Intégrations",
+        "documentation": "Documentation",
+        "gettingStarted": "Guide de démarrage",
+        "blog": "Blog",
+        "about": "À propos",
+        "contact": "Contact",
+        "privacy": "Confidentialité",
+        "terms": "CGU",
+        "cookies": "Cookies",
+        "legalNotice": "Mentions légales"
+      },
+      "shopifyPartner": "Shopify Partner"
+    }
+  },
+  "comingSoon": {
+    "badge": "Lancement imminent",
+    "title": "La gestion de stock Shopify,",
+    "titleHighlight": "réinventée",
+    "subtitle": "Soyez parmi les premiers à découvrir stockeasy. Inscrivez-vous pour un accès prioritaire.",
+    "emailPlaceholder": "votre@email.com",
+    "subscribe": "M'inscrire",
+    "subscribing": "Envoi...",
+    "subscribed": "Vous êtes inscrit !",
+    "subscribedMessage": "Nous vous préviendrons au lancement.",
+    "errorMessage": "Une erreur est survenue. Veuillez réessayer.",
+    "comingFeatures": "Ce qui vous attend",
+    "features": {
+      "aiPredictions": "Prévisions de stock par IA",
+      "realTimeSync": "Synchronisation Shopify temps réel",
+      "smartAlerts": "Alertes anti-rupture intelligentes"
+    },
+    "shopifyPartner": "Shopify Partner",
+    "contact": "contact@stockeasy.app"
+  },
+  "languages": {
+    "fr": "Français",
+    "en": "English",
+    "es": "Español"
+  },
+  "ordersTable": {
+    "columns": {
+      "poNumber": "N° PO",
+      "date": "Date",
+      "supplier": "Fournisseur",
+      "warehouse": "Entrepôt",
+      "total": "Total",
+      "status": "Statut",
+      "items": "Articles",
+      "actions": "Actions"
+    },
+    "actions": {
+      "confirm": "Confirmer",
+      "ship": "Expédier",
+      "receive": "Réceptionner",
+      "reconcile": "Réconcilier",
+      "complete": "Terminer",
+      "archived": "Archivée"
+    },
+    "tooltips": {
+      "confirmOrder": "Confirmer la commande",
+      "markAsShipped": "Marquer comme expédiée",
+      "validateReceipt": "Valider la réception",
+      "startReconciliation": "Démarrer la réconciliation",
+      "confirmReconciliation": "Confirmer la réconciliation"
+    },
+    "empty": {
+      "title": "Aucune commande",
+      "description": "Aucune commande ne correspond à vos critères de recherche."
+    },
+    "items": "art."
+  },
+  "orderDetail": {
+    "back": "Retour",
+    "productsOrdered": "Produits Commandés",
+    "itemsCount": "{{count}} article(s)",
+    "total": "Total",
+    "supplier": "Fournisseur",
+    "destinationWarehouse": "Entrepôt de Destination",
+    "deliveryTracking": "Suivi de Livraison",
+    "trackingNumber": "N° de suivi",
+    "estimatedDelivery": "Livraison Estimée",
+    "timelineComments": "Timeline & Commentaires",
+    "daysLate": "{{count}}j de retard",
+    "today": "Aujourd'hui",
+    "tomorrow": "Demain",
+    "inDays": "dans {{count}}j",
+    "form": {
+      "trackingNumberPlaceholder": "Numéro de suivi",
+      "trackingUrlPlaceholder": "URL de tracking (optionnel)",
+      "cancel": "Annuler",
+      "confirmShipment": "Confirmer Expédition"
+    },
+    "buttons": {
+      "confirmOrder": "Confirmer la Commande",
+      "markAsShipped": "Marquer comme Expédiée",
+      "markAsReceived": "Marquer comme Reçue",
+      "startReconciliation": "Démarrer la Réconciliation"
+    },
+    "reconciliation": {
+      "inProgress": "Réconciliation en cours",
+      "checkDiscrepancies": "Vérifiez les écarts et traitez les réclamations si nécessaire.",
+      "missing": "manquant",
+      "damaged": "endommagé"
+    }
+  },
+  "stockDetail": {
+    "status": {
+      "immediate": "Action Immédiate",
+      "watch": "À Surveiller",
+      "healthy": "En Bonne Santé"
+    },
+    "stockHealth": "Santé du Stock",
+    "healthOf": "de santé",
+    "metrics": {
+      "currentStock": "Stock Actuel",
+      "units": "unités",
+      "autonomy": "Autonomie",
+      "daysRemaining": "jours restants",
+      "salesPerDay": "Ventes/Jour",
+      "mlAdjusted": "ajustées ML",
+      "rotation": "Rotation",
+      "perYear": "par an"
+    },
+    "supplier": "Fournisseur",
+    "supplierInfo": {
+      "name": "Nom",
+      "unassigned": "Non assigné",
+      "leadTime": "Délai de livraison",
+      "days": "jours",
+      "reorderPoint": "Point de commande",
+      "moq": "MOQ"
+    },
+    "replenishment": {
+      "title": "Réapprovisionnement en cours",
+      "inTransit": "En transit",
+      "ordered": "Commandé"
+    },
+    "overstock": {
+      "title": "Surstock profond détecté",
+      "description": "Ce produit a un stock supérieur à la normale. Considérez une action promotionnelle ou une réduction des prochaines commandes."
+    },
+    "recommendedOrder": "Commande recommandée",
+    "order": "Commander",
+    "close": "Fermer",
+    "viewOnShopify": "Voir sur Shopify"
+  },
+  "productSelection": {
+    "searchPlaceholder": "Rechercher par SKU ou nom...",
+    "allSuppliers": "Tous les fournisseurs",
+    "statusFilter": {
+      "all": "Tous les statuts",
+      "toOrder": "À commander",
+      "watch": "À surveiller",
+      "ok": "Stock OK"
+    },
+    "productsShown": "{{count}} produit(s) affiché(s)",
+    "selected": "{{count}} sélectionné(s)",
+    "bulkActions": {
+      "title": "Actions en masse",
+      "selectAllToOrder": "Sélectionner tous à commander",
+      "selectedSuccess": "{{count}} produits à commander sélectionnés",
+      "quantityPlaceholder": "Quantité",
+      "applyToSelection": "Appliquer à la sélection",
+      "invalidQuantity": "Veuillez entrer une quantité valide",
+      "quantityApplied": "Quantité {{qty}} appliquée à {{count}} produits"
+    },
+    "columns": {
+      "sku": "SKU",
+      "name": "Nom",
+      "supplier": "Fournisseur",
+      "stock": "Stock",
+      "recommended": "Recommandé",
+      "price": "Prix",
+      "quantity": "Quantité"
+    },
+    "empty": "Aucun produit trouvé",
+    "createOrder": "Créer une commande",
+    "pagination": {
+      "page": "Page",
+      "of": "sur",
+      "total": "produits au total"
+    },
+    "guide": {
+      "title": "Guide d'utilisation",
+      "selection": "Sélection",
+      "selectionDesc": "Cochez les produits ou utilisez \"Sélectionner tous à commander\"",
+      "quantities": "Quantités",
+      "quantitiesDesc": "Ajustez individuellement ou en masse",
+      "sorting": "Tri",
+      "sortingDesc": "Cliquez sur les en-têtes de colonnes pour trier"
+    }
+  },
+  "comments": {
+    "title": "Commentaires",
+    "noComments": "Aucun commentaire pour le moment",
+    "placeholder": "Ajouter un commentaire... (utilisez @ pour mentionner quelqu'un)",
+    "mentionHint": "Tapez @ pour mentionner un membre de l'équipe",
+    "emptyError": "Le commentaire ne peut pas être vide",
+    "added": "Commentaire ajouté !",
+    "addError": "Erreur lors de l'ajout du commentaire",
+    "edited": "Commentaire modifié !",
+    "editError": "Erreur lors de la modification",
+    "deleted": "Commentaire supprimé !",
+    "deleteError": "Erreur lors de la suppression",
+    "deleteConfirm": "Êtes-vous sûr de vouloir supprimer ce commentaire ?",
+    "save": "Sauvegarder",
+    "cancel": "Annuler",
+    "loadError": "Erreur lors du chargement des commentaires",
+    "modified": "(modifié)"
+  },
+  "helpCenter": {
+    "title": "Centre d'Aide",
+    "subtitle": "Documentation et guides pour utiliser Stockeasy",
+    "searchPlaceholder": "Rechercher dans l'aide...",
+    "articles": "article(s)",
+    "results": "résultat(s)",
+    "resultsFor": "pour",
+    "clearSearch": "Effacer la recherche",
+    "noResults": "Aucun article trouvé. Essayez d'autres mots-clés.",
+    "welcome": {
+      "title": "Comment pouvons-nous vous aider ?",
+      "description": "Parcourez nos guides ou utilisez la recherche pour trouver rapidement des réponses."
+    },
+    "popularArticles": "Articles populaires",
+    "back": "Retour"
+  }
+}
+

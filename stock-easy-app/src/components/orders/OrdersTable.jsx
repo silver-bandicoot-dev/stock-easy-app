@@ -1,5 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
+import { useTranslation } from 'react-i18next';
 import { 
   ArrowUpDown, 
   ArrowUp, 
@@ -37,16 +38,18 @@ export const OrdersTable = ({
   onStartReconciliation,
   onConfirmReconciliation
 }) => {
+  const { t } = useTranslation();
+  
   const columns = [
     { key: 'select', label: '', sortable: false, width: 'w-12' },
-    { key: 'id', label: 'N° PO', sortable: true, width: 'w-32' },
-    { key: 'createdAt', label: 'Date', sortable: true, width: 'w-28' },
-    { key: 'supplier', label: 'Fournisseur', sortable: true, width: 'flex-1' },
-    { key: 'warehouse', label: 'Entrepôt', sortable: false, width: 'w-32 hidden lg:table-cell' },
-    { key: 'total', label: 'Total', sortable: true, width: 'w-28' },
-    { key: 'status', label: 'Statut', sortable: true, width: 'w-32' },
-    { key: 'items', label: 'Articles', sortable: false, width: 'w-20 hidden md:table-cell' },
-    { key: 'actions', label: 'Actions', sortable: false, width: 'w-40' },
+    { key: 'id', label: t('ordersTable.columns.poNumber'), sortable: true, width: 'w-32' },
+    { key: 'createdAt', label: t('ordersTable.columns.date'), sortable: true, width: 'w-28' },
+    { key: 'supplier', label: t('ordersTable.columns.supplier'), sortable: true, width: 'flex-1' },
+    { key: 'warehouse', label: t('ordersTable.columns.warehouse'), sortable: false, width: 'w-32 hidden lg:table-cell' },
+    { key: 'total', label: t('ordersTable.columns.total'), sortable: true, width: 'w-28' },
+    { key: 'status', label: t('ordersTable.columns.status'), sortable: true, width: 'w-32' },
+    { key: 'items', label: t('ordersTable.columns.items'), sortable: false, width: 'w-20 hidden md:table-cell' },
+    { key: 'actions', label: t('ordersTable.columns.actions'), sortable: false, width: 'w-40' },
     { key: 'chevron', label: '', sortable: false, width: 'w-10' }
   ];
 
@@ -70,10 +73,10 @@ export const OrdersTable = ({
               onConfirmOrder?.(order.id);
             }}
             className={`${buttonStyles.base} ${buttonStyles.confirm}`}
-            title="Confirmer la commande"
+            title={t('ordersTable.tooltips.confirmOrder')}
           >
             <CheckCircle className="w-3.5 h-3.5" />
-            <span>Confirmer</span>
+            <span>{t('ordersTable.actions.confirm')}</span>
           </button>
         );
       
@@ -85,10 +88,10 @@ export const OrdersTable = ({
               onShipOrder?.(order.id);
             }}
             className={`${buttonStyles.base} ${buttonStyles.ship}`}
-            title="Marquer comme expédiée"
+            title={t('ordersTable.tooltips.markAsShipped')}
           >
             <Truck className="w-3.5 h-3.5" />
-            <span>Expédier</span>
+            <span>{t('ordersTable.actions.ship')}</span>
           </button>
         );
       
@@ -100,10 +103,10 @@ export const OrdersTable = ({
               onReceiveOrder?.(order.id);
             }}
             className={`${buttonStyles.base} ${buttonStyles.receive}`}
-            title="Valider la réception"
+            title={t('ordersTable.tooltips.validateReceipt')}
           >
             <PackageCheck className="w-3.5 h-3.5" />
-            <span>Réceptionner</span>
+            <span>{t('ordersTable.actions.receive')}</span>
           </button>
         );
       
@@ -115,10 +118,10 @@ export const OrdersTable = ({
               onStartReconciliation?.(order);
             }}
             className={`${buttonStyles.base} ${buttonStyles.reconcile}`}
-            title="Démarrer la réconciliation"
+            title={t('ordersTable.tooltips.startReconciliation')}
           >
             <FileCheck className="w-3.5 h-3.5" />
-            <span>Réconcilier</span>
+            <span>{t('ordersTable.actions.reconcile')}</span>
           </button>
         );
       
@@ -130,10 +133,10 @@ export const OrdersTable = ({
               onConfirmReconciliation?.(order.id);
             }}
             className={`${buttonStyles.base} ${buttonStyles.complete}`}
-            title="Confirmer la réconciliation"
+            title={t('ordersTable.tooltips.confirmReconciliation')}
           >
             <ClipboardCheck className="w-3.5 h-3.5" />
-            <span>Terminer</span>
+            <span>{t('ordersTable.actions.complete')}</span>
           </button>
         );
       
@@ -141,7 +144,7 @@ export const OrdersTable = ({
         return (
           <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-gray-100 text-gray-500">
             <CheckCircle className="w-3.5 h-3.5" />
-            <span>Archivée</span>
+            <span>{t('ordersTable.actions.archived')}</span>
           </span>
         );
       
@@ -192,8 +195,8 @@ export const OrdersTable = ({
     return (
       <div className="flex-1 flex flex-col items-center justify-center py-12 text-center">
         <Package className="w-12 h-12 text-[#E5E4DF] mb-4" />
-        <h3 className="text-lg font-medium text-[#191919] mb-2">Aucune commande</h3>
-        <p className="text-sm text-[#666663]">Aucune commande ne correspond à vos critères de recherche.</p>
+        <h3 className="text-lg font-medium text-[#191919] mb-2">{t('ordersTable.empty.title')}</h3>
+        <p className="text-sm text-[#666663]">{t('ordersTable.empty.description')}</p>
       </div>
     );
   }
@@ -305,7 +308,7 @@ export const OrdersTable = ({
                 {/* Articles */}
                 <td className="px-3 py-3 hidden md:table-cell">
                   <span className="text-sm text-[#666663]">
-                    {order.items?.length || 0} art.
+                    {order.items?.length || 0} {t('ordersTable.items')}
                   </span>
                 </td>
 

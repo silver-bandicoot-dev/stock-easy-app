@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/SupabaseAuthContext';
+import { useLanguage } from '../../contexts/LanguageContext';
+import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -48,6 +50,8 @@ const AVATAR_STYLE = 'from-[#191919] to-[#444444]';
 const ProfilePage = () => {
   const { currentUser, logout } = useAuth();
   const navigate = useNavigate();
+  const { t } = useTranslation();
+  const { currentLanguage, setLanguage, supportedLanguages } = useLanguage();
 
   // States
   const [userData, setUserData] = useState(null);
@@ -62,7 +66,7 @@ const ProfilePage = () => {
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
-  const [language, setLanguage] = useState('fr');
+  const [selectedLanguage, setSelectedLanguage] = useState(currentLanguage);
   const [photoFile, setPhotoFile] = useState(null);
   const [photoPreview, setPhotoPreview] = useState(null);
   
@@ -120,7 +124,14 @@ const ProfilePage = () => {
           setFirstName(profileData.first_name || profileData.firstName || '');
           setLastName(profileData.last_name || profileData.lastName || '');
           setEmail(profileData.email || currentUser?.email || '');
-          setLanguage(profileData.language || 'fr');
+          
+          // Synchroniser la langue du profil avec le contexte
+          const userLang = profileData.language || currentLanguage;
+          setSelectedLanguage(userLang);
+          if (userLang !== currentLanguage) {
+            setLanguage(userLang);
+          }
+          
           setPhotoPreview(profileData.photo_url || profileData.photoUrl);
           
           setOriginalValues(prev => ({
@@ -128,7 +139,7 @@ const ProfilePage = () => {
             firstName: profileData.first_name || profileData.firstName || '',
             lastName: profileData.last_name || profileData.lastName || '',
             email: profileData.email || currentUser?.email || '',
-            language: profileData.language || 'fr',
+            language: userLang,
             photoUrl: profileData.photo_url || profileData.photoUrl
           }));
         } else if (currentUser) {
@@ -266,9 +277,14 @@ const ProfilePage = () => {
       await updateUserProfile({
         first_name: firstName,
         last_name: lastName,
-        language,
+        language: selectedLanguage,
         photo_url: photoUrl || undefined
       });
+      
+      // Appliquer le changement de langue dans l'interface
+      if (selectedLanguage !== currentLanguage) {
+        await setLanguage(selectedLanguage);
+      }
       
       // Mettre à jour l'entreprise si modifiée et si owner
       if (userData?.role === 'owner' && companyData) {
@@ -454,7 +470,7 @@ const ProfilePage = () => {
       firstName !== originalValues.firstName ||
       lastName !== originalValues.lastName ||
       email.trim() !== (originalValues.email || '') ||
-      language !== originalValues.language ||
+      selectedLanguage !== originalValues.language ||
       photoFile !== null ||
       (userData?.role === 'owner' && (
         companyName !== originalValues.companyName ||
@@ -652,16 +668,18 @@ const ProfilePage = () => {
                   <div>
                     <label className="block text-sm font-medium text-[#191919] mb-2 flex items-center gap-2">
                       <Globe className="w-4 h-4 text-[#666663]" />
-                      Langue de l'interface
+                      {t('profile.language')}
                     </label>
                     <select
-                      value={language}
-                      onChange={(e) => setLanguage(e.target.value)}
+                      value={selectedLanguage}
+                      onChange={(e) => setSelectedLanguage(e.target.value)}
                       className="w-full px-4 py-3 border border-[#E5E4DF] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#191919]/10 focus:border-[#191919] bg-white transition-all"
                     >
-                      <option value="fr">Français</option>
-                      <option value="en">English</option>
-                      <option value="es">Español</option>
+                      {supportedLanguages.map((lang) => (
+                        <option key={lang.code} value={lang.code}>
+                          {lang.flag} {lang.name}
+                        </option>
+                      ))}
                     </select>
                   </div>
                 </div>

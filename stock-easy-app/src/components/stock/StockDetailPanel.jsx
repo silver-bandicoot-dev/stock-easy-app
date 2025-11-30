@@ -1,5 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
+import { useTranslation } from 'react-i18next';
 import { 
   X, 
   Package, 
@@ -24,23 +25,25 @@ export const StockDetailPanel = ({
   onClose,
   onCreateOrder
 }) => {
+  const { t } = useTranslation();
+  
   if (!product) return null;
 
   const statusConfig = {
     urgent: {
-      label: 'Action Immédiate',
+      label: t('stockDetail.status.immediate'),
       color: 'text-red-600',
       bgColor: 'bg-red-50',
       borderColor: 'border-red-200'
     },
     warning: {
-      label: 'À Surveiller',
+      label: t('stockDetail.status.watch'),
       color: 'text-orange-600',
       bgColor: 'bg-orange-50',
       borderColor: 'border-orange-200'
     },
     healthy: {
-      label: 'En Bonne Santé',
+      label: t('stockDetail.status.healthy'),
       color: 'text-green-600',
       bgColor: 'bg-green-50',
       borderColor: 'border-green-200'
@@ -102,7 +105,7 @@ export const StockDetailPanel = ({
         <div className="bg-[#FAFAF7] rounded-lg p-4 border border-[#E5E4DF]">
           <h3 className="text-sm font-semibold text-[#191919] mb-3 flex items-center gap-2">
             <TrendingUp className="w-4 h-4" />
-            Santé du Stock
+            {t('stockDetail.stockHealth')}
           </h3>
           <div className="flex items-center gap-4">
             <div className="flex-1">
@@ -110,7 +113,7 @@ export const StockDetailPanel = ({
                 <span className={`text-3xl font-bold ${status.color}`}>
                   {Math.round(product.healthPercentage || 0)}%
                 </span>
-                <span className="text-sm text-[#666663]">de santé</span>
+                <span className="text-sm text-[#666663]">{t('stockDetail.healthOf')}</span>
               </div>
               <HealthBar 
                 percentage={product.healthPercentage || 0} 
@@ -127,43 +130,43 @@ export const StockDetailPanel = ({
           <div className="bg-white rounded-lg p-4 border border-[#E5E4DF]">
             <div className="flex items-center gap-2 text-[#666663] mb-1">
               <Package className="w-4 h-4" />
-              <span className="text-xs font-medium uppercase">Stock Actuel</span>
+              <span className="text-xs font-medium uppercase">{t('stockDetail.metrics.currentStock')}</span>
             </div>
             <div className="text-2xl font-bold text-[#191919]">
               {formatUnits(product.stock)}
             </div>
-            <div className="text-xs text-[#666663]">unités</div>
+            <div className="text-xs text-[#666663]">{t('stockDetail.metrics.units')}</div>
           </div>
 
           {/* Autonomie */}
           <div className="bg-white rounded-lg p-4 border border-[#E5E4DF]">
             <div className="flex items-center gap-2 text-[#666663] mb-1">
               <Calendar className="w-4 h-4" />
-              <span className="text-xs font-medium uppercase">Autonomie</span>
+              <span className="text-xs font-medium uppercase">{t('stockDetail.metrics.autonomy')}</span>
             </div>
             <div className={`text-2xl font-bold ${status.color}`}>
               {product.daysOfStock || 0}
             </div>
-            <div className="text-xs text-[#666663]">jours restants</div>
+            <div className="text-xs text-[#666663]">{t('stockDetail.metrics.daysRemaining')}</div>
           </div>
 
           {/* Ventes/jour */}
           <div className="bg-white rounded-lg p-4 border border-[#E5E4DF]">
             <div className="flex items-center gap-2 text-[#666663] mb-1">
               <ShoppingCart className="w-4 h-4" />
-              <span className="text-xs font-medium uppercase">Ventes/Jour</span>
+              <span className="text-xs font-medium uppercase">{t('stockDetail.metrics.salesPerDay')}</span>
             </div>
             <div className="text-2xl font-bold text-[#191919]">
               {formatSalesPerDay(product.salesPerDay ?? 0)}
             </div>
-            <div className="text-xs text-[#666663]">ajustées ML</div>
+            <div className="text-xs text-[#666663]">{t('stockDetail.metrics.mlAdjusted')}</div>
           </div>
 
           {/* Rotation */}
           <div className="bg-white rounded-lg p-4 border border-[#E5E4DF]">
             <div className="flex items-center gap-2 text-[#666663] mb-1">
               <RotateCw className="w-4 h-4" />
-              <span className="text-xs font-medium uppercase">Rotation</span>
+              <span className="text-xs font-medium uppercase">{t('stockDetail.metrics.rotation')}</span>
             </div>
             <div className={`text-2xl font-bold ${
               product.rotationRate > 6 ? 'text-green-600' :
@@ -172,7 +175,7 @@ export const StockDetailPanel = ({
             }`}>
               {product.rotationRate ? `${product.rotationRate.toFixed(1)}x` : 'N/A'}
             </div>
-            <div className="text-xs text-[#666663]">par an</div>
+            <div className="text-xs text-[#666663]">{t('stockDetail.metrics.perYear')}</div>
           </div>
         </div>
 
@@ -180,24 +183,24 @@ export const StockDetailPanel = ({
         <div className="bg-white rounded-lg p-4 border border-[#E5E4DF]">
           <h3 className="text-sm font-semibold text-[#191919] mb-3 flex items-center gap-2">
             <Building2 className="w-4 h-4" />
-            Fournisseur
+            {t('stockDetail.supplier')}
           </h3>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <div className="text-xs text-[#666663] mb-1">Nom</div>
-              <div className="font-medium text-[#191919]">{product.supplier || 'Non assigné'}</div>
+              <div className="text-xs text-[#666663] mb-1">{t('stockDetail.supplierInfo.name')}</div>
+              <div className="font-medium text-[#191919]">{product.supplier || t('stockDetail.supplierInfo.unassigned')}</div>
             </div>
             <div>
-              <div className="text-xs text-[#666663] mb-1">Délai de livraison</div>
-              <div className="font-medium text-[#191919]">{product.leadTimeDays || 0} jours</div>
+              <div className="text-xs text-[#666663] mb-1">{t('stockDetail.supplierInfo.leadTime')}</div>
+              <div className="font-medium text-[#191919]">{product.leadTimeDays || 0} {t('stockDetail.supplierInfo.days')}</div>
             </div>
             <div>
-              <div className="text-xs text-[#666663] mb-1">Point de commande</div>
-              <div className="font-medium text-[#191919]">{product.reorderPoint || 0} unités</div>
+              <div className="text-xs text-[#666663] mb-1">{t('stockDetail.supplierInfo.reorderPoint')}</div>
+              <div className="font-medium text-[#191919]">{product.reorderPoint || 0} {t('stockDetail.metrics.units')}</div>
             </div>
             <div>
-              <div className="text-xs text-[#666663] mb-1">MOQ</div>
-              <div className="font-medium text-[#191919]">{product.moq || 0} unités</div>
+              <div className="text-xs text-[#666663] mb-1">{t('stockDetail.supplierInfo.moq')}</div>
+              <div className="font-medium text-[#191919]">{product.moq || 0} {t('stockDetail.metrics.units')}</div>
             </div>
           </div>
         </div>
@@ -207,14 +210,14 @@ export const StockDetailPanel = ({
           <div className="bg-purple-50 rounded-lg p-4 border border-purple-200">
             <h3 className="text-sm font-semibold text-purple-900 mb-3 flex items-center gap-2">
               <Truck className="w-4 h-4" />
-              Réapprovisionnement en cours
+              {t('stockDetail.replenishment.title')}
             </h3>
             <div className="space-y-2">
               {quantities.inTransit > 0 && (
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-purple-700">En transit</span>
+                  <span className="text-sm text-purple-700">{t('stockDetail.replenishment.inTransit')}</span>
                   <div className="text-right">
-                    <span className="font-bold text-purple-900">{formatUnits(quantities.inTransit)} unités</span>
+                    <span className="font-bold text-purple-900">{formatUnits(quantities.inTransit)} {t('stockDetail.metrics.units')}</span>
                     {quantities.eta && (
                       <div className="text-xs text-purple-600">
                         ETA: {formatETA(quantities.eta).formatted}
@@ -225,8 +228,8 @@ export const StockDetailPanel = ({
               )}
               {quantities.ordered > 0 && (
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-yellow-700">Commandé</span>
-                  <span className="font-bold text-yellow-900">{formatUnits(quantities.ordered)} unités</span>
+                  <span className="text-sm text-yellow-700">{t('stockDetail.replenishment.ordered')}</span>
+                  <span className="font-bold text-yellow-900">{formatUnits(quantities.ordered)} {t('stockDetail.metrics.units')}</span>
                 </div>
               )}
             </div>
@@ -239,9 +242,9 @@ export const StockDetailPanel = ({
             <div className="flex items-start gap-3">
               <AlertTriangle className="w-5 h-5 text-gray-500 flex-shrink-0 mt-0.5" />
               <div>
-                <h4 className="text-sm font-semibold text-gray-900">Surstock profond détecté</h4>
+                <h4 className="text-sm font-semibold text-gray-900">{t('stockDetail.overstock.title')}</h4>
                 <p className="text-sm text-gray-600 mt-1">
-                  Ce produit a un stock supérieur à la normale. Considérez une action promotionnelle ou une réduction des prochaines commandes.
+                  {t('stockDetail.overstock.description')}
                 </p>
               </div>
             </div>
@@ -253,9 +256,9 @@ export const StockDetailPanel = ({
           <div className="bg-red-50 rounded-lg p-4 border border-red-200">
             <div className="flex items-center justify-between">
               <div>
-                <h4 className="text-sm font-semibold text-red-900">Commande recommandée</h4>
+                <h4 className="text-sm font-semibold text-red-900">{t('stockDetail.recommendedOrder')}</h4>
                 <p className="text-2xl font-bold text-red-600 mt-1">
-                  {formatUnits(product.qtyToOrder)} unités
+                  {formatUnits(product.qtyToOrder)} {t('stockDetail.metrics.units')}
                 </p>
               </div>
               {onCreateOrder && (
@@ -264,7 +267,7 @@ export const StockDetailPanel = ({
                   className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700 transition-colors"
                 >
                   <ShoppingCart className="w-4 h-4" />
-                  Commander
+                  {t('stockDetail.order')}
                 </button>
               )}
             </div>
@@ -279,7 +282,7 @@ export const StockDetailPanel = ({
             onClick={onClose}
             className="px-4 py-2 text-sm font-medium text-[#666663] hover:text-[#191919] transition-colors"
           >
-            Fermer
+            {t('stockDetail.close')}
           </button>
           {product.shopifyProductId && (
             <a
@@ -289,7 +292,7 @@ export const StockDetailPanel = ({
               className="flex items-center gap-2 px-4 py-2 bg-[#191919] text-white rounded-lg text-sm font-medium hover:bg-[#333] transition-colors"
             >
               <ExternalLink className="w-4 h-4" />
-              Voir sur Shopify
+              {t('stockDetail.viewOnShopify')}
             </a>
           )}
         </div>

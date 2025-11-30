@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useTranslation } from 'react-i18next';
 import { 
   Download, 
   Search, 
@@ -15,17 +16,6 @@ import { OrderDetailPanel } from './OrderDetailPanel';
 import { OrderFilters } from './OrderFilters';
 import api from '../../services/apiAdapter';
 import { useCurrency } from '../../contexts/CurrencyContext';
-
-// Onglets de statut style Shopify
-const STATUS_TABS = [
-  { key: 'all', label: 'Toutes', status: null },
-  { key: 'pending_confirmation', label: 'En Cours', status: 'pending_confirmation' },
-  { key: 'preparing', label: 'Préparation', status: 'preparing' },
-  { key: 'in_transit', label: 'Transit', status: 'in_transit' },
-  { key: 'received', label: 'Reçues', status: 'received' },
-  { key: 'reconciliation', label: 'Réconciliation', status: 'reconciliation' },
-  { key: 'completed', label: 'Archivées', status: 'completed' }
-];
 
 export const OrdersTab = ({
   orders: initialOrders = [],
@@ -45,7 +35,19 @@ export const OrdersTab = ({
   emailGeneration,
   loadData
 }) => {
+  const { t } = useTranslation();
   const { format: formatCurrency } = useCurrency();
+
+  // Onglets de statut style Shopify
+  const STATUS_TABS = [
+    { key: 'all', label: t('ordersPage.tabs.all'), status: null },
+    { key: 'pending_confirmation', label: t('ordersPage.tabs.pending'), status: 'pending_confirmation' },
+    { key: 'preparing', label: t('ordersPage.tabs.preparing'), status: 'preparing' },
+    { key: 'in_transit', label: t('ordersPage.tabs.inTransit'), status: 'in_transit' },
+    { key: 'received', label: t('ordersPage.tabs.received'), status: 'received' },
+    { key: 'reconciliation', label: t('ordersPage.tabs.reconciliation'), status: 'reconciliation' },
+    { key: 'completed', label: t('ordersPage.tabs.completed'), status: 'completed' }
+  ];
   
   // États
   const [activeTab, setActiveTab] = useState('all');
@@ -89,7 +91,7 @@ export const OrdersTab = ({
       setAggregates(result.aggregates || null);
     } catch (error) {
       console.error('Erreur chargement commandes:', error);
-      toast.error('Impossible de charger les commandes');
+      toast.error(t('ordersPage.loadError'));
     } finally {
       setLoading(false);
     }
@@ -254,7 +256,7 @@ export const OrdersTab = ({
   };
 
   const handleExportCSV = async () => {
-    const toastId = toast.loading('Préparation de l\'export...');
+    const toastId = toast.loading(t('ordersPage.exportPreparing'));
     try {
       const ordersToExport = selectedOrders.length > 0 
         ? sortedOrders.filter(o => selectedOrders.includes(o.id))
@@ -283,9 +285,9 @@ export const OrdersTab = ({
       link.download = `commandes_${new Date().toISOString().split('T')[0]}.csv`;
       link.click();
       
-      toast.success('Export CSV réussi !', { id: toastId });
+      toast.success(t('ordersPage.exportSuccess'), { id: toastId });
     } catch (error) {
-      toast.error('Erreur lors de l\'export', { id: toastId });
+      toast.error(t('ordersPage.exportError'), { id: toastId });
     }
   };
 
@@ -362,10 +364,10 @@ export const OrdersTab = ({
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
           <h1 className="text-xl sm:text-2xl font-semibold text-[#191919]">
-            Commandes Fournisseurs
+            {t('ordersPage.title')}
           </h1>
           <p className="text-sm text-[#6B7177] mt-0.5">
-            Gérez et suivez toutes vos commandes
+            {t('ordersPage.subtitle')}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -374,7 +376,7 @@ export const OrdersTab = ({
             className="flex items-center gap-2 px-3 py-1.5 bg-white border border-[#E1E3E5] rounded-full text-sm font-medium text-[#191919] hover:border-[#8A8C8E] transition-colors shadow-sm"
           >
             <Download className="w-4 h-4" />
-            <span className="hidden sm:inline">Exporter</span>
+            <span className="hidden sm:inline">{t('common.export')}</span>
           </button>
         </div>
       </div>
@@ -418,7 +420,7 @@ export const OrdersTab = ({
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#6B7177]" />
           <input
             type="text"
-            placeholder="Rechercher par N° PO, fournisseur..."
+            placeholder={t('ordersPage.searchPlaceholder')}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full pl-10 pr-4 py-2 bg-white border border-[#E1E3E5] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#191919] focus:border-transparent"
@@ -440,7 +442,7 @@ export const OrdersTab = ({
             onChange={(e) => setSupplierFilter(e.target.value)}
             className="px-3 py-2 bg-white border border-[#E1E3E5] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#191919]"
           >
-            <option value="all">Tous les fournisseurs</option>
+            <option value="all">{t('ordersPage.allSuppliers')}</option>
             {Object.values(suppliers || {}).map(supplier => (
               <option key={supplier.name} value={supplier.name}>
                 {supplier.name}
@@ -457,7 +459,7 @@ export const OrdersTab = ({
             }`}
           >
             <Filter className="w-4 h-4" />
-            <span className="hidden sm:inline">Filtres</span>
+            <span className="hidden sm:inline">{t('stockPage.filters')}</span>
           </button>
         </div>
 

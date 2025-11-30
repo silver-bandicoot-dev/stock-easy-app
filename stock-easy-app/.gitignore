@@ -1,3 +1,12 @@
+# Dépendances
+node_modules/
+.pnp
+.pnp.js
+
+# Build
+/dist
+/build
+
 # Logs
 logs
 *.log
@@ -7,28 +16,44 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-node_modules
-dist
-dist-ssr
-*.local
-
-# Editor directories and files
-.vscode/*
-!.vscode/extensions.json
+# Éditeurs et IDE
 .idea
-.DS_Store
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?
+.vscode
+*.swp
+*.swo
+*~
 
-# Environment variables
+# OS
+.DS_Store
+Thumbs.db
+
+# Environnement
 .env
 .env.local
+.env.*.local
+.env.development
 .env.production
 
 # Test coverage
-coverage
-*.lcov
-.nyc_output
+/coverage
+
+# Vite
+*.local
+
+# Playwright
+/playwright-report/
+/playwright-results/
+/playwright/.cache/
+/playwright/.auth/
+/e2e/**/*.png
+!/e2e/**/*-snapshots/
+
+# Vitest
+/test-results/
+
+# Cache
+.cache
+*.tsbuildinfo
+
+# Misc
+*.pem

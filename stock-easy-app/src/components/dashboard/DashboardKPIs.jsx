@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
 import { ShoppingCart, TrendingUp, DollarSign, Clock, TrendingDown, BarChart3, Boxes } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { KPICard } from '../features/KPICard';
 import { useCurrency } from '../../contexts/CurrencyContext';
 import { roundToTwoDecimals } from '../../utils/decimalUtils';
@@ -60,6 +61,7 @@ export function DashboardKPIs({
   seuilSurstockProfond = 90,
   analyticsData = null
 }) {
+  const { t } = useTranslation();
   const { format: formatCurrency } = useCurrency();
 
   // Calcul des KPIs
@@ -160,7 +162,7 @@ export function DashboardKPIs({
           change: analyticsData.skuAvailability.change || 0,
           changePercent: analyticsData.skuAvailability.changePercent || 0,
           trend: analyticsData.skuAvailability.trend || 'neutral',
-          comparisonPeriod: analyticsData.skuAvailability.comparisonPeriod || 'semaine dernière'
+          comparisonPeriod: analyticsData.skuAvailability.comparisonPeriod || t('dashboard.vsLastWeek')
         }
       : getComparison(skuAvailabilityRate, skuAvailabilityRate * 0.98); // Fallback avec simulation légère
 
@@ -169,7 +171,7 @@ export function DashboardKPIs({
           change: analyticsData.inventoryValuation.change || 0,
           changePercent: analyticsData.inventoryValuation.changePercent || 0,
           trend: analyticsData.inventoryValuation.trend || 'neutral',
-          comparisonPeriod: analyticsData.inventoryValuation.comparisonPeriod || 'semaine dernière'
+          comparisonPeriod: analyticsData.inventoryValuation.comparisonPeriod || t('dashboard.vsLastWeek')
         }
       : getComparison(totalInventoryValue, totalInventoryValue * 0.95);
 
@@ -178,7 +180,7 @@ export function DashboardKPIs({
           change: analyticsData.salesLost.change || 0,
           changePercent: analyticsData.salesLost.changePercent || 0,
           trend: analyticsData.salesLost.trend || 'neutral',
-          comparisonPeriod: analyticsData.salesLost.comparisonPeriod || 'semaine dernière'
+          comparisonPeriod: analyticsData.salesLost.comparisonPeriod || t('dashboard.vsLastWeek')
         }
       : getComparison(salesLostAmount, salesLostAmount * 1.1);
 
@@ -187,13 +189,13 @@ export function DashboardKPIs({
           change: analyticsData.overstockCost.change || 0,
           changePercent: analyticsData.overstockCost.changePercent || 0,
           trend: analyticsData.overstockCost.trend || 'neutral',
-          comparisonPeriod: analyticsData.overstockCost.comparisonPeriod || 'semaine dernière'
+          comparisonPeriod: analyticsData.overstockCost.comparisonPeriod || t('dashboard.vsLastWeek')
         }
       : getComparison(overstockCost, overstockCost * 0.92);
 
     // Pour les KPIs qui n'ont pas de correspondance directe dans analyticsData, utiliser des calculs basés sur l'historique si disponible
     // Sinon, utiliser des valeurs par défaut
-    const defaultComparisonPeriod = analyticsData?.skuAvailability?.comparisonPeriod || 'semaine dernière';
+    const defaultComparisonPeriod = analyticsData?.skuAvailability?.comparisonPeriod || t('dashboard.vsLastWeek');
 
     // Helper pour normaliser le trend (neutral -> up ou down selon le contexte)
     const normalizeTrend = (trend, defaultTrend = 'up') => {
@@ -206,101 +208,101 @@ export function DashboardKPIs({
     //        Ligne 2: Commandes en Cours, Ventes Perdues - Ruptures Réelles, Ventes Perdues Estimées, Valeur Surstocks Profonds
     return [
       {
-        title: 'Taux de Disponibilité des SKU',
+        title: t('dashboard.skuAvailability'),
         value: `${skuAvailabilityRate}%`,
         change: skuAvailabilityComparison.change,
         changePercent: skuAvailabilityComparison.changePercent,
         trend: normalizeTrend(skuAvailabilityComparison.trend, 'up'),
-        description: `${availableSKUs} SKUs disponibles sur ${totalSKUs}${!hasRealHistory ? ' • ⏳ En attente de données historiques' : ''}`,
+        description: `${t('dashboard.kpiDescriptions.skuAvailability', { available: availableSKUs, total: totalSKUs })}${!hasRealHistory ? ` • ⏳ ${t('dashboard.kpiDescriptions.waitingHistory')}` : ''}`,
         icon: BarChart3,
         chartData: getChartDataFor('skuAvailability', skuAvailabilityRate, true),
         isCritical: skuAvailabilityRate < 60,
         comparisonPeriod: skuAvailabilityComparison.comparisonPeriod
       },
       {
-        title: 'Valeur de l\'Inventaire',
+        title: t('dashboard.inventoryValue'),
         value: formatCurrency(roundToTwoDecimals(totalInventoryValue)),
         change: inventoryValuationComparison.change,
         changePercent: inventoryValuationComparison.changePercent,
         trend: normalizeTrend(inventoryValuationComparison.trend, 'up'),
-        description: `Valeur totale du stock actuel (prix d'achat)${!hasRealHistory ? ' • ⏳ En attente de données historiques' : ''}`,
+        description: `${t('dashboard.kpiDescriptions.inventoryValue')}${!hasRealHistory ? ` • ⏳ ${t('dashboard.kpiDescriptions.waitingHistory')}` : ''}`,
         icon: DollarSign,
         chartData: getChartDataFor('inventoryValuation', totalInventoryValue, false),
         comparisonPeriod: inventoryValuationComparison.comparisonPeriod
       },
       {
-        title: 'Investissement Requis',
+        title: t('dashboard.investmentRequired'),
         value: formatCurrency(roundToTwoDecimals(totalInvestmentRequired)),
         change: 0,
         changePercent: 0,
         trend: 'neutral',
-        description: 'Montant total à investir pour les produits à commander (pas d\'historique disponible)',
+        description: `${t('dashboard.kpiDescriptions.investmentRequired')} (${t('dashboard.kpiDescriptions.noHistory')})`,
         icon: TrendingDown,
         chartData: generatePlaceholderChart(totalInvestmentRequired),
         isCritical: totalInvestmentRequired > 5000,
         comparisonPeriod: defaultComparisonPeriod
       },
       {
-        title: 'À Commander',
+        title: t('dashboard.toOrder'),
         value: productsToOrder,
         change: 0,
         changePercent: 0,
         trend: 'neutral',
-        description: 'Nombre de produits nécessitant une commande urgente (pas d\'historique disponible)',
+        description: `${t('dashboard.kpiDescriptions.toOrder')} (${t('dashboard.kpiDescriptions.noHistory')})`,
         icon: ShoppingCart,
         chartData: generatePlaceholderChart(productsToOrder),
         isCritical: productsToOrder > 5,
         comparisonPeriod: defaultComparisonPeriod
       },
       {
-        title: 'Commandes en Cours',
+        title: t('dashboard.activeOrders'),
         value: activeOrders,
         change: 0,
         changePercent: 0,
         trend: 'neutral',
-        description: 'Nombre de commandes en attente, préparation ou transit (pas d\'historique disponible)',
+        description: `${t('dashboard.kpiDescriptions.activeOrders')} (${t('dashboard.kpiDescriptions.noHistory')})`,
         icon: Clock,
         chartData: generatePlaceholderChart(activeOrders),
         comparisonPeriod: defaultComparisonPeriod
       },
       {
-        title: 'Ventes Perdues - Ruptures Réelles',
+        title: t('dashboard.lostSalesReal'),
         value: formatCurrency(roundToTwoDecimals(salesLostAmount)),
         change: salesLostRealComparison.change,
         changePercent: salesLostRealComparison.changePercent,
         trend: normalizeTrend(salesLostRealComparison.trend, 'down'),
-        description: `⚠️ ATTENTION : Différent de "Ventes Perdues Estimées" ! Compte UNIQUEMENT les produits EN RUPTURE TOTALE (stock = 0). Mesure les pertes RÉELLES actuelles, pas les risques futurs. ${salesLostCount} SKU(s) en rupture. Pour voir les produits à risque, consultez "Ventes Perdues Estimées".${!hasRealHistory ? ' • ⏳ En attente de données historiques' : ''}`,
+        description: `${t('dashboard.kpiDescriptions.lostSalesReal')}. ${salesLostCount} SKU(s).${!hasRealHistory ? ` • ⏳ ${t('dashboard.kpiDescriptions.waitingHistory')}` : ''}`,
         icon: TrendingDown,
         chartData: getChartDataFor('salesLost', salesLostAmount, false),
         isCritical: salesLostAmount > 1000,
         comparisonPeriod: salesLostRealComparison.comparisonPeriod
       },
       {
-        title: 'Ventes Perdues Estimées',
+        title: t('dashboard.lostSalesEstimated'),
         value: formatCurrency(roundToTwoDecimals(lostSales)),
         change: 0,
         changePercent: 0,
         trend: 'neutral',
-        description: '⚠️ ATTENTION : Différent d\'Analytics ! Inclut TOUS les produits à risque (ruptures actuelles + produits qui vont manquer bientôt). Permet d\'anticiper les pertes avant la rupture totale. Pour voir uniquement les ruptures réelles, consultez Analytics. (pas d\'historique disponible)',
+        description: `${t('dashboard.kpiDescriptions.lostSalesEstimated')} (${t('dashboard.kpiDescriptions.noHistory')})`,
         icon: TrendingUp,
         chartData: generatePlaceholderChart(lostSales),
         isCritical: lostSales > 1000,
         comparisonPeriod: defaultComparisonPeriod
       },
       {
-        title: 'Valeur Surstocks Profonds',
+        title: t('dashboard.overstockValue'),
         value: formatCurrency(roundToTwoDecimals(overstockCost)),
         change: overstockComparison.change,
         changePercent: overstockComparison.changePercent,
         trend: normalizeTrend(overstockComparison.trend, 'up'),
-        description: `${overstockSKUs} SKU(s) en surstock profond${overstockSKUList && overstockSKUList.length > 0 ? ` : ${overstockSKUList.join(', ')}${overstockSKUs > 10 ? ` (+ ${overstockSKUs - 10} autres)` : ''}` : ''}${!hasRealHistory ? ' • ⏳ En attente de données historiques' : ''}`,
+        description: `${t('dashboard.kpiDescriptions.overstockValue', { count: overstockSKUs })}${overstockSKUList && overstockSKUList.length > 0 ? ` : ${overstockSKUList.join(', ')}${overstockSKUs > 10 ? ` (+ ${overstockSKUs - 10})` : ''}` : ''}${!hasRealHistory ? ` • ⏳ ${t('dashboard.kpiDescriptions.waitingHistory')}` : ''}`,
         icon: Boxes,
         chartData: getChartDataFor('overstockCost', overstockCost, false),
         isCritical: overstockCost > 2000,
         comparisonPeriod: overstockComparison.comparisonPeriod
       }
     ];
-  }, [enrichedProducts, orders, productsByStatus, formatCurrency, seuilSurstockProfond, analyticsData]);
+  }, [enrichedProducts, orders, productsByStatus, formatCurrency, seuilSurstockProfond, analyticsData, t]);
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
@@ -314,7 +316,7 @@ export function DashboardKPIs({
           trend={kpi.trend}
           description={kpi.description}
           chartData={kpi.chartData}
-          comparisonPeriod={kpi.comparisonPeriod || 'semaine dernière'}
+          comparisonPeriod={kpi.comparisonPeriod || t('dashboard.vsLastWeek')}
           isCritical={
             kpi.isCritical ||
             (kpi.title.includes('Perdues') && (typeof kpi.value === 'string' ? parseFloat(kpi.value.replace(/[^0-9.]/g, '')) > 0 : kpi.value > 0)) ||

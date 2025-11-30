@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../contexts/SupabaseAuthContext';
 import { acceptInvitation } from '../../services/companyService';
 import { toast } from 'sonner';
 import { CheckCircle, XCircle, Mail, ArrowRight, Loader } from 'lucide-react';
 
 const AcceptInvitation = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { currentUser } = useAuth();
@@ -20,7 +22,7 @@ const AcceptInvitation = () => {
     // Vérifier que le token existe
     if (!token) {
       setStatus('invalid');
-      setError('Aucun token d\'invitation fourni');
+      setError(t('auth.noInvitationToken'));
       setLoading(false);
       return;
     }
@@ -35,7 +37,7 @@ const AcceptInvitation = () => {
     // Marquer le token comme valide (la vraie validation se fait lors de l'acceptation)
     setStatus('valid');
     setLoading(false);
-  }, [token, currentUser]);
+  }, [token, currentUser, t]);
 
   const handleAccept = async () => {
     if (!token || !currentUser) return;
@@ -45,12 +47,12 @@ const AcceptInvitation = () => {
       const { data, error: acceptError } = await acceptInvitation(token);
       
       if (acceptError || !data.success) {
-        throw new Error(data?.error || acceptError?.message || 'Erreur lors de l\'acceptation');
+        throw new Error(data?.error || acceptError?.message || t('auth.acceptingError'));
       }
 
       setStatus('accepted');
-      toast.success('Bienvenue dans l\'équipe ! 🎉', {
-        description: 'Vous faites maintenant partie de l\'entreprise'
+      toast.success(t('auth.welcomeToast'), {
+        description: t('auth.welcomeToastDescription')
       });
 
       // Rediriger vers le tableau de bord après 2 secondes
@@ -79,7 +81,7 @@ const AcceptInvitation = () => {
       <div className="min-h-screen bg-[#FAFAF7] flex items-center justify-center p-4">
         <div className="text-center">
           <Loader className="w-12 h-12 text-[#191919] animate-spin mx-auto mb-4" />
-          <p className="text-lg text-[#191919]">Vérification de l'invitation...</p>
+          <p className="text-lg text-[#191919]">{t('auth.verifyingInvitation')}</p>
         </div>
       </div>
     );
@@ -93,9 +95,9 @@ const AcceptInvitation = () => {
             <div className="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-4">
               <Mail className="w-8 h-8 text-blue-600" />
             </div>
-            <h1 className="text-2xl font-bold text-[#191919] mb-2">Invitation reçue</h1>
+            <h1 className="text-2xl font-bold text-[#191919] mb-2">{t('auth.invitationReceived')}</h1>
             <p className="text-[#666663]">
-              Connectez-vous ou créez un compte pour rejoindre l'équipe
+              {t('auth.loginToAccept')}
             </p>
           </div>
 
@@ -103,7 +105,7 @@ const AcceptInvitation = () => {
             onClick={handleLogin}
             className="w-full bg-[#191919] text-white py-3 rounded-lg font-semibold hover:bg-[#2A2A2A] transition-colors flex items-center justify-center gap-2"
           >
-            Se connecter
+            {t('auth.loginButton')}
             <ArrowRight className="w-5 h-5" />
           </button>
         </div>
@@ -119,15 +121,15 @@ const AcceptInvitation = () => {
             <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-4">
               <XCircle className="w-8 h-8 text-red-600" />
             </div>
-            <h1 className="text-2xl font-bold text-[#191919] mb-2">Invitation invalide</h1>
+            <h1 className="text-2xl font-bold text-[#191919] mb-2">{t('auth.invalidInvitation')}</h1>
             <p className="text-[#666663] mb-6">
-              {error || 'Cette invitation n\'est plus valide ou a expiré.'}
+              {error || t('auth.invalidInvitationMessage')}
             </p>
             <button
               onClick={() => navigate('/')}
               className="w-full bg-[#191919] text-white py-3 rounded-lg font-semibold hover:bg-[#2A2A2A] transition-colors"
             >
-              Retour à l'accueil
+              {t('auth.backToHome')}
             </button>
           </div>
         </div>
@@ -143,9 +145,9 @@ const AcceptInvitation = () => {
             <div className="w-16 h-16 bg-green-50 rounded-full flex items-center justify-center mx-auto mb-4">
               <CheckCircle className="w-8 h-8 text-green-600" />
             </div>
-            <h1 className="text-2xl font-bold text-[#191919] mb-2">Bienvenue ! 🎉</h1>
+            <h1 className="text-2xl font-bold text-[#191919] mb-2">{t('auth.welcome')}</h1>
             <p className="text-[#666663] mb-6">
-              Vous faites maintenant partie de l'équipe. Redirection en cours...
+              {t('auth.welcomeMessage')}
             </p>
             <div className="flex justify-center">
               <Loader className="w-8 h-8 text-[#191919] animate-spin" />
@@ -164,14 +166,14 @@ const AcceptInvitation = () => {
           <div className="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-4">
             <Mail className="w-8 h-8 text-blue-600" />
           </div>
-          <h1 className="text-2xl font-bold text-[#191919] mb-2">Rejoindre l'équipe</h1>
+          <h1 className="text-2xl font-bold text-[#191919] mb-2">{t('auth.joinTeam')}</h1>
           <p className="text-[#666663]">
-            Vous avez été invité(e) à rejoindre une équipe sur Stock Easy
+            {t('auth.invitedToJoin')}
           </p>
         </div>
 
         <div className="bg-[#FAFAF7] rounded-lg p-4 mb-6">
-          <p className="text-sm text-[#666663] mb-1">Compte connecté</p>
+          <p className="text-sm text-[#666663] mb-1">{t('auth.connectedAccount')}</p>
           <p className="text-[#191919] font-medium">{currentUser?.email}</p>
         </div>
 
@@ -184,12 +186,12 @@ const AcceptInvitation = () => {
             {accepting ? (
               <>
                 <Loader className="w-5 h-5 animate-spin" />
-                Acceptation en cours...
+                {t('auth.acceptingInvitation')}
               </>
             ) : (
               <>
                 <CheckCircle className="w-5 h-5" />
-                Accepter l'invitation
+                {t('auth.acceptInvitation')}
               </>
             )}
           </button>
@@ -198,12 +200,12 @@ const AcceptInvitation = () => {
             onClick={() => navigate('/')}
             className="w-full border border-[#E5E4DF] py-3 rounded-lg font-semibold hover:bg-[#FAFAF7] transition-colors"
           >
-            Annuler
+            {t('common.cancel')}
           </button>
         </div>
 
         <p className="text-xs text-[#666663] text-center mt-6">
-          En acceptant, vous aurez accès aux données et aux fonctionnalités de l'entreprise
+          {t('auth.acceptNote')}
         </p>
       </div>
     </div>

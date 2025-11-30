@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { RefreshCw, Clock, Package, Zap, TrendingUp, DollarSign, Boxes, Lightbulb, ShoppingCart, AlertTriangle, CheckCircle, Heart, TrendingDown, Activity, ChevronDown, AlertCircle, TrendingUp as TrendingUpIcon, Info, Brain, Link } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { KPICard } from '../features/KPICard/KPICard';
 import { DateRangePicker } from './DateRangePicker';
 import { ComparisonSelector } from './ComparisonSelector';
@@ -25,6 +26,8 @@ export const AnalyticsTab = ({
   analyticsSubTab = ANALYTICS_TABS.KPIS,
   setAnalyticsSubTab
 }) => {
+  const { t } = useTranslation();
+  
   // États locaux pour les contrôles d'analytics
   const [dateRange, setDateRange] = useState('30d');
   const [customRange, setCustomRange] = useState({ start: '', end: '' });
@@ -493,7 +496,7 @@ export const AnalyticsTab = ({
             </div>
             <div className="text-left">
               <h4 className="font-medium text-[#191919]">{title}</h4>
-              <p className="text-xs text-[#6B7177]">{count} insight{count > 1 ? 's' : ''}</p>
+              <p className="text-xs text-[#6B7177]">{count} {count > 1 ? 'insights' : 'insight'}</p>
             </div>
           </div>
           <motion.div
@@ -574,12 +577,12 @@ export const AnalyticsTab = ({
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
           <h1 className="text-xl sm:text-2xl font-semibold text-[#191919]">
-            {analyticsSubTab === ANALYTICS_TABS.FORECAST ? 'Prévisions IA' : 'Analytics'}
+            {analyticsSubTab === ANALYTICS_TABS.FORECAST ? t('analytics.forecastTitle') : t('analytics.title')}
           </h1>
           <p className="text-sm text-[#6B7177] mt-0.5">
             {analyticsSubTab === ANALYTICS_TABS.FORECAST 
-              ? 'Prévisions de demande basées sur le Machine Learning'
-              : 'KPIs et indicateurs clés de votre inventaire'
+              ? t('analytics.forecastSubtitle')
+              : t('analytics.subtitle')
             }
           </p>
         </div>
@@ -588,8 +591,8 @@ export const AnalyticsTab = ({
       {/* Onglets - Style pills */}
       <div className="flex items-center gap-2 overflow-x-auto pb-1">
         {[
-          { id: ANALYTICS_TABS.KPIS, label: 'KPIs', icon: TrendingUp },
-          { id: ANALYTICS_TABS.FORECAST, label: 'Prévisions IA', icon: Brain }
+          { id: ANALYTICS_TABS.KPIS, label: t('analytics.tabs.kpis'), icon: TrendingUp },
+          { id: ANALYTICS_TABS.FORECAST, label: t('analytics.tabs.forecast'), icon: Brain }
         ].map(tab => {
           const Icon = tab.icon;
           return (
@@ -660,30 +663,30 @@ export const AnalyticsTab = ({
                 }}
                 className="w-full px-4 py-2.5 bg-white border border-[#E1E3E5] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#191919] focus:border-transparent appearance-none cursor-pointer"
               >
-                <option value="">Sélectionner un produit pour analyser...</option>
+                <option value="">{t('analytics.forecast.selectProduct')}</option>
                 {/* Groupe 1: Produits avec historique de ventes (triés par ventes décroissantes) */}
                 {products.filter(p => (p.salesPerDay || 0) > 0).length > 0 && (
-                  <optgroup label="📊 Produits avec historique de ventes">
+                  <optgroup label={t('analytics.forecast.productsWithHistory')}>
                     {products
                       .filter(p => (p.salesPerDay || 0) > 0)
                       .sort((a, b) => (b.salesPerDay || 0) - (a.salesPerDay || 0))
                       .map(product => (
                         <option key={product.sku} value={product.sku}>
-                          {product.name} ({product.sku}) - {(product.salesPerDay || 0).toFixed(1)} ventes/jour
+                          {product.name} ({product.sku}) - {(product.salesPerDay || 0).toFixed(1)} {t('analytics.forecast.salesPerDay')}
                         </option>
                       ))}
                   </optgroup>
                 )}
                 {/* Groupe 2: Produits sans historique (triés par nom) */}
                 {products.filter(p => (p.salesPerDay || 0) === 0 && (p.stock || 0) > 0).length > 0 && (
-                  <optgroup label="📦 Produits en stock (sans historique)">
+                  <optgroup label={t('analytics.forecast.productsInStock')}>
                     {products
                       .filter(p => (p.salesPerDay || 0) === 0 && (p.stock || 0) > 0)
                       .sort((a, b) => (a.name || '').localeCompare(b.name || ''))
                       .slice(0, 50) // Limiter à 50 pour performance
                       .map(product => (
                         <option key={product.sku} value={product.sku}>
-                          {product.name} ({product.sku}) - Stock: {product.stock || 0}
+                          {product.name} ({product.sku}) - {t('analytics.forecast.stock')}: {product.stock || 0}
                         </option>
                       ))}
                   </optgroup>
@@ -693,7 +696,7 @@ export const AnalyticsTab = ({
             </div>
             {selectedProductForForecast && (
               <span className="text-sm text-[#6B7177] whitespace-nowrap">
-                {products.filter(p => (p.salesPerDay || 0) > 0).length} avec historique / {products.length} total
+                {products.filter(p => (p.salesPerDay || 0) > 0).length} {t('analytics.forecast.withHistory')} / {products.length} {t('analytics.forecast.total')}
               </span>
             )}
           </div>
@@ -704,10 +707,10 @@ export const AnalyticsTab = ({
               <div className="bg-white rounded-lg border border-[#E1E3E5] p-12 text-center">
                 <RefreshCw className="w-12 h-12 mx-auto text-[#6B7177] mb-4 animate-spin" />
                 <h3 className="text-lg font-medium text-[#191919] mb-2">
-                  Chargement de l'historique...
+                  {t('analytics.forecast.loadingHistory')}
                 </h3>
                 <p className="text-sm text-[#6B7177]">
-                  Récupération des données de ventes depuis Supabase
+                  {t('analytics.forecast.loadingHistoryDesc')}
                 </p>
               </div>
             ) : (
@@ -724,10 +727,10 @@ export const AnalyticsTab = ({
                 <Brain className="w-8 h-8 text-[#6B7177]" />
               </div>
               <h3 className="text-lg font-medium text-[#191919] mb-2">
-                Sélectionnez un produit
+                {t('analytics.forecast.selectProductTitle')}
               </h3>
               <p className="text-sm text-[#6B7177] max-w-md mx-auto">
-                Choisissez un produit avec historique de ventes pour voir ses prévisions de demande basées sur le Machine Learning
+                {t('analytics.forecast.selectProductDesc')}
               </p>
             </div>
           )}
@@ -738,11 +741,11 @@ export const AnalyticsTab = ({
           {analyticsData.loading ? (
             <div className="flex items-center justify-center h-40 bg-white rounded-lg border border-[#E1E3E5]">
               <RefreshCw className="w-6 h-6 animate-spin text-[#6B7177]" />
-              <span className="ml-2 text-[#6B7177]">Chargement des analytics...</span>
+              <span className="ml-2 text-[#6B7177]">{t('analytics.loading')}</span>
             </div>
           ) : analyticsData.error ? (
             <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-              <p className="text-red-700">Erreur: {analyticsData.error}</p>
+              <p className="text-red-700">{t('analytics.error')}: {analyticsData.error}</p>
             </div>
           ) : (
             <>
@@ -750,11 +753,11 @@ export const AnalyticsTab = ({
           <div>
             <h3 className="text-lg font-bold text-[#191919] mb-4 flex items-center gap-2">
               <div className="w-1 h-5 bg-purple-500 rounded-full" />
-              KPIs Principaux
+              {t('analytics.kpis.main')}
             </h3>
             <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 mb-6">
               <KPICard
-                title="Taux de Disponibilité des SKU"
+                title={t('analytics.kpis.skuAvailability')}
                 value={analyticsData.skuAvailability.value}
                 change={analyticsData.skuAvailability.change}
                 changePercent={analyticsData.skuAvailability.changePercent}
@@ -766,7 +769,7 @@ export const AnalyticsTab = ({
               />
               
               <KPICard
-                title="Valeur de l'Inventaire"
+                title={t('analytics.kpis.inventoryValue')}
                 value={analyticsData.inventoryValuation.value}
                 change={analyticsData.inventoryValuation.change}
                 changePercent={analyticsData.inventoryValuation.changePercent}
@@ -778,7 +781,7 @@ export const AnalyticsTab = ({
               />
               
               <KPICard
-                title="Ventes Perdues - Ruptures Réelles"
+                title={t('analytics.kpis.lostSalesReal')}
                 value={analyticsData.salesLost.value}
                 change={analyticsData.salesLost.change}
                 changePercent={analyticsData.salesLost.changePercent}
@@ -790,7 +793,7 @@ export const AnalyticsTab = ({
               />
               
               <KPICard
-                title="Valeur Surstocks Profonds"
+                title={t('analytics.kpis.overstockValue')}
                 value={analyticsData.overstockCost.value}
                 change={analyticsData.overstockCost.change}
                 changePercent={analyticsData.overstockCost.changePercent}
@@ -807,11 +810,11 @@ export const AnalyticsTab = ({
           <div>
             <h3 className="text-lg font-bold text-[#191919] mb-4 flex items-center gap-2">
               <div className="w-1 h-5 bg-indigo-500 rounded-full" />
-              Analyse Approfondie
+              {t('analytics.kpis.advanced')}
               {mlRevenueLoading && (
                 <div className="flex items-center gap-2 ml-2 text-sm text-[#666663]">
                   <RefreshCw className="w-4 h-4 animate-spin" />
-                  <span>Calcul ML en cours...</span>
+                  <span>{t('analytics.mlCalculating')}</span>
                 </div>
               )}
             </h3>
@@ -849,11 +852,11 @@ export const AnalyticsTab = ({
                   <Lightbulb className="w-5 h-5 text-white" />
                 </div>
                 <h3 className="text-xl font-bold text-[#191919]">
-                  Insights Actionnables
+                  {t('analytics.insights.title')}
                 </h3>
               </div>
               <p className="text-sm text-[#666663] ml-[52px]">
-                Recommandations basées sur vos indicateurs clés de performance
+                {t('analytics.insights.subtitle')}
               </p>
             </div>
             
@@ -861,7 +864,7 @@ export const AnalyticsTab = ({
             <div className="space-y-4">
               {categorizedInsights.alertes.length > 0 && (
                 <CategoryAccordion
-                  title="Alertes"
+                  title={t('analytics.insights.categories.alerts')}
                   icon={AlertCircle}
                   iconColor="bg-red-500"
                   insights={categorizedInsights.alertes}
@@ -873,7 +876,7 @@ export const AnalyticsTab = ({
               
               {categorizedInsights.performance.length > 0 && (
                 <CategoryAccordion
-                  title="Performance"
+                  title={t('analytics.insights.categories.performance')}
                   icon={TrendingUpIcon}
                   iconColor="bg-blue-500"
                   insights={categorizedInsights.performance}
@@ -885,7 +888,7 @@ export const AnalyticsTab = ({
               
               {categorizedInsights.financier.length > 0 && (
                 <CategoryAccordion
-                  title="Financier"
+                  title={t('analytics.insights.categories.financial')}
                   icon={DollarSign}
                   iconColor="bg-green-500"
                   insights={categorizedInsights.financier}

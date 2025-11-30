@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, Sparkles, Download } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { OrderBySupplier } from './OrderBySupplier';
 import { ProductSelectionTable } from '../features/ProductSelectionTable/ProductSelectionTable';
 import { CustomOrderModal } from './modals/CustomOrderModal';
@@ -9,12 +10,6 @@ import { ACTIONS_TABS } from '../../constants/stockEasyConstants';
 import { toast } from 'sonner';
 import api from '../../services/apiAdapter';
 import { useCurrency } from '../../contexts/CurrencyContext';
-
-// Onglets style Shopify
-const ACTION_TABS = [
-  { key: ACTIONS_TABS.RECOMMENDATIONS, label: 'Recommandations', icon: Sparkles },
-  { key: ACTIONS_TABS.CUSTOM_ORDER, label: 'Personnalisée', icon: Plus }
-];
 
 export const ActionsTab = ({
   productsByStatus,
@@ -35,7 +30,14 @@ export const ActionsTab = ({
   emailGeneration,
   allProducts = []
 }) => {
+  const { t } = useTranslation();
   const { format: formatCurrency } = useCurrency();
+  
+  // Onglets style Shopify
+  const ACTION_TABS = [
+    { key: ACTIONS_TABS.RECOMMENDATIONS, label: t('actions.recommendations'), icon: Sparkles },
+    { key: ACTIONS_TABS.CUSTOM_ORDER, label: t('actions.custom'), icon: Plus }
+  ];
   
   // État local pour la sous-navigation Actions
   const [actionsSubTab, setActionsSubTab] = useState(ACTIONS_TABS.RECOMMENDATIONS);
@@ -74,7 +76,7 @@ export const ActionsTab = ({
   // Handler pour créer une commande personnalisée
   const handleCreateCustomOrder = (selectedProductsMap) => {
     if (selectedProductsMap.size === 0) {
-      toast.error('Veuillez sélectionner au moins un produit');
+      toast.error(t('actions.selectAtLeastOneProduct'));
       return;
     }
 
@@ -94,7 +96,7 @@ export const ActionsTab = ({
 
     const hasInvalidQuantity = products.some(p => !p.qtyToOrder || p.qtyToOrder <= 0);
     if (hasInvalidQuantity) {
-      toast.error('Veuillez définir une quantité positive pour chaque produit sélectionné');
+      toast.error(t('actions.invalidQuantity'));
       return;
     }
 
@@ -111,13 +113,13 @@ export const ActionsTab = ({
     const suppliersArray = Object.keys(productsBySupplier);
     
     if (suppliersArray.length === 0) {
-      toast.error('Aucun fournisseur trouvé pour les produits sélectionnés');
+      toast.error(t('actions.noSupplierFound'));
       return;
     }
 
     // Si plusieurs fournisseurs, informer l'utilisateur
     if (suppliersArray.length > 1) {
-      toast.info(`${suppliersArray.length} fournisseurs détectés. Sélectionner des produits d'un seul fournisseur.`, {
+      toast.info(t('actions.multipleSuppliers', { count: suppliersArray.length }), {
         duration: 4000
       });
       return;
@@ -140,7 +142,7 @@ export const ActionsTab = ({
         : warehouse;
 
       if (!warehouseEntry || !warehouseEntry.id) {
-        toast.error('Entrepôt invalide, veuillez réessayer');
+        toast.error(t('actions.invalidWarehouse'));
         return;
       }
 
@@ -178,16 +180,16 @@ export const ActionsTab = ({
 
       await loadData();
       setCustomOrderModalOpen(false);
-      toast.success('Commande créée avec succès !');
+      toast.success(t('orders.messages.created'));
     } catch (error) {
       console.error('Erreur lors de la création de la commande:', error);
-      toast.error('Erreur lors de la création de la commande');
+      toast.error(t('actions.orderCreationError'));
     }
   };
 
   // Export CSV des produits à commander
   const handleExportCSV = async () => {
-    const toastId = toast.loading('Préparation de l\'export...');
+    const toastId = toast.loading(t('common.export') + '...');
     try {
       const productsToExport = productsByStatus?.to_order || [];
       
@@ -215,9 +217,9 @@ export const ActionsTab = ({
       link.download = `produits_a_commander_${new Date().toISOString().split('T')[0]}.csv`;
       link.click();
 
-      toast.success('Export CSV réussi !', { id: toastId });
+      toast.success(t('actions.exportSuccess'), { id: toastId });
     } catch (error) {
-      toast.error('Erreur lors de l\'export', { id: toastId });
+      toast.error(t('actions.exportError'), { id: toastId });
     }
   };
 
@@ -235,10 +237,10 @@ export const ActionsTab = ({
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div>
             <h1 className="text-xl sm:text-2xl font-semibold text-[#191919]">
-              Passer Commande
+              {t('navigation.placeOrder')}
             </h1>
             <p className="text-sm text-[#6B7177] mt-0.5">
-              Gérez vos commandes fournisseurs
+              {t('actions.manageSupplierOrders')}
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -247,7 +249,7 @@ export const ActionsTab = ({
               className="flex items-center gap-2 px-3 py-1.5 bg-white border border-[#E1E3E5] rounded-full text-sm font-medium text-[#191919] hover:border-[#8A8C8E] transition-colors shadow-sm"
             >
               <Download className="w-4 h-4" />
-              <span className="hidden sm:inline">Exporter</span>
+              <span className="hidden sm:inline">{t('common.export')}</span>
             </button>
           </div>
         </div>

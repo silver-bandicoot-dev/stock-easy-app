@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Search, X, Package, Mail, FileText, TrendingUp, Edit, Truck, ExternalLink, ShoppingBag, MapPin, Warehouse as WarehouseIcon } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { useSearch } from './useSearch';
 import { SearchDropdown } from './SearchDropdown';
 import { useNavigate } from 'react-router-dom';
@@ -14,7 +15,7 @@ import { useNavigate } from 'react-router-dom';
  * @param {string} className - Classes CSS additionnelles
  */
 export const SearchBar = ({ 
-  placeholder = 'Rechercher un produit, fournisseur, commande...', 
+  placeholder, 
   onSelect, 
   setActiveTab,
   setParametersSubTab,
@@ -22,6 +23,8 @@ export const SearchBar = ({
   onSupplierSelect,
   className = '' 
 }) => {
+  const { t } = useTranslation();
+  const translatedPlaceholder = placeholder || t('search.placeholder');
   const [query, setQuery] = useState('');
   const [showDropdown, setShowDropdown] = useState(false);
   const [activeIndex, setActiveIndex] = useState(-1);
@@ -222,7 +225,7 @@ export const SearchBar = ({
     switch (item.type) {
       case 'product':
         actions.push({
-          label: 'Commander',
+          label: t('search.actions.order'),
           icon: ShoppingBag,
           onClick: (item) => {
             // Naviguer vers l'onglet Actions pour commander ce produit
@@ -236,7 +239,7 @@ export const SearchBar = ({
           }
         });
         actions.push({
-          label: 'Voir stock',
+          label: t('search.actions.viewStock'),
           icon: TrendingUp,
           onClick: (item) => {
             // Naviguer vers l'onglet Stock et filtrer
@@ -249,7 +252,7 @@ export const SearchBar = ({
           }
         });
         actions.push({
-          label: 'Analytics',
+          label: t('search.actions.analytics'),
           icon: Edit,
           onClick: (item) => {
             // Naviguer vers Analytics
@@ -262,7 +265,7 @@ export const SearchBar = ({
         
       case 'supplier':
         actions.push({
-          label: 'Email',
+          label: t('search.actions.email'),
           icon: Mail,
           onClick: (item) => {
             const email = item.data?.email || item.data?.commercial_contact_email;
@@ -272,7 +275,7 @@ export const SearchBar = ({
           }
         });
         actions.push({
-          label: 'Produits',
+          label: t('search.actions.products'),
           icon: Package,
           onClick: (item) => {
             // Naviguer vers Stock et filtrer par fournisseur
@@ -285,7 +288,7 @@ export const SearchBar = ({
           }
         });
         actions.push({
-          label: 'Stats',
+          label: t('search.actions.stats'),
           icon: TrendingUp,
           onClick: (item) => {
             if (setActiveTab) {
@@ -297,7 +300,7 @@ export const SearchBar = ({
         
       case 'order':
         actions.push({
-          label: 'Détails',
+          label: t('search.actions.details'),
           icon: FileText,
           onClick: (item) => {
             if (setActiveTab) {
@@ -307,7 +310,7 @@ export const SearchBar = ({
         });
         if (item.data?.tracking_number) {
           actions.push({
-            label: 'Tracking',
+            label: t('search.actions.tracking'),
             icon: Truck,
             onClick: (item) => {
               // Essayer d'ouvrir le lien de tracking (17track est populaire)
@@ -317,7 +320,7 @@ export const SearchBar = ({
           });
         }
         actions.push({
-          label: 'Contacter',
+          label: t('search.actions.contact'),
           icon: Mail,
           onClick: (item) => {
             // Naviguer vers les paramètres fournisseurs
@@ -331,7 +334,7 @@ export const SearchBar = ({
         
       case 'warehouse':
         actions.push({
-          label: 'Voir stocks',
+          label: t('search.actions.viewStocks'),
           icon: Package,
           onClick: (item) => {
             if (setActiveTab) {
@@ -340,7 +343,7 @@ export const SearchBar = ({
           }
         });
         actions.push({
-          label: 'Localiser',
+          label: t('search.actions.locate'),
           icon: MapPin,
           onClick: (item) => {
             const address = item.data?.address || item.data?.city;
@@ -351,7 +354,7 @@ export const SearchBar = ({
           }
         });
         actions.push({
-          label: 'Éditer',
+          label: t('search.actions.edit'),
           icon: Edit,
           onClick: (item) => {
             // Naviguer vers les paramètres entrepôts
@@ -368,7 +371,7 @@ export const SearchBar = ({
     }
     
     return actions;
-  }, [setActiveTab, setParametersSubTab, setStockLevelSearch]);
+  }, [setActiveTab, setParametersSubTab, setStockLevelSearch, t]);
 
   return (
     <div ref={containerRef} className={`relative ${className}`}>
@@ -385,7 +388,7 @@ export const SearchBar = ({
           onChange={handleInputChange}
           onFocus={handleInputFocus}
           onKeyDown={handleKeyDown}
-          placeholder={placeholder}
+          placeholder={translatedPlaceholder}
           className="
             w-full pl-10 pr-28 py-3 
             text-sm text-neutral-900 placeholder-neutral-500
@@ -416,7 +419,7 @@ export const SearchBar = ({
             <button
               onClick={handleClear}
               className="p-1 hover:bg-neutral-100 rounded transition-colors"
-              aria-label="Effacer la recherche"
+              aria-label={t('search.clear')}
             >
               <X className="w-4 h-4 text-neutral-500" />
             </button>

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../contexts/SupabaseAuthContext';
 import { Send, User as UserIcon, Trash2, Edit2, Check, X, AtSign } from 'lucide-react';
 import { toast } from 'sonner';
@@ -12,6 +13,7 @@ import {
 import { getTeamMembers } from '../../services/profileService';
 
 export default function CommentSection({ purchaseOrderId, purchaseOrderNumber }) {
+  const { t } = useTranslation();
   const { currentUser } = useAuth();
   const [comments, setComments] = useState([]);
   const [newComment, setNewComment] = useState('');
@@ -57,7 +59,7 @@ export default function CommentSection({ purchaseOrderId, purchaseOrderNumber })
       setComments(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error('Erreur chargement commentaires:', error);
-      toast.error('Erreur lors du chargement des commentaires');
+      toast.error(t('comments.loadError'));
     }
   };
 
@@ -145,7 +147,7 @@ export default function CommentSection({ purchaseOrderId, purchaseOrderNumber })
     e.preventDefault();
     
     if (!newComment.trim()) {
-      toast.error('Le commentaire ne peut pas être vide');
+      toast.error(t('comments.emptyError'));
       return;
     }
 
@@ -157,10 +159,10 @@ export default function CommentSection({ purchaseOrderId, purchaseOrderNumber })
       await addComment(purchaseOrderId, newComment.trim(), mentionedUserIds);
       
       setNewComment('');
-      toast.success('Commentaire ajouté !');
+      toast.success(t('comments.added'));
     } catch (error) {
       console.error('Erreur ajout commentaire:', error);
-      toast.error('Erreur lors de l\'ajout du commentaire');
+      toast.error(t('comments.addError'));
     } finally {
       setLoading(false);
     }
@@ -168,7 +170,7 @@ export default function CommentSection({ purchaseOrderId, purchaseOrderNumber })
 
   const handleEdit = async (commentId) => {
     if (!editContent.trim()) {
-      toast.error('Le commentaire ne peut pas être vide');
+      toast.error(t('comments.emptyError'));
       return;
     }
 
@@ -177,24 +179,24 @@ export default function CommentSection({ purchaseOrderId, purchaseOrderNumber })
       
       setEditingCommentId(null);
       setEditContent('');
-      toast.success('Commentaire modifié !');
+      toast.success(t('comments.edited'));
     } catch (error) {
       console.error('Erreur modification commentaire:', error);
-      toast.error('Erreur lors de la modification');
+      toast.error(t('comments.editError'));
     }
   };
 
   const handleDelete = async (commentId) => {
-    if (!window.confirm('Êtes-vous sûr de vouloir supprimer ce commentaire ?')) {
+    if (!window.confirm(t('comments.deleteConfirm'))) {
       return;
     }
 
     try {
       await deleteComment(commentId);
-      toast.success('Commentaire supprimé !');
+      toast.success(t('comments.deleted'));
     } catch (error) {
       console.error('Erreur suppression commentaire:', error);
-      toast.error('Erreur lors de la suppression');
+      toast.error(t('comments.deleteError'));
     }
   };
 
@@ -242,14 +244,14 @@ export default function CommentSection({ purchaseOrderId, purchaseOrderNumber })
   return (
     <div className="bg-white rounded-lg border border-[#E5E4DF] p-6">
       <h3 className="text-lg font-bold text-[#191919] mb-4">
-        Commentaires {purchaseOrderNumber && `- ${purchaseOrderNumber}`}
+        {t('comments.title')} {purchaseOrderNumber && `- ${purchaseOrderNumber}`}
       </h3>
 
       {/* Liste des commentaires */}
       <div className="space-y-4 mb-6 max-h-96 overflow-y-auto">
         {comments.length === 0 ? (
           <p className="text-sm text-gray-500 text-center py-8">
-            Aucun commentaire pour le moment
+            {t('comments.noComments')}
           </p>
         ) : (
           comments.map((comment) => (
@@ -276,7 +278,7 @@ export default function CommentSection({ purchaseOrderId, purchaseOrderNumber })
                       {new Date(comment.createdAt).toLocaleString('fr-FR')}
                     </span>
                     {comment.isEdited && (
-                      <span className="text-xs text-gray-400 italic">(modifié)</span>
+                      <span className="text-xs text-gray-400 italic">{t('comments.modified')}</span>
                     )}
                   </div>
                   
@@ -285,14 +287,14 @@ export default function CommentSection({ purchaseOrderId, purchaseOrderNumber })
                       <button
                         onClick={() => startEditing(comment)}
                         className="p-1 hover:bg-gray-200 rounded transition-colors"
-                        title="Modifier"
+                        title={t('common.edit')}
                       >
                         <Edit2 className="w-3 h-3 text-gray-600" />
                       </button>
                       <button
                         onClick={() => handleDelete(comment.id)}
                         className="p-1 hover:bg-red-100 rounded transition-colors"
-                        title="Supprimer"
+                        title={t('common.delete')}
                       >
                         <Trash2 className="w-3 h-3 text-red-600" />
                       </button>
@@ -314,14 +316,14 @@ export default function CommentSection({ purchaseOrderId, purchaseOrderNumber })
                         className="px-3 py-1 bg-black text-white rounded text-xs hover:bg-gray-800 flex items-center gap-1"
                       >
                         <Check className="w-3 h-3" />
-                        Sauvegarder
+                        {t('comments.save')}
                       </button>
                       <button
                         onClick={cancelEditing}
                         className="px-3 py-1 bg-gray-200 text-gray-700 rounded text-xs hover:bg-gray-300 flex items-center gap-1"
                       >
                         <X className="w-3 h-3" />
-                        Annuler
+                        {t('comments.cancel')}
                       </button>
                     </div>
                   </div>
@@ -343,7 +345,7 @@ export default function CommentSection({ purchaseOrderId, purchaseOrderNumber })
             ref={textareaRef}
             value={newComment}
             onChange={handleInputChange}
-            placeholder="Ajouter un commentaire... (utilisez @ pour mentionner quelqu'un)"
+            placeholder={t('comments.placeholder')}
             className="w-full px-4 py-3 pr-12 border border-[#E5E4DF] rounded-lg focus:outline-none focus:ring-2 focus:ring-black resize-none text-sm"
             rows={3}
             disabled={loading}
@@ -392,7 +394,7 @@ export default function CommentSection({ purchaseOrderId, purchaseOrderNumber })
 
         <p className="text-xs text-gray-500 mt-2 flex items-center gap-1">
           <AtSign className="w-3 h-3" />
-          Tapez @ pour mentionner un membre de l'équipe
+          {t('comments.mentionHint')}
         </p>
       </form>
     </div>
