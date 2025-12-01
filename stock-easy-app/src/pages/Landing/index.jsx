@@ -26,7 +26,7 @@ const Landing = () => {
       <Partners />
       <Features />
       <HowItWorks />
-      <Testimonials />
+      {/* <Testimonials /> - Temporairement caché, sera réintégré plus tard */}
       <Pricing />
       <CTA />
       <Footer />

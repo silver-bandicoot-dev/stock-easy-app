@@ -124,7 +124,7 @@ const itemVariants = {
   }
 };
 
-export const DashboardTab = ({ productsByStatus, orders, enrichedProducts, onViewDetails, seuilSurstockProfond = 90, syncing = false, setActiveTab, setParametersSubTab }) => {
+export const DashboardTab = ({ productsByStatus, orders, enrichedProducts, onViewDetails, seuilSurstockProfond = 90, syncing = false, setActiveTab, setParametersSubTab, suppliers = [] }) => {
   const { t } = useTranslation();
   const { currentUser } = useAuth();
   const [isReturningToday, setIsReturningToday] = useState(false);
@@ -186,26 +186,24 @@ export const DashboardTab = ({ productsByStatus, orders, enrichedProducts, onVie
 
   // Calcul de l'état de l'onboarding
   const onboardingStatus = useMemo(() => {
-    const hasMappedProducts = enrichedProducts && enrichedProducts.some(p => p.supplierId || p.supplier_id);
-    const hasOrders = orders && orders.length > 0;
+    // Vérifier si des fournisseurs ont été créés
+    const hasSuppliers = suppliers && suppliers.length > 0;
     
-    // Approximation : si on a mappé des produits, on a forcément créé des fournisseurs
-    // Pour être plus précis, on pourrait passer la liste des fournisseurs en props
-    const hasSuppliers = hasMappedProducts; 
+    // Vérifier si des produits sont mappés à des fournisseurs
+    const hasMappedProducts = enrichedProducts && enrichedProducts.some(p => p.supplierId || p.supplier_id);
+    
+    // Vérifier si des commandes ont été créées
+    const hasOrders = orders && orders.length > 0;
 
     return {
       hasSuppliers,
       hasMappedProducts,
       hasOrders
     };
-  }, [enrichedProducts, orders]);
+  }, [enrichedProducts, orders, suppliers]);
 
   // Navigation depuis la checklist d'onboarding
   const handleOnboardingNavigate = useCallback((target) => {
-    console.log('🚀 handleOnboardingNavigate called with target:', target);
-    console.log('🔍 setActiveTab available:', !!setActiveTab);
-    console.log('🔍 setParametersSubTab available:', !!setParametersSubTab);
-    
     if (!setActiveTab) {
       console.warn('⚠️ setActiveTab is not available!');
       return;
@@ -213,21 +211,18 @@ export const DashboardTab = ({ productsByStatus, orders, enrichedProducts, onVie
     
     switch (target) {
       case 'suppliers':
-        console.log('📦 Navigating to Settings > Suppliers');
         setActiveTab(MAIN_TABS.SETTINGS);
         if (setParametersSubTab) setParametersSubTab(SETTINGS_TABS.SUPPLIERS);
         break;
       case 'mapping':
-        console.log('🔗 Navigating to Settings > Mapping');
         setActiveTab(MAIN_TABS.SETTINGS);
         if (setParametersSubTab) setParametersSubTab(SETTINGS_TABS.MAPPING);
         break;
       case 'orders':
-        console.log('🛒 Navigating to Actions');
         setActiveTab(MAIN_TABS.ACTIONS);
         break;
       default:
-        console.warn('⚠️ Unknown target:', target);
+        console.warn('⚠️ Unknown navigation target:', target);
         break;
     }
   }, [setActiveTab, setParametersSubTab]);

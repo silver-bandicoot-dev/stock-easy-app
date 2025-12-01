@@ -28,7 +28,7 @@ import { ImagePreview } from '../ui/ImagePreview';
 import CommentSection from '../comments/CommentSection';
 import { formatConfirmedDate, calculateETA, formatETA } from '../../utils/dateUtils';
 import { formatTrackingUrl, getTrackingLinkText, isValidUrl } from '../../utils/trackingUtils';
-import { ORDER_STATUS_LABELS, ORDER_STATUS_COLORS } from '../../constants/stockEasyConstants';
+import { ORDER_STATUS_COLORS } from '../../constants/stockEasyConstants';
 import { roundToTwoDecimals } from '../../utils/decimalUtils';
 
 export const OrderDetailPanel = ({
@@ -67,7 +67,7 @@ export const OrderDetailPanel = ({
   // Statut badges
   const getStatusBadge = (status) => {
     const colors = ORDER_STATUS_COLORS[status] || ORDER_STATUS_COLORS.pending_confirmation;
-    const label = ORDER_STATUS_LABELS[status] || status;
+    const label = t(`orders.status.${status}`) || status;
     
     const statusIcons = {
       pending_confirmation: Clock,

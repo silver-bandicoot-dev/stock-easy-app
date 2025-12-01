@@ -241,6 +241,11 @@
         "description": "Créez votre premier fournisseur",
         "action": "Gérer les fournisseurs"
       },
+      "warehouses": {
+        "title": "Configurer un entrepôt",
+        "description": "Définissez où recevoir vos commandes",
+        "action": "Créer un entrepôt"
+      },
       "mapping": {
         "title": "Lier les produits",
         "description": "Assignez des produits aux fournisseurs",
@@ -251,6 +256,11 @@
         "description": "Testez la création de commande",
         "action": "Passer commande"
       }
+    },
+    "booking": {
+      "title": "Besoin d'aide pour démarrer ?",
+      "description": "Réservez un appel gratuit de 30 min avec notre équipe pour un accompagnement personnalisé.",
+      "action": "Prendre rendez-vous"
     }
   },
   "search": {
@@ -356,7 +366,31 @@
     "linkCopied": "Lien copié dans le presse-papier !",
     "orderNotFound": "Commande {{id}} introuvable",
     "reconciliationConfirmed": "Réconciliation confirmée ! La commande a été archivée.",
-    "reconciliationError": "Erreur lors de la confirmation de la réconciliation"
+    "reconciliationError": "Erreur lors de la confirmation de la réconciliation",
+    "pagination": {
+      "summary": "{{count}} commande(s) • Page {{page}} sur {{totalPages}}"
+    },
+    "export": {
+      "orderNumber": "N° Commande",
+      "supplier": "Fournisseur",
+      "status": "Statut",
+      "date": "Date",
+      "total": "Total",
+      "products": "Produits",
+      "warehouse": "Entrepôt",
+      "notSpecified": "Non spécifié",
+      "tracking": "Suivi",
+      "notAvailable": "Non disponible"
+    }
+  },
+  "orderFilters": {
+    "startDate": "Date de début",
+    "endDate": "Date de fin",
+    "clear": "Effacer",
+    "today": "Aujourd'hui",
+    "last7Days": "7 derniers jours",
+    "last30Days": "30 derniers jours",
+    "thisMonth": "Ce mois"
   },
   "orders": {
     "title": "Mes Commandes",

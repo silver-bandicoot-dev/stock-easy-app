@@ -131,6 +131,7 @@ export const permissions: GadgetPermissions = {
       },
       actions: {
         connectShopToCompany: true,
+        getShopLocations: true,
         getSupabaseStats: true,
         syncInitialInventoryFromShopify: true,
         syncOrdersToSupabase: true,

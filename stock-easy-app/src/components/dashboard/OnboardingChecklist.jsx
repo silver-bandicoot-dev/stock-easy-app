@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import { 
@@ -10,7 +10,9 @@ import {
   Link as LinkIcon, 
   ShoppingBag, 
   X,
-  PartyPopper
+  PartyPopper,
+  CalendarClock,
+  Sparkles
 } from 'lucide-react';
 
 /**
@@ -47,7 +49,7 @@ export const OnboardingChecklist = ({
       icon: Truck,
       isCompleted: hasSuppliers,
       actionLabel: t('onboarding.steps.suppliers.action'),
-      link: 'suppliers' // ID de l'onglet à ouvrir (à gérer par le parent)
+      link: 'suppliers'
     },
     {
       id: 'mapping',
@@ -74,6 +76,35 @@ export const OnboardingChecklist = ({
     const completed = steps.filter(s => s.isCompleted).length;
     setCompletionPercentage((completed / steps.length) * 100);
   }, [hasSuppliers, hasMappedProducts, hasOrders]);
+
+  // Chargement du script Calendly
+  useEffect(() => {
+    // Vérifier si le script est déjà chargé
+    if (!document.querySelector('script[src*="calendly.com"]')) {
+      const script = document.createElement('script');
+      script.src = 'https://assets.calendly.com/assets/external/widget.js';
+      script.async = true;
+      document.head.appendChild(script);
+    }
+    
+    // Charger le CSS Calendly si pas déjà présent
+    if (!document.querySelector('link[href*="calendly.com"]')) {
+      const link = document.createElement('link');
+      link.href = 'https://assets.calendly.com/assets/external/widget.css';
+      link.rel = 'stylesheet';
+      document.head.appendChild(link);
+    }
+  }, []);
+
+  // Ouvrir le popup Calendly
+  const openCalendly = useCallback((e) => {
+    e.preventDefault();
+    if (window.Calendly) {
+      window.Calendly.initPopupWidget({
+        url: 'https://calendly.com/jory-cherief/30min'
+      });
+    }
+  }, []);
 
   // Si tout est terminé, on peut proposer de fermer
   const allCompleted = completionPercentage === 100;
@@ -201,6 +232,37 @@ export const OnboardingChecklist = ({
                   {t('onboarding.congratulations')}
                 </span>
               </div>
+            )}
+
+            {/* Section Calendly - visible seulement si pas 100% complet */}
+            {!allCompleted && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="p-4 bg-gradient-to-r from-[#191919] to-[#2a2a2a] border-t border-[#333]"
+              >
+                <div className="flex items-center gap-4">
+                  <div className="shrink-0 w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center">
+                    <CalendarClock className="w-5 h-5 text-white" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h4 className="font-medium text-white flex items-center gap-2">
+                      {t('onboarding.booking.title')}
+                      <Sparkles className="w-4 h-4 text-amber-400" />
+                    </h4>
+                    <p className="text-sm text-white/70 mt-0.5">
+                      {t('onboarding.booking.description')}
+                    </p>
+                  </div>
+                  <button
+                    onClick={openCalendly}
+                    className="px-4 py-2 text-sm font-semibold text-[#191919] bg-white rounded-lg hover:bg-gray-100 transition-all shadow-lg hover:shadow-xl whitespace-nowrap flex items-center gap-2"
+                  >
+                    <CalendarClock className="w-4 h-4" />
+                    {t('onboarding.booking.action')}
+                  </button>
+                </div>
+              </motion.div>
             )}
           </motion.div>
         )}

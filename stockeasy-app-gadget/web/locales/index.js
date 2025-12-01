@@ -16,6 +16,19 @@ export const translations = {
     connected: "connecté",
     notConnected: "non connecté",
     
+    // Location selection
+    loadingLocations: "Chargement des emplacements...",
+    noLocationsFound: "Aucun emplacement actif trouvé. Veuillez configurer au moins un emplacement dans Shopify.",
+    singleLocationDetected: "Emplacement détecté",
+    singleLocationInfo: "Votre boutique n'a qu'un seul emplacement actif. Il sera utilisé pour la synchronisation du stock.",
+    selectLocation: "Choisissez votre emplacement",
+    selectLocationDescription: "Sélectionnez l'emplacement à utiliser pour synchroniser votre stock avec Stockeasy.",
+    confirmAndConnect: "Confirmer et connecter",
+    confirmSelection: "Confirmer la sélection",
+    basicPlanInfo: "💡 Plan Basic : 1 emplacement. Passez au plan Pro pour synchroniser plusieurs entrepôts.",
+    currentLocation: "Emplacement actuel",
+    changeLocation: "Changer d'emplacement",
+    
     // Time
     never: "Jamais",
     justNow: "À l'instant",
@@ -107,6 +120,19 @@ export const translations = {
     connected: "connected",
     notConnected: "not connected",
     
+    // Location selection
+    loadingLocations: "Loading locations...",
+    noLocationsFound: "No active locations found. Please configure at least one location in Shopify.",
+    singleLocationDetected: "Location detected",
+    singleLocationInfo: "Your store has only one active location. It will be used for stock synchronization.",
+    selectLocation: "Choose your location",
+    selectLocationDescription: "Select the location to use for syncing your stock with Stockeasy.",
+    confirmAndConnect: "Confirm and connect",
+    confirmSelection: "Confirm selection",
+    basicPlanInfo: "💡 Basic Plan: 1 location. Upgrade to Pro to sync multiple warehouses.",
+    currentLocation: "Current location",
+    changeLocation: "Change location",
+    
     // Time
     never: "Never",
     justNow: "Just now",
@@ -197,6 +223,19 @@ export const translations = {
     // Connection status
     connected: "conectado",
     notConnected: "no conectado",
+    
+    // Location selection
+    loadingLocations: "Cargando ubicaciones...",
+    noLocationsFound: "No se encontraron ubicaciones activas. Configura al menos una ubicación en Shopify.",
+    singleLocationDetected: "Ubicación detectada",
+    singleLocationInfo: "Tu tienda solo tiene una ubicación activa. Se utilizará para la sincronización del stock.",
+    selectLocation: "Elige tu ubicación",
+    selectLocationDescription: "Selecciona la ubicación para sincronizar tu stock con Stockeasy.",
+    confirmAndConnect: "Confirmar y conectar",
+    confirmSelection: "Confirmar selección",
+    basicPlanInfo: "💡 Plan Básico: 1 ubicación. Actualiza a Pro para sincronizar múltiples almacenes.",
+    currentLocation: "Ubicación actual",
+    changeLocation: "Cambiar ubicación",
     
     // Time
     never: "Nunca",

@@ -20,8 +20,8 @@ const Pricing = () => {
     t('landing.pricing.features.threeLocations', "3 emplacements de sync des stocks"),
   ];
 
-  // Vert Spotify
-  const spotifyGreen = '#1DB954';
+  // Vert aligné avec le reste de la landing page
+  const spotifyGreen = '#10B981';
 
   return (
     <section id="pricing" className="landing-section bg-[#FAFAF7] overflow-hidden">

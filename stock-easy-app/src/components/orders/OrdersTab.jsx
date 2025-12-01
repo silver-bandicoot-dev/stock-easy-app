@@ -305,14 +305,14 @@ export const OrdersTab = ({
         : sortedOrders;
 
       const csvData = ordersToExport.map(order => ({
-        'N° Commande': order.id,
-        'Fournisseur': order.supplier,
-        'Statut': order.status,
-        'Date': new Date(order.createdAt).toLocaleDateString('fr-FR'),
-        'Total': formatCurrency(order.total),
-        'Produits': order.items?.length || 0,
-        'Entrepôt': order.warehouseName || order.warehouseId || 'Non spécifié',
-        'Suivi': order.trackingNumber || 'Non disponible'
+        [t('ordersPage.export.orderNumber')]: order.id,
+        [t('ordersPage.export.supplier')]: order.supplier,
+        [t('ordersPage.export.status')]: t(`orders.status.${order.status}`) || order.status,
+        [t('ordersPage.export.date')]: new Date(order.createdAt).toLocaleDateString(),
+        [t('ordersPage.export.total')]: formatCurrency(order.total),
+        [t('ordersPage.export.products')]: order.items?.length || 0,
+        [t('ordersPage.export.warehouse')]: order.warehouseName || order.warehouseId || t('ordersPage.export.notSpecified'),
+        [t('ordersPage.export.tracking')]: order.trackingNumber || t('ordersPage.export.notAvailable')
       }));
 
       const headers = Object.keys(csvData[0] || {});
@@ -378,18 +378,18 @@ export const OrdersTab = ({
       const isSuccess = result?.success === true || (result && !result.error);
       
       if (isSuccess) {
-        toast.success('Réconciliation confirmée ! La commande a été archivée.');
+        toast.success(t('ordersPage.reconciliationConfirmed'));
         // Rafraîchir les données locales et globales
         fetchOrders();
         if (typeof loadData === 'function') {
           await loadData();
         }
       } else {
-        toast.error(result?.error || result?.message || 'Erreur lors de la confirmation');
+        toast.error(result?.error || result?.message || t('ordersPage.reconciliationError'));
       }
     } catch (error) {
       console.error('❌ Erreur lors de la confirmation de la réconciliation:', error);
-      toast.error('Erreur lors de la confirmation de la réconciliation');
+      toast.error(t('ordersPage.reconciliationError'));
     }
   };
 
@@ -552,7 +552,7 @@ export const OrdersTab = ({
           {meta.totalPages > 1 && (
             <div className="border-t border-[#E1E3E5] px-4 py-3 flex items-center justify-between bg-[#F6F6F7]">
               <span className="text-sm text-[#6B7177]">
-                {meta.totalCount} commande{meta.totalCount > 1 ? 's' : ''} • Page {page} sur {meta.totalPages}
+                {t('ordersPage.pagination.summary', { count: meta.totalCount, page: page, totalPages: meta.totalPages })}
               </span>
               <div className="flex items-center gap-2">
                 <button

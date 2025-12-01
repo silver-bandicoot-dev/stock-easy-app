@@ -2,15 +2,19 @@ import { getSupabaseClient } from "../lib/supabase";
 
 /**
  * Connects a Shopify shop to Stockeasy by creating a company.
- * Simplified version for reliability.
+ * Includes location selection for inventory sync.
  */
 export const run = async ({ params, logger, api }) => {
-  const { shopId } = params;
+  const { shopId, locationId } = params;
   
-  logger.info({ shopId }, '🚀 Starting connectShopToCompany');
+  logger.info({ shopId, locationId }, '🚀 Starting connectShopToCompany');
   
   if (!shopId) {
     return { success: false, message: 'shopId is required' };
+  }
+
+  if (!locationId) {
+    return { success: false, message: 'locationId is required' };
   }
 
   try {
@@ -23,7 +27,8 @@ export const run = async ({ params, logger, api }) => {
         email: true,
         shopOwner: true,
         myshopifyDomain: true,
-        stockEasyCompanyId: true
+        stockEasyCompanyId: true,
+        defaultLocationId: true
       }
     });
 
@@ -33,12 +38,44 @@ export const run = async ({ params, logger, api }) => {
 
     logger.info({ shop: shop.myshopifyDomain }, '📍 Found shop');
 
+    // Verify the location exists and belongs to this shop
+    const location = await api.shopifyLocation.findOne(locationId, {
+      select: {
+        id: true,
+        name: true,
+        active: true,
+        shop: { id: true }
+      }
+    });
+
+    if (!location) {
+      return { success: false, message: 'Location not found' };
+    }
+
+    if (location.shop?.id !== shopId) {
+      return { success: false, message: 'Location does not belong to this shop' };
+    }
+
+    if (!location.active) {
+      return { success: false, message: 'Selected location is not active' };
+    }
+
+    logger.info({ locationId, locationName: location.name }, '📍 Location verified');
+
     // Already connected?
     if (shop.stockEasyCompanyId) {
-      logger.info({ companyId: shop.stockEasyCompanyId }, '✅ Already connected');
+      logger.info({ companyId: shop.stockEasyCompanyId }, '✅ Already connected, updating location');
+      
+      // Update the location even if already connected
+      await api.shopifyShop.update(shopId, {
+        defaultLocationId: locationId
+      });
+      
       return {
         success: true,
         companyId: shop.stockEasyCompanyId,
+        locationId: locationId,
+        locationName: location.name,
         alreadyConnected: true
       };
     }
@@ -68,7 +105,9 @@ export const run = async ({ params, logger, api }) => {
             owner_email: shop.email,
             owner_name: shop.shopOwner,
             source: 'shopify',
-            installed_at: new Date().toISOString()
+            installed_at: new Date().toISOString(),
+            default_location_id: locationId,
+            default_location_name: location.name
           }
         })
         .select('id')
@@ -83,16 +122,19 @@ export const run = async ({ params, logger, api }) => {
       logger.info({ companyId }, '✅ Company created');
     }
 
-    // Update shop with company ID
+    // Update shop with company ID and location ID
     await api.shopifyShop.update(shopId, {
-      stockEasyCompanyId: companyId
+      stockEasyCompanyId: companyId,
+      defaultLocationId: locationId
     });
 
-    logger.info({ companyId }, '🔗 Shop connected!');
+    logger.info({ companyId, locationId }, '🔗 Shop connected with location!');
 
     return {
       success: true,
       companyId,
+      locationId: locationId,
+      locationName: location.name,
       alreadyConnected: false
     };
 
@@ -103,6 +145,7 @@ export const run = async ({ params, logger, api }) => {
 };
 
 export const params = {
-  shopId: { type: "string" }
+  shopId: { type: "string" },
+  locationId: { type: "string" }
 };
 

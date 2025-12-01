@@ -17,12 +17,14 @@ import {
   AlertTriangleIcon,
   ExternalIcon,
   RefreshIcon,
-  AlertCircleIcon
+  AlertCircleIcon,
+  LocationIcon
 } from '@shopify/polaris-icons';
 import { useState, useCallback, useEffect } from "react";
 import { useNavigate } from "react-router";
 import { useTranslations } from "../hooks/useTranslations";
 import { LanguageSelector } from "../components/LanguageSelector";
+import { LocationSelector } from "../components/LocationSelector";
 
 export const DashboardPage = () => {
   const navigate = useNavigate();
@@ -38,6 +40,12 @@ export const DashboardPage = () => {
     unsyncedCount: 0
   });
   const [statsLoading, setStatsLoading] = useState(true);
+  
+  // Location selection state
+  const [locations, setLocations] = useState([]);
+  const [locationsLoading, setLocationsLoading] = useState(false);
+  const [showLocationSelector, setShowLocationSelector] = useState(false);
+  const [selectedLocationName, setSelectedLocationName] = useState(null);
 
   // Load shop data - Gelly filter on server side handles tenancy
   const [{ data: shop, fetching: shopFetching, error: shopError }, refetchShop] = useFindFirst(api.shopifyShop, {
@@ -46,7 +54,8 @@ export const DashboardPage = () => {
       name: true,
       myshopifyDomain: true,
       email: true,
-      stockEasyCompanyId: true
+      stockEasyCompanyId: true,
+      defaultLocationId: true
     }
   });
 
@@ -64,6 +73,14 @@ export const DashboardPage = () => {
   const [, connectShopToCompany] = useAction(api.connectShopToCompany);
   const [, updateShop] = useAction(api.shopifyShop.update);
   const [, getSupabaseStats] = useAction(api.getSupabaseStats);
+  const [, getShopLocations] = useAction(api.getShopLocations);
+
+  // Load selected location name
+  const [{ data: selectedLocation }] = useFindFirst(api.shopifyLocation, {
+    filter: shop?.defaultLocationId ? { id: { equals: shop.defaultLocationId } } : undefined,
+    select: { id: true, name: true },
+    pause: !shop?.defaultLocationId
+  });
 
   // Load Supabase stats (source of truth)
   const loadSupabaseStats = useCallback(async () => {
@@ -102,31 +119,81 @@ export const DashboardPage = () => {
   const unsyncedCount = supabaseStats.unsyncedCount || unsyncedItems.length; // Use server count if available
   const lastSync = lastLogs?.[0]?.createdAt;
 
-  // Handle connect
-  const handleConnect = useCallback(async () => {
-    if (!shop?.id) {
-      shopify.toast.show(t('shopNotFound'), { isError: true });
+  // Load locations for selection
+  const loadLocations = useCallback(async () => {
+    if (!shop?.id) return;
+    
+    setLocationsLoading(true);
+    try {
+      const response = await getShopLocations({ shopId: shop.id });
+      const result = response?.data || response;
+      
+      if (result?.success && result?.locations) {
+        setLocations(result.locations);
+        
+        // If only 1 active location, auto-select and connect directly
+        const activeLocations = result.locations.filter(loc => loc.active);
+        if (activeLocations.length === 1) {
+          // Still show the selector for confirmation
+          setShowLocationSelector(true);
+        } else if (activeLocations.length > 1) {
+          // Multiple locations - show selector
+          setShowLocationSelector(true);
+        } else {
+          // No locations
+          shopify.toast.show(t('noLocationsFound'), { isError: true });
+        }
+      } else {
+        shopify.toast.show(result?.message || t('error'), { isError: true });
+      }
+    } catch (error) {
+      console.error('Failed to load locations:', error);
+      shopify.toast.show(t('error'), { isError: true });
+    } finally {
+      setLocationsLoading(false);
+    }
+  }, [shop?.id, getShopLocations, t]);
+
+  // Handle connect button click - load locations first
+  const handleConnectClick = useCallback(async () => {
+    await loadLocations();
+  }, [loadLocations]);
+
+  // Handle location selection confirmation
+  const handleLocationConfirm = useCallback(async (locationId) => {
+    if (!shop?.id || !locationId) {
+      shopify.toast.show(t('error'), { isError: true });
       return;
     }
     
     setConnecting(true);
     try {
-      const response = await connectShopToCompany({ shopId: shop.id });
+      const response = await connectShopToCompany({ 
+        shopId: shop.id, 
+        locationId: locationId 
+      });
       const result = response?.data || response;
       
       if (result?.success || result?.companyId) {
         shopify.toast.show(t('connectionSuccess'));
+        setShowLocationSelector(false);
         refetchShop();
       } else {
         const errorMsg = result?.message || t('connectionError');
         shopify.toast.show(errorMsg, { isError: true });
       }
     } catch (error) {
+      console.error('Connection error:', error);
       shopify.toast.show(t('connectionError'), { isError: true });
     } finally {
       setConnecting(false);
     }
   }, [shop?.id, connectShopToCompany, refetchShop, t]);
+
+  // Handle connect (legacy - now redirects to location selection)
+  const handleConnect = useCallback(async () => {
+    await handleConnectClick();
+  }, [handleConnectClick]);
 
   // Handle disconnect
   const handleDisconnect = useCallback(async () => {
@@ -186,6 +253,53 @@ export const DashboardPage = () => {
             <Text as="p">{t('loading')}</Text>
           </BlockStack>
         </Card>
+      </Page>
+    );
+  }
+
+  // Show location selector when needed (before connection or changing location)
+  if (showLocationSelector) {
+    return (
+      <Page>
+        <BlockStack gap="500">
+          {/* Header Card with Logo */}
+          <Card>
+            <InlineStack align="space-between" blockAlign="center">
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <svg
+                  viewBox="0 0 100 100"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                  style={{ width: 32, height: 32, transform: 'scaleY(-1)' }}
+                >
+                  <path d="M50 15 L85 35 L85 65 L50 85 L15 65 L15 35 Z" fill="rgba(0, 0, 0, 0.8)" stroke="#191919" strokeWidth="1.5"/>
+                  <path d="M50 15 L15 35 L15 65 L50 45 Z" fill="rgba(0, 0, 0, 0.6)" stroke="#191919" strokeWidth="1.5"/>
+                  <path d="M50 15 L85 35 L85 65 L50 45 Z" fill="rgba(0, 0, 0, 0.9)" stroke="#191919" strokeWidth="1.5"/>
+                  <line x1="50" y1="15" x2="50" y2="45" stroke="#191919" strokeWidth="1" opacity="0.5"/>
+                  <line x1="15" y1="35" x2="50" y2="45" stroke="#191919" strokeWidth="1" opacity="0.5"/>
+                  <line x1="85" y1="35" x2="50" y2="45" stroke="#191919" strokeWidth="1" opacity="0.5"/>
+                </svg>
+                <div style={{ width: '1px', height: '24px', backgroundColor: '#191919', opacity: 0.2 }} />
+                <span className="stockeasy-logo-text">stockeasy</span>
+              </div>
+              <Button
+                variant="plain"
+                onClick={() => setShowLocationSelector(false)}
+              >
+                {t('back')}
+              </Button>
+            </InlineStack>
+          </Card>
+          
+          {/* Location Selector */}
+          <LocationSelector
+            locations={locations}
+            selectedLocationId={shop?.defaultLocationId}
+            onSelectLocation={() => {}}
+            loading={connecting || locationsLoading}
+            onConfirm={handleLocationConfirm}
+          />
+        </BlockStack>
       </Page>
     );
   }
@@ -277,7 +391,39 @@ export const DashboardPage = () => {
                   }} />
                   <Text as="span" variant="bodySm" tone="subdued">{t('notConnected')}</Text>
                 </div>
-              )}</InlineStack>
+              )}
+            </InlineStack>
+
+            {/* Current location badge - show when connected */}
+            {isConnected && selectedLocation && (
+              <Box 
+                background="bg-surface-secondary" 
+                borderRadius="200" 
+                padding="300"
+              >
+                <InlineStack align="space-between" blockAlign="center">
+                  <InlineStack gap="200" blockAlign="center">
+                    <Icon source={LocationIcon} tone="subdued" />
+                    <BlockStack gap="050">
+                      <Text as="span" variant="bodySm" tone="subdued">
+                        {t('currentLocation')}
+                      </Text>
+                      <Text as="p" variant="bodyMd" fontWeight="semibold">
+                        {selectedLocation.name}
+                      </Text>
+                    </BlockStack>
+                  </InlineStack>
+                  <Button
+                    variant="plain"
+                    size="slim"
+                    onClick={loadLocations}
+                    loading={locationsLoading}
+                  >
+                    {t('changeLocation')}
+                  </Button>
+                </InlineStack>
+              </Box>
+            )}
 
             {/* Stats - Only show if connected */}
             {isConnected && (

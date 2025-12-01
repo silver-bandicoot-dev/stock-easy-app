@@ -26,6 +26,8 @@
     "test:all": "npm run test && npm run test:e2e"
   },
   "dependencies": {
+    "@amplitude/analytics-browser": "^2.31.3",
+    "@amplitude/plugin-session-replay-browser": "^1.23.6",
     "@sentry/react": "^10.27.0",
     "@supabase/supabase-js": "^2.81.1",
     "@tensorflow/tfjs": "^4.22.0",

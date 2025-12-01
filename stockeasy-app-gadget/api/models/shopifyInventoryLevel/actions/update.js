@@ -37,15 +37,52 @@ export const run = async ({ params, record, logger, api }) => {
 export const onSuccess = async ({ record, api, logger, connections }) => {
   const inventoryItemId = record.inventoryItemId;
   const shopId = record.shopId;
+  const locationId = record.locationId; // The location this update is for
   const available = record.available; // Current stock in Shopify
   
   logger.info({ 
     inventoryItemId, 
-    shopId, 
+    shopId,
+    locationId,
     available 
   }, '📥 Received Shopify inventory_levels/update webhook');
 
   try {
+    // ═══════════════════════════════════════════════════════════════════
+    // 0. CHECK IF THIS IS THE USER'S SELECTED LOCATION
+    // Only sync inventory changes from the defaultLocationId
+    // ═══════════════════════════════════════════════════════════════════
+    const shop = await api.shopifyShop.findOne(shopId, {
+      select: {
+        id: true,
+        defaultLocationId: true,
+        stockEasyCompanyId: true
+      }
+    });
+
+    if (!shop.defaultLocationId) {
+      logger.info({ shopId }, 'No default location configured - skipping sync');
+      return;
+    }
+
+    // Compare location IDs (handle both string and number formats)
+    const webhookLocationId = String(locationId);
+    const defaultLocationId = String(shop.defaultLocationId);
+
+    if (webhookLocationId !== defaultLocationId) {
+      logger.info({ 
+        webhookLocationId, 
+        defaultLocationId, 
+        shopId 
+      }, '🏭 Ignoring inventory update from non-default location');
+      return;
+    }
+
+    logger.info({ 
+      locationId: webhookLocationId, 
+      defaultLocationId 
+    }, '✅ Inventory update is from the default location - proceeding with sync');
+
     // ═══════════════════════════════════════════════════════════════════
     // 1. Find the product mapping for this inventory item
     // ═══════════════════════════════════════════════════════════════════
@@ -62,11 +99,7 @@ export const onSuccess = async ({ record, api, logger, connections }) => {
           shopifyVariantId: true,
           productTitle: true,
           lastSyncDirection: true,
-          lastSyncedAt: true,
-          shop: {
-            id: true,
-            stockEasyCompanyId: true
-          }
+          lastSyncedAt: true
         }
       });
     } catch (error) {
@@ -84,11 +117,11 @@ export const onSuccess = async ({ record, api, logger, connections }) => {
     }
 
     const sku = mapping.stockEasySku;
-    const companyId = mapping.shop?.stockEasyCompanyId;
+    const companyId = shop.stockEasyCompanyId;
 
     if (!companyId) {
       logger.warn({ 
-        mappingId: mapping.id, 
+        shopId, 
         sku 
       }, 'Shop has no stockEasyCompanyId configured - cannot sync to Supabase');
       return;

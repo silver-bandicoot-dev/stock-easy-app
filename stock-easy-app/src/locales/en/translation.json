@@ -274,6 +274,11 @@
         "description": "Create your first supplier",
         "action": "Manage suppliers"
       },
+      "warehouses": {
+        "title": "Set up a warehouse",
+        "description": "Define where to receive your orders",
+        "action": "Create warehouse"
+      },
       "mapping": {
         "title": "Link products",
         "description": "Assign products to suppliers",
@@ -284,6 +289,11 @@
         "description": "Test order creation",
         "action": "Place order"
       }
+    },
+    "booking": {
+      "title": "Need help getting started?",
+      "description": "Book a free 30-min call with our team for personalized onboarding assistance.",
+      "action": "Book a call"
     }
   },
   "search": {
@@ -389,7 +399,31 @@
     "linkCopied": "Link copied to clipboard!",
     "orderNotFound": "Order {{id}} not found",
     "reconciliationConfirmed": "Reconciliation confirmed! The order has been archived.",
-    "reconciliationError": "Error confirming reconciliation"
+    "reconciliationError": "Error confirming reconciliation",
+    "pagination": {
+      "summary": "{{count}} order(s) • Page {{page}} of {{totalPages}}"
+    },
+    "export": {
+      "orderNumber": "Order #",
+      "supplier": "Supplier",
+      "status": "Status",
+      "date": "Date",
+      "total": "Total",
+      "products": "Products",
+      "warehouse": "Warehouse",
+      "notSpecified": "Not specified",
+      "tracking": "Tracking",
+      "notAvailable": "Not available"
+    }
+  },
+  "orderFilters": {
+    "startDate": "Start date",
+    "endDate": "End date",
+    "clear": "Clear",
+    "today": "Today",
+    "last7Days": "Last 7 days",
+    "last30Days": "Last 30 days",
+    "thisMonth": "This month"
   },
   "orders": {
     "title": "My Orders",

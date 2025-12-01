@@ -8,7 +8,7 @@ const Hero = () => {
   const stats = [
     { value: '40%', label: t('landing.hero.stats.reduction') },
     { value: '3h', label: t('landing.hero.stats.timeSaved') },
-    { value: '500+', label: t('landing.hero.stats.activeMerchants') },
+    // { value: '500+', label: t('landing.hero.stats.activeMerchants') }, - Temporairement retiré, sera réintégré plus tard
   ];
 
   return (
@@ -69,8 +69,8 @@ const Hero = () => {
               </a>
             </div>
 
-            {/* Trust indicators */}
-            <div className="flex items-center gap-6 pt-4">
+            {/* Trust indicators - Temporairement caché, sera réintégré plus tard */}
+            {/* <div className="flex items-center gap-6 pt-4">
               <div className="flex items-center gap-2">
                 <div className="flex -space-x-2">
                   {['M', 'S', 'T', 'J'].map((letter, i) => (
@@ -88,7 +88,7 @@ const Hero = () => {
                 <span className="text-amber-500">★★★★★</span>
                 <span className="text-sm text-[#191919]/60">4.9/5</span>
               </div>
-            </div>
+            </div> */}
           </motion.div>
 
           {/* Right Content - Dashboard Preview */}
@@ -181,7 +181,7 @@ const Hero = () => {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.4 }}
-          className="grid grid-cols-3 gap-8 mt-12 pt-8 border-t border-[#E5E4DF]"
+          className="grid grid-cols-2 gap-8 mt-12 pt-8 border-t border-[#E5E4DF]"
         >
           {stats.map((stat) => (
             <div key={stat.label} className="text-center">

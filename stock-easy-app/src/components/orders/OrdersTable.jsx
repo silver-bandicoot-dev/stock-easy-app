@@ -15,7 +15,7 @@ import {
   ClipboardCheck
 } from 'lucide-react';
 import { formatConfirmedDate } from '../../utils/dateUtils';
-import { ORDER_STATUS_LABELS, ORDER_STATUS_COLORS } from '../../constants/stockEasyConstants';
+import { ORDER_STATUS_COLORS } from '../../constants/stockEasyConstants';
 
 export const OrdersTable = ({
   orders,
@@ -155,7 +155,7 @@ export const OrdersTable = ({
 
   const getStatusBadge = (status) => {
     const colors = ORDER_STATUS_COLORS[status] || ORDER_STATUS_COLORS.pending_confirmation;
-    const label = ORDER_STATUS_LABELS[status] || status;
+    const label = t(`orders.status.${status}`) || status;
     
     const statusDots = {
       pending_confirmation: '🟡',

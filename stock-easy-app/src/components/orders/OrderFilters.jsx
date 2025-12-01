@@ -1,5 +1,6 @@
 import React from 'react';
 import { Calendar, X } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 export const OrderFilters = ({
   dateStart,
@@ -8,6 +9,7 @@ export const OrderFilters = ({
   setDateEnd,
   onClear
 }) => {
+  const { t } = useTranslation();
   const hasFilters = dateStart || dateEnd;
 
   return (
@@ -18,7 +20,7 @@ export const OrderFilters = ({
           <label className="block text-xs font-medium text-[#666663] mb-1.5">
             <div className="flex items-center gap-1">
               <Calendar className="w-3 h-3" />
-              Date de début
+              {t('orderFilters.startDate')}
             </div>
           </label>
           <input
@@ -34,7 +36,7 @@ export const OrderFilters = ({
           <label className="block text-xs font-medium text-[#666663] mb-1.5">
             <div className="flex items-center gap-1">
               <Calendar className="w-3 h-3" />
-              Date de fin
+              {t('orderFilters.endDate')}
             </div>
           </label>
           <input
@@ -52,7 +54,7 @@ export const OrderFilters = ({
             className="flex items-center gap-1.5 px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg transition-colors"
           >
             <X className="w-4 h-4" />
-            Effacer
+            {t('orderFilters.clear')}
           </button>
         )}
       </div>
@@ -67,7 +69,7 @@ export const OrderFilters = ({
           }}
           className="px-3 py-1.5 text-xs font-medium bg-[#FAFAF7] border border-[#E5E4DF] rounded-lg hover:bg-[#E5E4DF] transition-colors"
         >
-          Aujourd'hui
+          {t('orderFilters.today')}
         </button>
         <button
           onClick={() => {
@@ -79,7 +81,7 @@ export const OrderFilters = ({
           }}
           className="px-3 py-1.5 text-xs font-medium bg-[#FAFAF7] border border-[#E5E4DF] rounded-lg hover:bg-[#E5E4DF] transition-colors"
         >
-          7 derniers jours
+          {t('orderFilters.last7Days')}
         </button>
         <button
           onClick={() => {
@@ -91,7 +93,7 @@ export const OrderFilters = ({
           }}
           className="px-3 py-1.5 text-xs font-medium bg-[#FAFAF7] border border-[#E5E4DF] rounded-lg hover:bg-[#E5E4DF] transition-colors"
         >
-          30 derniers jours
+          {t('orderFilters.last30Days')}
         </button>
         <button
           onClick={() => {
@@ -102,7 +104,7 @@ export const OrderFilters = ({
           }}
           className="px-3 py-1.5 text-xs font-medium bg-[#FAFAF7] border border-[#E5E4DF] rounded-lg hover:bg-[#E5E4DF] transition-colors"
         >
-          Ce mois
+          {t('orderFilters.thisMonth')}
         </button>
       </div>
     </div>

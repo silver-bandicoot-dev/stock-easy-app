@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { RefreshCw, Menu, User, LogOut, Compass } from 'lucide-react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation, useParams } from 'react-router-dom';
 import { Toaster, toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
 import NotificationBell from './components/notifications/NotificationBell';
@@ -131,20 +131,8 @@ const StockeasyContent = () => {
     return () => { isMounted = false; };
   }, []);
 
-  // Gestion Navigation URL (Track Order)
-  useEffect(() => {
-    const params = new URLSearchParams(location.search);
-    const orderId = params.get('order');
-
-    if (orderId && orders && orders.length > 0) {
-      setActiveTab(MAIN_TABS.ORDERS);
-      const targetOrder = orders.find(order => order.id === orderId);
-      if (!targetOrder) {
-        toast.error('Commande introuvable');
-      }
-      navigate(location.pathname, { replace: true });
-    }
-  }, [location.search, orders, navigate, setActiveTab]);
+  // Note: La navigation vers une commande spécifique via URL (?order=PO-XXX)
+  // est maintenant gérée directement dans OrdersTab avec useAppNavigation
 
   // Gestion Raccourci Clavier Recherche
   useEffect(() => {
@@ -354,6 +342,9 @@ const StockeasyContent = () => {
                           onViewDetails={onViewDetails}
                           seuilSurstockProfond={parameterState.seuilSurstockProfond}
                           syncing={syncing}
+                          setActiveTab={setActiveTab}
+                          setParametersSubTab={setParametersSubTab}
+                          suppliers={suppliers}
                         />
                       </ErrorBoundary>
                     )}
