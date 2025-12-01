@@ -47,8 +47,9 @@
     "allRightsReserved": "Tous droits réservés."
   },
   "seo": {
-    "title": "Stockeasy - Gestion de Stock & Prévisions IA pour Shopify",
-    "description": "Optimisez votre gestion de stock Shopify avec Stockeasy. Prévisions IA, alertes anti-rupture et synchronisation multi-emplacements en temps réel. Essai gratuit 14 jours."
+    "title": "Stockeasy - Gestion de Stock Shopify, Prévisions IA & Réapprovisionnement",
+    "description": "La solution de gestion de stock pour Shopify. Évitez les ruptures grâce aux prévisions IA, alertes de stock bas et réapprovisionnement automatique. Inventory Planner et WMS simplifié.",
+    "keywords": "gestion de stock shopify, inventory planner, réapprovisionnement automatique, logistique e-commerce, prévisions ventes, wms shopify, alertes stock faible, rupture de stock, surstock, commande fournisseur, gestion inventaire, supply chain, dropshipping stock, logiciel stock tpe"
   },
   "auth": {
     "login": "Connexion",
@@ -261,6 +262,93 @@
       "title": "Besoin d'aide pour démarrer ?",
       "description": "Réservez un appel gratuit de 30 min avec notre équipe pour un accompagnement personnalisé.",
       "action": "Prendre rendez-vous"
+    }
+  },
+  "tour": {
+    "progress": "{{current}} / {{total}}",
+    "next": "Suivant",
+    "previous": "Précédent",
+    "finish": "Terminer",
+    "skip": "Passer",
+    "restart": "Relancer le tour",
+    "restartTooltip": "Relancer le tour guidé",
+    "steps": {
+      "welcome": {
+        "title": "Bienvenue sur StockEasy ! 👋",
+        "description": "Ce tour rapide vous présente les fonctionnalités clés pour optimiser votre gestion de stock."
+      },
+      "sidebar": {
+        "title": "Navigation principale",
+        "description": "Votre menu de navigation. Accédez rapidement à toutes les sections de l'application depuis cette barre latérale."
+      },
+      "tabDashboard": {
+        "title": "📊 Tableau de bord",
+        "description": "Vue d'ensemble de votre stock : indicateurs clés, alertes et graphiques pour suivre la santé de votre inventaire."
+      },
+      "tabActions": {
+        "title": "🛒 Passer Commande",
+        "description": "Créez vos commandes fournisseurs. StockEasy calcule automatiquement les quantités recommandées selon vos ventes et paramètres."
+      },
+      "tabOrders": {
+        "title": "📦 Mes Commandes",
+        "description": "Suivez toutes vos commandes en cours : en attente, en transit, reçues. Gérez la réconciliation à la réception."
+      },
+      "tabStock": {
+        "title": "📈 Niveaux de Stock",
+        "description": "Analysez la santé de chaque produit : autonomie en jours, rotation, alertes rupture/surstock. Filtrez par statut ou fournisseur."
+      },
+      "tabInventory": {
+        "title": "📋 Inventaire",
+        "description": "Gérez vos comptages d'inventaire, ajustements de stock et historique des mouvements."
+      },
+      "tabAnalytics": {
+        "title": "📉 Analytics",
+        "description": "Statistiques avancées et prévisions IA. Analysez vos KPIs, tendances de ventes et optimisez votre stratégie de réapprovisionnement."
+      },
+      "tabSettings": {
+        "title": "⚙️ Paramètres",
+        "description": "Configurez StockEasy selon vos besoins. Explorons ensemble chaque section des paramètres..."
+      },
+      "settingsGeneral": {
+        "title": "Paramètres généraux",
+        "description": "Configurez les seuils d'alerte (surstock), la devise par défaut et les préférences globales de l'application."
+      },
+      "settingsMultipliers": {
+        "title": "Multiplicateurs de sécurité",
+        "description": "Ajustez le coefficient de sécurité pour les recommandations de commande. Un multiplicateur plus élevé = stock de sécurité plus important."
+      },
+      "settingsSuppliers": {
+        "title": "Gestion des fournisseurs",
+        "description": "Créez et gérez vos fournisseurs : coordonnées, délais de livraison (lead time), quantités minimales de commande (MOQ)."
+      },
+      "settingsMapping": {
+        "title": "Mapping Produits-Fournisseurs",
+        "description": "Associez chaque produit à son fournisseur. Essentiel pour que StockEasy calcule correctement les recommandations de commande."
+      },
+      "settingsWarehouses": {
+        "title": "Gestion des entrepôts",
+        "description": "Configurez vos lieux de stockage. Définissez l'adresse de réception pour vos commandes fournisseurs."
+      },
+      "settingsIntegrations": {
+        "title": "Intégrations",
+        "description": "Gérez la connexion avec votre boutique Shopify. Consultez le statut de synchronisation et les données connectées."
+      },
+      "search": {
+        "title": "🔍 Recherche rapide",
+        "description": "Trouvez instantanément produits, fournisseurs ou commandes. Raccourci : ⌘K (Mac) ou Ctrl+K (Windows)."
+      },
+      "sync": {
+        "title": "🔄 Synchronisation",
+        "description": "Forcez une synchronisation avec Shopify. Les données se mettent à jour automatiquement, mais vous pouvez rafraîchir manuellement ici."
+      },
+      "notifications": {
+        "title": "🔔 Notifications",
+        "description": "Alertes stock bas, commandes en retard, événements importants. Personnalisez vos préférences dans les paramètres."
+      },
+      "profile": {
+        "title": "👤 Votre profil",
+        "description": "Gérez votre compte, invitez des collaborateurs et accédez aux paramètres personnels. C'est terminé ! 🎉"
+      }
     }
   },
   "search": {
@@ -722,15 +810,6 @@
       "defaultMultiplier": "Multiplicateur par défaut",
       "multiplierTitle": "📈 Multiplicateur par défaut",
       "multiplierHelp": "Coefficient appliqué aux nouveaux produits pour ajuster les prévisions",
-      "cookiesTitle": "Gestion des Cookies",
-      "cookiesSubtitle": "Conformité RGPD",
-      "cookiesHelp": "Gérez vos préférences de cookies pour contrôler les données que nous collectons.",
-      "cookiesRequired": "Requis",
-      "cookiesEnabled": "Activé",
-      "cookiesDisabled": "Désactivé",
-      "cookiesLastUpdated": "Dernière mise à jour",
-      "cookiesModify": "Modifier mes préférences de cookies",
-      "cookiesPolicyLink": "Consulter notre Politique de Cookies",
       "savedSuccess": "✅ Paramètres sauvegardés avec succès !",
       "unsavedChanges": "Vous avez des modifications non sauvegardées",
       "saveParameters": "Sauvegarder les paramètres",
@@ -759,16 +838,7 @@
       },
       "customValue": "Ou saisissez une valeur personnalisée (1-365 jours)",
       "customPlaceholder": "Ex : 75 jours",
-      "selectedValue": "Valeur sélectionnée",
-      "days": "jours",
-      "custom": "Personnalisé",
       "recommendation": "💡 Recommandation",
-      "thresholds": {
-        "fashion": { "label": "60 jours", "type": "Fashion", "description": "Produits à rotation rapide, mode saisonnière" },
-        "standard": { "label": "90 jours ⭐", "type": "Standard", "description": "Recommandé pour la plupart des activités" },
-        "durable": { "label": "120 jours", "type": "Durable", "description": "Produits à longue durée de vie" },
-        "b2b": { "label": "180 jours", "type": "B2B", "description": "Commerce B2B avec cycles longs" }
-      },
       "recommendationTypes": {
         "fashion": "Adapté pour les produits à rotation rapide",
         "standard": "Recommandé pour la plupart des activités",
@@ -1490,7 +1560,6 @@
         "contact": "Contact",
         "privacy": "Confidentialité",
         "terms": "CGU",
-        "cookies": "Cookies",
         "legalNotice": "Mentions légales"
       },
       "shopifyPartner": "Shopify Partner"
@@ -1708,58 +1777,6 @@
     },
     "popularArticles": "Articles populaires",
     "back": "Retour"
-  },
-  "cookies": {
-    "banner": {
-      "title": "Nous respectons votre vie privée",
-      "subtitle": "Gérez vos préférences de cookies",
-      "description": "Nous utilisons des cookies pour améliorer votre expérience, analyser le trafic et personnaliser le contenu. Les cookies essentiels sont nécessaires au fonctionnement du site. Vous pouvez accepter tous les cookies, les refuser ou personnaliser vos choix.",
-      "acceptAll": "Accepter tout",
-      "rejectAll": "Refuser tout",
-      "customize": "Personnaliser",
-      "learnMore": "En savoir plus dans notre",
-      "cookiePolicy": "Politique de Cookies"
-    },
-    "preferences": {
-      "title": "Préférences de cookies",
-      "subtitle": "Gérez vos choix par catégorie",
-      "info": "Cliquez sur chaque catégorie pour voir les détails. Les cookies essentiels ne peuvent pas être désactivés car ils sont nécessaires au fonctionnement de l'application.",
-      "acceptAll": "Tout accepter",
-      "rejectAll": "Tout refuser",
-      "saveChoices": "Enregistrer mes choix"
-    },
-    "categories": {
-      "essential": {
-        "name": "Cookies Essentiels",
-        "shortDesc": "Toujours actifs",
-        "description": "Ces cookies sont nécessaires au fonctionnement du site. Ils permettent de maintenir votre session connectée, de mémoriser vos choix de navigation et d'assurer la sécurité de votre compte.",
-        "details": {
-          "auth": "Authentification et session utilisateur",
-          "security": "Sécurité et protection CSRF",
-          "navigation": "État de navigation"
-        }
-      },
-      "analytics": {
-        "name": "Cookies Analytiques",
-        "shortDesc": "Monitoring & erreurs",
-        "description": "Ces cookies nous aident à comprendre comment vous utilisez l'application, à détecter les erreurs et à améliorer les performances. Ils sont gérés par Sentry, notre outil de monitoring.",
-        "details": {
-          "errors": "Détection et rapport d'erreurs",
-          "performance": "Monitoring des performances",
-          "replay": "Replay de session (en cas d'erreur)"
-        }
-      },
-      "preferences": {
-        "name": "Cookies de Préférences",
-        "shortDesc": "Langue & devise",
-        "description": "Ces cookies mémorisent vos préférences personnelles comme la langue, la devise et vos paramètres d'affichage pour vous offrir une expérience personnalisée.",
-        "details": {
-          "language": "Langue de l'interface",
-          "currency": "Devise préférée",
-          "display": "Préférences d'affichage"
-        }
-      }
-    }
   },
   "legal": {
     "backToHome": "Retour à l'accueil",

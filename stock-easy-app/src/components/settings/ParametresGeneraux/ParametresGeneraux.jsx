@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { CheckCircle, AlertCircle, Check, RefreshCw, Cookie, Shield, BarChart3, Settings } from 'lucide-react';
+import { CheckCircle, AlertCircle, Check, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
 import { Button } from '../../ui/Button';
-import { useCookieConsent, COOKIE_CATEGORIES } from '../../../contexts/CookieConsentContext';
 
 // Obtenir une recommandation selon la valeur du seuil (avec traduction)
 const getRecommendationForValue = (value, t) => {
@@ -349,138 +348,6 @@ export function ParametresGeneraux({
           </button>
         </div>
       </div>
-
-      {/* Gestion des Cookies (RGPD) */}
-      <CookiePreferencesSection />
-    </div>
-  );
-}
-
-/**
- * Section de gestion des préférences de cookies
- */
-function CookiePreferencesSection() {
-  const { t } = useTranslation();
-  const { consent, openPreferences, hasConsent } = useCookieConsent();
-
-  const categories = [
-    {
-      id: COOKIE_CATEGORIES.ESSENTIAL,
-      name: t('cookies.categories.essential.name', 'Cookies Essentiels'),
-      icon: Shield,
-      color: 'text-[#16A34A]',
-      bgColor: 'bg-[#F0FDF4]',
-      borderColor: 'border-[#BBF7D0]',
-      enabled: true,
-      required: true,
-    },
-    {
-      id: COOKIE_CATEGORIES.ANALYTICS,
-      name: t('cookies.categories.analytics.name', 'Cookies Analytiques'),
-      icon: BarChart3,
-      color: 'text-[#D97706]',
-      bgColor: 'bg-[#FEF3C7]',
-      borderColor: 'border-[#FDE68A]',
-      enabled: hasConsent(COOKIE_CATEGORIES.ANALYTICS),
-      required: false,
-    },
-    {
-      id: COOKIE_CATEGORIES.PREFERENCES,
-      name: t('cookies.categories.preferences.name', 'Cookies de Préférences'),
-      icon: Settings,
-      color: 'text-[#2563EB]',
-      bgColor: 'bg-[#EFF6FF]',
-      borderColor: 'border-[#BFDBFE]',
-      enabled: hasConsent(COOKIE_CATEGORIES.PREFERENCES),
-      required: false,
-    },
-  ];
-
-  return (
-    <div className="bg-white rounded-xl shadow-sm border border-[#E5E4DF] p-6">
-      <div className="flex items-center gap-3 mb-4">
-        <div className="p-2 bg-[#FAFAF7] rounded-lg">
-          <Cookie className="w-5 h-5 text-[#191919]" />
-        </div>
-        <div>
-          <h3 className="text-lg font-semibold text-[#191919]">
-            {t('settings.general.cookiesTitle', 'Gestion des Cookies')}
-          </h3>
-          <p className="text-sm text-[#666663]">
-            {t('settings.general.cookiesSubtitle', 'Conformité RGPD')}
-          </p>
-        </div>
-      </div>
-      
-      <p className="text-sm text-[#666663] mb-4">
-        {t('settings.general.cookiesHelp', 'Gérez vos préférences de cookies pour contrôler les données que nous collectons.')}
-      </p>
-
-      {/* État actuel des cookies */}
-      <div className="space-y-2 mb-4">
-        {categories.map((cat) => {
-          const Icon = cat.icon;
-          return (
-            <div
-              key={cat.id}
-              className={`flex items-center justify-between p-3 rounded-lg ${cat.bgColor} border ${cat.borderColor}`}
-            >
-              <div className="flex items-center gap-2">
-                <Icon className={`w-4 h-4 ${cat.color}`} />
-                <span className="text-sm font-medium text-[#191919]">{cat.name}</span>
-              </div>
-              <span className={`text-xs font-medium px-2 py-1 rounded-full ${
-                cat.enabled 
-                  ? 'bg-green-100 text-green-700' 
-                  : 'bg-red-100 text-red-700'
-              }`}>
-                {cat.required 
-                  ? t('settings.general.cookiesRequired', 'Requis')
-                  : cat.enabled 
-                    ? t('settings.general.cookiesEnabled', 'Activé')
-                    : t('settings.general.cookiesDisabled', 'Désactivé')
-                }
-              </span>
-            </div>
-          );
-        })}
-      </div>
-
-      {/* Date du dernier consentement */}
-      {consent.timestamp && (
-        <p className="text-xs text-[#666663] mb-4">
-          {t('settings.general.cookiesLastUpdated', 'Dernière mise à jour')}: {' '}
-          {new Date(consent.timestamp).toLocaleDateString('fr-FR', {
-            day: 'numeric',
-            month: 'long',
-            year: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit'
-          })}
-        </p>
-      )}
-
-      {/* Bouton pour modifier */}
-      <Button
-        variant="outline"
-        onClick={openPreferences}
-        className="w-full"
-      >
-        <Settings className="w-4 h-4 mr-2" />
-        {t('settings.general.cookiesModify', 'Modifier mes préférences de cookies')}
-      </Button>
-
-      {/* Lien vers la politique */}
-      <p className="text-center text-xs text-[#666663] mt-3">
-        <a 
-          href="/legal/cookies" 
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-[#191919] underline hover:no-underline"
-        >
-          {t('settings.general.cookiesPolicyLink', 'Consulter notre Politique de Cookies')}
-        </a>
-      </p>
     </div>
   );
 }

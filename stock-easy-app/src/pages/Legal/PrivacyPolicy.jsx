@@ -11,7 +11,8 @@ import {
   Shield,
   Clock,
   Mail,
-  FileText
+  FileText,
+  Scale
 } from 'lucide-react';
 import SEOUpdater from '../../components/common/SEOUpdater';
 
@@ -22,12 +23,12 @@ const PrivacyPolicy = () => {
     {
       icon: FileText,
       title: t('legal.privacy.intro.title', "1. Introduction"),
-      content: t('legal.privacy.intro.content', "Chez StockEasy, nous prenons la protection de vos données personnelles très au sérieux. Cette politique de confidentialité explique quelles données nous collectons, pourquoi nous les collectons, comment nous les utilisons et quels sont vos droits. Cette politique s'applique à tous les utilisateurs de la plateforme StockEasy.")
+      content: t('legal.privacy.intro.content', "Chez Stockeasy, nous prenons la protection de vos données personnelles très au sérieux. Cette politique de confidentialité explique quelles données nous collectons, pourquoi nous les collectons, comment nous les utilisons et quels sont vos droits. Cette politique s'applique à tous les utilisateurs de la plateforme Stockeasy.")
     },
     {
       icon: UserCheck,
       title: t('legal.privacy.controller.title', "2. Responsable du traitement"),
-      content: t('legal.privacy.controller.content', "Le responsable du traitement de vos données personnelles est StockEasy SAS, société par actions simplifiée au capital de 10 000€, dont le siège social est situé à Paris, France. Pour toute question relative à la protection de vos données, vous pouvez nous contacter à : contact@stockeasy.app")
+      content: t('legal.privacy.controller.content', "Pour toute question relative à la protection de vos données, vous pouvez nous contacter à : contact@stockeasy.app")
     },
     {
       icon: Database,
@@ -51,17 +52,24 @@ const PrivacyPolicy = () => {
           ]
         },
         {
-          subtitle: t('legal.privacy.data.usage.title', "3.3. Données d'utilisation"),
+          subtitle: t('legal.privacy.data.usage.title', "3.3. Données d'utilisation et analytics"),
           items: [
             t('legal.privacy.data.usage.items.0', "Logs de connexion : adresses IP, dates et heures de connexion, type de navigateur"),
             t('legal.privacy.data.usage.items.1', "Données d'interaction : pages visitées, fonctionnalités utilisées, temps passé"),
             t('legal.privacy.data.usage.items.2', "Données techniques : type d'appareil, système d'exploitation, résolution d'écran"),
-            t('legal.privacy.data.usage.items.3', "Données de performance : temps de chargement, erreurs, bugs")
+            t('legal.privacy.data.usage.items.3', "Données de performance : temps de chargement, erreurs, bugs"),
+            t('legal.privacy.data.usage.items.4', "Analytics : enregistrements de sessions (avec votre consentement), événements d'utilisation, interactions utilisateur")
           ]
         },
         {
           subtitle: t('legal.privacy.data.cookies.title', "3.4. Cookies et technologies similaires"),
-          content: t('legal.privacy.data.cookies.content', "Nous utilisons des cookies et technologies similaires pour améliorer votre expérience. Pour plus d'informations, consultez notre politique de cookies.")
+          items: [
+            t('legal.privacy.data.cookies.items.0', "Cookies essentiels : nécessaires au fonctionnement de l'application (authentification, préférences)"),
+            t('legal.privacy.data.cookies.items.1', "Cookies analytiques : utilisés pour améliorer notre service (Amplitude, Sentry) - nécessitent votre consentement"),
+            t('legal.privacy.data.cookies.items.2', "Données de session : informations temporaires stockées localement dans votre navigateur"),
+            t('legal.privacy.data.cookies.items.3', "Gestion des cookies : nous utilisons Cookiebot comme plateforme de gestion du consentement (CMP)"),
+            t('legal.privacy.data.cookies.items.4', "Vous pouvez modifier vos préférences de cookies à tout moment via la bannière Cookiebot ou les paramètres de votre navigateur")
+          ]
         }
       ]
     },
@@ -84,8 +92,9 @@ const PrivacyPolicy = () => {
           items: [
             t('legal.privacy.purposes.improvement.items.0', "Analyse de l'utilisation pour améliorer l'interface et les fonctionnalités"),
             t('legal.privacy.purposes.improvement.items.1', "Optimisation des algorithmes de prévision"),
-            t('legal.privacy.purposes.improvement.items.2', "Détection et correction des bugs"),
-            t('legal.privacy.purposes.improvement.items.3', "Développement de nouvelles fonctionnalités")
+            t('legal.privacy.purposes.improvement.items.2', "Détection et correction des bugs via Sentry (monitoring d'erreurs)"),
+            t('legal.privacy.purposes.improvement.items.3', "Développement de nouvelles fonctionnalités"),
+            t('legal.privacy.purposes.improvement.items.4', "Analytics via Amplitude pour comprendre l'usage de l'application (avec consentement)")
           ]
         },
         {
@@ -109,8 +118,24 @@ const PrivacyPolicy = () => {
     },
     {
       icon: Scale,
-      title: t('legal.privacy.legal.title', "5. Base légale du traitement"),
-      content: t('legal.privacy.legal.content', "Nous traitons vos données sur les bases légales suivantes : Exécution du contrat : traitement nécessaire à la fourniture de nos services. Intérêt légitime : amélioration du service, sécurité, prévention de la fraude. Consentement : marketing, cookies non essentiels. Obligations légales : conformité réglementaire, obligations comptables.")
+      title: t('legal.privacy.legal.title', "5. Base légale du traitement et consentement"),
+      subsections: [
+        {
+          subtitle: t('legal.privacy.legal.basis.title', "5.1. Bases légales"),
+          content: t('legal.privacy.legal.basis.content', "Nous traitons vos données sur les bases légales suivantes : Exécution du contrat : traitement nécessaire à la fourniture de nos services. Intérêt légitime : amélioration du service, sécurité, prévention de la fraude. Consentement : analytics, cookies non essentiels, enregistrements de sessions. Obligations légales : conformité réglementaire.")
+        },
+        {
+          subtitle: t('legal.privacy.legal.consent.title', "5.2. Gestion du consentement avec Cookiebot"),
+          items: [
+            t('legal.privacy.legal.consent.items.0', "Nous utilisons Cookiebot comme plateforme de gestion du consentement (Consent Management Platform - CMP) pour respecter le RGPD"),
+            t('legal.privacy.legal.consent.items.1', "Cookies essentiels : installés automatiquement car nécessaires au fonctionnement de l'application"),
+            t('legal.privacy.legal.consent.items.2', "Cookies analytiques (Amplitude, Sentry Session Replay) : nécessitent votre consentement explicite via la bannière Cookiebot"),
+            t('legal.privacy.legal.consent.items.3', "Vous pouvez retirer votre consentement à tout moment sans impact sur l'utilisation de l'application"),
+            t('legal.privacy.legal.consent.items.4', "Vos préférences sont enregistrées par Cookiebot et synchronisées entre vos sessions"),
+            t('legal.privacy.legal.consent.items.5', "En cas de refus, seules les fonctionnalités essentielles seront actives")
+          ]
+        }
+      ]
     },
     {
       icon: Globe,
@@ -118,7 +143,7 @@ const PrivacyPolicy = () => {
       subsections: [
         {
           subtitle: t('legal.privacy.sharing.providers.title', "6.1. Prestataires de services"),
-          content: t('legal.privacy.sharing.providers.content', "Nous partageons vos données avec des prestataires tiers de confiance : Shopify (plateforme e-commerce), Vercel (hébergement), Supabase (base de données), Sentry (monitoring d'erreurs), Services d'emailing pour les notifications. Ces prestataires sont contractuellement tenus de protéger vos données et ne peuvent les utiliser qu'aux fins pour lesquelles nous les partageons.")
+          content: t('legal.privacy.sharing.providers.content', "Nous partageons vos données avec des prestataires tiers de confiance : Shopify (plateforme e-commerce), Vercel (hébergement), Supabase (base de données), Sentry (monitoring d'erreurs et performance), Amplitude (analytics, avec consentement), Services d'emailing pour les notifications. Ces prestataires sont contractuellement tenus de protéger vos données et ne peuvent les utiliser qu'aux fins pour lesquelles nous les partageons.")
         },
         {
           subtitle: t('legal.privacy.sharing.transfers.title', "6.2. Transferts internationaux"),
@@ -126,7 +151,17 @@ const PrivacyPolicy = () => {
         },
         {
           subtitle: t('legal.privacy.sharing.legal.title', "6.3. Obligations légales"),
-          content: t('legal.privacy.sharing.legal.content', "Nous pouvons divulguer vos données si requis par la loi ou en réponse à une demande légale (assignation, mandat de perquisition, etc.).")
+          content: t('legal.privacy.sharing.legal.content', "Nous pouvons divulguer vos données si requis par la loi ou en réponse à une demande légale valide.")
+        },
+        {
+          subtitle: t('legal.privacy.sharing.analytics.title', "6.4. Outils d'analytics et gestion du consentement"),
+          items: [
+            t('legal.privacy.sharing.analytics.items.0', "Cookiebot : plateforme de gestion du consentement (CMP) pour respecter le RGPD et recueillir vos préférences"),
+            t('legal.privacy.sharing.analytics.items.1', "Amplitude : plateforme d'analytics pour comprendre l'utilisation de l'application, basée en Europe (EU)"),
+            t('legal.privacy.sharing.analytics.items.2', "Sentry : monitoring d'erreurs et replay de sessions en cas de bugs critiques"),
+            t('legal.privacy.sharing.analytics.items.3', "Ces outils analytiques ne sont activés qu'avec votre consentement explicite via Cookiebot"),
+            t('legal.privacy.sharing.analytics.items.4', "Aucune donnée commerciale sensible n'est partagée avec ces services")
+          ]
         }
       ]
     },
@@ -149,7 +184,11 @@ const PrivacyPolicy = () => {
         },
         {
           subtitle: t('legal.privacy.retention.legal.title', "8.3. Obligations légales"),
-          content: t('legal.privacy.retention.legal.content', "Certaines données peuvent être conservées plus longtemps pour répondre à nos obligations légales (comptables, fiscales, etc.), généralement 5 à 10 ans selon la législation applicable.")
+          content: t('legal.privacy.retention.legal.content', "Certaines données peuvent être conservées plus longtemps pour répondre à nos obligations légales (comptables, fiscales, etc.), selon la législation applicable.")
+        },
+        {
+          subtitle: t('legal.privacy.retention.analytics.title', "8.4. Données analytics"),
+          content: t('legal.privacy.retention.analytics.content', "Les données collectées par Amplitude et Sentry sont conservées selon leurs politiques respectives (généralement 90 jours pour les sessions replay, jusqu'à 2 ans pour les analytics agrégées). Vous pouvez demander la suppression de ces données à tout moment.")
         }
       ]
     },
@@ -163,14 +202,18 @@ const PrivacyPolicy = () => {
         },
         {
           subtitle: t('legal.privacy.rights.exercise.title', "9.2. Exercice de vos droits"),
-          content: t('legal.privacy.rights.exercise.content', "Pour exercer vos droits, contactez-nous à : contact@stockeasy.app. Nous répondrons à votre demande dans un délai d'un mois. En cas de difficulté, vous pouvez introduire une réclamation auprès de la CNIL (Commission Nationale de l'Informatique et des Libertés).")
+          content: t('legal.privacy.rights.exercise.content', "Pour exercer vos droits, contactez-nous à : contact@stockeasy.app. Nous répondrons à votre demande dans un délai raisonnable.")
+        },
+        {
+          subtitle: t('legal.privacy.rights.cookies.title', "9.3. Gestion des cookies via Cookiebot"),
+          content: t('legal.privacy.rights.cookies.content', "Vous pouvez à tout moment gérer vos préférences de cookies et retirer votre consentement pour les cookies analytiques via la bannière Cookiebot présente sur notre site, les paramètres de votre navigateur, ou en nous contactant directement. Vos choix seront respectés et appliqués immédiatement.")
         }
       ]
     },
     {
       icon: UserCheck,
       title: t('legal.privacy.minors.title', "10. Données des mineurs"),
-      content: t('legal.privacy.minors.content', "StockEasy est un service destiné aux professionnels. Nous ne collectons pas sciemment de données personnelles de personnes de moins de 18 ans. Si vous apprenez qu'un mineur nous a fourni des données personnelles, veuillez nous contacter immédiatement.")
+      content: t('legal.privacy.minors.content', "Stockeasy est un service destiné aux professionnels. Nous ne collectons pas sciemment de données personnelles de personnes de moins de 18 ans. Si vous apprenez qu'un mineur nous a fourni des données personnelles, veuillez nous contacter immédiatement.")
     },
     {
       icon: FileText,
@@ -182,8 +225,8 @@ const PrivacyPolicy = () => {
   return (
     <div className="min-h-screen bg-[#FAFAF7]">
       <SEOUpdater 
-        title={t('legal.privacy.seo.title', "Politique de Confidentialité | StockEasy")}
-        description={t('legal.privacy.seo.description', "Découvrez comment StockEasy protège vos données personnelles et respecte votre vie privée conformément au RGPD.")}
+        title={t('legal.privacy.seo.title', "Politique de Confidentialité | Stockeasy")}
+        description={t('legal.privacy.seo.description', "Découvrez comment Stockeasy protège vos données personnelles et respecte votre vie privée conformément au RGPD.")}
       />
 
       {/* Header */}

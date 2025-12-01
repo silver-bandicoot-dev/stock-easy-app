@@ -9,11 +9,6 @@
  * - Performance Tracing: Monitoring des performances
  * - Session Replay: Replay des sessions avec erreurs
  * - React Router v7 Integration: Tracing des navigations
- * 
- * RGPD:
- * - Sentry est initialisé mais désactivé par défaut
- * - L'activation dépend du consentement utilisateur (cookies analytiques)
- * - Le consentement est vérifié via localStorage
  */
 
 import * as Sentry from "@sentry/react";
@@ -30,9 +25,6 @@ const SENTRY_DSN = import.meta.env.VITE_SENTRY_DSN;
 const IS_PRODUCTION = import.meta.env.PROD;
 const ENVIRONMENT = import.meta.env.VITE_ENVIRONMENT || (IS_PRODUCTION ? 'production' : 'development');
 
-// Clé de stockage du consentement (doit correspondre à CookieConsentContext)
-const CONSENT_STORAGE_KEY = 'stockeasy_cookie_consent';
-
 // Routes publiques où Sentry ne doit pas être actif (landing, coming soon, pages légales)
 const PUBLIC_ROUTES = ['/', '/preview', '/legal/', '/login', '/forgot-password', '/confirm-email'];
 
@@ -45,27 +37,16 @@ const isPublicRoute = () => {
 };
 
 /**
- * Vérifie si l'utilisateur a donné son consentement pour les cookies analytiques
- * @returns {boolean}
- */
-const hasAnalyticsConsent = () => {
-  try {
-    const stored = localStorage.getItem(CONSENT_STORAGE_KEY);
-    if (!stored) return false;
-    
-    const consent = JSON.parse(stored);
-    return consent.hasConsented && consent.categories?.analytics === true;
-  } catch (error) {
-    console.warn('[Sentry] Erreur lors de la vérification du consentement:', error);
-    return false;
-  }
-};
-
-/**
  * État global pour suivre si Sentry est activé
  */
-let isSentryEnabled = false;
 let sentryInitialized = false;
+
+/**
+ * Vérifie si l'utilisateur a donné son consentement via Cookiebot
+ */
+const hasAnalyticsConsent = () => {
+  return window.Cookiebot && window.Cookiebot.consent && window.Cookiebot.consent.statistics;
+};
 
 /**
  * Initialise Sentry avec la configuration complète
@@ -85,9 +66,8 @@ const initializeSentry = () => {
     // Envoyer les PII (informations personnelles) pour le debugging
     sendDefaultPii: true,
 
-    // IMPORTANT: Démarrer avec un sample rate de 0 si pas de consentement
-    // Sera mis à jour dynamiquement via updateSentryConsent
-    enabled: hasAnalyticsConsent() && !isPublicRoute(),
+    // Activer Sentry sauf sur les pages publiques
+    enabled: !isPublicRoute(),
 
     integrations: [
       // Intégration React Router v7 pour le tracing des navigations
@@ -99,16 +79,19 @@ const initializeSentry = () => {
         matchRoutes,
       }),
       
-      // Session Replay pour reproduire les erreurs (uniquement si consentement)
-      Sentry.replayIntegration({
-        maskAllText: false,
-        blockAllMedia: false,
-      }),
+      // Session Replay pour reproduire les erreurs - SEULEMENT avec consentement Cookiebot
+      // Le replay est activé dynamiquement selon le consentement
+      ...(hasAnalyticsConsent() ? [
+        Sentry.replayIntegration({
+          maskAllText: false,
+          blockAllMedia: false,
+        })
+      ] : []),
       
       // Feedback utilisateur - Design StockEasy
       Sentry.feedbackIntegration({
         // Ne pas injecter automatiquement le bouton sur les pages publiques
-        autoInject: hasAnalyticsConsent() && !isPublicRoute(),
+        autoInject: !isPublicRoute(),
         colorScheme: "light",
         showBranding: false,
         triggerLabel: "",
@@ -191,14 +174,14 @@ const initializeSentry = () => {
       /^https:\/\/stockeasy\./,
     ],
 
-    // Session Replay - Échantillonnage conditionnel
-    replaysSessionSampleRate: IS_PRODUCTION ? 0.1 : 0.0,
-    replaysOnErrorSampleRate: 1.0,
+    // Session Replay - Échantillonnage conditionnel (seulement si consentement Cookiebot)
+    replaysSessionSampleRate: hasAnalyticsConsent() ? (IS_PRODUCTION ? 0.1 : 0.0) : 0.0,
+    replaysOnErrorSampleRate: hasAnalyticsConsent() ? 1.0 : 0.0,
 
     // Filtrer les erreurs non pertinentes et les pages publiques
     beforeSend(event, hint) {
-      // Vérifier le consentement à chaque envoi
-      if (!hasAnalyticsConsent() || isPublicRoute()) {
+      // Ne pas envoyer sur les pages publiques
+      if (isPublicRoute()) {
         return null;
       }
       
@@ -222,7 +205,7 @@ const initializeSentry = () => {
 
     // Filtrer les transactions (tracing) des pages publiques
     beforeSendTransaction(event) {
-      if (!hasAnalyticsConsent() || isPublicRoute()) {
+      if (isPublicRoute()) {
         return null;
       }
       return event;
@@ -237,56 +220,29 @@ const initializeSentry = () => {
   });
 
   sentryInitialized = true;
-  isSentryEnabled = hasAnalyticsConsent() && !isPublicRoute();
   
-  console.log(`[Sentry] Initialized in ${ENVIRONMENT} mode (enabled: ${isSentryEnabled})`);
+  const replayStatus = hasAnalyticsConsent() ? 'enabled (with consent)' : 'disabled (no consent)';
+  console.log(`[Sentry] Initialized in ${ENVIRONMENT} mode - Session Replay: ${replayStatus}`);
 };
-
-/**
- * Met à jour l'état de Sentry en fonction du consentement
- * Appelé lorsque l'utilisateur change ses préférences de cookies
- */
-export const updateSentryConsent = () => {
-  const hasConsent = hasAnalyticsConsent();
-  const shouldEnable = hasConsent && !isPublicRoute();
-  
-  if (shouldEnable !== isSentryEnabled) {
-    isSentryEnabled = shouldEnable;
-    
-    // Activer ou désactiver Sentry
-    const client = Sentry.getClient();
-    if (client) {
-      if (shouldEnable) {
-        // Réactiver Sentry
-        client.getOptions().enabled = true;
-        console.log('[Sentry] Activé suite au consentement utilisateur');
-      } else {
-        // Désactiver Sentry
-        client.getOptions().enabled = false;
-        console.log('[Sentry] Désactivé - consentement retiré');
-      }
-    }
-  }
-};
-
-/**
- * Vérifie si Sentry est actuellement activé
- * @returns {boolean}
- */
-export const isSentryActive = () => isSentryEnabled;
 
 // Initialiser Sentry si le DSN est configuré
 if (SENTRY_DSN) {
-  initializeSentry();
+  // Initialiser immédiatement ou attendre Cookiebot
+  if (window.Cookiebot) {
+    initializeSentry();
+  } else {
+    // Attendre que Cookiebot soit chargé
+    window.addEventListener('CookiebotOnLoad', initializeSentry);
+  }
+  
+  // Écouter les changements de consentement pour mettre à jour Sentry
+  window.addEventListener('CookiebotOnAccept', () => {
+    if (window.Cookiebot.consent.statistics && !sentryInitialized) {
+      initializeSentry();
+    }
+  });
 } else {
   console.log('[Sentry] Not initialized - VITE_SENTRY_DSN not configured');
-}
-
-// Écouter les changements de consentement
-if (typeof window !== 'undefined') {
-  window.addEventListener('cookieConsentUpdated', () => {
-    updateSentryConsent();
-  });
 }
 
 // Exporter Sentry pour utilisation dans l'application

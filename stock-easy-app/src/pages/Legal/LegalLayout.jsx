@@ -70,12 +70,6 @@ const LegalLayout = ({ children, title, lastUpdated }) => {
             >
               {t('legal.notices', 'Mentions Légales')}
             </Link>
-            <Link
-              to="/legal/cookies"
-              className="text-sm text-[#191919] hover:underline"
-            >
-              {t('legal.cookies', 'Politique de Cookies')}
-            </Link>
           </div>
         </div>
       </div>

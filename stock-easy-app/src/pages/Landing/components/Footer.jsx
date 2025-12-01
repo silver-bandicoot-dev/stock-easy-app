@@ -34,7 +34,6 @@ const Footer = () => {
         { name: t('landing.footer.links.privacy', "Confidentialité"), href: "/legal/privacy" },
         { name: t('landing.footer.links.terms', "CGU"), href: "/legal/terms" },
         { name: t('landing.footer.links.legalNotice', "Mentions légales"), href: "/legal/notices" },
-        { name: t('landing.footer.links.cookies', "Cookies"), href: "/legal/cookies" },
       ]
     },
   };

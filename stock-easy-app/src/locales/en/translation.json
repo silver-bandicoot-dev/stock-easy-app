@@ -47,8 +47,9 @@
     "allRightsReserved": "All rights reserved."
   },
   "seo": {
-    "title": "Stockeasy - Inventory Management & AI Forecasting for Shopify",
-    "description": "Optimize your Shopify inventory management with Stockeasy. AI forecasts, stockout alerts, and real-time multi-location sync. 14-day free trial."
+    "title": "Stockeasy - Shopify Inventory Management, AI Forecasting & Restock Alerts",
+    "description": "The ultimate inventory planner for Shopify. Prevent stockouts with AI demand forecasting, smart reorder points, and purchase order management. Simple WMS alternative.",
+    "keywords": "shopify inventory management, inventory planner, demand forecasting, stock control, ecommerce logistics, safety stock, reorder point, stockout prevention, wms shopify, purchase orders, supplier management, multi-location inventory"
   },
   "auth": {
     "login": "Login",
@@ -294,6 +295,93 @@
       "title": "Need help getting started?",
       "description": "Book a free 30-min call with our team for personalized onboarding assistance.",
       "action": "Book a call"
+    }
+  },
+  "tour": {
+    "progress": "{{current}} / {{total}}",
+    "next": "Next",
+    "previous": "Previous",
+    "finish": "Finish",
+    "skip": "Skip",
+    "restart": "Restart tour",
+    "restartTooltip": "Restart the guided tour",
+    "steps": {
+      "welcome": {
+        "title": "Welcome to StockEasy! 👋",
+        "description": "This quick tour introduces you to the key features for optimizing your inventory management."
+      },
+      "sidebar": {
+        "title": "Main navigation",
+        "description": "Your navigation menu. Quickly access all sections of the application from this sidebar."
+      },
+      "tabDashboard": {
+        "title": "📊 Dashboard",
+        "description": "Overview of your stock: key indicators, alerts and charts to monitor your inventory health."
+      },
+      "tabActions": {
+        "title": "🛒 Place Order",
+        "description": "Create supplier orders. StockEasy automatically calculates recommended quantities based on your sales and settings."
+      },
+      "tabOrders": {
+        "title": "📦 My Orders",
+        "description": "Track all your orders: pending, in transit, received. Manage reconciliation upon receipt."
+      },
+      "tabStock": {
+        "title": "📈 Stock Levels",
+        "description": "Analyze each product's health: days of autonomy, turnover, stockout/overstock alerts. Filter by status or supplier."
+      },
+      "tabInventory": {
+        "title": "📋 Inventory",
+        "description": "Manage your inventory counts, stock adjustments and movement history."
+      },
+      "tabAnalytics": {
+        "title": "📉 Analytics",
+        "description": "Advanced statistics and AI forecasts. Analyze your KPIs, sales trends and optimize your replenishment strategy."
+      },
+      "tabSettings": {
+        "title": "⚙️ Settings",
+        "description": "Configure StockEasy to your needs. Let's explore each settings section together..."
+      },
+      "settingsGeneral": {
+        "title": "General settings",
+        "description": "Configure alert thresholds (overstock), default currency and global application preferences."
+      },
+      "settingsMultipliers": {
+        "title": "Safety multipliers",
+        "description": "Adjust the safety coefficient for order recommendations. Higher multiplier = larger safety stock."
+      },
+      "settingsSuppliers": {
+        "title": "Supplier management",
+        "description": "Create and manage your suppliers: contact details, lead times, minimum order quantities (MOQ)."
+      },
+      "settingsMapping": {
+        "title": "Product-Supplier mapping",
+        "description": "Associate each product with its supplier. Essential for StockEasy to correctly calculate order recommendations."
+      },
+      "settingsWarehouses": {
+        "title": "Warehouse management",
+        "description": "Configure your storage locations. Set the delivery address for your supplier orders."
+      },
+      "settingsIntegrations": {
+        "title": "Integrations",
+        "description": "Manage your Shopify store connection. Check synchronization status and connected data."
+      },
+      "search": {
+        "title": "🔍 Quick search",
+        "description": "Instantly find products, suppliers or orders. Shortcut: ⌘K (Mac) or Ctrl+K (Windows)."
+      },
+      "sync": {
+        "title": "🔄 Synchronization",
+        "description": "Force a sync with Shopify. Data updates automatically, but you can manually refresh here."
+      },
+      "notifications": {
+        "title": "🔔 Notifications",
+        "description": "Low stock alerts, late orders, important events. Customize your preferences in settings."
+      },
+      "profile": {
+        "title": "👤 Your profile",
+        "description": "Manage your account, invite team members and access personal settings. All done! 🎉"
+      }
     }
   },
   "search": {
@@ -754,15 +842,6 @@
       "selectedCurrency": "Selected currency",
       "multiplierTitle": "📈 Default multiplier",
       "multiplierHelp": "Coefficient applied to new products to adjust forecasts",
-      "cookiesTitle": "Cookie Management",
-      "cookiesSubtitle": "GDPR Compliance",
-      "cookiesHelp": "Manage your cookie preferences to control the data we collect.",
-      "cookiesRequired": "Required",
-      "cookiesEnabled": "Enabled",
-      "cookiesDisabled": "Disabled",
-      "cookiesLastUpdated": "Last updated",
-      "cookiesModify": "Modify my cookie preferences",
-      "cookiesPolicyLink": "View our Cookie Policy",
       "savedSuccess": "✅ Settings saved successfully!",
       "unsavedChanges": "You have unsaved changes",
       "saveParameters": "Save settings",
@@ -1490,7 +1569,6 @@
         "contact": "Contact",
         "privacy": "Privacy",
         "terms": "Terms",
-        "cookies": "Cookies",
         "legalNotice": "Legal Notice"
       },
       "shopifyPartner": "Shopify Partner"
@@ -1708,58 +1786,6 @@
     },
     "popularArticles": "Popular articles",
     "back": "Back"
-  },
-  "cookies": {
-    "banner": {
-      "title": "We respect your privacy",
-      "subtitle": "Manage your cookie preferences",
-      "description": "We use cookies to improve your experience, analyze traffic, and personalize content. Essential cookies are necessary for the site to function. You can accept all cookies, reject them, or customize your choices.",
-      "acceptAll": "Accept all",
-      "rejectAll": "Reject all",
-      "customize": "Customize",
-      "learnMore": "Learn more in our",
-      "cookiePolicy": "Cookie Policy"
-    },
-    "preferences": {
-      "title": "Cookie preferences",
-      "subtitle": "Manage your choices by category",
-      "info": "Click on each category to see details. Essential cookies cannot be disabled as they are necessary for the application to function.",
-      "acceptAll": "Accept all",
-      "rejectAll": "Reject all",
-      "saveChoices": "Save my choices"
-    },
-    "categories": {
-      "essential": {
-        "name": "Essential Cookies",
-        "shortDesc": "Always active",
-        "description": "These cookies are necessary for the site to function. They allow you to stay logged in, remember your navigation choices, and ensure the security of your account.",
-        "details": {
-          "auth": "User authentication and session",
-          "security": "Security and CSRF protection",
-          "navigation": "Navigation state"
-        }
-      },
-      "analytics": {
-        "name": "Analytics Cookies",
-        "shortDesc": "Monitoring & errors",
-        "description": "These cookies help us understand how you use the application, detect errors, and improve performance. They are managed by Sentry, our monitoring tool.",
-        "details": {
-          "errors": "Error detection and reporting",
-          "performance": "Performance monitoring",
-          "replay": "Session replay (in case of error)"
-        }
-      },
-      "preferences": {
-        "name": "Preference Cookies",
-        "shortDesc": "Language & currency",
-        "description": "These cookies remember your personal preferences such as language, currency, and display settings to provide you with a personalized experience.",
-        "details": {
-          "language": "Interface language",
-          "currency": "Preferred currency",
-          "display": "Display preferences"
-        }
-      }
-    }
   },
   "legal": {
     "backToHome": "Back to home",

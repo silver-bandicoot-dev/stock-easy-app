@@ -20,7 +20,7 @@ const TermsOfService = () => {
     {
       icon: FileText,
       title: t('legal.terms.object.title', "1. Objet"),
-      content: t('legal.terms.object.content', "Les présentes Conditions Générales d'Utilisation (CGU) ont pour objet de définir les modalités et conditions d'utilisation de la plateforme StockEasy, ainsi que les services proposés. En accédant à notre plateforme et en l'utilisant, vous acceptez sans réserve les présentes CGU.")
+      content: t('legal.terms.object.content', "Les présentes Conditions Générales d'Utilisation (CGU) ont pour objet de définir les modalités et conditions d'utilisation de la plateforme Stockeasy, ainsi que les services proposés. En accédant à notre plateforme et en l'utilisant, vous acceptez sans réserve les présentes CGU.")
     },
     {
       icon: UserCheck,
@@ -28,15 +28,15 @@ const TermsOfService = () => {
       subsections: [
         {
           subtitle: t('legal.terms.access.registration.title', "2.1. Inscription"),
-          content: t('legal.terms.access.registration.content', "L'utilisation de StockEasy nécessite la création d'un compte via Shopify. Vous vous engagez à fournir des informations exactes et à les maintenir à jour. Vous êtes responsable de la confidentialité de vos identifiants de connexion.")
+          content: t('legal.terms.access.registration.content', "L'utilisation de Stockeasy nécessite la création d'un compte via Shopify. Vous vous engagez à fournir des informations exactes et à les maintenir à jour. Vous êtes responsable de la confidentialité de vos identifiants de connexion.")
         },
         {
           subtitle: t('legal.terms.access.eligibility.title', "2.2. Conditions d'éligibilité"),
-          content: t('legal.terms.access.eligibility.content', "StockEasy est destiné aux professionnels et aux entreprises utilisant Shopify pour leur activité de commerce électronique. Vous devez avoir la capacité juridique de contracter et d'utiliser nos services.")
+          content: t('legal.terms.access.eligibility.content', "Stockeasy est destiné aux professionnels et aux entreprises utilisant Shopify pour leur activité de commerce électronique. Vous devez avoir la capacité juridique de contracter et d'utiliser nos services.")
         },
         {
           subtitle: t('legal.terms.access.shopify.title', "2.3. Intégration Shopify"),
-          content: t('legal.terms.access.shopify.content', "Notre service nécessite une connexion à votre boutique Shopify. En installant l'application, vous autorisez StockEasy à accéder aux données nécessaires au fonctionnement du service (produits, inventaire, commandes). Cette autorisation peut être révoquée à tout moment depuis votre interface Shopify.")
+          content: t('legal.terms.access.shopify.content', "Notre service nécessite une connexion à votre boutique Shopify. En installant l'application, vous autorisez Stockeasy à accéder aux données nécessaires au fonctionnement du service (produits, inventaire, commandes). Cette autorisation peut être révoquée à tout moment depuis votre interface Shopify.")
         }
       ]
     },
@@ -46,7 +46,7 @@ const TermsOfService = () => {
       subsections: [
         {
           subtitle: t('legal.terms.services.features.title', "3.1. Fonctionnalités principales"),
-          content: t('legal.terms.services.features.content', "StockEasy propose une solution de gestion de stock incluant : synchronisation en temps réel avec Shopify, prévisions de stock par intelligence artificielle, gestion des commandes fournisseurs, alertes de rupture de stock, rapports et analyses avancées, gestion multi-emplacements (selon votre plan d'abonnement).")
+          content: t('legal.terms.services.features.content', "Stockeasy propose une solution de gestion de stock incluant : synchronisation en temps réel avec Shopify, prévisions de stock par intelligence artificielle, gestion des commandes fournisseurs, alertes de rupture de stock, rapports et analyses avancées, gestion multi-emplacements (selon votre plan d'abonnement).")
         },
         {
           subtitle: t('legal.terms.services.availability.title', "3.2. Disponibilité"),
@@ -60,7 +60,7 @@ const TermsOfService = () => {
       subsections: [
         {
           subtitle: t('legal.terms.pricing.plans.title', "4.1. Plans d'abonnement"),
-          content: t('legal.terms.pricing.plans.content', "StockEasy propose différents plans d'abonnement (Basic, Pro, Plus) avec des fonctionnalités adaptées. Les tarifs sont indiqués en USD et sont susceptibles de modification. Toute modification tarifaire sera communiquée avec un préavis de 30 jours.")
+          content: t('legal.terms.pricing.plans.content', "Stockeasy propose différents plans d'abonnement (Basic, Pro, Plus) avec des fonctionnalités adaptées. Les tarifs sont indiqués en USD et sont susceptibles de modification. Toute modification tarifaire sera communiquée avec un préavis de 30 jours.")
         },
         {
           subtitle: t('legal.terms.pricing.billing.title', "4.2. Facturation"),
@@ -81,7 +81,7 @@ const TermsOfService = () => {
           content: t('legal.terms.cancellation.rights.content', "Vous pouvez résilier votre abonnement à tout moment depuis votre interface Shopify ou en nous contactant. La résiliation prendra effet à la fin de votre période de facturation en cours. Aucun remboursement au prorata ne sera effectué pour la période en cours.")
         },
         {
-          subtitle: t('legal.terms.cancellation.suspension.title', "5.2. Suspension par StockEasy"),
+          subtitle: t('legal.terms.cancellation.suspension.title', "5.2. Suspension par Stockeasy"),
           content: t('legal.terms.cancellation.suspension.content', "Nous nous réservons le droit de suspendre ou de résilier votre accès en cas de violation des présentes CGU, d'utilisation frauduleuse, ou de non-paiement.")
         },
         {
@@ -96,11 +96,11 @@ const TermsOfService = () => {
       subsections: [
         {
           subtitle: t('legal.terms.obligations.usage.title', "6.1. Usage conforme"),
-          content: t('legal.terms.obligations.usage.content', "Vous vous engagez à utiliser StockEasy conformément à sa destination et à ne pas : tenter d'accéder à des systèmes informatiques non autorisés, perturber le fonctionnement du service, utiliser le service à des fins illégales ou frauduleuses, transmettre des virus ou codes malveillants, revendre ou redistribuer l'accès au service.")
+          content: t('legal.terms.obligations.usage.content', "Vous vous engagez à utiliser Stockeasy conformément à sa destination et à ne pas : tenter d'accéder à des systèmes informatiques non autorisés, perturber le fonctionnement du service, utiliser le service à des fins illégales ou frauduleuses, transmettre des virus ou codes malveillants, revendre ou redistribuer l'accès au service.")
         },
         {
           subtitle: t('legal.terms.obligations.data.title', "6.2. Responsabilité des données"),
-          content: t('legal.terms.obligations.data.content', "Vous êtes responsable de l'exactitude et de la qualité des données que vous importez dans StockEasy. Nous ne pouvons être tenus responsables des erreurs ou inexactitudes dans vos données sources.")
+          content: t('legal.terms.obligations.data.content', "Vous êtes responsable de l'exactitude et de la qualité des données que vous importez dans Stockeasy. Nous ne pouvons être tenus responsables des erreurs ou inexactitudes dans vos données sources.")
         }
       ]
     },
@@ -110,11 +110,11 @@ const TermsOfService = () => {
       subsections: [
         {
           subtitle: t('legal.terms.liability.service.title', "7.1. Service fourni \"en l'état\""),
-          content: t('legal.terms.liability.service.content', "StockEasy est fourni \"en l'état\" et \"selon disponibilité\". Nous ne garantissons pas que le service sera exempt d'erreurs ou ininterrompu. Nous nous efforçons de fournir des prévisions précises, mais celles-ci sont basées sur des algorithmes et ne constituent pas une garantie.")
+          content: t('legal.terms.liability.service.content', "Stockeasy est fourni \"en l'état\" et \"selon disponibilité\". Nous ne garantissons pas que le service sera exempt d'erreurs ou ininterrompu. Nous nous efforçons de fournir des prévisions précises, mais celles-ci sont basées sur des algorithmes et ne constituent pas une garantie.")
         },
         {
           subtitle: t('legal.terms.liability.damages.title', "7.2. Limitation des dommages"),
-          content: t('legal.terms.liability.damages.content', "Dans toute la mesure permise par la loi, notre responsabilité totale envers vous pour tout dommage résultant de l'utilisation ou de l'impossibilité d'utiliser StockEasy est limitée au montant que vous avez payé pour le service au cours des 12 derniers mois.")
+          content: t('legal.terms.liability.damages.content', "Dans toute la mesure permise par la loi, notre responsabilité totale envers vous pour tout dommage résultant de l'utilisation ou de l'impossibilité d'utiliser Stockeasy est limitée au montant que vous avez payé pour le service au cours des 12 derniers mois.")
         },
         {
           subtitle: t('legal.terms.liability.indirect.title', "7.3. Dommages indirects"),
@@ -125,7 +125,7 @@ const TermsOfService = () => {
     {
       icon: Shield,
       title: t('legal.terms.intellectual.title', "8. Propriété intellectuelle"),
-      content: t('legal.terms.intellectual.content', "Tous les droits de propriété intellectuelle relatifs à StockEasy (logiciels, algorithmes, interface, contenus) appartiennent exclusivement à StockEasy SAS. Vous conservez tous les droits sur vos données. En utilisant nos services, vous nous accordez une licence limitée pour traiter vos données uniquement dans le but de fournir nos services.")
+      content: t('legal.terms.intellectual.content', "Tous les droits de propriété intellectuelle relatifs à Stockeasy (logiciels, algorithmes, interface, contenus) nous appartiennent. Vous conservez tous les droits sur vos données. En utilisant nos services, vous nous accordez une licence limitée pour traiter vos données uniquement dans le but de fournir nos services.")
     },
     {
       icon: FileText,
@@ -142,8 +142,8 @@ const TermsOfService = () => {
   return (
     <div className="min-h-screen bg-[#FAFAF7]">
       <SEOUpdater 
-        title={t('legal.terms.seo.title', "Conditions Générales d'Utilisation | StockEasy")}
-        description={t('legal.terms.seo.description', "Consultez les conditions générales d'utilisation de StockEasy, plateforme de gestion de stock pour Shopify.")}
+        title={t('legal.terms.seo.title', "Conditions Générales d'Utilisation | Stockeasy")}
+        description={t('legal.terms.seo.description', "Consultez les conditions générales d'utilisation de Stockeasy, plateforme de gestion de stock pour Shopify.")}
       />
 
       {/* Header */}
@@ -166,7 +166,7 @@ const TermsOfService = () => {
               {t('legal.terms.title', "Conditions Générales d'Utilisation")}
             </h1>
             <p className="text-white/70 text-lg">
-              {t('legal.terms.subtitle', "Modalités d'utilisation de la plateforme StockEasy")}
+              {t('legal.terms.subtitle', "Modalités d'utilisation de la plateforme Stockeasy")}
             </p>
             <p className="text-white/50 text-sm mt-4">
               {t('legal.lastUpdated', "Dernière mise à jour")}: {new Date().toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}
@@ -191,7 +191,7 @@ const TermsOfService = () => {
                 {t('legal.terms.notice.title', "Information importante")}
               </h3>
               <p className="text-amber-800 text-sm leading-relaxed">
-                {t('legal.terms.notice.content', "En utilisant StockEasy, vous acceptez d'être lié par ces conditions générales d'utilisation. Si vous n'acceptez pas ces conditions, veuillez ne pas utiliser notre service.")}
+                {t('legal.terms.notice.content', "En utilisant Stockeasy, vous acceptez d'être lié par ces conditions générales d'utilisation. Si vous n'acceptez pas ces conditions, veuillez ne pas utiliser notre service.")}
               </p>
             </div>
           </div>

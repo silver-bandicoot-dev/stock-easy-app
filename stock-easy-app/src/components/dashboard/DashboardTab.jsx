@@ -9,6 +9,7 @@ import { RevenueComparisonChart } from './RevenueComparisonChart';
 import { useAnalytics } from '../../hooks/useAnalytics';
 import { OnboardingChecklist } from './OnboardingChecklist';
 import { MAIN_TABS, SETTINGS_TABS } from '../../constants/stockEasyConstants';
+import { TOUR_ELEMENT_IDS } from '../onboarding/tourSteps';
 
 /**
  * Génère un message de bienvenue dynamique basé sur l'heure, le jour et le contexte
@@ -267,7 +268,7 @@ export const DashboardTab = ({ productsByStatus, orders, enrichedProducts, onVie
 
       {/* Guide de démarrage (visible seulement si non masqué et tâches restantes) */}
       {showOnboarding && (
-        <motion.div variants={itemVariants}>
+        <motion.div id={TOUR_ELEMENT_IDS.ONBOARDING_CHECKLIST} variants={itemVariants}>
           <OnboardingChecklist 
             hasSuppliers={onboardingStatus.hasSuppliers}
             hasMappedProducts={onboardingStatus.hasMappedProducts}
@@ -294,7 +295,7 @@ export const DashboardTab = ({ productsByStatus, orders, enrichedProducts, onVie
       </motion.section>
 
       {/* KPIs Principaux */}
-      <motion.section variants={itemVariants}>
+      <motion.section id={TOUR_ELEMENT_IDS.DASHBOARD_KPIS} variants={itemVariants}>
         <SectionHeader title={t('dashboard.keyIndicators')} />
         <DashboardKPIs 
           enrichedProducts={enrichedProducts || []}

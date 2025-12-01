@@ -24,12 +24,19 @@ export const ActionsTab = ({
   handleOpenEmailModal,
   loadData,
   getUserSignature,
-  // Nouveaux props pour les modals
+  // Props pour les modals - Support both naming conventions
   emailModal,
+  orderEmailModal,
   emailModalHandlers,
   emailGeneration,
-  allProducts = []
+  allProducts = [],
+  // Navigation props from parent
+  onViewStock,
+  setActiveTab,
+  setParametersSubTab
 }) => {
+  // Use orderEmailModal if emailModal not provided
+  const activeEmailModal = emailModal || orderEmailModal;
   const { t } = useTranslation();
   const { format: formatCurrency } = useCurrency();
   

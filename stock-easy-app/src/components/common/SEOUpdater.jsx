@@ -42,6 +42,18 @@ const SEOUpdater = () => {
     }
     ogLocale.setAttribute('content', currentLocale);
 
+    // Update Meta Keywords
+    const keywords = t('seo.keywords', '');
+    if (keywords) {
+      let metaKeywords = document.querySelector('meta[name="keywords"]');
+      if (!metaKeywords) {
+        metaKeywords = document.createElement('meta');
+        metaKeywords.setAttribute('name', 'keywords');
+        document.head.appendChild(metaKeywords);
+      }
+      metaKeywords.setAttribute('content', keywords);
+    }
+
     // Update HTML lang attribute
     document.documentElement.lang = i18n.language;
 

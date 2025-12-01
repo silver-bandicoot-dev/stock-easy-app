@@ -4,7 +4,6 @@ import * as Sentry from '@sentry/react';
 import { SupabaseAuthProvider } from './contexts/SupabaseAuthContext';
 import { ModalProvider } from './contexts/ModalContext';
 import { LanguageProvider } from './contexts/LanguageContext';
-import { CookieConsentProvider } from './contexts/CookieConsentContext';
 import { Toaster } from 'sonner';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import SupabaseLogin from './components/auth/SupabaseLogin';
@@ -22,7 +21,6 @@ import PrivacyPolicy from './pages/Legal/PrivacyPolicy';
 import LegalNotices from './pages/Legal/LegalNotices';
 import SentryErrorBoundary from './components/common/SentryErrorBoundary';
 import SEOUpdater from './components/common/SEOUpdater';
-import { CookieBanner, CookiePreferencesModal } from './components/cookies';
 import './config/i18n';
 
 // Wrapper Routes avec Sentry pour le tracing des navigations (uniquement pour les routes protégées)
@@ -43,8 +41,7 @@ const ProtectedAppRoute = ({ children }) => (
 const App = () => {
   return (
     <LanguageProvider>
-      <CookieConsentProvider>
-        <SEOUpdater />
+      <SEOUpdater />
         <Router>
           <Toaster
             position="top-right"
@@ -135,7 +132,6 @@ const App = () => {
           </ModalProvider>
         </SupabaseAuthProvider>
       </Router>
-      </CookieConsentProvider>
     </LanguageProvider>
   );
 };

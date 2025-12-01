@@ -47,8 +47,9 @@
     "allRightsReserved": "Todos los derechos reservados."
   },
   "seo": {
-    "title": "Stockeasy - Gestión de Inventario y Previsiones IA para Shopify",
-    "description": "Optimiza tu gestión de inventario Shopify con Stockeasy. Previsiones IA, alertas anti-rotura y sincronización multi-ubicación en tiempo real. Prueba gratis 14 días."
+    "title": "Stockeasy - Gestión de Inventario Shopify, Previsiones IA y Reabastecimiento",
+    "description": "La solución de control de stock para Shopify. Evita roturas con previsiones de demanda IA, alertas de stock bajo y gestión de pedidos. Inventory Planner y WMS simplificado.",
+    "keywords": "gestión de inventario shopify, control de stock, previsiones de demanda, logística ecommerce, reabastecimiento automático, alertas de stock, evitar roturas de stock, gestión de proveedores, wms shopify, planificación de inventario, software de inventario"
   },
   "auth": {
     "login": "Inicio de sesión",
@@ -294,6 +295,93 @@
       "title": "¿Necesitas ayuda para empezar?",
       "description": "Reserva una llamada gratuita de 30 min con nuestro equipo para un acompañamiento personalizado.",
       "action": "Reservar cita"
+    }
+  },
+  "tour": {
+    "progress": "{{current}} / {{total}}",
+    "next": "Siguiente",
+    "previous": "Anterior",
+    "finish": "Terminar",
+    "skip": "Saltar",
+    "restart": "Reiniciar tour",
+    "restartTooltip": "Reiniciar el tour guiado",
+    "steps": {
+      "welcome": {
+        "title": "¡Bienvenido a StockEasy! 👋",
+        "description": "Este tour rápido te presenta las funcionalidades clave para optimizar tu gestión de stock."
+      },
+      "sidebar": {
+        "title": "Navegación principal",
+        "description": "Tu menú de navegación. Accede rápidamente a todas las secciones de la aplicación desde esta barra lateral."
+      },
+      "tabDashboard": {
+        "title": "📊 Panel de control",
+        "description": "Vista general de tu stock: indicadores clave, alertas y gráficos para seguir la salud de tu inventario."
+      },
+      "tabActions": {
+        "title": "🛒 Hacer pedido",
+        "description": "Crea tus pedidos a proveedores. StockEasy calcula automáticamente las cantidades recomendadas según tus ventas y parámetros."
+      },
+      "tabOrders": {
+        "title": "📦 Mis pedidos",
+        "description": "Sigue todos tus pedidos: pendientes, en tránsito, recibidos. Gestiona la reconciliación a la recepción."
+      },
+      "tabStock": {
+        "title": "📈 Niveles de stock",
+        "description": "Analiza la salud de cada producto: días de autonomía, rotación, alertas de rotura/sobrestock. Filtra por estado o proveedor."
+      },
+      "tabInventory": {
+        "title": "📋 Inventario",
+        "description": "Gestiona tus conteos de inventario, ajustes de stock e historial de movimientos."
+      },
+      "tabAnalytics": {
+        "title": "📉 Analíticas",
+        "description": "Estadísticas avanzadas y predicciones IA. Analiza tus KPIs, tendencias de ventas y optimiza tu estrategia de reabastecimiento."
+      },
+      "tabSettings": {
+        "title": "⚙️ Configuración",
+        "description": "Configura StockEasy según tus necesidades. Exploremos juntos cada sección de configuración..."
+      },
+      "settingsGeneral": {
+        "title": "Configuración general",
+        "description": "Configura los umbrales de alerta (sobrestock), la moneda por defecto y las preferencias globales de la aplicación."
+      },
+      "settingsMultipliers": {
+        "title": "Multiplicadores de seguridad",
+        "description": "Ajusta el coeficiente de seguridad para las recomendaciones de pedido. Mayor multiplicador = mayor stock de seguridad."
+      },
+      "settingsSuppliers": {
+        "title": "Gestión de proveedores",
+        "description": "Crea y gestiona tus proveedores: datos de contacto, tiempos de entrega (lead time), cantidades mínimas de pedido (MOQ)."
+      },
+      "settingsMapping": {
+        "title": "Mapeo Productos-Proveedores",
+        "description": "Asocia cada producto a su proveedor. Esencial para que StockEasy calcule correctamente las recomendaciones de pedido."
+      },
+      "settingsWarehouses": {
+        "title": "Gestión de almacenes",
+        "description": "Configura tus lugares de almacenamiento. Define la dirección de recepción para tus pedidos a proveedores."
+      },
+      "settingsIntegrations": {
+        "title": "Integraciones",
+        "description": "Gestiona la conexión con tu tienda Shopify. Consulta el estado de sincronización y los datos conectados."
+      },
+      "search": {
+        "title": "🔍 Búsqueda rápida",
+        "description": "Encuentra instantáneamente productos, proveedores o pedidos. Atajo: ⌘K (Mac) o Ctrl+K (Windows)."
+      },
+      "sync": {
+        "title": "🔄 Sincronización",
+        "description": "Fuerza una sincronización con Shopify. Los datos se actualizan automáticamente, pero puedes refrescar manualmente aquí."
+      },
+      "notifications": {
+        "title": "🔔 Notificaciones",
+        "description": "Alertas de stock bajo, pedidos retrasados, eventos importantes. Personaliza tus preferencias en configuración."
+      },
+      "profile": {
+        "title": "👤 Tu perfil",
+        "description": "Gestiona tu cuenta, invita a colaboradores y accede a la configuración personal. ¡Terminamos! 🎉"
+      }
     }
   },
   "search": {
@@ -755,15 +843,6 @@
       "defaultMultiplier": "Multiplicador por defecto",
       "multiplierTitle": "📈 Multiplicador por defecto",
       "multiplierHelp": "Coeficiente aplicado a nuevos productos para ajustar las previsiones",
-      "cookiesTitle": "Gestión de Cookies",
-      "cookiesSubtitle": "Cumplimiento RGPD",
-      "cookiesHelp": "Gestiona tus preferencias de cookies para controlar los datos que recopilamos.",
-      "cookiesRequired": "Requerido",
-      "cookiesEnabled": "Activado",
-      "cookiesDisabled": "Desactivado",
-      "cookiesLastUpdated": "Última actualización",
-      "cookiesModify": "Modificar mis preferencias de cookies",
-      "cookiesPolicyLink": "Consultar nuestra Política de Cookies",
       "savedSuccess": "✅ ¡Configuración guardada con éxito!",
       "unsavedChanges": "Tienes cambios sin guardar",
       "saveParameters": "Guardar configuración",
@@ -1490,7 +1569,6 @@
         "contact": "Contacto",
         "privacy": "Privacidad",
         "terms": "Términos",
-        "cookies": "Cookies",
         "legalNotice": "Aviso Legal"
       },
       "shopifyPartner": "Shopify Partner"
@@ -1708,58 +1786,6 @@
     },
     "popularArticles": "Artículos populares",
     "back": "Volver"
-  },
-  "cookies": {
-    "banner": {
-      "title": "Respetamos tu privacidad",
-      "subtitle": "Gestiona tus preferencias de cookies",
-      "description": "Utilizamos cookies para mejorar tu experiencia, analizar el tráfico y personalizar el contenido. Las cookies esenciales son necesarias para el funcionamiento del sitio. Puedes aceptar todas las cookies, rechazarlas o personalizar tus opciones.",
-      "acceptAll": "Aceptar todo",
-      "rejectAll": "Rechazar todo",
-      "customize": "Personalizar",
-      "learnMore": "Más información en nuestra",
-      "cookiePolicy": "Política de Cookies"
-    },
-    "preferences": {
-      "title": "Preferencias de cookies",
-      "subtitle": "Gestiona tus opciones por categoría",
-      "info": "Haz clic en cada categoría para ver los detalles. Las cookies esenciales no se pueden desactivar porque son necesarias para el funcionamiento de la aplicación.",
-      "acceptAll": "Aceptar todo",
-      "rejectAll": "Rechazar todo",
-      "saveChoices": "Guardar mis opciones"
-    },
-    "categories": {
-      "essential": {
-        "name": "Cookies Esenciales",
-        "shortDesc": "Siempre activas",
-        "description": "Estas cookies son necesarias para el funcionamiento del sitio. Permiten mantener tu sesión iniciada, recordar tus opciones de navegación y garantizar la seguridad de tu cuenta.",
-        "details": {
-          "auth": "Autenticación y sesión de usuario",
-          "security": "Seguridad y protección CSRF",
-          "navigation": "Estado de navegación"
-        }
-      },
-      "analytics": {
-        "name": "Cookies Analíticas",
-        "shortDesc": "Monitoreo y errores",
-        "description": "Estas cookies nos ayudan a entender cómo usas la aplicación, detectar errores y mejorar el rendimiento. Son gestionadas por Sentry, nuestra herramienta de monitoreo.",
-        "details": {
-          "errors": "Detección y reporte de errores",
-          "performance": "Monitoreo de rendimiento",
-          "replay": "Repetición de sesión (en caso de error)"
-        }
-      },
-      "preferences": {
-        "name": "Cookies de Preferencias",
-        "shortDesc": "Idioma y moneda",
-        "description": "Estas cookies recuerdan tus preferencias personales como el idioma, la moneda y la configuración de visualización para ofrecerte una experiencia personalizada.",
-        "details": {
-          "language": "Idioma de la interfaz",
-          "currency": "Moneda preferida",
-          "display": "Preferencias de visualización"
-        }
-      }
-    }
   },
   "legal": {
     "backToHome": "Volver al inicio",

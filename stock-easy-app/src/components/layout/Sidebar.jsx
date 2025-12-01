@@ -30,6 +30,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import NotificationBell from '../notifications/NotificationBell';
 import { Logo } from '../ui/Logo';
+import { TOUR_ELEMENT_IDS } from '../onboarding/tourSteps';
 
 const Sidebar = ({ 
   activeTab, 
@@ -42,25 +43,32 @@ const Sidebar = ({
   mobileMenuOpen,
   setMobileMenuOpen,
   orderBadgeCount = 0,
-  ordersBadgeCount = 0
+  ordersBadgeCount = 0,
+  // Props pour le tour d'onboarding (contrôle externe de l'expansion)
+  settingsExpanded: settingsExpandedProp,
+  setSettingsExpanded: setSettingsExpandedProp
 }) => {
   const { t } = useTranslation();
   const [analyticsExpanded, setAnalyticsExpanded] = useState(false);
-  const [settingsExpanded, setSettingsExpanded] = useState(false);
+  // Utiliser les props si fournies, sinon état local
+  const [settingsExpandedLocal, setSettingsExpandedLocal] = useState(false);
+  const settingsExpanded = settingsExpandedProp ?? settingsExpandedLocal;
+  const setSettingsExpanded = setSettingsExpandedProp ?? setSettingsExpandedLocal;
   const navigate = useNavigate();
   const location = useLocation();
 
   const menuItems = [
-    { id: 'dashboard', label: t('navigation.dashboard'), icon: Package, type: 'tab' },
-    { id: 'actions', label: t('navigation.placeOrder'), icon: Plus, type: 'tab' },
-    { id: 'orders', label: t('navigation.myOrders'), icon: Truck, type: 'tab' },
-    { id: 'stock-level', label: t('navigation.stockLevels'), icon: Activity, type: 'tab' },
-    { id: 'inventory', label: t('navigation.inventory'), icon: ClipboardList, type: 'tab' },
+    { id: 'dashboard', label: t('navigation.dashboard'), icon: Package, type: 'tab', tourId: TOUR_ELEMENT_IDS.TAB_DASHBOARD },
+    { id: 'actions', label: t('navigation.placeOrder'), icon: Plus, type: 'tab', tourId: TOUR_ELEMENT_IDS.TAB_ACTIONS },
+    { id: 'orders', label: t('navigation.myOrders'), icon: Truck, type: 'tab', tourId: TOUR_ELEMENT_IDS.TAB_ORDERS },
+    { id: 'stock-level', label: t('navigation.stockLevels'), icon: Activity, type: 'tab', tourId: TOUR_ELEMENT_IDS.TAB_STOCK },
+    { id: 'inventory', label: t('navigation.inventory'), icon: ClipboardList, type: 'tab', tourId: TOUR_ELEMENT_IDS.TAB_INVENTORY },
     { 
       id: 'analytics', 
       label: t('navigation.analytics'), 
       icon: TrendingUp, 
       type: 'tab',
+      tourId: TOUR_ELEMENT_IDS.TAB_ANALYTICS,
       hasSubMenu: true,
       subItems: [
         { id: 'kpis', label: t('navigation.kpis'), icon: BarChart3 },
@@ -72,14 +80,15 @@ const Sidebar = ({
       label: t('navigation.settings'), 
       icon: Cog, 
       type: 'tab',
+      tourId: TOUR_ELEMENT_IDS.TAB_SETTINGS,
       hasSubMenu: true,
       subItems: [
-        { id: 'general', label: t('navigation.generalSettings'), icon: Sliders },
-        { id: 'multipliers', label: t('navigation.multipliers'), icon: TrendingUp },
-        { id: 'suppliers', label: t('navigation.supplierManagement'), icon: Users },
-        { id: 'mapping', label: t('navigation.mapping'), icon: Package },
-        { id: 'warehouses', label: t('navigation.warehouseManagement'), icon: Warehouse },
-        { id: 'integrations', label: t('navigation.integrations'), icon: PlugZap }
+        { id: 'general', label: t('navigation.generalSettings'), icon: Sliders, tourId: TOUR_ELEMENT_IDS.SETTINGS_GENERAL },
+        { id: 'multipliers', label: t('navigation.multipliers'), icon: TrendingUp, tourId: TOUR_ELEMENT_IDS.SETTINGS_MULTIPLIERS },
+        { id: 'suppliers', label: t('navigation.supplierManagement'), icon: Users, tourId: TOUR_ELEMENT_IDS.SETTINGS_SUPPLIERS },
+        { id: 'mapping', label: t('navigation.mapping'), icon: Package, tourId: TOUR_ELEMENT_IDS.SETTINGS_MAPPING },
+        { id: 'warehouses', label: t('navigation.warehouseManagement'), icon: Warehouse, tourId: TOUR_ELEMENT_IDS.SETTINGS_WAREHOUSES },
+        { id: 'integrations', label: t('navigation.integrations'), icon: PlugZap, tourId: TOUR_ELEMENT_IDS.SETTINGS_INTEGRATIONS }
       ]
     },
   ];
@@ -118,18 +127,23 @@ const Sidebar = ({
   
   const handleSubMenuClick = (parentId, subItem) => {
     if (parentId === 'analytics') {
+      // Naviguer directement vers le sous-onglet analytics
+      // Ne pas appeler setActiveTab car setAnalyticsSubTab gère déjà la navigation complète
       setAnalyticsSubTab(subItem.id);
-      setActiveTab('analytics');
     } else if (parentId === 'settings') {
+      // Naviguer directement vers le sous-onglet settings
+      // Ne pas appeler setActiveTab car setSettingsSubTab gère déjà la navigation complète
       setSettingsSubTab(subItem.id);
-      setActiveTab('settings');
     }
     setMobileMenuOpen(false);
   };
 
   // Menu Desktop/Tablette (sidebar fixe pleine hauteur)
   const DesktopSidebar = () => (
-    <aside className="hidden md:flex md:flex-col md:fixed md:top-16 md:bottom-0 md:left-0 md:w-64 md:bg-[#FAFAF7] md:border-r md:border-[#E5E4DF] md:z-40">
+    <aside 
+      id={TOUR_ELEMENT_IDS.SIDEBAR}
+      className="hidden md:flex md:flex-col md:fixed md:top-16 md:bottom-0 md:left-0 md:w-64 md:bg-[#FAFAF7] md:border-r md:border-[#E5E4DF] md:z-40"
+    >
       {/* Navigation - Le logo est maintenant dans la barre horizontale globale */}
       <nav className="flex-1 px-4 py-6 space-y-2 overflow-y-auto">
         {menuItems.map((item) => {
@@ -145,6 +159,7 @@ const Sidebar = ({
             <div key={item.id}>
               {/* Menu principal */}
               <button
+                id={item.tourId}
                 onClick={() => handleMenuItemClick(item)}
                 className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg font-medium text-sm transition-all ${
                   isActive
@@ -198,6 +213,7 @@ const Sidebar = ({
                     
                     return (
                       <button
+                        id={subItem.tourId}
                         key={subItem.id}
                         onClick={() => handleSubMenuClick(item.id, subItem)}
                         className={`w-full flex items-center gap-3 px-4 py-2 rounded-lg transition-colors ${
@@ -284,6 +300,7 @@ const Sidebar = ({
                     <div key={item.id}>
                       {/* Menu principal */}
                       <button
+                        id={`mobile-${item.tourId}`}
                         onClick={() => handleMenuItemClick(item)}
                         className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg font-medium text-sm transition-all ${
                           isActive
@@ -336,6 +353,7 @@ const Sidebar = ({
                             
                             return (
                               <button
+                                id={subItem.tourId ? `mobile-${subItem.tourId}` : undefined}
                                 key={subItem.id}
                                 onClick={() => handleSubMenuClick(item.id, subItem)}
                                 className={`w-full flex items-center gap-3 px-4 py-2 rounded-lg transition-colors ${

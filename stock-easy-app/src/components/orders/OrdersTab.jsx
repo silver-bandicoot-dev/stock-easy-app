@@ -21,23 +21,46 @@ import { useCurrency } from '../../contexts/CurrencyContext';
 import { useAppNavigation } from '../../hooks/useAppNavigation';
 
 export const OrdersTab = ({
+  // Data props - Support both naming conventions
   orders: initialOrders = [],
   suppliers = {},
-  products = [],
+  products,
+  enrichedProducts,
   warehouses = {},
-  // Actions existantes
+  // Expanded state (from parent)
+  expandedOrders,
+  setExpandedOrders,
+  // Actions - Support both new and legacy patterns
   confirmOrder,
   shipOrder,
   receiveOrder,
-  // Modal handlers existants
+  handleUpdateOrderStatus,
+  handleDeleteOrder,
+  handleUpdateQuantityReceived,
+  handleReconcileOrder,
+  handleUpdateOrderItems,
+  // Modal handlers - Support both patterns
   reconciliationModal,
   reconciliationModalHandlers,
   reclamationEmailModal,
   reclamationEmailModalHandlers,
   reconciliationLogic,
   emailGeneration,
+  // Individual reconciliation handlers
+  handleSaveReconciliation,
+  handleCloseAndSaveAsDraft,
+  handleDiscardDraft,
+  handleUpdateReconciledItem,
+  handleAutoReconcile,
+  generateReclamationEmail,
+  // Other props
+  orderEmailModal,
+  getUserSignature,
+  currentUser,
   loadData
 }) => {
+  // Use enrichedProducts if products not provided
+  const productsList = products || enrichedProducts || [];
   const { t } = useTranslation();
   const { format: formatCurrency } = useCurrency();
   const { resourceParams, clearResourceParams, getShareableUrl, navigateToOrder } = useAppNavigation();

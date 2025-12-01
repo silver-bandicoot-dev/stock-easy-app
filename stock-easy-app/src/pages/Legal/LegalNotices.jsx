@@ -13,32 +13,12 @@ const LegalNotices = () => {
       title: t('legal.notices.editor.title', "1. Éditeur du site"),
       content: [
         {
-          label: t('legal.notices.editor.company', "Dénomination sociale"),
-          value: "StockEasy SAS"
+          label: t('legal.notices.editor.service', "Service"),
+          value: "Stockeasy - Plateforme de gestion de stock pour Shopify"
         },
         {
-          label: t('legal.notices.editor.legalForm', "Forme juridique"),
-          value: "Société par Actions Simplifiée (SAS)"
-        },
-        {
-          label: t('legal.notices.editor.capital', "Capital social"),
-          value: "10 000 €"
-        },
-        {
-          label: t('legal.notices.editor.address', "Siège social"),
-          value: "Paris, France"
-        },
-        {
-          label: t('legal.notices.editor.rcs', "Numéro RCS"),
-          value: "Paris B XXX XXX XXX"
-        },
-        {
-          label: t('legal.notices.editor.vat', "Numéro TVA intracommunautaire"),
-          value: "FR XX XXX XXX XXX"
-        },
-        {
-          label: t('legal.notices.editor.director', "Directeur de la publication"),
-          value: "Représentant légal de StockEasy SAS"
+          label: t('legal.notices.editor.status', "Statut"),
+          value: "Service en développement"
         }
       ]
     },
@@ -103,8 +83,8 @@ const LegalNotices = () => {
   return (
     <div className="min-h-screen bg-[#FAFAF7]">
       <SEOUpdater 
-        title={t('legal.notices.seo.title', "Mentions Légales | StockEasy")}
-        description={t('legal.notices.seo.description', "Mentions légales et informations juridiques de StockEasy, solution de gestion de stock pour Shopify.")}
+        title={t('legal.notices.seo.title', "Mentions Légales | Stockeasy")}
+        description={t('legal.notices.seo.description', "Mentions légales et informations juridiques de Stockeasy, solution de gestion de stock pour Shopify.")}
       />
 
       {/* Header */}
@@ -192,10 +172,10 @@ const LegalNotices = () => {
             {t('legal.notices.intellectual.title', "5. Propriété intellectuelle")}
           </h3>
           <p className="text-[#191919]/70 leading-relaxed mb-4">
-            {t('legal.notices.intellectual.content', "L'ensemble du contenu de ce site (structure, textes, logos, images, vidéos, etc.) est la propriété exclusive de StockEasy SAS, sauf mention contraire. Toute reproduction, distribution, modification, adaptation, retransmission ou publication de ces différents éléments est strictement interdite sans l'accord écrit de StockEasy SAS.")}
+            {t('legal.notices.intellectual.content', "L'ensemble du contenu de ce site (structure, textes, logos, images, vidéos, etc.) est protégé par les droits de propriété intellectuelle. Toute reproduction, distribution, modification, adaptation, retransmission ou publication de ces différents éléments est strictement interdite sans autorisation préalable.")}
           </p>
           <p className="text-[#191919]/70 leading-relaxed">
-            {t('legal.notices.intellectual.trademark', "Les marques et logos présents sur le site sont des marques déposées de StockEasy SAS ou de leurs propriétaires respectifs.")}
+            {t('legal.notices.intellectual.trademark', "Les marques et logos présents sur le site sont la propriété de Stockeasy ou de leurs propriétaires respectifs.")}
           </p>
         </motion.div>
 
@@ -210,7 +190,7 @@ const LegalNotices = () => {
             {t('legal.notices.credits.title', "6. Crédits")}
           </h3>
           <p className="text-[#191919]/70 leading-relaxed">
-            {t('legal.notices.credits.design', "Design et développement : StockEasy Team")}
+            {t('legal.notices.credits.design', "Design et développement : Équipe Stockeasy")}
           </p>
           <p className="text-[#191919]/70 leading-relaxed mt-2">
             {t('legal.notices.credits.icons', "Icônes : Lucide Icons")}

@@ -5,10 +5,11 @@ import { useTranslation } from 'react-i18next';
 import { ParametresGeneraux } from '../settings/ParametresGeneraux';
 import { GestionFournisseurs } from '../settings/GestionFournisseurs';
 import { MappingSKUFournisseur } from '../settings/MappingSKUFournisseur';
-import { GestionWarehouses } from '../settings/GestionWarehouses';
+import GestionWarehouses from '../settings/GestionWarehouses';
 import { GestionMultiplicateurs } from '../settings/GestionMultiplicateurs';
 import { IntegrationsSettings } from '../settings/IntegrationsSettings';
 import { SETTINGS_TABS } from '../../constants/stockEasyConstants';
+import { useStockContext } from '../../contexts/StockDataContext';
 
 // Settings tabs configuration
 const getSettingsSections = (t) => [
@@ -21,34 +22,95 @@ const getSettingsSections = (t) => [
 ];
 
 export const SettingsTab = ({
-  parametersSubTab,
-  setParametersSubTab,
-  products,
-  suppliers,
-  warehouses,
-  parameters,
+  // Navigation - Support both naming conventions
+  subTab,
+  setSubTab,
+  parametersSubTab: parametersSubTabProp,
+  setParametersSubTab: setParametersSubTabProp,
+  
+  // Parameter State (new way)
+  parameterState,
+  handleInputChange,
+  handleSaveParameters,
+  handleResetParameters,
+  isDirty,
+  isSavingParameters,
+  
+  // Legacy props (for backwards compatibility)
+  parameters: parametersProp,
   setParameters,
-  loadData,
-  // Props pour ParametresGeneraux
-  seuilSurstockProfond,
+  loadData: loadDataProp,
+  seuilSurstockProfond: seuilSurstockProfondProp,
   onUpdateSeuilSurstock,
-  deviseDefaut,
+  deviseDefaut: deviseDefautProp,
   onUpdateDevise,
-  multiplicateurDefaut,
+  multiplicateurDefaut: multiplicateurDefautProp,
   onUpdateMultiplicateur,
-  // Props pour GestionFournisseurs
+  
+  // Suppliers
+  suppliers,
+  supplierModalOpen,
+  editingSupplier,
   handleOpenSupplierModal,
+  handleCloseSupplierModal,
+  handleSaveSupplier,
   handleDeleteSupplier,
-  // Props pour MappingSKUFournisseur
+  
+  // Mapping
+  assignSupplierModalOpen,
+  setAssignSupplierModalOpen,
+  selectedProductForMapping,
+  setSelectedProductForMapping,
   handleSaveSupplierMapping,
   isSavingSupplierMapping,
-  // Props pour GestionWarehouses
+  
+  // Warehouses
+  warehouses: warehousesProp,
   onCreateWarehouse,
   onUpdateWarehouse,
-  onDeleteWarehouse
+  onDeleteWarehouse,
+  
+  // Products (may come from context)
+  products: productsProp
 }) => {
   const { t } = useTranslation();
   const settingsSections = getSettingsSections(t);
+  
+  // Get data from context as fallback
+  const stockContext = useStockContext();
+  
+  // Use props or fallback to context
+  const products = productsProp || stockContext?.products || stockContext?.enrichedProducts || [];
+  const warehouses = warehousesProp || stockContext?.warehouses || [];
+  const loadData = loadDataProp || stockContext?.refreshData;
+  
+  // Support both naming conventions for tabs
+  const currentSubTab = subTab || parametersSubTabProp || SETTINGS_TABS.GENERAL;
+  const setCurrentSubTab = setSubTab || setParametersSubTabProp;
+  
+  // Extract values from parameterState or use legacy props
+  const seuilSurstockProfond = parameterState?.seuilSurstockProfond ?? seuilSurstockProfondProp ?? 90;
+  const deviseDefaut = parameterState?.deviseDefaut ?? deviseDefautProp ?? 'EUR';
+  const multiplicateurDefaut = parameterState?.multiplicateurDefaut ?? multiplicateurDefautProp ?? 1.2;
+  
+  // Create update handlers from parameterState if available
+  const handleUpdateSeuil = onUpdateSeuilSurstock || ((value) => {
+    if (handleInputChange) {
+      handleInputChange('seuilSurstockProfond', value);
+    }
+  });
+  
+  const handleUpdateDevise = onUpdateDevise || ((value) => {
+    if (handleInputChange) {
+      handleInputChange('deviseDefaut', value);
+    }
+  });
+  
+  const handleUpdateMultiplicateur = onUpdateMultiplicateur || ((value) => {
+    if (handleInputChange) {
+      handleInputChange('multiplicateurDefaut', value);
+    }
+  });
 
   return (
     <motion.div
@@ -78,9 +140,9 @@ export const SettingsTab = ({
           return (
             <button
               key={section.key}
-              onClick={() => setParametersSubTab(section.key)}
+              onClick={() => setCurrentSubTab(section.key)}
               className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all ${
-                parametersSubTab === section.key
+                currentSubTab === section.key
                   ? 'bg-[#191919] text-white shadow-sm'
                   : 'bg-white text-[#6B7177] border border-[#E1E3E5] hover:border-[#8A8C8E] hover:text-[#191919]'
               }`}
@@ -95,7 +157,7 @@ export const SettingsTab = ({
       {/* Contenu des sous-onglets */}
       <div className="flex-1 min-h-0">
         <AnimatePresence mode="wait">
-          {parametersSubTab === SETTINGS_TABS.GENERAL && (
+          {currentSubTab === SETTINGS_TABS.GENERAL && (
             <motion.div
               key="general"
               initial={{ opacity: 0, y: 20 }}
@@ -104,20 +166,18 @@ export const SettingsTab = ({
               transition={{ duration: 0.25 }}
             >
               <ParametresGeneraux
-                parameters={parameters}
-                setParameters={setParameters}
-                loadData={loadData}
                 seuilSurstock={seuilSurstockProfond}
-                onUpdateSeuil={onUpdateSeuilSurstock}
+                onUpdateSeuil={handleUpdateSeuil}
                 devise={deviseDefaut}
-                onUpdateDevise={onUpdateDevise}
+                onUpdateDevise={handleUpdateDevise}
                 multiplicateur={multiplicateurDefaut}
-                onUpdateMultiplicateur={onUpdateMultiplicateur}
+                onUpdateMultiplicateur={handleUpdateMultiplicateur}
+                loadData={loadData}
               />
             </motion.div>
           )}
 
-          {parametersSubTab === SETTINGS_TABS.MULTIPLIERS && (
+          {currentSubTab === SETTINGS_TABS.MULTIPLIERS && (
             <motion.div
               key="multipliers"
               initial={{ opacity: 0, y: 20 }}
@@ -133,7 +193,7 @@ export const SettingsTab = ({
             </motion.div>
           )}
 
-          {parametersSubTab === SETTINGS_TABS.SUPPLIERS && (
+          {currentSubTab === SETTINGS_TABS.SUPPLIERS && (
             <motion.div
               key="suppliers"
               initial={{ opacity: 0, y: 20 }}
@@ -150,7 +210,7 @@ export const SettingsTab = ({
             </motion.div>
           )}
 
-          {parametersSubTab === SETTINGS_TABS.MAPPING && (
+          {currentSubTab === SETTINGS_TABS.MAPPING && (
             <motion.div
               key="mapping"
               initial={{ opacity: 0, y: 20 }}
@@ -167,7 +227,7 @@ export const SettingsTab = ({
             </motion.div>
           )}
 
-          {parametersSubTab === SETTINGS_TABS.WAREHOUSES && (
+          {currentSubTab === SETTINGS_TABS.WAREHOUSES && (
             <motion.div
               key="warehouses"
               initial={{ opacity: 0, y: 20 }}
@@ -184,7 +244,7 @@ export const SettingsTab = ({
             </motion.div>
           )}
 
-          {parametersSubTab === SETTINGS_TABS.INTEGRATIONS && (
+          {currentSubTab === SETTINGS_TABS.INTEGRATIONS && (
             <motion.div
               key="integrations"
               initial={{ opacity: 0, y: 20 }}
