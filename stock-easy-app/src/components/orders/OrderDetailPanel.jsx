@@ -41,6 +41,8 @@ export const OrderDetailPanel = ({
   onShip,
   onReceive,
   onStartReconciliation,
+  onGenerateReclamation,
+  onCompleteReconciliation,
   onShare,
   formatCurrency
 }) => {
@@ -174,15 +176,49 @@ export const OrderDetailPanel = ({
         );
       
       case 'reconciliation':
+        // Vérifier s'il y a des écarts (manquants ou endommagés)
+        const hasMissingItems = order.missingQuantitiesBySku && 
+          Object.values(order.missingQuantitiesBySku).some(qty => qty > 0);
+        const hasDamagedItems = order.damagedQuantitiesBySku && 
+          Object.values(order.damagedQuantitiesBySku).some(qty => qty > 0);
+        const hasDiscrepancies = hasMissingItems || hasDamagedItems;
+        
         return (
-          <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
-            <div className="flex items-center gap-2 text-red-700 font-medium mb-1">
-              <AlertTriangle className="w-4 h-4" />
-              {t('orderDetail.reconciliation.inProgress')}
+          <div className="space-y-3">
+            <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
+              <div className="flex items-center gap-2 text-amber-700 font-medium mb-1">
+                <AlertTriangle className="w-4 h-4" />
+                {t('orderDetail.reconciliation.inProgress')}
+              </div>
+              <p className="text-sm text-amber-600">
+                {t('orderDetail.reconciliation.checkDiscrepancies')}
+              </p>
             </div>
-            <p className="text-sm text-red-600">
-              {t('orderDetail.reconciliation.checkDiscrepancies')}
-            </p>
+            
+            {/* Boutons d'action pour la réconciliation */}
+            <div className="flex flex-col gap-2">
+              {/* Bouton Générer réclamation - affiché seulement s'il y a des écarts */}
+              {hasDiscrepancies && onGenerateReclamation && (
+                <button
+                  onClick={() => onGenerateReclamation(order)}
+                  className="flex items-center justify-center gap-2 px-4 py-2.5 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700 transition-colors"
+                >
+                  <Mail className="w-4 h-4" />
+                  {t('orderDetail.buttons.generateReclamation')}
+                </button>
+              )}
+              
+              {/* Bouton Terminer la réconciliation */}
+              {onCompleteReconciliation && (
+                <button
+                  onClick={() => onCompleteReconciliation(order.id)}
+                  className="flex items-center justify-center gap-2 px-4 py-2.5 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors"
+                >
+                  <CheckCircle className="w-4 h-4" />
+                  {t('orderDetail.buttons.completeReconciliation')}
+                </button>
+              )}
+            </div>
           </div>
         );
       

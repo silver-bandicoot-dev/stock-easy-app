@@ -44,7 +44,8 @@
     "selectOption": "Seleccionar una opción",
     "optional": "Opcional",
     "required": "Requerido",
-    "allRightsReserved": "Todos los derechos reservados."
+    "allRightsReserved": "Todos los derechos reservados.",
+    "retry": "Reintentar"
   },
   "seo": {
     "title": "Stockeasy - Gestión de Inventario Shopify, Previsiones IA y Reabastecimiento",
@@ -143,7 +144,10 @@
     "supplierManagement": "Gestión de Proveedores",
     "mapping": "Asignación",
     "warehouseManagement": "Gestión de Almacenes",
-    "integrations": "Integraciones"
+    "integrations": "Integraciones",
+    "openMenu": "Abrir menú",
+    "closeMenu": "Cerrar menú",
+    "syncData": "Sincronizar datos"
   },
   "dashboard": {
     "welcomeBack": "Bienvenido de nuevo 👋",
@@ -488,6 +492,7 @@
     "orderNotFound": "Pedido {{id}} no encontrado",
     "reconciliationConfirmed": "¡Conciliación confirmada! El pedido ha sido archivado.",
     "reconciliationError": "Error al confirmar la conciliación",
+    "reclamationModalUnavailable": "No se puede abrir el modal de reclamación",
     "pagination": {
       "summary": "{{count}} pedido(s) • Página {{page}} de {{totalPages}}"
     },
@@ -895,6 +900,9 @@
       "modify": "Editar",
       "delete": "Eliminar",
       "na": "N/D",
+      "unassigned": "Proveedor no asignado",
+      "assignmentRequired": "Asigna un proveedor en Configuración > Mapeo",
+      "cannotOrderUnassigned": "Primero debes asignar un proveedor a estos productos",
       "messages": {
         "created": "¡Proveedor creado!",
         "updated": "¡Proveedor actualizado!",
@@ -1125,6 +1133,8 @@
   },
   "profile": {
     "title": "Mi Perfil",
+    "myProfile": "Mi perfil",
+    "user": "Usuario",
     "subtitle": "Gestiona tu información personal, empresa y equipo",
     "personalInfo": "Información personal",
     "preferences": "Preferencias",
@@ -1599,6 +1609,64 @@
     "en": "English",
     "es": "Español"
   },
+  "emailTemplates": {
+    "order": {
+      "subject": "Pedido de reposición - {{supplier}}",
+      "greeting": "Hola",
+      "greetingWithName": "Hola {{name}},",
+      "intro": "Deseamos realizar un pedido de reposición de los siguientes productos:",
+      "deliverySection": "📦 Entrega",
+      "warehouse": "Almacén",
+      "address": "Dirección",
+      "notSpecified": "No especificado",
+      "confirmRequest": "Por favor, confirme:",
+      "confirmAvailability": "Disponibilidad de productos",
+      "confirmDelivery": "Plazos de entrega estimados",
+      "confirmTotal": "Importe total con gastos de envío",
+      "supplierContact": "Contacto del proveedor",
+      "phone": "Tel",
+      "closing": "Atentamente,",
+      "table": {
+        "product": "Producto",
+        "sku": "SKU",
+        "qty": "Cant.",
+        "unitPrice": "P.U.",
+        "total": "Total",
+        "subtotal": "Subtotal",
+        "productsOrdered": "Productos pedidos",
+        "noProducts": "Sin productos",
+        "noProductsSelected": "Ningún producto seleccionado",
+        "unnamed": "Sin nombre"
+      }
+    },
+    "reclamation": {
+      "subject": "Reclamación - Pedido {{poNumber}}",
+      "greeting": "Hola",
+      "greetingWithName": "Hola {{name}},",
+      "intro": "Hemos recibido el pedido {{poNumber}} y encontramos los siguientes problemas:",
+      "missingSection": "🔴 CANTIDADES FALTANTES",
+      "damagedSection": "⚠️ PRODUCTOS DAÑADOS",
+      "notesSection": "📝 Notas adicionales",
+      "ordered": "Pedido",
+      "receivedHealthy": "Recibido (en buen estado)",
+      "receivedDamaged": "Recibido (dañado)",
+      "missing": "Faltante",
+      "damagedQty": "Cantidad dañada",
+      "units": "unidades",
+      "noIssues": "No se han detallado problemas específicos.",
+      "actionRequest": "Por favor, proceda con el reemplazo o envío de los artículos faltantes/dañados lo antes posible.",
+      "reclamationContact": "Contacto de reclamaciones",
+      "phone": "Tel",
+      "closing": "Atentamente,"
+    }
+  },
+  "reclamation": {
+    "attachmentWarning": {
+      "title": "Archivos adjuntos deben añadirse manualmente",
+      "description": "Las fotos y documentos no pueden enviarse automáticamente. Una vez que el correo se abra en Gmail o Outlook, deberá añadir los archivos adjuntos manualmente.",
+      "photosDetected": "Se tomaron fotos - ¡no olvides adjuntarlas!"
+    }
+  },
   "ordersTable": {
     "columns": {
       "poNumber": "N° PO",
@@ -1657,7 +1725,9 @@
       "confirmOrder": "Confirmar Pedido",
       "markAsShipped": "Marcar como Enviado",
       "markAsReceived": "Marcar como Recibido",
-      "startReconciliation": "Iniciar Conciliación"
+      "startReconciliation": "Iniciar Conciliación",
+      "generateReclamation": "Generar Reclamación",
+      "completeReconciliation": "Completar Conciliación"
     },
     "reconciliation": {
       "inProgress": "Conciliación en curso",

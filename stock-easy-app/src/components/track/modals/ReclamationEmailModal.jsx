@@ -1,8 +1,10 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { Copy, ExternalLink, AlertTriangle, Paperclip, Trash2, Mail } from 'lucide-react';
+import { AlertTriangle, Paperclip, Trash2, Mail, Info } from 'lucide-react';
 import { Modal, ModalSection, ModalFooter } from '../../ui/Modal';
 import { Button } from '../../ui/Button';
+import { EmailSendOptions } from '../../ui/EmailSendOptions';
 import { toast } from 'sonner';
+import { useTranslation } from 'react-i18next';
 
 export const ReclamationEmailModal = ({
   isOpen,
@@ -11,7 +13,7 @@ export const ReclamationEmailModal = ({
   emailContent,
   onCopy
 }) => {
-  const [isCopied, setIsCopied] = useState(false);
+  const { t } = useTranslation();
   const [attachments, setAttachments] = useState([]);
   const [isDragging, setIsDragging] = useState(false);
   const [editableTo, setEditableTo] = useState('');
@@ -114,16 +116,6 @@ export const ReclamationEmailModal = ({
 
   const totalSizeMB = getFileSizeInMB(attachments.reduce((sum, f) => sum + f.size, 0));
 
-  const handleCopy = async () => {
-    try {
-      await onCopy(emailContent);
-      setIsCopied(true);
-      setTimeout(() => setIsCopied(false), 2000);
-    } catch (error) {
-      console.error('Erreur lors de la copie:', error);
-    }
-  };
-
   const parseEmailContent = (content) => {
     if (!content) {
       return { to: '', subject: '', body: '' };
@@ -171,15 +163,6 @@ export const ReclamationEmailModal = ({
     setEditableBody(parsed.body || emailContent);
   }, [isOpen, emailContent, order]);
 
-  const handleOpenEmailClient = () => {
-    const poNumber = order?.poNumber || order?.id || '';
-    const enforcedSubject = `Réclamation - Commande ${poNumber}`;
-    const safeSubject = encodeURIComponent(enforcedSubject);
-    const safeBody = encodeURIComponent(editableBody || emailContent);
-    const mailtoLink = `mailto:${editableTo || ''}?subject=${safeSubject}&body=${safeBody}`;
-    window.open(mailtoLink);
-  };
-
   if (!isOpen || !emailContent) return null;
 
   const poNumber = order?.poNumber || order?.id || '';
@@ -214,26 +197,6 @@ export const ReclamationEmailModal = ({
 
       {/* Contenu de l'email */}
       <ModalSection title="Contenu de l'email" className="mb-6">
-        <div className="flex items-center justify-end gap-2 mb-4">
-          <Button
-            variant="outline"
-            size="sm"
-            icon={Copy}
-            onClick={handleCopy}
-            disabled={isCopied}
-          >
-            {isCopied ? 'Copié !' : 'Copier'}
-          </Button>
-          <Button
-            variant="primary"
-            size="sm"
-            icon={ExternalLink}
-            onClick={handleOpenEmailClient}
-          >
-            Ouvrir dans l'email
-          </Button>
-        </div>
-
         <div className="space-y-4">
           {/* Adresse email du destinataire */}
           <div>
@@ -278,6 +241,37 @@ export const ReclamationEmailModal = ({
               className="input-base font-mono text-sm resize-y min-h-[200px]"
             />
           </div>
+        </div>
+
+        {/* Avertissement pièces jointes */}
+        {attachments.length > 0 && (
+          <div className="mt-4 bg-amber-50 border border-amber-200 rounded-lg p-4">
+            <div className="flex items-start gap-3">
+              <Info className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+              <div>
+                <h4 className="font-semibold text-amber-900 mb-1 flex items-center gap-2">
+                  <AlertTriangle className="w-4 h-4" />
+                  {t('reclamation.attachmentWarning.title', 'Pièces jointes à ajouter manuellement')}
+                </h4>
+                <p className="text-sm text-amber-700">
+                  {t('reclamation.attachmentWarning.description', "Les photos et documents ne peuvent pas être envoyés automatiquement. Une fois l'email ouvert dans Gmail ou Outlook, vous devrez ajouter les pièces jointes manuellement.")}
+                </p>
+                <p className="text-sm text-amber-800 font-medium mt-2">
+                  📎 {attachments.length} {attachments.length > 1 ? 'fichiers sélectionnés' : 'fichier sélectionné'} - {t('reclamation.attachmentWarning.photosDetected', 'pensez à les joindre !')}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Options d'envoi Gmail / Outlook */}
+        <div className="mt-6 pt-6 border-t border-neutral-200">
+          <EmailSendOptions
+            to={editableTo}
+            subject={editableSubject}
+            body={editableBody}
+            onCopied={() => onCopy?.(emailContent)}
+          />
         </div>
       </ModalSection>
 

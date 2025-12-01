@@ -44,7 +44,8 @@
     "selectOption": "Sélectionner une option",
     "optional": "Optionnel",
     "required": "Requis",
-    "allRightsReserved": "Tous droits réservés."
+    "allRightsReserved": "Tous droits réservés.",
+    "retry": "Réessayer"
   },
   "seo": {
     "title": "Stockeasy - Gestion de Stock Shopify, Prévisions IA & Réapprovisionnement",
@@ -143,7 +144,10 @@
     "supplierManagement": "Gestion Fournisseurs",
     "mapping": "Mapping",
     "warehouseManagement": "Gestion Entrepôts",
-    "integrations": "Intégrations"
+    "integrations": "Intégrations",
+    "openMenu": "Ouvrir le menu",
+    "closeMenu": "Fermer le menu",
+    "syncData": "Synchroniser les données"
   },
   "dashboard": {
     "welcomeBack": "Content de vous revoir 👋",
@@ -455,6 +459,7 @@
     "orderNotFound": "Commande {{id}} introuvable",
     "reconciliationConfirmed": "Réconciliation confirmée ! La commande a été archivée.",
     "reconciliationError": "Erreur lors de la confirmation de la réconciliation",
+    "reclamationModalUnavailable": "Impossible d'ouvrir la modale de réclamation",
     "pagination": {
       "summary": "{{count}} commande(s) • Page {{page}} sur {{totalPages}}"
     },
@@ -871,6 +876,9 @@
       "modify": "Modifier",
       "delete": "Supprimer",
       "na": "N/A",
+      "unassigned": "Fournisseur non assigné",
+      "assignmentRequired": "Assignez un fournisseur dans Paramètres > Mapping",
+      "cannotOrderUnassigned": "Vous devez d'abord assigner un fournisseur à ces produits",
       "messages": {
         "created": "Fournisseur créé !",
         "updated": "Fournisseur modifié !",
@@ -1116,6 +1124,8 @@
   },
   "profile": {
     "title": "Mon Profil",
+    "myProfile": "Mon profil",
+    "user": "Utilisateur",
     "subtitle": "Gérez vos informations personnelles, votre entreprise et votre équipe",
     "personalInfo": "Informations personnelles",
     "preferences": "Préférences",
@@ -1585,10 +1595,82 @@
     "shopifyPartner": "Shopify Partner",
     "contact": "contact@stockeasy.app"
   },
+  "email": {
+    "options": {
+      "title": "Choisissez comment envoyer",
+      "openIn": "Ouvrir dans {{client}}",
+      "otherClient": "Autre client email",
+      "copy": "Copier",
+      "copiedShort": "Copié !",
+      "copied": "Email copié dans le presse-papiers",
+      "opened": "Ouvert !",
+      "openedIn": "{{client}} ouvert dans un nouvel onglet",
+      "helpText": "L'email s'ouvrira dans votre messagerie web. Vérifiez et envoyez depuis votre compte.",
+      "emailClient": "votre client email"
+    }
+  },
   "languages": {
     "fr": "Français",
     "en": "English",
     "es": "Español"
+  },
+  "emailTemplates": {
+    "order": {
+      "subject": "Commande de réapprovisionnement - {{supplier}}",
+      "greeting": "Bonjour",
+      "greetingWithName": "Bonjour {{name}},",
+      "intro": "Nous souhaitons passer une commande de réapprovisionnement pour les produits suivants :",
+      "deliverySection": "📦 Livraison",
+      "warehouse": "Entrepôt",
+      "address": "Adresse",
+      "notSpecified": "Non spécifié",
+      "confirmRequest": "Merci de nous confirmer :",
+      "confirmAvailability": "La disponibilité des produits",
+      "confirmDelivery": "Les délais de livraison estimés",
+      "confirmTotal": "Le montant total avec frais de port",
+      "supplierContact": "Contact fournisseur",
+      "phone": "Tél",
+      "closing": "Cordialement,",
+      "table": {
+        "product": "Produit",
+        "sku": "SKU",
+        "qty": "Qté",
+        "unitPrice": "P.U.",
+        "total": "Total",
+        "subtotal": "Sous-total",
+        "productsOrdered": "Produits commandés",
+        "noProducts": "Aucun produit",
+        "noProductsSelected": "Aucun produit sélectionné",
+        "unnamed": "Sans nom"
+      }
+    },
+    "reclamation": {
+      "subject": "Réclamation - Commande {{poNumber}}",
+      "greeting": "Bonjour",
+      "greetingWithName": "Bonjour {{name}},",
+      "intro": "Nous avons réceptionné la commande {{poNumber}} et constatons les problèmes suivants :",
+      "missingSection": "🔴 QUANTITÉS MANQUANTES",
+      "damagedSection": "⚠️ PRODUITS ENDOMMAGÉS",
+      "notesSection": "📝 Notes additionnelles",
+      "ordered": "Commandé",
+      "receivedHealthy": "Reçu sain",
+      "receivedDamaged": "Reçu endommagé",
+      "missing": "Manquant",
+      "damagedQty": "Quantité endommagée",
+      "units": "unités",
+      "noIssues": "Aucun problème spécifique détaillé.",
+      "actionRequest": "Merci de procéder rapidement au remplacement ou à l'envoi des articles manquants/endommagés.",
+      "reclamationContact": "Contact réclamations",
+      "phone": "Tél",
+      "closing": "Cordialement,"
+    }
+  },
+  "reclamation": {
+    "attachmentWarning": {
+      "title": "Pièces jointes à ajouter manuellement",
+      "description": "Les photos et documents ne peuvent pas être envoyés automatiquement. Une fois l'email ouvert dans Gmail ou Outlook, vous devrez ajouter les pièces jointes manuellement.",
+      "photosDetected": "Des photos ont été prises - pensez à les joindre !"
+    }
   },
   "ordersTable": {
     "columns": {
@@ -1648,7 +1730,9 @@
       "confirmOrder": "Confirmer la Commande",
       "markAsShipped": "Marquer comme Expédiée",
       "markAsReceived": "Marquer comme Reçue",
-      "startReconciliation": "Démarrer la Réconciliation"
+      "startReconciliation": "Démarrer la Réconciliation",
+      "generateReclamation": "Générer une Réclamation",
+      "completeReconciliation": "Terminer la Réconciliation"
     },
     "reconciliation": {
       "inProgress": "Réconciliation en cours",

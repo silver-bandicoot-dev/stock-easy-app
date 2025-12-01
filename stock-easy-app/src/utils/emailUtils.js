@@ -12,15 +12,20 @@ import { ORDER_STATUS_LABELS } from '../constants/stockEasyConstants';
 /**
  * Génère la signature de l'utilisateur pour les emails
  * @param {Object} currentUser - L'utilisateur actuel
- * @returns {string} La signature de l'utilisateur
+ * @returns {string} La signature de l'utilisateur (vide si non disponible)
+ * @deprecated Utiliser getUserSignature() du contexte StockDataContext qui inclut la société
  */
 export const getUserSignature = (currentUser) => {
   if (currentUser && currentUser.firstName && currentUser.lastName) {
     return `${currentUser.firstName} ${currentUser.lastName}`;
   } else if (currentUser && currentUser.displayName) {
     return currentUser.displayName;
+  } else if (currentUser && currentUser.email) {
+    // Utiliser le nom avant @ comme fallback
+    return currentUser.email.split('@')[0];
   }
-  return "L'équipe Stockeasy";
+  // Ne JAMAIS retourner "L'équipe Stockeasy" - retourner vide
+  return '';
 };
 
 /**
@@ -49,7 +54,7 @@ export const generateEmailDraft = (
     quantities: orderQuantities,
     supplier: supplierInfo,
     warehouse: warehouseInfo ? { ...warehouseInfo, name: selectedWarehouse } : { name: selectedWarehouse },
-    signature: getUserSignatureFn ? getUserSignatureFn() : "L'équipe Stockeasy",
+    signature: getUserSignatureFn ? getUserSignatureFn() : '',
     formatCurrency: (amount) => formatCurrency(roundToTwoDecimals(amount), deviseDefaut)
   });
 
@@ -90,7 +95,7 @@ export const generateReclamationEmail = (order, suppliers, products, getUserSign
     products,
     supplier: supplierInfo,
     notes: '',
-    signature: getUserSignatureFn ? getUserSignatureFn() : "L'équipe Stockeasy"
+    signature: getUserSignatureFn ? getUserSignatureFn() : ''
   });
 
   // Retourner au format legacy avec À: et Objet: en préfixe

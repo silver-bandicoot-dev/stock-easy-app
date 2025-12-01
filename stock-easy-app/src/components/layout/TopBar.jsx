@@ -5,6 +5,7 @@ import NotificationBell from '../notifications/NotificationBell';
 import { useNavigate } from 'react-router-dom';
 import { User, LogOut, RefreshCw, Menu, X } from 'lucide-react';
 import { useAuth } from '../../contexts/SupabaseAuthContext';
+import { useTranslation } from 'react-i18next';
 
 /**
  * Barre horizontale en haut de l'application
@@ -20,6 +21,7 @@ const TopBar = ({
   setTrackTabSection,
   setStockLevelSearch
 }) => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { user, logout } = useAuth();
 
@@ -43,7 +45,7 @@ const TopBar = ({
         <button
           onClick={onMenuToggle}
           className="md:hidden p-2 rounded-lg hover:bg-neutral-100 transition-colors"
-          aria-label={mobileMenuOpen ? 'Fermer le menu' : 'Ouvrir le menu'}
+          aria-label={mobileMenuOpen ? t('navigation.closeMenu') : t('navigation.openMenu')}
         >
           {mobileMenuOpen ? (
             <X className="w-6 h-6 text-neutral-900" />
@@ -77,7 +79,7 @@ const TopBar = ({
             onClick={syncData}
             disabled={syncing}
             className="hidden lg:flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-neutral-700 hover:bg-neutral-100 transition-colors disabled:opacity-50"
-            title="Synchroniser les données"
+            title={t('navigation.syncData')}
           >
             <RefreshCw className={`w-4 h-4 ${syncing ? 'animate-spin' : ''}`} />
             <span className="hidden xl:inline">Sync</span>
@@ -93,13 +95,13 @@ const TopBar = ({
             <button
               onClick={handleProfileClick}
               className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-neutral-100 transition-colors"
-              title="Mon profil"
+              title={t('profile.myProfile')}
             >
               <div className="w-8 h-8 rounded-full bg-primary-100 flex items-center justify-center">
                 <User className="w-4 h-4 text-primary-600" />
               </div>
               <span className="hidden lg:inline text-sm font-medium text-neutral-900">
-                {user?.email?.split('@')[0] || 'Profil'}
+                {user?.email?.split('@')[0] || t('navigation.profile')}
               </span>
             </button>
 
@@ -110,7 +112,7 @@ const TopBar = ({
                 className="w-full flex items-center gap-3 px-4 py-2 text-sm text-neutral-700 hover:bg-neutral-50 transition-colors"
               >
                 <User className="w-4 h-4" />
-                <span>Mon profil</span>
+                <span>{t('profile.myProfile')}</span>
               </button>
               <div className="my-1 border-t border-neutral-200" />
               <button
@@ -118,7 +120,7 @@ const TopBar = ({
                 className="w-full flex items-center gap-3 px-4 py-2 text-sm text-danger-600 hover:bg-danger-50 transition-colors"
               >
                 <LogOut className="w-4 h-4" />
-                <span>Déconnexion</span>
+                <span>{t('auth.logout')}</span>
               </button>
             </div>
           </div>

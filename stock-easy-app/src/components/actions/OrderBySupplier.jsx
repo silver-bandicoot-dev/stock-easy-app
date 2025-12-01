@@ -1,10 +1,13 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { AlertCircle, CheckCircle, Mail, Package } from 'lucide-react';
+import { AlertCircle, CheckCircle, Mail, Package, HelpCircle } from 'lucide-react';
 import { Button } from '../shared/Button';
 import { InfoTooltip } from '../ui/InfoTooltip';
 import { ImagePreview } from '../ui/ImagePreview';
 import { formatUnits } from '../../utils/decimalUtils';
+import { useTranslation } from 'react-i18next';
+
+const UNASSIGNED_SUPPLIER = '__unassigned__';
 
 export const OrderBySupplier = ({ 
   toOrderBySupplier, 
@@ -18,6 +21,21 @@ export const OrderBySupplier = ({
   handleOpenEmailModal,
   emailModalHandlers
 }) => {
+  const { t } = useTranslation();
+  
+  // Helper pour obtenir le nom d'affichage du fournisseur
+  const getSupplierDisplayName = (supplierKey) => {
+    if (supplierKey === UNASSIGNED_SUPPLIER || !supplierKey || supplierKey === 'undefined') {
+      return t('suppliers.unassigned', 'Fournisseur non assigné');
+    }
+    return supplierKey;
+  };
+  
+  // Helper pour vérifier si c'est un fournisseur non assigné
+  const isUnassignedSupplier = (supplierKey) => {
+    return supplierKey === UNASSIGNED_SUPPLIER || !supplierKey || supplierKey === 'undefined';
+  };
+  
   return (
     <div className="space-y-6">
       {Object.keys(toOrderBySupplier).length === 0 ? (
@@ -36,15 +54,30 @@ export const OrderBySupplier = ({
             className="bg-white rounded-xl shadow-sm border border-[#E5E4DF] overflow-hidden"
           >
             {/* Header */}
-            <div className="bg-[#FAFAF7] border-b border-[#E5E4DF] p-4">
+            <div className={`border-b border-[#E5E4DF] p-4 ${isUnassignedSupplier(supplier) ? 'bg-amber-50' : 'bg-[#FAFAF7]'}`}>
                 <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-red-50 rounded-lg flex items-center justify-center border border-red-200 shrink-0">
-                    <AlertCircle className="w-6 h-6 text-[#EF1C43] shrink-0" />
+                  <div className={`w-10 h-10 rounded-lg flex items-center justify-center border shrink-0 ${
+                    isUnassignedSupplier(supplier) 
+                      ? 'bg-amber-100 border-amber-300' 
+                      : 'bg-red-50 border-red-200'
+                  }`}>
+                    {isUnassignedSupplier(supplier) ? (
+                      <HelpCircle className="w-6 h-6 text-amber-600 shrink-0" />
+                    ) : (
+                      <AlertCircle className="w-6 h-6 text-[#EF1C43] shrink-0" />
+                    )}
                   </div>
                   <div>
-                    <h2 className="text-xl font-bold text-[#191919]">{supplier || 'Fournisseur non assigné'}</h2>
+                    <h2 className={`text-xl font-bold ${isUnassignedSupplier(supplier) ? 'text-amber-800' : 'text-[#191919]'}`}>
+                      {getSupplierDisplayName(supplier)}
+                    </h2>
                     <p className="text-sm text-[#666663]">{products.length} produit(s) à commander</p>
+                    {isUnassignedSupplier(supplier) && (
+                      <p className="text-xs text-amber-600 mt-1">
+                        {t('suppliers.assignmentRequired', 'Assignez un fournisseur dans Paramètres > Mapping')}
+                      </p>
+                    )}
                   </div>
                 </div>
               </div>
@@ -126,15 +159,27 @@ export const OrderBySupplier = ({
             </div>
 
             {/* Actions globales */}
-            <div className="p-4 border-t border-[#E5E4DF] bg-[#FAFAF7]">
+            <div className={`p-4 border-t border-[#E5E4DF] ${isUnassignedSupplier(supplier) ? 'bg-amber-50' : 'bg-[#FAFAF7]'}`}>
               <div className="flex flex-wrap gap-3 justify-end">
-                <Button
-                  variant="primary"
-                  icon={Package}
-                  onClick={() => handleOpenEmailModal(supplier, products)}
-                >
-                  Commander
-                </Button>
+                {isUnassignedSupplier(supplier) ? (
+                  <InfoTooltip content={t('suppliers.cannotOrderUnassigned', 'Vous devez d\'abord assigner un fournisseur à ces produits')}>
+                    <Button
+                      variant="secondary"
+                      icon={Package}
+                      disabled
+                    >
+                      Commander
+                    </Button>
+                  </InfoTooltip>
+                ) : (
+                  <Button
+                    variant="primary"
+                    icon={Package}
+                    onClick={() => handleOpenEmailModal(supplier, products)}
+                  >
+                    Commander
+                  </Button>
+                )}
               </div>
             </div>
           </motion.div>

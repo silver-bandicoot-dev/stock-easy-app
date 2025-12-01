@@ -1,12 +1,14 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Mail, AlertCircle, AlertTriangle, CheckCircle2, Copy, ExternalLink } from 'lucide-react';
+import { Mail, AlertCircle, AlertTriangle, CheckCircle2 } from 'lucide-react';
 import { Modal, ModalFooter, ModalSection } from '../ui/Modal';
 import { Button } from '../ui/Button';
 import { roundToTwoDecimals } from '../../utils/decimalUtils';
 import { useCurrency } from '../../contexts/CurrencyContext';
 import { ImagePreview } from '../ui/ImagePreview';
+import { EmailSendOptions } from '../ui/EmailSendOptions';
 import emailService from '../../services/emailService';
 import { toast } from 'sonner';
+import { useTranslation } from 'react-i18next';
 
 export const EmailOrderModalInline = ({
   isOpen,
@@ -27,9 +29,9 @@ export const EmailOrderModalInline = ({
   const [editableEmail, setEditableEmail] = useState('');
   const [editableSubject, setEditableSubject] = useState('');
   const [editableBody, setEditableBody] = useState('');
-  const [isCopied, setIsCopied] = useState(false);
   const { format: formatCurrency } = useCurrency();
-
+  const { t } = useTranslation();
+  
   // Trouver les informations du fournisseur et de l'entrepôt
   const supplierInfo = useMemo(() => {
     if (!selectedSupplier || !suppliers) return null;
@@ -58,44 +60,49 @@ export const EmailOrderModalInline = ({
     );
   }, [productsToOrder, orderQuantities]);
 
-  // Générer l'email quand les paramètres changent
+  // Générer l'email quand les conditions sont réunies
   useEffect(() => {
-    if (!isOpen || !selectedSupplier || !selectedWarehouse) return;
+    // Ne générer que si le modal est ouvert ET qu'on a toutes les données nécessaires
+    if (!isOpen || !selectedSupplier || !selectedWarehouse) {
+      return;
+    }
+    
+    // Récupérer les produits directement depuis toOrderBySupplier
+    // (en cas de problème de timing avec productsToOrder)
+    const products = toOrderBySupplier?.[selectedSupplier] || productsToOrder;
+    
+    // Attendre que les données soient prêtes
+    if (!products || products.length === 0) {
+      return;
+    }
 
     const email = emailService.generateOrderEmail({
       supplierName: selectedSupplier,
-      products: productsToOrder,
+      products: products,
       quantities: orderQuantities,
       supplier: supplierInfo,
       warehouse: warehouseInfo ? { ...warehouseInfo, name: selectedWarehouse } : { name: selectedWarehouse },
-      signature: getUserSignature?.() || "L'équipe Stockeasy",
-      formatCurrency
+      signature: getUserSignature?.() || '',
+      formatCurrency,
+      t // Passer la fonction de traduction pour i18n
     });
 
     setEditableEmail(email.to);
     setEditableSubject(email.subject);
     setEditableBody(email.body);
-  }, [isOpen, selectedSupplier, selectedWarehouse, orderQuantities, productsToOrder, supplierInfo, warehouseInfo, formatCurrency]);
+  }, [isOpen, selectedSupplier, selectedWarehouse, toOrderBySupplier, productsToOrder, orderQuantities, supplierInfo, warehouseInfo, getUserSignature, formatCurrency, t]);
+
+  // Reset les champs quand le modal se ferme
+  useEffect(() => {
+    if (!isOpen) {
+      setEditableEmail('');
+      setEditableSubject('');
+      setEditableBody('');
+    }
+  }, [isOpen]);
 
   // Validation de l'email
   const isEmailValid = emailService.isValidEmail(editableEmail);
-
-  // Handlers
-  const handleCopy = async () => {
-    const fullEmail = emailService.buildEmailContent(editableEmail, editableSubject, editableBody);
-    const success = await emailService.copyToClipboard(fullEmail);
-    if (success) {
-      setIsCopied(true);
-      toast.success('Email copié dans le presse-papiers');
-      setTimeout(() => setIsCopied(false), 2000);
-    } else {
-      toast.error('Erreur lors de la copie');
-    }
-  };
-
-  const handleOpenEmailClient = () => {
-    emailService.openEmailClient(editableEmail, editableSubject, editableBody);
-  };
 
   if (!isOpen || !selectedSupplier) return null;
 
@@ -226,27 +233,6 @@ export const EmailOrderModalInline = ({
         description="Vérifiez et modifiez le contenu avant envoi"
         className="mb-4"
       >
-        {/* Actions rapides */}
-        <div className="flex items-center justify-end gap-2 mb-4">
-          <Button
-            variant="outline"
-            size="sm"
-            icon={Copy}
-            onClick={handleCopy}
-            disabled={isCopied}
-          >
-            {isCopied ? 'Copié !' : 'Copier'}
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            icon={ExternalLink}
-            onClick={handleOpenEmailClient}
-          >
-            Ouvrir client email
-          </Button>
-        </div>
-
         <div className="space-y-4">
           {/* Destinataire */}
           <div>
@@ -292,6 +278,15 @@ export const EmailOrderModalInline = ({
               className="input-base font-mono text-sm resize-y min-h-[200px]"
             />
           </div>
+        </div>
+
+        {/* Options d'envoi Gmail / Outlook */}
+        <div className="mt-6 pt-6 border-t border-neutral-200">
+          <EmailSendOptions
+            to={editableEmail}
+            subject={editableSubject}
+            body={editableBody}
+          />
         </div>
       </ModalSection>
     </Modal>

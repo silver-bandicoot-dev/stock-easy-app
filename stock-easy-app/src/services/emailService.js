@@ -1,6 +1,7 @@
 /**
  * Service unifié de génération d'emails
  * Centralise toute la logique de création d'emails pour l'application
+ * Supporte l'internationalisation (i18n)
  */
 
 // ============================================
@@ -39,12 +40,19 @@ export const getFirstName = (fullName) => {
 };
 
 /**
- * Génère une ligne de salutation personnalisée
+ * Génère une ligne de salutation personnalisée (traduite)
  * @param {string} contactName - Le nom du contact
+ * @param {Function} t - Fonction de traduction
  * @returns {string} La ligne de salutation
  */
-export const getGreeting = (contactName) => {
+export const getGreeting = (contactName, t) => {
   const firstName = getFirstName(contactName);
+  if (t) {
+    return firstName 
+      ? t('emailTemplates.order.greetingWithName', { name: firstName })
+      : t('emailTemplates.order.greeting') + ',';
+  }
+  // Fallback FR si pas de fonction de traduction
   return firstName ? `Bonjour ${firstName},` : 'Bonjour,';
 };
 
@@ -67,14 +75,28 @@ const formatPrice = (amount, formatFn) => {
 
 /**
  * Crée un tableau de produits formaté pour email texte
+ * Utilise un format en liste pour une meilleure compatibilité avec tous les clients email
  * @param {Array} products - Liste des produits
  * @param {Object} quantities - Quantités par SKU
  * @param {Function} formatCurrency - Fonction de formatage devise
+ * @param {Function} t - Fonction de traduction (optionnel)
  * @returns {Object} { table: string, total: number }
  */
-export const formatProductTable = (products, quantities, formatCurrency) => {
+export const formatProductTable = (products, quantities, formatCurrency, t) => {
+  // Traductions avec fallbacks
+  const labels = {
+    qty: t?.('emailTemplates.order.table.qty') || 'Qté',
+    unitPrice: t?.('emailTemplates.order.table.unitPrice') || 'P.U.',
+    subtotal: t?.('emailTemplates.order.table.subtotal') || 'Sous-total',
+    total: t?.('emailTemplates.order.table.total') || 'TOTAL',
+    noProducts: t?.('emailTemplates.order.table.noProducts') || 'Aucun produit',
+    noProductsSelected: t?.('emailTemplates.order.table.noProductsSelected') || 'Aucun produit sélectionné',
+    unnamed: t?.('emailTemplates.order.table.unnamed') || 'Sans nom',
+    productsOrdered: t?.('emailTemplates.order.table.productsOrdered') || 'Produits commandés',
+  };
+
   if (!products || !Array.isArray(products) || products.length === 0) {
-    return { table: 'Aucun produit', total: 0 };
+    return { table: labels.noProducts, total: 0 };
   }
 
   const filteredProducts = products.filter(p => {
@@ -83,63 +105,35 @@ export const formatProductTable = (products, quantities, formatCurrency) => {
   });
 
   if (filteredProducts.length === 0) {
-    return { table: 'Aucun produit sélectionné', total: 0 };
+    return { table: labels.noProductsSelected, total: 0 };
   }
 
-  // Calculer les largeurs dynamiques basées sur le contenu
-  const maxNameLength = Math.min(
-    Math.max(...filteredProducts.map(p => (p.name || '').length), 10),
-    35
-  );
-
-  // En-tête du tableau
-  const header = [
-    'Produit'.padEnd(maxNameLength),
-    'SKU'.padEnd(15),
-    'Qté'.padStart(6),
-    'P.U.'.padStart(12),
-    'Total'.padStart(12)
-  ].join(' │ ');
-
-  const separator = '─'.repeat(header.length);
-
-  // Lignes de produits
+  // Générer les lignes de produits en format liste
   let grandTotal = 0;
-  const rows = filteredProducts.map(product => {
-    const name = (product.name || 'Sans nom').substring(0, maxNameLength);
-    const sku = (product.sku || '').substring(0, 15);
+  const productLines = filteredProducts.map((product, index) => {
+    const name = product.name || labels.unnamed;
+    const sku = product.sku || '';
     const quantity = quantities?.[product.sku] || product.qtyToOrder || 0;
     const unitPrice = product.buyPrice || product.supplierPrice || product.price || 0;
     const lineTotal = quantity * unitPrice;
     grandTotal += lineTotal;
 
-    return [
-      name.padEnd(maxNameLength),
-      sku.padEnd(15),
-      quantity.toString().padStart(6),
-      formatPrice(unitPrice, formatCurrency).padStart(12),
-      formatPrice(lineTotal, formatCurrency).padStart(12)
-    ].join(' │ ');
+    return `${index + 1}. ${name}
+   SKU: ${sku}
+   ${labels.qty}: ${quantity} × ${formatPrice(unitPrice, formatCurrency)}
+   ${labels.subtotal}: ${formatPrice(lineTotal, formatCurrency)}`;
   });
 
-  // Ligne de total
-  const totalRow = [
-    'TOTAL'.padEnd(maxNameLength),
-    ''.padEnd(15),
-    ''.padStart(6),
-    ''.padStart(12),
-    formatPrice(grandTotal, formatCurrency).padStart(12)
-  ].join(' │ ');
+  // Construire le tableau final
+  const table = `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📋 ${labels.productsOrdered}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-  const table = [
-    separator,
-    header,
-    separator,
-    ...rows,
-    separator,
-    totalRow,
-    separator
-  ].join('\n');
+${productLines.join('\n\n')}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+💰 ${labels.total}: ${formatPrice(grandTotal, formatCurrency)}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`;
 
   return { table, total: grandTotal };
 };
@@ -149,11 +143,17 @@ export const formatProductTable = (products, quantities, formatCurrency) => {
  * @param {Array} products - Liste des produits
  * @param {Object} quantities - Quantités par SKU
  * @param {Function} formatCurrency - Fonction de formatage devise
+ * @param {Function} t - Fonction de traduction (optionnel)
  * @returns {Object} { list: string, total: number }
  */
-export const formatProductList = (products, quantities, formatCurrency) => {
+export const formatProductList = (products, quantities, formatCurrency, t) => {
+  const labels = {
+    noProducts: t?.('emailTemplates.order.table.noProducts') || 'Aucun produit',
+    qty: t?.('emailTemplates.order.table.qty') || 'Quantité',
+  };
+
   if (!products || !Array.isArray(products) || products.length === 0) {
-    return { list: 'Aucun produit', total: 0 };
+    return { list: labels.noProducts, total: 0 };
   }
 
   let grandTotal = 0;
@@ -168,7 +168,7 @@ export const formatProductList = (products, quantities, formatCurrency) => {
       const lineTotal = quantity * unitPrice;
       grandTotal += lineTotal;
 
-      return `• ${product.name} (${product.sku})\n  Quantité: ${quantity} × ${formatPrice(unitPrice, formatCurrency)} = ${formatPrice(lineTotal, formatCurrency)}`;
+      return `• ${product.name} (${product.sku})\n  ${labels.qty}: ${quantity} × ${formatPrice(unitPrice, formatCurrency)} = ${formatPrice(lineTotal, formatCurrency)}`;
     });
 
   return {
@@ -191,6 +191,7 @@ export const formatProductList = (products, quantities, formatCurrency) => {
  * @param {Object} options.warehouse - Infos de l'entrepôt
  * @param {string} options.signature - Signature de l'expéditeur
  * @param {Function} options.formatCurrency - Fonction de formatage devise
+ * @param {Function} options.t - Fonction de traduction i18n (optionnel)
  * @returns {Object} { to, subject, body, isValid }
  */
 export const generateOrderEmail = ({
@@ -199,15 +200,34 @@ export const generateOrderEmail = ({
   quantities,
   supplier,
   warehouse,
-  signature = "L'équipe Stockeasy",
-  formatCurrency
+  signature = '',
+  formatCurrency,
+  t
 }) => {
+  // Traductions avec fallbacks
+  const labels = {
+    subject: t ? t('emailTemplates.order.subject', { supplier: supplierName }) : `Commande de réapprovisionnement - ${supplierName}`,
+    intro: t?.('emailTemplates.order.intro') || 'Nous souhaitons passer une commande de réapprovisionnement pour les produits suivants :',
+    deliverySection: t?.('emailTemplates.order.deliverySection') || '📦 Livraison',
+    warehouse: t?.('emailTemplates.order.warehouse') || 'Entrepôt',
+    address: t?.('emailTemplates.order.address') || 'Adresse',
+    notSpecified: t?.('emailTemplates.order.notSpecified') || 'Non spécifié',
+    confirmRequest: t?.('emailTemplates.order.confirmRequest') || 'Merci de nous confirmer :',
+    confirmAvailability: t?.('emailTemplates.order.confirmAvailability') || 'La disponibilité des produits',
+    confirmDelivery: t?.('emailTemplates.order.confirmDelivery') || 'Les délais de livraison estimés',
+    confirmTotal: t?.('emailTemplates.order.confirmTotal') || 'Le montant total avec frais de port',
+    supplierContact: t?.('emailTemplates.order.supplierContact') || 'Contact fournisseur',
+    phone: t?.('emailTemplates.order.phone') || 'Tél',
+    closing: t?.('emailTemplates.order.closing') || 'Cordialement,',
+    missingParams: t?.('emailTemplates.order.missingParams') || 'Paramètres manquants pour générer l\'email.',
+  };
+
   // Validation des paramètres requis
   if (!supplierName || !products || !warehouse) {
     return {
       to: '',
       subject: '',
-      body: 'Paramètres manquants pour générer l\'email.',
+      body: labels.missingParams,
       isValid: false
     };
   }
@@ -225,36 +245,35 @@ export const generateOrderEmail = ({
   // Construire l'adresse de l'entrepôt
   const warehouseAddress = warehouse?.address
     ? `${warehouse.address}\n${warehouse.postalCode || ''} ${warehouse.city || ''}\n${warehouse.country || ''}`
-    : warehouse?.name || 'Non spécifié';
+    : warehouse?.name || labels.notSpecified;
 
   // Générer le tableau de produits
-  const { table: productTable, total } = formatProductTable(products, quantities, formatCurrency);
+  const { table: productTable, total } = formatProductTable(products, quantities, formatCurrency, t);
 
   // Construire le corps de l'email
-  const body = `${getGreeting(commercialName)}
+  const body = `${getGreeting(commercialName, t)}
 
-Nous souhaitons passer une commande de réapprovisionnement pour les produits suivants :
+${labels.intro}
 
 ${productTable}
 
-📦 Livraison
-───────────────────────────────
-Entrepôt : ${warehouse?.name || 'Non spécifié'}
-Adresse :
+${labels.deliverySection}
+-------------------------------
+${labels.warehouse} : ${warehouse?.name || labels.notSpecified}
+${labels.address} :
 ${warehouseAddress}
 
-Merci de nous confirmer :
-• La disponibilité des produits
-• Les délais de livraison estimés
-• Le montant total avec frais de port
+${labels.confirmRequest}
+• ${labels.confirmAvailability}
+• ${labels.confirmDelivery}
+• ${labels.confirmTotal}
 
-${commercialName || commercialPhone ? `Contact fournisseur : ${commercialName}${commercialPhone ? ` • Tél: ${commercialPhone}` : ''}\n` : ''}
-Cordialement,
+${commercialName || commercialPhone ? `${labels.supplierContact} : ${commercialName}${commercialPhone ? ` • ${labels.phone}: ${commercialPhone}` : ''}\n` : ''}${labels.closing}
 ${signature}`;
 
   return {
     to: commercialEmail,
-    subject: `Commande de réapprovisionnement - ${supplierName}`,
+    subject: labels.subject,
     body,
     total,
     isValid: isValidEmail(commercialEmail)
@@ -275,6 +294,7 @@ ${signature}`;
  * @param {Object} options.supplier - Infos du fournisseur
  * @param {string} options.notes - Notes additionnelles
  * @param {string} options.signature - Signature de l'expéditeur
+ * @param {Function} options.t - Fonction de traduction i18n (optionnel)
  * @returns {Object} { to, subject, body, isValid }
  */
 export const generateReclamationEmail = ({
@@ -284,18 +304,40 @@ export const generateReclamationEmail = ({
   products,
   supplier,
   notes,
-  signature = "L'équipe Stockeasy"
+  signature = '',
+  t
 }) => {
+  const poNumber = order?.poNumber || order?.id || 'N/A';
+
+  // Traductions avec fallbacks
+  const labels = {
+    subject: t ? t('emailTemplates.reclamation.subject', { poNumber }) : `Réclamation - Commande ${poNumber}`,
+    intro: t ? t('emailTemplates.reclamation.intro', { poNumber }) : `Nous avons réceptionné la commande ${poNumber} et constatons les problèmes suivants :`,
+    missingSection: t?.('emailTemplates.reclamation.missingSection') || '🔴 QUANTITÉS MANQUANTES',
+    damagedSection: t?.('emailTemplates.reclamation.damagedSection') || '⚠️ PRODUITS ENDOMMAGÉS',
+    notesSection: t?.('emailTemplates.reclamation.notesSection') || '📝 Notes additionnelles',
+    ordered: t?.('emailTemplates.reclamation.ordered') || 'Commandé',
+    receivedHealthy: t?.('emailTemplates.reclamation.receivedHealthy') || 'Reçu sain',
+    receivedDamaged: t?.('emailTemplates.reclamation.receivedDamaged') || 'Reçu endommagé',
+    missing: t?.('emailTemplates.reclamation.missing') || 'Manquant',
+    damagedQty: t?.('emailTemplates.reclamation.damagedQty') || 'Quantité endommagée',
+    units: t?.('emailTemplates.reclamation.units') || 'unités',
+    noIssues: t?.('emailTemplates.reclamation.noIssues') || 'Aucun problème spécifique détaillé.',
+    actionRequest: t?.('emailTemplates.reclamation.actionRequest') || 'Merci de procéder rapidement au remplacement ou à l\'envoi des articles manquants/endommagés.',
+    reclamationContact: t?.('emailTemplates.reclamation.reclamationContact') || 'Contact réclamations',
+    phone: t?.('emailTemplates.reclamation.phone') || 'Tél',
+    closing: t?.('emailTemplates.reclamation.closing') || 'Cordialement,',
+    orderNotSpecified: 'Commande non spécifiée.',
+  };
+
   if (!order) {
     return {
       to: '',
       subject: '',
-      body: 'Commande non spécifiée.',
+      body: labels.orderNotSpecified,
       isValid: false
     };
   }
-
-  const poNumber = order.poNumber || order.id || 'N/A';
 
   // Récupérer l'email de réclamation
   const reclamationEmail = sanitizeEmail(
@@ -319,9 +361,9 @@ export const generateReclamationEmail = ({
       const received = typeof receivedData === 'object' ? receivedData.received : (receivedData || 0);
       const damaged = damagedQuantities?.[item.sku] || 0;
       const totalReceived = Number(received) + Number(damaged);
-      const missing = item.quantity - totalReceived;
+      const missingQty = item.quantity - totalReceived;
 
-      if (missing > 0) {
+      if (missingQty > 0) {
         const product = products?.find(p => p.sku === item.sku);
         missingItems.push({
           name: product?.name || item.sku,
@@ -329,24 +371,24 @@ export const generateReclamationEmail = ({
           ordered: item.quantity,
           received: Number(received),
           damaged: Number(damaged),
-          missing
+          missing: missingQty
         });
       }
     });
   }
 
   if (missingItems.length > 0) {
-    let section = '🔴 QUANTITÉS MANQUANTES\n';
-    section += '─'.repeat(40) + '\n';
+    let section = `${labels.missingSection}\n`;
+    section += '-'.repeat(40) + '\n';
     missingItems.forEach(item => {
-      section += `\n▸ ${item.name}\n`;
+      section += `\n> ${item.name}\n`;
       section += `  SKU: ${item.sku}\n`;
-      section += `  Commandé: ${item.ordered} unités\n`;
-      section += `  Reçu sain: ${item.received} unités\n`;
+      section += `  ${labels.ordered}: ${item.ordered} ${labels.units}\n`;
+      section += `  ${labels.receivedHealthy}: ${item.received} ${labels.units}\n`;
       if (item.damaged > 0) {
-        section += `  Reçu endommagé: ${item.damaged} unités\n`;
+        section += `  ${labels.receivedDamaged}: ${item.damaged} ${labels.units}\n`;
       }
-      section += `  ⚠️ Manquant: ${item.missing} unités\n`;
+      section += `  ⚠️ ${labels.missing}: ${item.missing} ${labels.units}\n`;
     });
     sections.push(section);
   }
@@ -367,12 +409,12 @@ export const generateReclamationEmail = ({
   }
 
   if (damagedItems.length > 0) {
-    let section = '⚠️ PRODUITS ENDOMMAGÉS\n';
-    section += '─'.repeat(40) + '\n';
+    let section = `${labels.damagedSection}\n`;
+    section += '-'.repeat(40) + '\n';
     damagedItems.forEach(item => {
-      section += `\n▸ ${item.name}\n`;
+      section += `\n> ${item.name}\n`;
       section += `  SKU: ${item.sku}\n`;
-      section += `  Quantité endommagée: ${item.quantity} unités\n`;
+      section += `  ${labels.damagedQty}: ${item.quantity} ${labels.units}\n`;
     });
     sections.push(section);
   }
@@ -380,24 +422,29 @@ export const generateReclamationEmail = ({
   // Notes utilisateur
   const hasNotes = notes && typeof notes === 'string' && notes.trim().length > 0;
 
-  // Construire le corps de l'email
-  const body = `${getGreeting(contactName)}
+  // Construire le corps de l'email (avec salutation traduite pour réclamation)
+  const greetingReclamation = t 
+    ? (contactName 
+        ? t('emailTemplates.reclamation.greetingWithName', { name: getFirstName(contactName) })
+        : t('emailTemplates.reclamation.greeting') + ',')
+    : (contactName ? `Bonjour ${getFirstName(contactName)},` : 'Bonjour,');
 
-Nous avons réceptionné la commande ${poNumber} et constatons les problèmes suivants :
+  const body = `${greetingReclamation}
 
-${sections.length > 0 ? sections.join('\n') : 'Aucun problème spécifique détaillé.'}
-${hasNotes ? `\n📝 Notes additionnelles\n${'─'.repeat(40)}\n${notes.trim()}\n` : ''}
-─────────────────────────────────────────
+${labels.intro}
 
-Merci de procéder rapidement au remplacement ou à l'envoi des articles manquants/endommagés.
+${sections.length > 0 ? sections.join('\n') : labels.noIssues}
+${hasNotes ? `\n${labels.notesSection}\n${'-'.repeat(40)}\n${notes.trim()}\n` : ''}
+-----------------------------------------
 
-${contactName || contactPhone ? `Contact réclamations : ${contactName}${contactPhone ? ` • Tél: ${contactPhone}` : ''}\n` : ''}
-Cordialement,
+${labels.actionRequest}
+
+${contactName || contactPhone ? `${labels.reclamationContact} : ${contactName}${contactPhone ? ` • ${labels.phone}: ${contactPhone}` : ''}\n` : ''}${labels.closing}
 ${signature}`;
 
   return {
     to: reclamationEmail,
-    subject: `Réclamation - Commande ${poNumber}`,
+    subject: labels.subject,
     body,
     isValid: isValidEmail(reclamationEmail),
     hasIssues: missingItems.length > 0 || damagedItems.length > 0
@@ -426,11 +473,11 @@ export const parseEmailContent = (content) => {
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i].trim();
 
-    if (line.startsWith('À:') || line.startsWith('A:')) {
-      to = line.replace(/^[ÀA]:/, '').trim();
-    } else if (line.startsWith('Objet:')) {
-      subject = line.replace('Objet:', '').trim();
-    } else if (line.startsWith('Bonjour')) {
+    if (line.startsWith('À:') || line.startsWith('A:') || line.startsWith('To:')) {
+      to = line.replace(/^[ÀATo]:/, '').trim();
+    } else if (line.startsWith('Objet:') || line.startsWith('Subject:')) {
+      subject = line.replace(/^(Objet|Subject):/, '').trim();
+    } else if (line.startsWith('Bonjour') || line.startsWith('Hello') || line.startsWith('Hola')) {
       bodyStartIndex = i;
       break;
     }
@@ -519,4 +566,3 @@ const emailService = {
 };
 
 export default emailService;
-

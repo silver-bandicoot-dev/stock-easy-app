@@ -416,6 +416,25 @@ export const OrdersTab = ({
     }
   };
 
+  // Générer une réclamation fournisseur
+  const handleGenerateReclamation = (order) => {
+    if (reclamationEmailModalHandlers?.open) {
+      reclamationEmailModalHandlers.open(order);
+    } else if (reclamationEmailModal?.openReclamationEmailModal) {
+      reclamationEmailModal.openReclamationEmailModal(order);
+    } else {
+      console.warn('⚠️ Modale de réclamation non disponible');
+      toast.error(t('ordersPage.reclamationModalUnavailable', 'Impossible d\'ouvrir la modale de réclamation'));
+    }
+  };
+
+  // Compléter la réconciliation (archiver la commande)
+  const handleCompleteReconciliation = async (orderId) => {
+    await handleConfirmReconciliation(orderId);
+    // Désélectionner la commande après archivage
+    setSelectedOrder(null);
+  };
+
   return (
     <motion.div
       key="orders"
@@ -610,6 +629,8 @@ export const OrdersTab = ({
               onShip={handleShipOrder}
               onReceive={handleReceiveOrder}
               onStartReconciliation={handleStartReconciliation}
+              onGenerateReclamation={handleGenerateReclamation}
+              onCompleteReconciliation={handleCompleteReconciliation}
               onShare={handleShareOrder}
               formatCurrency={formatCurrency}
             />

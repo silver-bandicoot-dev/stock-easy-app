@@ -44,7 +44,8 @@
     "selectOption": "Select an option",
     "optional": "Optional",
     "required": "Required",
-    "allRightsReserved": "All rights reserved."
+    "allRightsReserved": "All rights reserved.",
+    "retry": "Retry"
   },
   "seo": {
     "title": "Stockeasy - Shopify Inventory Management, AI Forecasting & Restock Alerts",
@@ -143,7 +144,10 @@
     "supplierManagement": "Supplier Management",
     "mapping": "Mapping",
     "warehouseManagement": "Warehouse Management",
-    "integrations": "Integrations"
+    "integrations": "Integrations",
+    "openMenu": "Open menu",
+    "closeMenu": "Close menu",
+    "syncData": "Sync data"
   },
   "dashboard": {
     "welcomeBack": "Welcome back 👋",
@@ -488,6 +492,7 @@
     "orderNotFound": "Order {{id}} not found",
     "reconciliationConfirmed": "Reconciliation confirmed! The order has been archived.",
     "reconciliationError": "Error confirming reconciliation",
+    "reclamationModalUnavailable": "Unable to open reclamation modal",
     "pagination": {
       "summary": "{{count}} order(s) • Page {{page}} of {{totalPages}}"
     },
@@ -895,6 +900,9 @@
       "modify": "Edit",
       "delete": "Delete",
       "na": "N/A",
+      "unassigned": "Unassigned supplier",
+      "assignmentRequired": "Assign a supplier in Settings > Mapping",
+      "cannotOrderUnassigned": "You must first assign a supplier to these products",
       "messages": {
         "created": "Supplier created!",
         "updated": "Supplier updated!",
@@ -1125,6 +1133,8 @@
   },
   "profile": {
     "title": "My Profile",
+    "myProfile": "My profile",
+    "user": "User",
     "subtitle": "Manage your personal information, company, and team",
     "personalInfo": "Personal information",
     "preferences": "Preferences",
@@ -1599,6 +1609,64 @@
     "en": "English",
     "es": "Español"
   },
+  "emailTemplates": {
+    "order": {
+      "subject": "Replenishment Order - {{supplier}}",
+      "greeting": "Hello",
+      "greetingWithName": "Hello {{name}},",
+      "intro": "We would like to place a replenishment order for the following products:",
+      "deliverySection": "📦 Delivery",
+      "warehouse": "Warehouse",
+      "address": "Address",
+      "notSpecified": "Not specified",
+      "confirmRequest": "Please confirm:",
+      "confirmAvailability": "Product availability",
+      "confirmDelivery": "Estimated delivery times",
+      "confirmTotal": "Total amount including shipping",
+      "supplierContact": "Supplier contact",
+      "phone": "Phone",
+      "closing": "Best regards,",
+      "table": {
+        "product": "Product",
+        "sku": "SKU",
+        "qty": "Qty",
+        "unitPrice": "Unit Price",
+        "total": "Total",
+        "subtotal": "Subtotal",
+        "productsOrdered": "Products ordered",
+        "noProducts": "No products",
+        "noProductsSelected": "No products selected",
+        "unnamed": "Unnamed"
+      }
+    },
+    "reclamation": {
+      "subject": "Claim - Order {{poNumber}}",
+      "greeting": "Hello",
+      "greetingWithName": "Hello {{name}},",
+      "intro": "We have received order {{poNumber}} and found the following issues:",
+      "missingSection": "🔴 MISSING QUANTITIES",
+      "damagedSection": "⚠️ DAMAGED PRODUCTS",
+      "notesSection": "📝 Additional notes",
+      "ordered": "Ordered",
+      "receivedHealthy": "Received (healthy)",
+      "receivedDamaged": "Received (damaged)",
+      "missing": "Missing",
+      "damagedQty": "Damaged quantity",
+      "units": "units",
+      "noIssues": "No specific issues detailed.",
+      "actionRequest": "Please proceed with the replacement or shipment of missing/damaged items as soon as possible.",
+      "reclamationContact": "Claims contact",
+      "phone": "Phone",
+      "closing": "Best regards,"
+    }
+  },
+  "reclamation": {
+    "attachmentWarning": {
+      "title": "Attachments must be added manually",
+      "description": "Photos and documents cannot be sent automatically. Once the email opens in Gmail or Outlook, you will need to add the attachments manually.",
+      "photosDetected": "Photos were taken - don't forget to attach them!"
+    }
+  },
   "ordersTable": {
     "columns": {
       "poNumber": "PO #",
@@ -1657,7 +1725,9 @@
       "confirmOrder": "Confirm Order",
       "markAsShipped": "Mark as Shipped",
       "markAsReceived": "Mark as Received",
-      "startReconciliation": "Start Reconciliation"
+      "startReconciliation": "Start Reconciliation",
+      "generateReclamation": "Generate Reclamation",
+      "completeReconciliation": "Complete Reconciliation"
     },
     "reconciliation": {
       "inProgress": "Reconciliation in progress",

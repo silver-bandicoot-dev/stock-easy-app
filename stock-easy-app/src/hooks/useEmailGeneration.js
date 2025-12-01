@@ -49,7 +49,7 @@ export const useEmailGeneration = () => {
       quantities: orderQuantities,
       supplier,
       warehouse: warehouse ? { ...warehouse, name: warehouseName } : { name: warehouseName },
-      signature: userSignature || "L'équipe Stockeasy",
+      signature: userSignature || '',
       formatCurrency
     });
 
@@ -82,7 +82,7 @@ export const useEmailGeneration = () => {
       products: allProducts,
       supplier,
       notes,
-      signature: "L'équipe Stockeasy"
+      signature: userSignature || ''
     });
 
     return email.body;

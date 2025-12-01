@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Mail, Send, FileText, Calculator, Package, Copy, ExternalLink, CheckCircle2, AlertTriangle } from 'lucide-react';
+import { Mail, Send, FileText, Calculator, Package, CheckCircle2, AlertTriangle } from 'lucide-react';
 import { Modal, ModalFooter, ModalSection } from '../../ui/Modal';
 import { Button } from '../../ui/Button';
 import { formatPrice } from '../../../utils/decimalUtils';
 import { ImagePreview } from '../../ui/ImagePreview';
+import { EmailSendOptions } from '../../ui/EmailSendOptions';
 import emailService from '../../../services/emailService';
 import { toast } from 'sonner';
 
@@ -26,7 +27,6 @@ export const EmailOrderModal = ({
   const [editableEmail, setEditableEmail] = useState('');
   const [editableSubject, setEditableSubject] = useState('');
   const [editableBody, setEditableBody] = useState('');
-  const [isCopied, setIsCopied] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
 
   // Trouver les informations du fournisseur
@@ -74,7 +74,7 @@ export const EmailOrderModal = ({
       quantities: orderQuantities,
       supplier: supplierInfo,
       warehouse: warehouseInfo ? { ...warehouseInfo, name: selectedWarehouse } : { name: selectedWarehouse },
-      signature: getUserSignature?.() || "L'équipe Stockeasy",
+      signature: getUserSignature?.() || '',
       formatCurrency: formatPrice
     });
 
@@ -87,22 +87,6 @@ export const EmailOrderModal = ({
   const isEmailValid = emailService.isValidEmail(editableEmail);
 
   // Handlers
-  const handleCopy = async () => {
-    const fullEmail = emailService.buildEmailContent(editableEmail, editableSubject, editableBody);
-    const success = await emailService.copyToClipboard(fullEmail);
-    if (success) {
-      setIsCopied(true);
-      toast.success('Email copié dans le presse-papiers');
-      setTimeout(() => setIsCopied(false), 2000);
-    } else {
-      toast.error('Erreur lors de la copie');
-    }
-  };
-
-  const handleOpenEmailClient = () => {
-    emailService.openEmailClient(editableEmail, editableSubject, editableBody);
-  };
-
   const handleSendEmail = async () => {
     setIsProcessing(true);
     try {
@@ -266,27 +250,6 @@ export const EmailOrderModal = ({
         title="Contenu de l'email"
         description="Vérifiez et modifiez le contenu avant envoi"
       >
-        {/* Actions rapides */}
-        <div className="flex items-center justify-end gap-2 mb-4">
-          <Button
-            variant="outline"
-            size="sm"
-            icon={Copy}
-            onClick={handleCopy}
-            disabled={isCopied}
-          >
-            {isCopied ? 'Copié !' : 'Copier'}
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            icon={ExternalLink}
-            onClick={handleOpenEmailClient}
-          >
-            Client email
-          </Button>
-        </div>
-
         <div className="space-y-4">
           {/* Destinataire */}
           <div>
@@ -328,6 +291,15 @@ export const EmailOrderModal = ({
               className="input-base font-mono text-sm resize-y min-h-[200px]"
             />
           </div>
+        </div>
+
+        {/* Options d'envoi Gmail / Outlook */}
+        <div className="mt-6 pt-6 border-t border-neutral-200">
+          <EmailSendOptions
+            to={editableEmail}
+            subject={editableSubject}
+            body={editableBody}
+          />
         </div>
       </ModalSection>
     </Modal>

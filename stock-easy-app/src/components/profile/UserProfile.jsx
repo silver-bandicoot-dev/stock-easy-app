@@ -237,7 +237,7 @@ const UserProfile = () => {
               </div>
               <div className="flex flex-col">
                 <h1 className="text-xl font-semibold text-[#191919] leading-snug">
-                  Mon profil
+                  {t('profile.myProfile')}
                 </h1>
                 <p className="text-sm text-[#666663]">
                   {firstName || lastName
@@ -258,7 +258,7 @@ const UserProfile = () => {
             }`}
           >
             <Save className="w-5 h-5" />
-            {uploadingPhoto ? 'Upload photo...' : saving ? 'Sauvegarde...' : 'Sauvegarder'}
+            {uploadingPhoto ? t('profile.uploading') : saving ? t('profile.saving') : t('profile.saveChanges')}
           </button>
         </div>
 
@@ -293,7 +293,7 @@ const UserProfile = () => {
               
               <div className="flex-1">
                 <h2 className="text-2xl font-bold text-[#191919] mb-1">
-                  {firstName && lastName ? `${firstName} ${lastName}` : 'Votre nom'}
+                  {firstName && lastName ? `${firstName} ${lastName}` : t('profile.yourName')}
                 </h2>
                 <p className="text-gray-600 flex items-center gap-2">
                   <Mail className="w-4 h-4" />
@@ -302,8 +302,8 @@ const UserProfile = () => {
                 {userData?.role && (
                   <div className="mt-3 inline-flex items-center gap-2 px-3 py-1 bg-blue-50 text-blue-700 rounded-full text-sm">
                     {userData.role === 'owner' && <Crown className="w-4 h-4" />}
-                    {userData.role === 'owner' ? 'Propriétaire' : 
-                     userData.role === 'admin' ? 'Administrateur' : 'Utilisateur'}
+                    {userData.role === 'owner' ? t('profile.roles.owner') : 
+                     userData.role === 'admin' ? t('profile.roles.admin') : t('profile.roles.member')}
                   </div>
                 )}
               </div>
@@ -315,14 +315,14 @@ const UserProfile = () => {
                 {/* Prénom */}
                 <div>
                   <label className="block text-sm font-medium text-[#191919] mb-2">
-                    Prénom *
+                    {t('profile.firstNameRequired')}
                   </label>
                   <input
                     type="text"
                     value={firstName}
                     onChange={(e) => setFirstName(e.target.value)}
                     className="w-full px-4 py-3 border border-[#E5E4DF] rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
-                    placeholder="Votre prénom"
+                    placeholder={t('profile.firstNamePlaceholder')}
                     required
                   />
                 </div>
@@ -330,14 +330,14 @@ const UserProfile = () => {
                 {/* Nom */}
                 <div>
                   <label className="block text-sm font-medium text-[#191919] mb-2">
-                    Nom *
+                    {t('profile.lastNameRequired')}
                   </label>
                   <input
                     type="text"
                     value={lastName}
                     onChange={(e) => setLastName(e.target.value)}
                     className="w-full px-4 py-3 border border-[#E5E4DF] rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
-                    placeholder="Votre nom"
+                    placeholder={t('profile.lastNamePlaceholder')}
                     required
                   />
                 </div>
@@ -347,16 +347,16 @@ const UserProfile = () => {
               <div>
                 <label className="block text-sm font-medium text-[#191919] mb-2 flex items-center gap-2">
                   <Globe className="w-4 h-4" />
-                  Langue de l'interface
+                  {t('profile.language')}
                 </label>
                 <select
                   value={language}
                   onChange={(e) => setLanguage(e.target.value)}
                   className="w-full px-4 py-3 border border-[#E5E4DF] rounded-lg focus:outline-none focus:ring-2 focus:ring-black bg-white"
                 >
-                  <option value="fr">Français</option>
-                  <option value="en">English</option>
-                  <option value="es">Español</option>
+                  <option value="fr">{t('languages.fr')}</option>
+                  <option value="en">{t('languages.en')}</option>
+                  <option value="es">{t('languages.es')}</option>
                 </select>
               </div>
             </div>
@@ -367,15 +367,15 @@ const UserProfile = () => {
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-bold text-[#191919] flex items-center gap-2">
                 <Users className="w-5 h-5" />
-                Équipe
+                {t('profile.team')}
               </h3>
-              <span className="text-sm text-gray-500">{Array.isArray(teamMembers) ? teamMembers.length : 0} membres</span>
+              <span className="text-sm text-gray-500">{Array.isArray(teamMembers) ? teamMembers.length : 0} {t('profile.teamMembers')}</span>
             </div>
 
             <div className="space-y-3 max-h-96 overflow-y-auto">
               {Array.isArray(teamMembers) && teamMembers.length === 0 ? (
                 <p className="text-sm text-gray-500 text-center py-4">
-                  Aucun membre d'équipe
+                  {t('profile.noTeamMembers')}
                 </p>
               ) : (
                 Array.isArray(teamMembers) ? teamMembers.map((member) => (
@@ -407,13 +407,7 @@ const UserProfile = () => {
           </div>
         </div>
 
-        {/* Info Box */}
-        <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
-          <p className="text-sm text-blue-800">
-            <strong>✨ Nouveau :</strong> Votre profil est maintenant hébergé sur Supabase ! 
-            Les photos sont stockées de manière sécurisée et les données sont synchronisées en temps réel.
-          </p>
-        </div>
+{/* Info Box supprimé - informations techniques non pertinentes pour l'utilisateur */}
       </div>
     </div>
   );

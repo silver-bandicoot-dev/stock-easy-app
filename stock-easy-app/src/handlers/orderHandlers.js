@@ -340,13 +340,17 @@ export const handleCreateOrderWithoutEmail = async (
     await loadData();
     
     inlineModals.emailOrderModal.closeEmailModal();
-    toast.success('Commande créée avec succès !', {
-      action: {
-        label: 'Voir',
-        onClick: () => setActiveTab('track')
-      },
-      duration: 6000
+    
+    // Afficher un toast de confirmation avec le numéro de commande
+    toast.success(`Commande ${orderData.id} créée avec succès !`, {
+      description: `${productsToOrder.length} article(s) - ${selectedSupplier}`,
+      duration: 5000
     });
+    
+    // Rediriger automatiquement vers l'onglet des commandes après un court délai
+    setTimeout(() => {
+      setActiveTab('track');
+    }, 500);
   } catch (error) {
     console.error('❌ Erreur lors de la création de la commande:', error);
     toast.error('Erreur lors de la création de la commande');
@@ -372,14 +376,18 @@ export const handleOpenEmailModal = (
   inlineModals.emailOrderModal.openEmailModal(supplier);
   
   // Pré-remplir les quantités dans le système inline
-  products.forEach(p => {
-    inlineModals.emailOrderModal.updateOrderQuantity(p.sku, p.qtyToOrder);
-  });
+  if (products && Array.isArray(products)) {
+    products.forEach(p => {
+      inlineModals.emailOrderModal.updateOrderQuantity(p.sku, p.qtyToOrder);
+    });
+  }
   
   // Sélectionner le premier warehouse par défaut
-  const warehousesList = Object.values(warehouses);
-  if (warehousesList.length > 0) {
-    inlineModals.emailOrderModal.setSelectedWarehouse(warehousesList[0].name);
+  if (warehouses && typeof warehouses === 'object') {
+    const warehousesList = Object.values(warehouses);
+    if (warehousesList.length > 0) {
+      inlineModals.emailOrderModal.setSelectedWarehouse(warehousesList[0].name);
+    }
   }
 };
 

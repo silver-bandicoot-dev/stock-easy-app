@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useMemo, useEffect, useRef } from 'react';
+import React, { createContext, useContext, useMemo, useEffect, useRef, useState } from 'react';
 import { useStockData } from '../hooks/useStockData';
 import { useOrderManagement } from '../hooks/useOrderManagement';
 import { useSupplierManagement } from '../hooks/useSupplierManagement';
@@ -21,6 +21,7 @@ import * as ReconciliationHandlers from '../handlers/reconciliationHandlers';
 import * as EmailUtils from '../utils/emailUtils';
 import { calculateMetrics } from '../utils/calculations';
 import { checkAndSaveKPISnapshot } from '../utils/kpiScheduler';
+import { getCurrentUserProfile } from '../services/companyService';
 import api from '../services/apiAdapter';
 
 const StockDataContext = createContext(null);
@@ -36,7 +37,61 @@ export const StockDataProvider = ({ children }) => {
   } = modalContext;
 
   const { currentUser } = useAuth();
-  const getUserSignature = () => EmailUtils.getUserSignature(currentUser);
+  
+  // Profil complet de l'utilisateur (prénom, nom, société)
+  const [userProfile, setUserProfile] = useState(null);
+  
+  // Charger le profil complet quand l'utilisateur est connecté
+  useEffect(() => {
+    const loadUserProfile = async () => {
+      if (!currentUser?.id) {
+        setUserProfile(null);
+        return;
+      }
+      
+      try {
+        const { data, error } = await getCurrentUserProfile();
+        if (!error && data) {
+          setUserProfile(data);
+        }
+      } catch (err) {
+        console.warn('⚠️ Impossible de charger le profil utilisateur:', err);
+      }
+    };
+    
+    loadUserProfile();
+  }, [currentUser?.id]);
+  
+  // Génère la signature de l'utilisateur avec prénom, nom et société
+  const getUserSignature = () => {
+    // Priorité au profil complet
+    if (userProfile) {
+      const firstName = userProfile.first_name || '';
+      const lastName = userProfile.last_name || '';
+      const companyName = userProfile.company?.name || '';
+      
+      if (firstName || lastName) {
+        const fullName = `${firstName} ${lastName}`.trim();
+        return companyName ? `${fullName}\n${companyName}` : fullName;
+      }
+    }
+    
+    // Fallback sur currentUser
+    if (currentUser) {
+      if (currentUser.firstName && currentUser.lastName) {
+        return `${currentUser.firstName} ${currentUser.lastName}`;
+      }
+      if (currentUser.displayName) {
+        return currentUser.displayName;
+      }
+      if (currentUser.email) {
+        return currentUser.email.split('@')[0];
+      }
+    }
+    
+    // Dernier recours - ne JAMAIS retourner "L'équipe Stockeasy"
+    return '';
+  };
 
   // 1. UI & Navigation (basée sur l'URL)
   const tabManagement = useAppNavigation();

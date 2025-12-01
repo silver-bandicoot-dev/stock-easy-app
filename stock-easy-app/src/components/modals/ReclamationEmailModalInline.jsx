@@ -1,7 +1,9 @@
-import React, { useState } from 'react';
-import { Mail, Copy, Check } from 'lucide-react';
+import React from 'react';
+import { Mail, AlertTriangle, Paperclip } from 'lucide-react';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
+import { EmailSendOptions } from '../ui/EmailSendOptions';
+import { useTranslation } from 'react-i18next';
 
 export const ReclamationEmailModalInline = ({
   isOpen,
@@ -10,8 +12,8 @@ export const ReclamationEmailModalInline = ({
   emailGeneration,
   getUserSignature
 }) => {
-  const [copied, setCopied] = useState(false);
-
+  const { t } = useTranslation();
+  
   if (!isOpen || !currentReclamationOrder) return null;
 
   const email = emailGeneration.generateReclamationEmail(
@@ -19,39 +21,21 @@ export const ReclamationEmailModalInline = ({
     getUserSignature()
   );
 
-  const handleCopyToClipboard = async () => {
-    try {
-      await emailGeneration.copyToClipboard(email);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch (error) {
-      console.error('Erreur lors de la copie:', error);
-    }
-  };
+  // Vérifier s'il y a des photos attachées
+  const hasPhotos = currentReclamationOrder.items?.some(item => 
+    item.photos?.length > 0 || item.damagePhotos?.length > 0
+  );
 
   return (
     <Modal
       isOpen={isOpen && currentReclamationOrder}
       onClose={onClose}
       title="Email de Réclamation"
+      icon={Mail}
       footer={
         <div className="flex justify-end gap-3">
           <Button variant="outline" onClick={onClose}>
             Fermer
-          </Button>
-          <Button 
-            variant="secondary" 
-            icon={copied ? Check : Copy}
-            onClick={handleCopyToClipboard}
-          >
-            {copied ? 'Copié !' : 'Copier dans le presse-papiers'}
-          </Button>
-          <Button 
-            variant="primary" 
-            icon={Mail}
-            onClick={() => window.open(`mailto:${email.to}?subject=${encodeURIComponent(email.subject)}&body=${encodeURIComponent(email.body)}`)}
-          >
-            Ouvrir dans le client email
           </Button>
         </div>
       }
@@ -108,6 +92,36 @@ export const ReclamationEmailModalInline = ({
               </div>
             </div>
           </div>
+        </div>
+
+        {/* Avertissement pièces jointes */}
+        <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+          <div className="flex items-start gap-3">
+            <Paperclip className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+            <div>
+              <h4 className="font-semibold text-amber-900 mb-1 flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4" />
+                {t('reclamation.attachmentWarning.title', 'Pièces jointes à ajouter manuellement')}
+              </h4>
+              <p className="text-sm text-amber-700">
+                {t('reclamation.attachmentWarning.description', 'Les photos et documents ne peuvent pas être envoyés automatiquement. Une fois l\'email ouvert dans Gmail ou Outlook, vous devrez ajouter les pièces jointes manuellement.')}
+              </p>
+              {hasPhotos && (
+                <p className="text-sm text-amber-800 font-medium mt-2">
+                  📷 {t('reclamation.attachmentWarning.photosDetected', 'Des photos ont été prises - pensez à les joindre !')}
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Options d'envoi Gmail / Outlook */}
+        <div className="pt-4 border-t border-neutral-200">
+          <EmailSendOptions
+            to={email.to}
+            subject={email.subject}
+            body={email.body}
+          />
         </div>
       </div>
     </Modal>

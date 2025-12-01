@@ -223,17 +223,17 @@ const StockeasyUI = ({
                   {userAvatarUrl ? <img src={userAvatarUrl} alt="Profil" className="w-full h-full object-cover" /> : <span>{userInitials || 'U'}</span>}
                 </div>
                 <div className="hidden sm:flex flex-col items-start">
-                  <span className="text-xs text-[#666663]">{t('profile.myProfile', 'Mon profil')}</span>
-                  <span className="text-sm font-medium text-[#191919] truncate max-w-[120px]">{userDisplayName || t('profile.user', 'Utilisateur')}</span>
+                  <span className="text-xs text-[#666663]">{t('profile.myProfile')}</span>
+                  <span className="text-sm font-medium text-[#191919] truncate max-w-[120px]">{userDisplayName || t('profile.user')}</span>
                 </div>
               </button>
               {isProfileMenuOpen && (
                 <div className="absolute right-0 mt-2 w-56 rounded-lg border border-[#E5E4DF] bg-white shadow-lg py-1 text-sm z-40">
                   <button onClick={() => { setActiveTab(MAIN_TABS.PROFILE); setIsProfileMenuOpen(false); }} className="w-full flex items-center gap-2 px-3 py-2 hover:bg-[#FAFAF7] text-left text-[#191919]">
-                    <User className="w-4 h-4 text-[#666663]" /> <span>{t('profile.myProfile', 'Mon profil')}</span>
+                    <User className="w-4 h-4 text-[#666663]" /> <span>{t('profile.myProfile')}</span>
                   </button>
                   <button onClick={handleProfileLogout} className="w-full flex items-center gap-2 px-3 py-2 hover:bg-[#FAFAF7] text-left text-[#EF1C43]">
-                    <LogOut className="w-4 h-4" /> <span>{t('auth.logout', 'Se déconnecter')}</span>
+                    <LogOut className="w-4 h-4" /> <span>{t('auth.logout')}</span>
                   </button>
                 </div>
               )}
@@ -348,7 +348,8 @@ const StockeasyUI = ({
                           handleOpenEmailModal={(supplier, products) => OrderHandlers.handleOpenEmailModal(
                             inlineModals,
                             supplier,
-                            products
+                            products,
+                            warehouses
                           )}
                           orderEmailModal={inlineModals.emailOrderModal}
                           onViewStock={() => setActiveTab(MAIN_TABS.STOCK)}
@@ -385,6 +386,10 @@ const StockeasyUI = ({
                           reclamationEmailModalHandlers={reclamationEmailModalHandlers}
                           getUserSignature={getUserSignature}
                           currentUser={currentUser}
+                          confirmOrder={orderManagement.confirmOrder}
+                          shipOrder={handlers.handleShipOrder}
+                          receiveOrder={orderManagement.receiveOrder}
+                          loadData={loadData}
                         />
                       </ErrorBoundary>
                     )}

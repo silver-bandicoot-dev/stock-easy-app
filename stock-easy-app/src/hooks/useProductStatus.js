@@ -85,11 +85,15 @@ export const useProductStatus = (enrichedProducts, orders) => {
   // Groupe les produits à commander par fournisseur
   const toOrderBySupplier = useMemo(() => {
     const grouped = {};
+    const UNASSIGNED_SUPPLIER = '__unassigned__';
+    
     productsByStatus.to_order.forEach(p => {
-      if (!grouped[p.supplier]) {
-        grouped[p.supplier] = [];
+      // Utiliser une clé spéciale pour les produits sans fournisseur
+      const supplierKey = p.supplier || UNASSIGNED_SUPPLIER;
+      if (!grouped[supplierKey]) {
+        grouped[supplierKey] = [];
       }
-      grouped[p.supplier].push(p);
+      grouped[supplierKey].push(p);
     });
     return grouped;
   }, [productsByStatus]);

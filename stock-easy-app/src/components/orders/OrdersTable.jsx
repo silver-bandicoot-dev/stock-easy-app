@@ -281,9 +281,15 @@ export const OrdersTable = ({
 
                 {/* Fournisseur */}
                 <td className="px-3 py-3">
-                  <span className="text-sm text-[#191919] font-medium truncate block max-w-[200px]">
-                    {order.supplier}
-                  </span>
+                  {(!order.supplier || order.supplier === 'undefined' || order.supplier === '__unassigned__') ? (
+                    <span className="text-sm text-amber-600 font-medium truncate block max-w-[200px]">
+                      {t('suppliers.unassigned', 'Fournisseur non assigné')}
+                    </span>
+                  ) : (
+                    <span className="text-sm text-[#191919] font-medium truncate block max-w-[200px]">
+                      {order.supplier}
+                    </span>
+                  )}
                 </td>
 
                 {/* Entrepôt */}
