@@ -47,7 +47,8 @@ const App = () => {
             position="top-right"
             richColors
             expand={false}
-            duration={3000}
+            closeButton
+            duration={4000}
           />
           <SupabaseAuthProvider>
             <ModalProvider>

@@ -162,3 +162,4 @@ Merci pour votre aide !
 
 Une fois le lien généré, partagez-le avec le testeur et suivez le guide `GUIDE_INSTALLATION_TESTEUR.md` pour les instructions détaillées.
 
+

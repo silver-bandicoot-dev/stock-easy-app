@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { RefreshCw, Menu, User, LogOut, Compass, Sparkles } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { Toaster } from 'sonner';
 import { AnimatePresence } from 'framer-motion';
+import { useSearchParams } from 'react-router-dom';
 import NotificationBell from '../notifications/NotificationBell';
 import Sidebar from './Sidebar';
 import BottomNav, { BottomNavMoreMenu } from './BottomNav';
@@ -81,6 +81,7 @@ const StockeasyUI = ({
   isTourActive
 }) => {
   const { t } = useTranslation();
+  const [searchParams, setSearchParams] = useSearchParams();
   
   // Navigation State
   const { 
@@ -106,6 +107,35 @@ const StockeasyUI = ({
   const setStockLevelSearch = (term) => {
     setSearchTerm(term);
   };
+
+  // ============================================
+  // Lecture des paramètres d'URL pour les filtres (notifications)
+  // Permet aux notifications de rediriger vers la bonne vue filtrée
+  // ============================================
+  useEffect(() => {
+    const filterParam = searchParams.get('filter');
+    
+    if (filterParam) {
+      // Mapping des paramètres d'URL vers les filtres de stock
+      const filterMapping = {
+        'urgent': STOCK_FILTERS.URGENT || 'urgent',
+        'warning': STOCK_FILTERS.WARNING || 'warning',
+        'healthy': STOCK_FILTERS.HEALTHY || 'healthy',
+        'overstock': 'overstock',
+        'all': STOCK_FILTERS.ALL || 'all'
+      };
+      
+      const mappedFilter = filterMapping[filterParam.toLowerCase()];
+      if (mappedFilter) {
+        setStockLevelFilter(mappedFilter);
+        
+        // Nettoyer le paramètre de l'URL après l'avoir appliqué
+        const newParams = new URLSearchParams(searchParams);
+        newParams.delete('filter');
+        setSearchParams(newParams, { replace: true });
+      }
+    }
+  }, [searchParams, setSearchParams]);
 
   // Gestion Profile Photo
   useEffect(() => {
@@ -179,8 +209,6 @@ const StockeasyUI = ({
   return (
     <CurrencyProvider code={currencyCode}>
       <>
-        <Toaster position="top-right" expand={true} richColors closeButton duration={4000} />
-        
         {/* HEADER DESKTOP */}
         <div className="hidden md:flex fixed top-0 left-0 right-0 z-[60] bg-[#FAFAF7] border-b border-[#E5E4DF] h-16 items-center">
           <div id={TOUR_ELEMENT_IDS.WELCOME} className="w-64 flex items-center justify-center shrink-0">
@@ -355,6 +383,10 @@ const StockeasyUI = ({
                           onViewStock={() => setActiveTab(MAIN_TABS.STOCK)}
                           setActiveTab={setActiveTab}
                           setParametersSubTab={setParametersSubTab}
+                          allProducts={enrichedProducts}
+                          loadData={loadData}
+                          emailGeneration={emailGeneration}
+                          getUserSignature={getUserSignature}
                         />
                       </ErrorBoundary>
                     )}
@@ -417,6 +449,7 @@ const StockeasyUI = ({
                           products={enrichedProducts}
                           suppliers={suppliers}
                           warehouses={warehouses}
+                          loadData={loadData}
                         />
                       </ErrorBoundary>
                     )}

@@ -313,3 +313,4 @@ Suivez les instructions ci-dessus et commencez à tester l'application StockEasy
 
 **Dernière mise à jour** : Janvier 2025
 
+

@@ -16,9 +16,12 @@ import { OrdersKPIBar } from './OrdersKPIBar';
 import { OrdersTable } from './OrdersTable';
 import { OrderDetailPanel } from './OrderDetailPanel';
 import { OrderFilters } from './OrderFilters';
+import { ReplacementReceiptModal } from '../modals/ReplacementReceiptModal';
+import { EditOrderModal } from '../modals/EditOrderModal';
 import api from '../../services/apiAdapter';
 import { useCurrency } from '../../contexts/CurrencyContext';
 import { useAppNavigation } from '../../hooks/useAppNavigation';
+import { updateShopifyInventory, prepareStockUpdatesFromReconciliation } from '../../services/gadgetService';
 
 export const OrdersTab = ({
   // Data props - Support both naming conventions
@@ -83,6 +86,14 @@ export const OrdersTab = ({
   const [selectedOrders, setSelectedOrders] = useState([]);
   const [sortConfig, setSortConfig] = useState({ key: 'createdAt', direction: 'desc' });
   const [showFilters, setShowFilters] = useState(false);
+  
+  // État pour la modale de remplacement
+  const [replacementModalOrder, setReplacementModalOrder] = useState(null);
+  const [isProcessingReplacement, setIsProcessingReplacement] = useState(false);
+  
+  // État pour la modale d'édition
+  const [editModalOrder, setEditModalOrder] = useState(null);
+  const [isProcessingEdit, setIsProcessingEdit] = useState(false);
   
   // Filtres avancés
   const [supplierFilter, setSupplierFilter] = useState('all');
@@ -394,6 +405,16 @@ export const OrdersTab = ({
   const handleConfirmReconciliation = async (orderId) => {
     try {
       console.log('🔄 Confirmation réconciliation pour:', orderId);
+      
+      // 1. Trouver la commande dans la liste
+      const order = localOrders.find(o => o.id === orderId);
+      if (!order) {
+        console.error('❌ Commande non trouvée:', orderId);
+        toast.error(t('ordersPage.reconciliationError'));
+        return;
+      }
+      
+      // 2. Confirmer la réconciliation dans Supabase (met à jour le stock local)
       const result = await api.confirmOrderReconciliation(orderId);
       console.log('📦 Résultat confirmOrderReconciliation:', result);
       
@@ -401,8 +422,31 @@ export const OrdersTab = ({
       const isSuccess = result?.success === true || (result && !result.error);
       
       if (isSuccess) {
-        toast.success(t('ordersPage.reconciliationConfirmed'));
-        // Rafraîchir les données locales et globales
+        // 3. Préparer et envoyer les mises à jour vers Shopify via Gadget
+        const productsList = products || enrichedProducts || [];
+        const stockUpdates = prepareStockUpdatesFromReconciliation(order, productsList);
+        
+        if (stockUpdates.length > 0 && order.company_id) {
+          console.log('🔄 Envoi mise à jour Shopify pour', stockUpdates.length, 'produits');
+          
+          const shopifyResult = await updateShopifyInventory(order.company_id, stockUpdates);
+          
+          if (shopifyResult.success) {
+            console.log('✅ Inventaire Shopify mis à jour:', shopifyResult);
+            toast.success(t('ordersPage.reconciliationConfirmed') + ` (${shopifyResult.processed} produits synchronisés)`);
+          } else {
+            console.warn('⚠️ Mise à jour Shopify partielle ou échouée:', shopifyResult);
+            // On affiche quand même le succès car la réconciliation locale a fonctionné
+            toast.success(t('ordersPage.reconciliationConfirmed'));
+            if (shopifyResult.error) {
+              toast.warning(t('ordersPage.shopifySyncWarning', 'Synchronisation Shopify en attente - vérifiez la configuration'));
+            }
+          }
+        } else {
+          toast.success(t('ordersPage.reconciliationConfirmed'));
+        }
+        
+        // 4. Rafraîchir les données locales et globales
         fetchOrders();
         if (typeof loadData === 'function') {
           await loadData();
@@ -433,6 +477,90 @@ export const OrdersTab = ({
     await handleConfirmReconciliation(orderId);
     // Désélectionner la commande après archivage
     setSelectedOrder(null);
+  };
+
+  // Ouvrir la modale de réception de remplacement
+  const handleOpenReplacementModal = (order) => {
+    setReplacementModalOrder(order);
+  };
+
+  // Confirmer la réception des articles de remplacement
+  const handleConfirmReplacement = async (orderId, replacements) => {
+    try {
+      setIsProcessingReplacement(true);
+      console.log('📦 Réception remplacement pour commande:', orderId, replacements);
+      
+      // Appeler l'API Supabase
+      const result = await api.receiveReplacementItems(orderId, replacements);
+      
+      if (result.success) {
+        toast.success(t('orders.replacement.success', 'Articles de remplacement reçus ! Stock mis à jour.'));
+        
+        // Fermer la modale
+        setReplacementModalOrder(null);
+        
+        // Rafraîchir les données
+        fetchOrders();
+        if (typeof loadData === 'function') {
+          await loadData();
+        }
+      } else {
+        toast.error(result.error || t('orders.replacement.error', 'Erreur lors de la réception'));
+      }
+    } catch (error) {
+      console.error('❌ Erreur réception remplacement:', error);
+      toast.error(t('orders.replacement.error', 'Erreur lors de la réception'));
+    } finally {
+      setIsProcessingReplacement(false);
+    }
+  };
+
+  // Ouvrir la modale d'édition
+  const handleOpenEditModal = (order) => {
+    // Vérifier que le statut permet l'édition
+    if (!['pending_confirmation', 'preparing'].includes(order.status)) {
+      toast.error(t('editOrder.notAllowed', 'Modification non autorisée pour ce statut'));
+      return;
+    }
+    setEditModalOrder(order);
+  };
+
+  // Sauvegarder les modifications de la commande
+  const handleSaveOrderEdit = async (orderId, updates) => {
+    try {
+      setIsProcessingEdit(true);
+      console.log('📝 Sauvegarde modifications commande:', orderId, updates);
+      
+      // Appeler l'API Supabase
+      const result = await api.updateOrder(orderId, updates);
+      
+      if (result.success) {
+        toast.success(t('editOrder.success', 'Commande modifiée avec succès !'));
+        
+        // Fermer la modale
+        setEditModalOrder(null);
+        
+        // Rafraîchir les données
+        fetchOrders();
+        if (typeof loadData === 'function') {
+          await loadData();
+        }
+        
+        // Mettre à jour la commande sélectionnée si c'est la même
+        if (selectedOrder?.id === orderId) {
+          // Re-sélectionner avec les nouvelles données
+          const updatedOrder = { ...selectedOrder, ...updates };
+          setSelectedOrder(updatedOrder);
+        }
+      } else {
+        toast.error(result.error || t('editOrder.error', 'Erreur lors de la modification'));
+      }
+    } catch (error) {
+      console.error('❌ Erreur modification commande:', error);
+      toast.error(t('editOrder.error', 'Erreur lors de la modification'));
+    } finally {
+      setIsProcessingEdit(false);
+    }
   };
 
   return (
@@ -631,12 +759,33 @@ export const OrdersTab = ({
               onStartReconciliation={handleStartReconciliation}
               onGenerateReclamation={handleGenerateReclamation}
               onCompleteReconciliation={handleCompleteReconciliation}
+              onReceiveReplacement={handleOpenReplacementModal}
               onShare={handleShareOrder}
+              onEdit={handleOpenEditModal}
               formatCurrency={formatCurrency}
             />
           )}
         </AnimatePresence>
       </div>
+      
+      {/* Modale de réception des remplacements */}
+      <ReplacementReceiptModal
+        isOpen={!!replacementModalOrder}
+        onClose={() => setReplacementModalOrder(null)}
+        order={replacementModalOrder}
+        onConfirm={handleConfirmReplacement}
+        isProcessing={isProcessingReplacement}
+      />
+      
+      {/* Modale d'édition de commande */}
+      <EditOrderModal
+        isOpen={!!editModalOrder}
+        onClose={() => setEditModalOrder(null)}
+        order={editModalOrder}
+        products={productsList}
+        onSave={handleSaveOrderEdit}
+        isProcessing={isProcessingEdit}
+      />
     </motion.div>
   );
 };

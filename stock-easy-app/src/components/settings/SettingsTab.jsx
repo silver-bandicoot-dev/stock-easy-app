@@ -9,7 +9,7 @@ import GestionWarehouses from '../settings/GestionWarehouses';
 import { GestionMultiplicateurs } from '../settings/GestionMultiplicateurs';
 import { IntegrationsSettings } from '../settings/IntegrationsSettings';
 import { SETTINGS_TABS } from '../../constants/stockEasyConstants';
-import { useStockContext } from '../../contexts/StockDataContext';
+import { useStockContextOptional } from '../../contexts/StockDataContext';
 
 // Settings tabs configuration
 const getSettingsSections = (t) => [
@@ -76,8 +76,8 @@ export const SettingsTab = ({
   const { t } = useTranslation();
   const settingsSections = getSettingsSections(t);
   
-  // Get data from context as fallback
-  const stockContext = useStockContext();
+  // Get data from context as fallback (optional - won't throw if not in provider)
+  const stockContext = useStockContextOptional();
   
   // Use props or fallback to context
   const products = productsProp || stockContext?.products || stockContext?.enrichedProducts || [];

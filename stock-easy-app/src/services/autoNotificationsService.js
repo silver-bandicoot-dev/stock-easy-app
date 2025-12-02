@@ -1,5 +1,6 @@
 /**
- * Service de notifications automatiques
+ * Service de notifications automatiques (v2 avec déduplication anti-spam)
+ * 
  * Gère la création de notifications pour :
  * - Alertes de stock (rupture, bientôt en rupture)
  * - Produits non mappés avec fournisseurs
@@ -8,61 +9,130 @@
  * - Écarts de réception
  * - Surstock profond
  * - Informations fournisseurs manquantes
+ * 
+ * Utilise create_notification_v2 avec système de déduplication pour éviter le spam.
+ * Chaque notification a une clé unique et un cooldown qui empêche les doublons.
  */
 
 import { supabase } from '../lib/supabaseClient';
 
+// ============================================
+// Configuration des cooldowns par type
+// ============================================
+
+const COOLDOWN_CONFIG = {
+  stock_alert_critical: 24,      // 24h avant de re-notifier pour les ruptures
+  stock_alert_warning: 12,       // 12h pour les alertes de stock bas
+  unmapped_product: 24,          // 24h pour les produits sans fournisseur
+  weekly_report: 168,            // 7 jours (une fois par semaine)
+  order_delayed_critical: 24,    // 24h pour les commandes très en retard
+  order_delayed_warning: 12,     // 12h pour les commandes légèrement en retard
+  order_discrepancy: 48,         // 48h pour les écarts de réception
+  surstock_alert: 24,            // 24h pour les alertes de surstock
+  missing_supplier_info: 48,     // 48h pour les infos fournisseurs manquantes
+  missing_product_moq: 48        // 48h pour les produits sans MOQ
+};
+
+// ============================================
+// Fonction de création avec déduplication
+// ============================================
+
 /**
- * Crée une notification pour un utilisateur
+ * Crée une notification avec déduplication anti-spam
+ * Utilise create_notification_v2 de PostgreSQL
+ * 
  * @param {string} userId - ID de l'utilisateur
  * @param {string} type - Type de notification
  * @param {string} title - Titre de la notification
  * @param {string} message - Message de la notification
  * @param {string} link - Lien optionnel vers la ressource
  * @param {Object} metadata - Métadonnées supplémentaires
+ * @param {string} dedupKey - Clé de déduplication unique
+ * @param {number} cooldownHours - Heures avant de pouvoir renvoyer la même notification
  */
-export async function createNotification(userId, type, title, message, link = null, metadata = {}) {
+export async function createNotification(
+  userId, 
+  type, 
+  title, 
+  message, 
+  link = null, 
+  metadata = {},
+  dedupKey = null,
+  cooldownHours = 24
+) {
   try {
-    const { data, error } = await supabase.rpc('create_notification', {
+    // Utiliser la fonction v2 avec déduplication
+    const { data, error } = await supabase.rpc('create_notification_v2', {
       p_user_id: userId,
       p_type: type,
       p_title: title,
       p_message: message,
       p_link: link,
-      p_metadata: metadata
+      p_metadata: metadata,
+      p_dedup_key: dedupKey,
+      p_cooldown_hours: cooldownHours
     });
 
     if (error) {
       console.error('Erreur création notification:', error);
-      return { success: false, error };
+      return { success: false, error, skipped: false };
     }
 
-    return { success: true, data };
+    // Si data est null, la notification a été ignorée (cooldown actif ou désactivée)
+    if (data === null) {
+      return { success: true, skipped: true, reason: 'cooldown_active_or_disabled' };
+    }
+
+    return { success: true, data, skipped: false };
   } catch (error) {
     console.error('Erreur création notification:', error);
-    return { success: false, error };
+    return { success: false, error, skipped: false };
   }
 }
 
 /**
- * Crée des notifications pour tous les utilisateurs d'une entreprise
+ * Crée des notifications pour tous les utilisateurs d'une entreprise avec déduplication
  * @param {Array<string>} userIds - Liste des IDs utilisateurs
  * @param {string} type - Type de notification
  * @param {string} title - Titre de la notification
  * @param {string} message - Message de la notification
  * @param {string} link - Lien optionnel
  * @param {Object} metadata - Métadonnées supplémentaires
+ * @param {string} dedupKey - Clé de déduplication (sera suffixée avec l'userId)
+ * @param {number} cooldownHours - Heures de cooldown
  */
-export async function createNotificationsForUsers(userIds, type, title, message, link = null, metadata = {}) {
+export async function createNotificationsForUsers(
+  userIds, 
+  type, 
+  title, 
+  message, 
+  link = null, 
+  metadata = {},
+  dedupKey = null,
+  cooldownHours = 24
+) {
   const results = await Promise.all(
-    userIds.map(userId => 
-      createNotification(userId, type, title, message, link, metadata)
-    )
+    userIds.map(userId => {
+      // Ajouter l'userId à la clé de déduplication pour que chaque utilisateur ait son propre cooldown
+      const userDedupKey = dedupKey ? `${dedupKey}_${userId}` : null;
+      return createNotification(userId, type, title, message, link, metadata, userDedupKey, cooldownHours);
+    })
   );
 
-  const successCount = results.filter(r => r.success).length;
-  return { success: successCount > 0, successCount, total: userIds.length };
+  const successCount = results.filter(r => r.success && !r.skipped).length;
+  const skippedCount = results.filter(r => r.skipped).length;
+  
+  return { 
+    success: successCount > 0 || skippedCount > 0, 
+    successCount, 
+    skippedCount,
+    total: userIds.length 
+  };
 }
+
+// ============================================
+// Fonctions de vérification (inchangées)
+// ============================================
 
 /**
  * Vérifie les produits en rupture ou bientôt en rupture
@@ -119,8 +189,12 @@ export function checkUnmappedProducts(products) {
   }));
 }
 
+// ============================================
+// Fonctions de notification avec déduplication
+// ============================================
+
 /**
- * Crée des notifications pour les alertes de stock
+ * Crée des notifications pour les alertes de stock avec déduplication
  * @param {Array} userIds - Liste des IDs utilisateurs
  * @param {Array} products - Liste des produits
  */
@@ -143,16 +217,21 @@ export async function notifyStockAlerts(userIds, products) {
       ? `${critical[0].name} est en rupture de stock (${critical[0].stock} unité(s) restante(s))`
       : `${productList}${moreText} ${criticalCount === 1 ? 'est' : 'sont'} en rupture de stock`;
 
+    // Clé de déduplication basée sur les SKUs en rupture (triés pour consistance)
+    const skuHash = critical.map(p => p.sku).sort().join('_').substring(0, 50);
+    
     notifications.push({
       type: 'stock_alert',
       title,
       message,
-      link: '/stock?filter=urgent',
+      link: '/app/stock?filter=urgent',
       metadata: { 
         severity: 'critical',
         count: criticalCount,
         products: critical.map(p => p.sku)
-      }
+      },
+      dedupKey: `stock_critical_${skuHash}`,
+      cooldownHours: COOLDOWN_CONFIG.stock_alert_critical
     });
   }
 
@@ -170,38 +249,55 @@ export async function notifyStockAlerts(userIds, products) {
       ? `${warning[0].name} approche du point de réapprovisionnement (${warning[0].stock} unité(s))`
       : `${productList}${moreText} ${warningCount === 1 ? 'approche' : 'approchent'} du point de réapprovisionnement`;
 
+    // Clé de déduplication basée sur les SKUs en warning
+    const skuHash = warning.map(p => p.sku).sort().join('_').substring(0, 50);
+
     notifications.push({
       type: 'stock_alert',
       title,
       message,
-      link: '/stock?filter=warning',
+      link: '/app/stock?filter=warning',
       metadata: {
         severity: 'warning',
         count: warningCount,
         products: warning.map(p => p.sku)
-      }
+      },
+      dedupKey: `stock_warning_${skuHash}`,
+      cooldownHours: COOLDOWN_CONFIG.stock_alert_warning
     });
   }
 
   // Créer les notifications pour tous les utilisateurs
+  let totalCreated = 0;
+  let totalSkipped = 0;
+  
   if (notifications.length > 0) {
     for (const notif of notifications) {
-      await createNotificationsForUsers(
+      const result = await createNotificationsForUsers(
         userIds,
         notif.type,
         notif.title,
         notif.message,
         notif.link,
-        notif.metadata
+        notif.metadata,
+        notif.dedupKey,
+        notif.cooldownHours
       );
+      totalCreated += result.successCount;
+      totalSkipped += result.skippedCount;
     }
   }
 
-  return { critical, warning, notificationsCreated: notifications.length };
+  return { 
+    critical, 
+    warning, 
+    notificationsCreated: totalCreated,
+    notificationsSkipped: totalSkipped
+  };
 }
 
 /**
- * Crée des notifications pour les produits non mappés
+ * Crée des notifications pour les produits non mappés avec déduplication
  * @param {Array} userIds - Liste des IDs utilisateurs
  * @param {Array} products - Liste des produits
  */
@@ -209,7 +305,7 @@ export async function notifyUnmappedProducts(userIds, products) {
   const unmapped = checkUnmappedProducts(products);
 
   if (unmapped.length === 0) {
-    return { count: 0, notificationsCreated: 0 };
+    return { count: 0, notificationsCreated: 0, notificationsSkipped: 0 };
   }
 
   const count = unmapped.length;
@@ -224,23 +320,32 @@ export async function notifyUnmappedProducts(userIds, products) {
     ? `${unmapped[0].name} n'a pas de fournisseur assigné. Veuillez le mapper pour pouvoir passer commande.`
     : `${productList}${moreText} ${count === 1 ? 'n\'a' : 'n\'ont'} pas de fournisseur assigné. Veuillez les mapper pour pouvoir passer commande.`;
 
-  await createNotificationsForUsers(
+  // Clé de déduplication quotidienne (basée sur la date)
+  const today = new Date().toISOString().split('T')[0];
+  
+  const result = await createNotificationsForUsers(
     userIds,
     'unmapped_product',
     title,
     message,
-    '/settings?tab=mapping',
+    '/app/settings/suppliers', // Route vers la gestion des fournisseurs
     {
       count,
       products: unmapped.map(p => p.sku)
-    }
+    },
+    `unmapped_${today}_${count}`,
+    COOLDOWN_CONFIG.unmapped_product
   );
 
-  return { count, notificationsCreated: 1 };
+  return { 
+    count, 
+    notificationsCreated: result.successCount,
+    notificationsSkipped: result.skippedCount
+  };
 }
 
 /**
- * Génère un rapport hebdomadaire et crée une notification
+ * Génère un rapport hebdomadaire et crée une notification avec déduplication
  * @param {Array} userIds - Liste des IDs utilisateurs
  * @param {Object} data - Données pour le rapport { products, orders, suppliers }
  */
@@ -299,12 +404,15 @@ export async function notifyWeeklyReport(userIds, data) {
 
   const title = `📊 Rapport hebdomadaire - ${new Date().toLocaleDateString('fr-FR', { month: 'short', day: 'numeric' })}`;
 
-  await createNotificationsForUsers(
+  // Clé de déduplication basée sur la semaine (année + numéro de semaine)
+  const weekNumber = getWeekNumber(new Date());
+  
+  const result = await createNotificationsForUsers(
     userIds,
     'weekly_report',
     title,
     message,
-    '/analytics',
+    '/app/analytics/kpis',
     {
       reportDate: new Date().toISOString(),
       stats: {
@@ -316,10 +424,28 @@ export async function notifyWeeklyReport(userIds, data) {
         ordersInProgress,
         ordersPendingReceipt
       }
-    }
+    },
+    `weekly_report_${weekNumber}`,
+    COOLDOWN_CONFIG.weekly_report
   );
 
-  return { success: true };
+  return { 
+    success: result.successCount > 0,
+    notificationsCreated: result.successCount,
+    notificationsSkipped: result.skippedCount
+  };
+}
+
+/**
+ * Récupère le numéro de semaine de l'année
+ */
+function getWeekNumber(date) {
+  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+  const dayNum = d.getUTCDay() || 7;
+  d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+  const weekNo = Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+  return `${d.getUTCFullYear()}-W${weekNo}`;
 }
 
 /**
@@ -405,7 +531,7 @@ export function checkDelayedOrders(orders) {
 }
 
 /**
- * Crée des notifications pour les commandes en retard
+ * Crée des notifications pour les commandes en retard avec déduplication
  * @param {Array} userIds - Liste des IDs utilisateurs
  * @param {Array} orders - Liste des commandes
  */
@@ -413,7 +539,7 @@ export async function notifyOrderDelayed(userIds, orders) {
   const delayed = checkDelayedOrders(orders);
 
   if (delayed.length === 0) {
-    return { count: 0, notificationsCreated: 0 };
+    return { count: 0, notificationsCreated: 0, notificationsSkipped: 0 };
   }
 
   // Grouper par nombre de jours de retard pour créer des notifications pertinentes
@@ -436,17 +562,22 @@ export async function notifyOrderDelayed(userIds, orders) {
       ? `Commande ${critical[0].id} en retard de ${critical[0].daysLate} jour(s) - Fournisseur: ${critical[0].supplier}`
       : `Commandes ${orderList}${moreText} en retard de 3+ jour(s). Vérifier avec les fournisseurs.`;
 
+    // Clé basée sur les IDs de commandes critiques
+    const orderHash = critical.map(o => o.id).sort().join('_').substring(0, 50);
+
     notifications.push({
       type: 'order_delayed',
       title,
       message,
-      link: '/track?filter=delayed',
+      link: '/app/orders?filter=delayed',
       metadata: {
         severity: 'critical',
         count: criticalCount,
         orders: critical.map(o => o.id),
         daysLate: critical.map(o => o.daysLate)
-      }
+      },
+      dedupKey: `delayed_critical_${orderHash}`,
+      cooldownHours: COOLDOWN_CONFIG.order_delayed_critical
     });
   }
 
@@ -464,35 +595,51 @@ export async function notifyOrderDelayed(userIds, orders) {
       ? `Commande ${warning[0].id} en retard de ${warning[0].daysLate} jour(s) - Fournisseur: ${warning[0].supplier}`
       : `Commandes ${orderList}${moreText} en retard. Surveiller de près.`;
 
+    // Clé basée sur les IDs de commandes en warning
+    const orderHash = warning.map(o => o.id).sort().join('_').substring(0, 50);
+
     notifications.push({
       type: 'order_delayed',
       title,
       message,
-      link: '/track?filter=delayed',
+      link: '/app/orders?filter=delayed',
       metadata: {
         severity: 'warning',
         count: warningCount,
         orders: warning.map(o => o.id),
         daysLate: warning.map(o => o.daysLate)
-      }
+      },
+      dedupKey: `delayed_warning_${orderHash}`,
+      cooldownHours: COOLDOWN_CONFIG.order_delayed_warning
     });
   }
 
   // Créer les notifications
+  let totalCreated = 0;
+  let totalSkipped = 0;
+  
   if (notifications.length > 0) {
     for (const notif of notifications) {
-      await createNotificationsForUsers(
+      const result = await createNotificationsForUsers(
         userIds,
         notif.type,
         notif.title,
         notif.message,
         notif.link,
-        notif.metadata
+        notif.metadata,
+        notif.dedupKey,
+        notif.cooldownHours
       );
+      totalCreated += result.successCount;
+      totalSkipped += result.skippedCount;
     }
   }
 
-  return { count: delayed.length, notificationsCreated: notifications.length };
+  return { 
+    count: delayed.length, 
+    notificationsCreated: totalCreated,
+    notificationsSkipped: totalSkipped
+  };
 }
 
 /**
@@ -541,7 +688,7 @@ export function checkOrderDiscrepancies(orders) {
 }
 
 /**
- * Crée des notifications pour les écarts de réception
+ * Crée des notifications pour les écarts de réception avec déduplication
  * @param {Array} userIds - Liste des IDs utilisateurs
  * @param {Array} orders - Liste des commandes
  */
@@ -549,8 +696,11 @@ export async function notifyOrderDiscrepancy(userIds, orders) {
   const discrepancies = checkOrderDiscrepancies(orders);
 
   if (discrepancies.length === 0) {
-    return { count: 0, notificationsCreated: 0 };
+    return { count: 0, notificationsCreated: 0, notificationsSkipped: 0 };
   }
+
+  let totalCreated = 0;
+  let totalSkipped = 0;
 
   // Créer une notification par commande avec écarts (pour plus de précision)
   for (const order of discrepancies) {
@@ -571,22 +721,31 @@ export async function notifyOrderDiscrepancy(userIds, orders) {
       message = `Commande ${order.id} (${order.supplier}) : Des écarts ont été détectés. Vérifier la réception.`;
     }
 
-    await createNotificationsForUsers(
+    const result = await createNotificationsForUsers(
       userIds,
       'order_discrepancy',
       title,
       message,
-      `/track?order=${order.id}&section=reconciliation`,
+      `/app/orders?order=${order.id}&section=reconciliation`,
       {
         orderId: order.id,
         supplier: order.supplier,
         missingCount: order.missingCount,
         damagedCount: order.damagedCount
-      }
+      },
+      `discrepancy_${order.id}`, // Clé unique par commande
+      COOLDOWN_CONFIG.order_discrepancy
     );
+    
+    totalCreated += result.successCount;
+    totalSkipped += result.skippedCount;
   }
 
-  return { count: discrepancies.length, notificationsCreated: discrepancies.length };
+  return { 
+    count: discrepancies.length, 
+    notificationsCreated: totalCreated,
+    notificationsSkipped: totalSkipped
+  };
 }
 
 /**
@@ -618,7 +777,7 @@ export function checkSurstockProducts(products, thresholdDays = 90) {
 }
 
 /**
- * Crée des notifications pour les surstocks
+ * Crée des notifications pour les surstocks avec déduplication
  * @param {Array} userIds - Liste des IDs utilisateurs
  * @param {Array} products - Liste des produits
  * @param {number} thresholdDays - Seuil en jours d'autonomie
@@ -627,7 +786,7 @@ export async function notifySurstockAlert(userIds, products, thresholdDays = 90)
   const surstock = checkSurstockProducts(products, thresholdDays);
 
   if (surstock.length === 0) {
-    return { count: 0, notificationsCreated: 0 };
+    return { count: 0, notificationsCreated: 0, notificationsSkipped: 0 };
   }
 
   const count = surstock.length;
@@ -649,21 +808,30 @@ export async function notifySurstockAlert(userIds, products, thresholdDays = 90)
     ? `${surstock[0].name} : ${surstock[0].daysOfStock} jours d'autonomie (seuil: ${thresholdDays} jours). Capital immobilisé: ${totalValue > 0 ? totalValue.toFixed(2) + '€' : 'N/A'}`
     : `${productList}${moreText} ${count === 1 ? 'est' : 'sont'} en surstock (${thresholdDays}+ jours d'autonomie). Capital total immobilisé estimé.`;
 
-  await createNotificationsForUsers(
+  // Clé quotidienne pour éviter le spam
+  const today = new Date().toISOString().split('T')[0];
+  
+  const result = await createNotificationsForUsers(
     userIds,
     'surstock_alert',
     title,
     message,
-    '/stock?filter=overstock',
+    '/app/stock?filter=overstock',
     {
       count,
       thresholdDays,
       products: surstock.map(p => p.sku),
       totalValue
-    }
+    },
+    `surstock_${today}_${count}`,
+    COOLDOWN_CONFIG.surstock_alert
   );
 
-  return { count, notificationsCreated: 1 };
+  return { 
+    count, 
+    notificationsCreated: result.successCount,
+    notificationsSkipped: result.skippedCount
+  };
 }
 
 /**
@@ -706,7 +874,7 @@ export async function notifyMissingSupplierInfo(userIds, suppliers) {
   const incomplete = checkMissingSupplierInfo(suppliers);
 
   if (incomplete.length === 0) {
-    return { count: 0, notificationsCreated: 0 };
+    return { count: 0, notificationsCreated: 0, notificationsSkipped: 0 };
   }
 
   const count = incomplete.length;
@@ -722,22 +890,31 @@ export async function notifyMissingSupplierInfo(userIds, suppliers) {
     ? `${incomplete[0].name} : ${incomplete[0].missing.join(', ')} manquant(s). Compléter pour optimiser les commandes.`
     : `${supplierList}${moreText} ${count === 1 ? 'a' : 'ont'} des informations manquantes (email, délai). Compléter les données pour améliorer la gestion.`;
 
-  await createNotificationsForUsers(
+  // Clé basée sur les noms de fournisseurs incomplets
+  const supplierHash = incomplete.map(s => s.name).sort().join('_').substring(0, 50);
+  
+  const result = await createNotificationsForUsers(
     userIds,
     'missing_supplier_info',
     title,
     message,
-    '/settings?tab=suppliers',
+    '/app/settings/suppliers',
     {
       count,
       suppliers: incomplete.map(s => ({
         name: s.name,
         missing: s.missing
       }))
-    }
+    },
+    `supplier_info_${supplierHash}`,
+    COOLDOWN_CONFIG.missing_supplier_info
   );
 
-  return { count, notificationsCreated: 1 };
+  return { 
+    count, 
+    notificationsCreated: result.successCount,
+    notificationsSkipped: result.skippedCount
+  };
 }
 
 /**
@@ -764,7 +941,7 @@ export async function notifyMissingProductMoq(userIds, products) {
   const missing = checkProductsMissingMoq(products);
 
   if (missing.length === 0) {
-    return { count: 0, notificationsCreated: 0 };
+    return { count: 0, notificationsCreated: 0, notificationsSkipped: 0 };
   }
 
   const count = missing.length;
@@ -779,18 +956,26 @@ export async function notifyMissingProductMoq(userIds, products) {
     ? `${missing[0].name} n'a pas de MOQ défini. Définir un MOQ au niveau produit pour sécuriser les calculs de réapprovisionnement.`
     : `${productList}${moreText} ${count === 1 ? 'n\'a' : 'n\'ont'} pas de MOQ défini. Définir un MOQ au niveau produit pour sécuriser les calculs de réapprovisionnement.`;
 
-  await createNotificationsForUsers(
+  // Clé quotidienne
+  const today = new Date().toISOString().split('T')[0];
+  
+  const result = await createNotificationsForUsers(
     userIds,
     'missing_product_moq',
     title,
     message,
-    '/stock?filter=all',
+    '/app/stock',
     {
       count,
       products: missing.map(p => p.sku)
-    }
+    },
+    `moq_missing_${today}_${count}`,
+    COOLDOWN_CONFIG.missing_product_moq
   );
 
-  return { count, notificationsCreated: 1 };
+  return { 
+    count, 
+    notificationsCreated: result.successCount,
+    notificationsSkipped: result.skippedCount
+  };
 }
-

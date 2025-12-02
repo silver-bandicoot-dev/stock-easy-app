@@ -169,20 +169,21 @@ export const StockDataProvider = ({ children }) => {
     });
   }, [enrichedProducts, orders, currentUser, parameterState.seuilSurstockProfond]);
 
-  // 6. Notifications Automatiques
-  // Notifications automatiques désactivées (gérées uniquement pour mentions et ML)
+  // 6. Notifications Automatiques (v2 avec déduplication anti-spam)
+  // Utilise create_notification_v2 avec cooldowns pour éviter le spam
+  // Chaque type de notification a sa propre période de cooldown
   useAutoNotifications(
     { products, orders, suppliers },
     {
-      enabled: false, // Désactivé complètement selon configuration originale
-      stockCheckInterval: 60 * 60 * 1000,
-      unmappedCheckInterval: 6 * 60 * 60 * 1000,
-      weeklyReportDay: 1,
-      weeklyReportHour: 9,
-      orderDelayedInterval: 12 * 60 * 60 * 1000,
-      orderDiscrepancyInterval: 6 * 60 * 60 * 1000,
-      surstockCheckHour: 8,
-      supplierInfoInterval: 12 * 60 * 60 * 1000,
+      enabled: true, // Activé avec système de déduplication anti-spam
+      stockCheckInterval: 60 * 60 * 1000,        // Vérifier le stock toutes les heures
+      unmappedCheckInterval: 6 * 60 * 60 * 1000, // Vérifier les produits non mappés toutes les 6h
+      weeklyReportDay: 1,                        // Rapport hebdomadaire le lundi
+      weeklyReportHour: 9,                       // À 9h du matin
+      orderDelayedInterval: 12 * 60 * 60 * 1000, // Vérifier les commandes en retard toutes les 12h
+      orderDiscrepancyInterval: 6 * 60 * 60 * 1000, // Vérifier les écarts toutes les 6h
+      surstockCheckHour: 8,                      // Vérifier les surstocks à 8h
+      supplierInfoInterval: 12 * 60 * 60 * 1000, // Vérifier les infos fournisseurs toutes les 12h
       surstockThresholdDays: parameterState.seuilSurstockProfond || 90
     }
   );
@@ -309,4 +310,12 @@ export const useStockContext = () => {
     throw new Error('useStockContext must be used within a StockDataProvider');
   }
   return context;
+};
+
+/**
+ * Version optionnelle de useStockContext qui retourne null si le contexte n'est pas disponible.
+ * Utile pour les composants qui peuvent être rendus en dehors du StockDataProvider.
+ */
+export const useStockContextOptional = () => {
+  return useContext(StockDataContext);
 };

@@ -43,7 +43,9 @@ export const OrderDetailPanel = ({
   onStartReconciliation,
   onGenerateReclamation,
   onCompleteReconciliation,
+  onReceiveReplacement,
   onShare,
+  onEdit,
   formatCurrency
 }) => {
   const { t } = useTranslation();
@@ -222,6 +224,24 @@ export const OrderDetailPanel = ({
           </div>
         );
       
+      case 'completed':
+        // Vérifier s'il y a des articles à remplacer (manquants ou endommagés)
+        const hasMissingOrDamaged = (order.missing_quantity_total || order.missingQuantityTotal || 0) > 0 ||
+          (order.damaged_quantity_total || order.damagedQuantityTotal || 0) > 0;
+        
+        if (hasMissingOrDamaged && onReceiveReplacement) {
+          return (
+            <button
+              onClick={() => onReceiveReplacement(order)}
+              className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors"
+            >
+              <Package className="w-4 h-4" />
+              {t('orderDetail.buttons.receiveReplacement', 'Recevoir les remplacements')}
+            </button>
+          );
+        }
+        return null;
+      
       default:
         return null;
     }
@@ -256,12 +276,26 @@ export const OrderDetailPanel = ({
                 <Share2 className="w-4 h-4 text-[#666663] group-hover:text-[#191919]" />
               </button>
             )}
-            <button className="p-2 hover:bg-[#E5E4DF] rounded-lg transition-colors">
-              <Edit className="w-4 h-4 text-[#666663]" />
-            </button>
-            <button className="p-2 hover:bg-[#E5E4DF] rounded-lg transition-colors">
-              <MoreHorizontal className="w-4 h-4 text-[#666663]" />
-            </button>
+            {/* Bouton Éditer - uniquement pour pending_confirmation et preparing */}
+            {onEdit && ['pending_confirmation', 'preparing'].includes(order.status) && (
+              <button 
+                onClick={() => onEdit(order)}
+                className="p-2 hover:bg-[#E5E4DF] rounded-lg transition-colors group"
+                title={t('orderDetail.edit', 'Modifier la commande')}
+              >
+                <Edit className="w-4 h-4 text-[#666663] group-hover:text-[#191919]" />
+              </button>
+            )}
+            {/* Bouton Éditer désactivé pour les autres statuts */}
+            {onEdit && !['pending_confirmation', 'preparing'].includes(order.status) && (
+              <button 
+                disabled
+                className="p-2 rounded-lg transition-colors opacity-40 cursor-not-allowed"
+                title={t('orderDetail.editDisabled', 'Modification non disponible pour ce statut')}
+              >
+                <Edit className="w-4 h-4 text-[#666663]" />
+              </button>
+            )}
             <button
               onClick={onClose}
               className="p-2 hover:bg-[#E5E4DF] rounded-lg transition-colors lg:hidden"

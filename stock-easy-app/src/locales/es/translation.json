@@ -493,6 +493,7 @@
     "reconciliationConfirmed": "¡Conciliación confirmada! El pedido ha sido archivado.",
     "reconciliationError": "Error al confirmar la conciliación",
     "reclamationModalUnavailable": "No se puede abrir el modal de reclamación",
+    "shopifySyncWarning": "Sincronización de Shopify pendiente - verifique la configuración",
     "pagination": {
       "summary": "{{count}} pedido(s) • Página {{page}} de {{totalPages}}"
     },
@@ -557,6 +558,20 @@
     "empty": {
       "title": "Sin pedidos",
       "description": "Aún no tienes pedidos. Crea tu primer pedido para empezar."
+    },
+    "replacement": {
+      "title": "Recibir Reemplazos",
+      "subtitle": "Pedido {{id}}",
+      "info": "Indica las cantidades recibidas del proveedor para actualizar el stock.",
+      "noItems": "No hay artículos para reemplazar",
+      "fillAll": "Recibir todo",
+      "received": "Recibido",
+      "missing": "{{count}} faltante(s)",
+      "damaged": "{{count}} dañado(s)",
+      "totalToReceive": "Total a recibir",
+      "confirm": "Confirmar recepción",
+      "success": "¡Artículos de reemplazo recibidos! Stock actualizado.",
+      "error": "Error al recibir los reemplazos"
     },
     "reconciliation": {
       "title": "Conciliación",
@@ -657,7 +672,12 @@
     "exportInfo": {
       "title": "Exportación CSV contable",
       "description": "El archivo descargado contiene todos los datos del inventario filtrado, incluyendo los totales de valoración. Compatible con Excel y todos los programas de contabilidad."
-    }
+    },
+    "clickToEdit": "Haga clic para editar la cantidad",
+    "updatingStock": "Actualizando stock...",
+    "stockUpdated": "Stock actualizado: {{sku}} → {{quantity}} unidades",
+    "updateError": "Error al actualizar el stock",
+    "invalidQuantity": "Cantidad inválida"
   },
   "analytics": {
     "title": "Analíticas",
@@ -1699,9 +1719,35 @@
     },
     "items": "art."
   },
+  "editOrder": {
+    "title": "Modificar Pedido",
+    "info": "Modifica las cantidades y precios de los artículos. Los cambios se guardarán en tu sistema.",
+    "items": "Artículos",
+    "addProduct": "Añadir un producto",
+    "searchProduct": "Buscar un producto...",
+    "noProducts": "No hay productos disponibles",
+    "newItem": "Nuevo",
+    "removeItem": "Eliminar este artículo",
+    "quantity": "Cantidad",
+    "unitPrice": "Precio unitario",
+    "lineTotal": "Total",
+    "wasQuantity": "Antes",
+    "wasPrice": "Antes",
+    "notes": "Notas",
+    "notesPlaceholder": "Notas adicionales...",
+    "unsavedChanges": "Tienes cambios sin guardar.",
+    "newTotal": "Nuevo total",
+    "originalTotal": "Total original",
+    "save": "Guardar cambios",
+    "success": "¡Pedido modificado con éxito!",
+    "error": "Error al modificar el pedido",
+    "notAllowed": "Modificación no permitida para este estado"
+  },
   "orderDetail": {
     "back": "Volver",
     "share": "Compartir enlace a este pedido",
+    "edit": "Modificar pedido",
+    "editDisabled": "Modificación no disponible para este estado",
     "productsOrdered": "Productos Pedidos",
     "itemsCount": "{{count}} artículo(s)",
     "total": "Total",
@@ -1727,7 +1773,8 @@
       "markAsReceived": "Marcar como Recibido",
       "startReconciliation": "Iniciar Conciliación",
       "generateReclamation": "Generar Reclamación",
-      "completeReconciliation": "Completar Conciliación"
+      "completeReconciliation": "Completar Conciliación",
+      "receiveReplacement": "Recibir reemplazos"
     },
     "reconciliation": {
       "inProgress": "Conciliación en curso",

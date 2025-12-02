@@ -5,8 +5,32 @@
 // ============================================
 
 import { toast } from 'sonner';
+import { updateShopifyInventory, prepareStockUpdatesFromReconciliation } from '../services/gadgetService';
+import { supabase } from '../lib/supabaseClient';
 
 console.log('📁 Loading reconciliationHandlers.js - Phase 9 & 13');
+
+/**
+ * Récupère le company_id de l'utilisateur actuel
+ * @returns {Promise<string|null>} company_id ou null si non trouvé
+ */
+async function getCurrentUserCompanyId() {
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return null;
+    
+    const { data: profile } = await supabase
+      .from('user_profiles')
+      .select('company_id')
+      .eq('id', user.id)
+      .single();
+    
+    return profile?.company_id || null;
+  } catch (error) {
+    console.error('❌ Erreur récupération company_id:', error);
+    return null;
+  }
+}
 
 /**
  * Confirme la réconciliation avec quantités reçues et endommagées
@@ -190,6 +214,14 @@ export const handleReconciliationConfirm = async (
     console.log('🔥 reconciliationData:', reconciliationData);
     console.log('🔥 order:', order);
     
+    // Récupérer le company_id de l'ordre OU de l'utilisateur actuel
+    let companyId = order.company_id;
+    if (!companyId) {
+      console.log('⚠️ company_id manquant dans la commande, récupération depuis le profil utilisateur...');
+      companyId = await getCurrentUserCompanyId();
+      console.log('📋 company_id récupéré:', companyId);
+    }
+    
     // Analyser les données pour déterminer s'il y a des écarts ou dommages
     const hasDiscrepancies = Object.values(reconciliationData.discrepancies || {}).some(d => d !== 0);
     const hasDamages = Object.values(reconciliationData.damages || {}).some(d => d > 0);
@@ -248,7 +280,7 @@ export const handleReconciliationConfirm = async (
         damagedQuantitiesBySku: damagedQuantitiesBySku
       });
       
-      // Mettre à jour le stock avec les quantités reçues
+      // Mettre à jour le stock local avec les quantités reçues
       const stockUpdates = Object.entries(reconciliationData.receivedItems || {}).map(([sku, data]) => {
         const quantityReceived = parseInt(data.received || data, 10) || 0;
         return {
@@ -258,6 +290,35 @@ export const handleReconciliationConfirm = async (
       });
       
       await api.updateStock(stockUpdates);
+      
+      // Synchroniser avec Shopify si company_id est disponible
+      if (companyId && stockUpdates.length > 0) {
+        console.log('🔄 Synchronisation Shopify (avec écarts) - Préparation des mises à jour...');
+        
+        const shopifyUpdates = stockUpdates.map(update => {
+          const product = products?.find(p => p.sku === update.sku);
+          const currentStock = product?.stock_actuel || 0;
+          const newStock = currentStock + update.quantityToAdd;
+          
+          return {
+            sku: update.sku,
+            stock_actuel: newStock
+          };
+        }).filter(u => u.sku);
+        
+        if (shopifyUpdates.length > 0) {
+          try {
+            const shopifyResult = await updateShopifyInventory(companyId, shopifyUpdates);
+            if (shopifyResult.success) {
+              console.log('✅ Shopify synchronisé (avec écarts):', shopifyResult);
+            } else {
+              console.warn('⚠️ Synchronisation Shopify partielle (avec écarts):', shopifyResult);
+            }
+          } catch (shopifyError) {
+            console.error('❌ Erreur sync Shopify (avec écarts):', shopifyError);
+          }
+        }
+      }
       
       reconciliationModalHandlers.close();
       
@@ -285,7 +346,7 @@ export const handleReconciliationConfirm = async (
         damageReport: false
       });
       
-      // Mettre à jour le stock
+      // Mettre à jour le stock local
       const stockUpdates = Object.entries(reconciliationData.receivedItems || {}).map(([sku, data]) => {
         const quantityReceived = parseInt(data.received || data, 10) || 0;
         return {
@@ -296,8 +357,49 @@ export const handleReconciliationConfirm = async (
       
       await api.updateStock(stockUpdates);
       
+      // Synchroniser avec Shopify si company_id est disponible
+      if (companyId && stockUpdates.length > 0) {
+        console.log('🔄 Synchronisation Shopify - Préparation des mises à jour...');
+        
+        // Préparer les mises à jour pour Shopify (stock actuel = stock existant + quantité reçue)
+        const shopifyUpdates = stockUpdates.map(update => {
+          const product = products?.find(p => p.sku === update.sku);
+          const currentStock = product?.stock_actuel || 0;
+          const newStock = currentStock + update.quantityToAdd;
+          
+          return {
+            sku: update.sku,
+            stock_actuel: newStock
+          };
+        }).filter(u => u.sku);
+        
+        if (shopifyUpdates.length > 0) {
+          try {
+            const shopifyResult = await updateShopifyInventory(companyId, shopifyUpdates);
+            
+            if (shopifyResult.success) {
+              console.log('✅ Shopify synchronisé:', shopifyResult);
+              toast.success(`Réconciliation validée - ${shopifyResult.processed || shopifyUpdates.length} produit(s) synchronisé(s) avec Shopify`);
+            } else {
+              console.warn('⚠️ Synchronisation Shopify partielle:', shopifyResult);
+              toast.success('Réconciliation validée - Commande complétée');
+              if (shopifyResult.error) {
+                toast.warning('Synchronisation Shopify en attente - vérifiez la configuration');
+              }
+            }
+          } catch (shopifyError) {
+            console.error('❌ Erreur sync Shopify:', shopifyError);
+            toast.success('Réconciliation validée - Commande complétée');
+            toast.warning('Synchronisation Shopify échouée - mise à jour manuelle requise');
+          }
+        } else {
+          toast.success('Réconciliation validée - Commande complétée');
+        }
+      } else {
+        toast.success('Réconciliation validée - Commande complétée');
+      }
+      
       reconciliationModalHandlers.close();
-      toast.success('Réconciliation validée - Commande complétée');
     }
     
     // Recharger les données

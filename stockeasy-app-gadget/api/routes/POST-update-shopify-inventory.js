@@ -7,6 +7,22 @@ import { RouteHandler } from "gadget-server";
 const route = async ({ request, reply, api, logger, config }) => {
   const startTime = Date.now();
 
+  // Set CORS headers manually (route.options.cors doesn't work reliably)
+  const allowedOrigins = [
+    'https://stockeasy.app',
+    'https://www.stockeasy.app',
+    'http://localhost:5173',
+    'http://localhost:3000'
+  ];
+  const origin = request.headers.origin;
+  
+  if (allowedOrigins.includes(origin)) {
+    reply.header('Access-Control-Allow-Origin', origin);
+  }
+  reply.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  reply.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+  reply.header('Access-Control-Allow-Credentials', 'true');
+
   try {
     // 1. Authenticate the request
     const authHeader = request.headers.authorization;
@@ -232,7 +248,15 @@ route.options = {
     }
   },
   cors: {
-    origin: true
+    origin: [
+      'https://stockeasy.app',
+      'https://www.stockeasy.app',
+      'http://localhost:5173',
+      'http://localhost:3000'
+    ],
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+    credentials: true
   }
 };
 

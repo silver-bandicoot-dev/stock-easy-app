@@ -606,6 +606,141 @@ export async function confirmOrderReconciliation(orderId) {
   }
 }
 
+// Recevoir les articles de remplacement pour une commande réconciliée
+export async function receiveReplacementItems(orderId, replacements) {
+  try {
+    console.log('📦 Réception articles remplacement pour commande:', orderId);
+    console.log('📦 Remplacements:', replacements);
+
+    const { data, error } = await supabase.rpc('receive_replacement_items', {
+      p_order_id: orderId,
+      p_replacements: replacements
+    });
+
+    if (error) {
+      console.error('❌ Erreur Supabase receiveReplacementItems:', error);
+      throw error;
+    }
+    
+    console.log('✅ Articles de remplacement reçus:', data);
+    return data;
+  } catch (error) {
+    console.error('❌ Erreur réception remplacement:', error);
+    return { success: false, error: error.message };
+  }
+}
+
+// Mettre à jour une commande (items, notes, total)
+export async function updateOrder(orderId, updates) {
+  try {
+    console.log('📝 Mise à jour commande:', orderId, updates);
+    
+    // 1. Mettre à jour les informations de base de la commande
+    const orderUpdates = {
+      notes: updates.notes || null,
+      total: updates.total
+    };
+    
+    const { error: orderError } = await supabase
+      .from('commandes')
+      .update(orderUpdates)
+      .eq('id', orderId);
+    
+    if (orderError) {
+      console.error('❌ Erreur mise à jour commande:', orderError);
+      throw orderError;
+    }
+    
+    // 2. Mettre à jour les articles de la commande
+    if (updates.items && Array.isArray(updates.items)) {
+      // D'abord, récupérer les articles existants
+      const { data: existingItems, error: fetchError } = await supabase
+        .from('articles_commande')
+        .select('sku')
+        .eq('order_id', orderId);
+      
+      if (fetchError) {
+        console.error('❌ Erreur récupération articles existants:', fetchError);
+        throw fetchError;
+      }
+      
+      const existingSkus = existingItems?.map(i => i.sku) || [];
+      const newSkus = updates.items.map(i => i.sku);
+      
+      // Articles à supprimer (présents avant mais plus maintenant)
+      const skusToDelete = existingSkus.filter(sku => !newSkus.includes(sku));
+      
+      // Articles à ajouter (pas présents avant)
+      const itemsToAdd = updates.items.filter(item => !existingSkus.includes(item.sku));
+      
+      // Articles à mettre à jour (présents avant et maintenant)
+      const itemsToUpdate = updates.items.filter(item => existingSkus.includes(item.sku));
+      
+      // Supprimer les articles retirés
+      if (skusToDelete.length > 0) {
+        const { error: deleteError } = await supabase
+          .from('articles_commande')
+          .delete()
+          .eq('order_id', orderId)
+          .in('sku', skusToDelete);
+        
+        if (deleteError) {
+          console.error('❌ Erreur suppression articles:', deleteError);
+          throw deleteError;
+        }
+        console.log(`✅ ${skusToDelete.length} article(s) supprimé(s)`);
+      }
+      
+      // Ajouter les nouveaux articles
+      if (itemsToAdd.length > 0) {
+        const newArticles = itemsToAdd.map(item => ({
+          order_id: orderId,
+          sku: item.sku,
+          quantity: item.quantity,
+          price_per_unit: item.pricePerUnit
+        }));
+        
+        const { error: insertError } = await supabase
+          .from('articles_commande')
+          .insert(newArticles);
+        
+        if (insertError) {
+          console.error('❌ Erreur ajout articles:', insertError);
+          throw insertError;
+        }
+        console.log(`✅ ${itemsToAdd.length} article(s) ajouté(s)`);
+      }
+      
+      // Mettre à jour les articles existants
+      for (const item of itemsToUpdate) {
+        const { error: updateError } = await supabase
+          .from('articles_commande')
+          .update({
+            quantity: item.quantity,
+            price_per_unit: item.pricePerUnit
+          })
+          .eq('order_id', orderId)
+          .eq('sku', item.sku);
+        
+        if (updateError) {
+          console.error('❌ Erreur mise à jour article:', item.sku, updateError);
+          throw updateError;
+        }
+      }
+      console.log(`✅ ${itemsToUpdate.length} article(s) mis à jour`);
+    }
+    
+    // Invalider le cache après modification
+    invalidateCache(['orders', 'allData']);
+    console.log('✅ Commande mise à jour avec succès');
+    
+    return { success: true };
+  } catch (error) {
+    console.error('❌ Erreur mise à jour commande:', error);
+    return { success: false, error: error.message };
+  }
+}
+
 // Recalculer l'investissement pour tous les produits
 export async function recalculateAllInvestments() {
   try {
@@ -758,6 +893,7 @@ export default {
   getMonthlyRevenueStats,
   getRevenueSummary,
   createOrder,
+  updateOrder,
   updateOrderStatus,
   processOrderReconciliation,
   updateStock,
@@ -771,6 +907,7 @@ export default {
   saveKPISnapshot,
   updateParameter,
   confirmOrderReconciliation,
+  receiveReplacementItems,
   assignSupplierToProduct,
   removeSupplierFromProduct,
   syncProductMoqFromSupplier

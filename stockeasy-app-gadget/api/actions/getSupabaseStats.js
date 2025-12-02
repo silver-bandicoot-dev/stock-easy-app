@@ -165,6 +165,6 @@ export const params = {
 };
 
 export const options = {
-  actionType: "global"
+  actionType: "custom"
 };
 

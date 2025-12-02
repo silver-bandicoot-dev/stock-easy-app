@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { 
   Download, 
@@ -9,12 +9,17 @@ import {
   Package,
   DollarSign,
   BarChart3,
-  ArrowUpDown
+  ArrowUpDown,
+  Check,
+  X,
+  Loader2
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
 import { exportInventoryReport } from '../../utils/exportInventory';
 import { useCurrency } from '../../contexts/CurrencyContext';
+import { ImagePreview } from '../ui/ImagePreview';
+import api from '../../services/apiAdapter';
 
 /**
  * Helper pour formater le prix avec le contexte de devise
@@ -50,15 +55,147 @@ const InventoryKPI = ({ icon: Icon, label, value, subValue, trend }) => (
 );
 
 /**
+ * Composant pour éditer la quantité inline
+ */
+const EditableQuantityCell = ({ product, onSave }) => {
+  const { t } = useTranslation();
+  const [isEditing, setIsEditing] = useState(false);
+  const [value, setValue] = useState(product.stock || 0);
+  const [isSaving, setIsSaving] = useState(false);
+  const qty = product.stock || 0;
+  const isOutOfStock = qty === 0;
+
+  const handleSave = async () => {
+    const newValue = parseInt(value, 10);
+    if (isNaN(newValue) || newValue < 0) {
+      toast.error(t('inventory.invalidQuantity'));
+      setValue(qty);
+      setIsEditing(false);
+      return;
+    }
+
+    if (newValue === qty) {
+      setIsEditing(false);
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      await onSave(product.sku, newValue);
+      setIsEditing(false);
+    } catch (error) {
+      setValue(qty);
+      toast.error(t('inventory.updateError'));
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleCancel = () => {
+    setValue(qty);
+    setIsEditing(false);
+  };
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter') {
+      handleSave();
+    } else if (e.key === 'Escape') {
+      handleCancel();
+    }
+  };
+
+  if (isEditing) {
+    return (
+      <div className="flex items-center justify-end gap-1">
+        <input
+          type="number"
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+          onKeyDown={handleKeyDown}
+          className="w-20 px-2 py-1 text-sm text-right border border-[#191919] rounded focus:outline-none focus:ring-2 focus:ring-[#191919]/20"
+          min="0"
+          autoFocus
+          disabled={isSaving}
+        />
+        {isSaving ? (
+          <Loader2 className="w-4 h-4 animate-spin text-[#666663]" />
+        ) : (
+          <>
+            <button
+              onClick={handleSave}
+              className="p-1 text-green-600 hover:bg-green-50 rounded transition-colors"
+              title={t('common.save')}
+            >
+              <Check className="w-4 h-4" />
+            </button>
+            <button
+              onClick={handleCancel}
+              className="p-1 text-red-600 hover:bg-red-50 rounded transition-colors"
+              title={t('common.cancel')}
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <button
+      onClick={() => setIsEditing(true)}
+      className={`text-sm font-medium px-2 py-1 rounded hover:bg-[#E5E4DF] transition-colors cursor-pointer ${
+        isOutOfStock ? 'text-red-600' : 'text-[#191919]'
+      }`}
+      title={t('inventory.clickToEdit')}
+    >
+      {qty.toLocaleString('fr-FR')}
+    </button>
+  );
+};
+
+/**
  * InventoryTab - Source de vérité pour l'inventaire du marchand
  * Affiche un tableau complet avec toutes les informations d'inventaire
  */
-export const InventoryTab = ({ products = [], suppliers = [] }) => {
+export const InventoryTab = ({ products = [], suppliers = [], loadData }) => {
   const { t } = useTranslation();
   const formatPrice = useFormatPrice();
   const [searchTerm, setSearchTerm] = useState('');
   const [supplierFilter, setSupplierFilter] = useState('all');
-  const [sortConfig, setSortConfig] = useState({ key: 'sku', direction: 'asc' });
+  const [sortConfig, setSortConfig] = useState({ key: 'name', direction: 'asc' });
+
+  // Handler pour mettre à jour le stock
+  const handleUpdateStock = useCallback(async (sku, newQuantity) => {
+    const toastId = toast.loading(t('inventory.updatingStock'));
+    try {
+      // Calculer la différence pour l'update
+      const product = products.find(p => p.sku === sku);
+      const currentStock = product?.stock || 0;
+      const difference = newQuantity - currentStock;
+
+      // Appel API pour mettre à jour le stock (qui sync avec Shopify via Gadget)
+      const result = await api.updateStock([{
+        sku,
+        quantityToAdd: difference
+      }]);
+
+      if (!result.success) {
+        throw new Error(result.error || 'Update failed');
+      }
+
+      toast.success(t('inventory.stockUpdated', { sku, quantity: newQuantity }), { id: toastId });
+      
+      // Rafraîchir les données
+      if (loadData) {
+        await loadData();
+      }
+    } catch (error) {
+      console.error('Erreur mise à jour stock:', error);
+      toast.error(t('inventory.updateError'), { id: toastId });
+      throw error;
+    }
+  }, [products, loadData, t]);
 
   // Calcul des totaux
   const totals = useMemo(() => {
@@ -253,15 +390,7 @@ export const InventoryTab = ({ products = [], suppliers = [] }) => {
           <table className="w-full">
             <thead>
               <tr className="bg-[#FAFAF7] border-b border-[#E5E4DF]">
-                <th 
-                  className="px-4 py-3 text-left text-xs font-semibold text-[#666663] uppercase tracking-wider cursor-pointer hover:bg-[#E5E4DF]/50 transition-colors"
-                  onClick={() => handleSort('sku')}
-                >
-                  <div className="flex items-center gap-1.5">
-                    {t('inventory.columns.sku')}
-                    <SortIcon columnKey="sku" />
-                  </div>
-                </th>
+                {/* Image + Nom du produit en premier */}
                 <th 
                   className="px-4 py-3 text-left text-xs font-semibold text-[#666663] uppercase tracking-wider cursor-pointer hover:bg-[#E5E4DF]/50 transition-colors"
                   onClick={() => handleSort('name')}
@@ -269,6 +398,16 @@ export const InventoryTab = ({ products = [], suppliers = [] }) => {
                   <div className="flex items-center gap-1.5">
                     {t('inventory.columns.productName')}
                     <SortIcon columnKey="name" />
+                  </div>
+                </th>
+                {/* SKU ensuite */}
+                <th 
+                  className="px-4 py-3 text-left text-xs font-semibold text-[#666663] uppercase tracking-wider cursor-pointer hover:bg-[#E5E4DF]/50 transition-colors"
+                  onClick={() => handleSort('sku')}
+                >
+                  <div className="flex items-center gap-1.5">
+                    {t('inventory.columns.sku')}
+                    <SortIcon columnKey="sku" />
                   </div>
                 </th>
                 <th 
@@ -347,14 +486,30 @@ export const InventoryTab = ({ products = [], suppliers = [] }) => {
                       key={product.sku || index}
                       className={`hover:bg-[#FAFAF7] transition-colors ${isOutOfStock ? 'bg-red-50/30' : ''}`}
                     >
+                      {/* Image + Nom du produit en premier */}
                       <td className="px-4 py-3">
-                        <span className="font-mono text-sm text-[#191919] font-medium">
-                          {product.sku || '-'}
-                        </span>
+                        <div className="flex items-center gap-3">
+                          {product.imageUrl || product.sku ? (
+                            <ImagePreview
+                              src={product.imageUrl}
+                              alt={product.name}
+                              sku={product.sku}
+                              thumbClassName="w-10 h-10 rounded-lg object-cover flex-shrink-0 bg-[#E5E4DF]"
+                            />
+                          ) : (
+                            <div className="w-10 h-10 rounded-lg bg-[#E5E4DF] flex items-center justify-center flex-shrink-0">
+                              <Package className="w-5 h-5 text-[#666663]" />
+                            </div>
+                          )}
+                          <span className="text-sm text-[#191919] line-clamp-2 font-medium">
+                            {product.name || '-'}
+                          </span>
+                        </div>
                       </td>
+                      {/* SKU ensuite */}
                       <td className="px-4 py-3">
-                        <span className="text-sm text-[#191919] line-clamp-2">
-                          {product.name || '-'}
+                        <span className="font-mono text-sm text-[#666663]">
+                          {product.sku || '-'}
                         </span>
                       </td>
                       <td className="px-4 py-3">
@@ -362,12 +517,12 @@ export const InventoryTab = ({ products = [], suppliers = [] }) => {
                           {product.supplier || '-'}
                         </span>
                       </td>
+                      {/* Quantité éditable */}
                       <td className="px-4 py-3 text-right">
-                        <span className={`text-sm font-medium ${
-                          isOutOfStock ? 'text-red-600' : 'text-[#191919]'
-                        }`}>
-                          {qty.toLocaleString('fr-FR')}
-                        </span>
+                        <EditableQuantityCell 
+                          product={product} 
+                          onSave={handleUpdateStock}
+                        />
                       </td>
                       <td className="px-4 py-3 text-right">
                         <span className="text-sm text-[#666663]">

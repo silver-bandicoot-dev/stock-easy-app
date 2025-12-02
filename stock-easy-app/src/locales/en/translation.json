@@ -493,6 +493,7 @@
     "reconciliationConfirmed": "Reconciliation confirmed! The order has been archived.",
     "reconciliationError": "Error confirming reconciliation",
     "reclamationModalUnavailable": "Unable to open reclamation modal",
+    "shopifySyncWarning": "Shopify sync pending - check configuration",
     "pagination": {
       "summary": "{{count}} order(s) • Page {{page}} of {{totalPages}}"
     },
@@ -557,6 +558,20 @@
     "empty": {
       "title": "No orders",
       "description": "You don't have any orders yet. Create your first order to get started."
+    },
+    "replacement": {
+      "title": "Receive Replacements",
+      "subtitle": "Order {{id}}",
+      "info": "Enter the quantities received from the supplier to update stock.",
+      "noItems": "No items to replace",
+      "fillAll": "Receive all",
+      "received": "Received",
+      "missing": "{{count}} missing",
+      "damaged": "{{count}} damaged",
+      "totalToReceive": "Total to receive",
+      "confirm": "Confirm receipt",
+      "success": "Replacement items received! Stock updated.",
+      "error": "Error receiving replacements"
     },
     "reconciliation": {
       "title": "Reconciliation",
@@ -657,7 +672,12 @@
     "exportInfo": {
       "title": "Accounting CSV Export",
       "description": "The downloaded file contains all filtered inventory data, including valuation totals. Compatible with Excel and all accounting software."
-    }
+    },
+    "clickToEdit": "Click to edit quantity",
+    "updatingStock": "Updating stock...",
+    "stockUpdated": "Stock updated: {{sku}} → {{quantity}} units",
+    "updateError": "Error updating stock",
+    "invalidQuantity": "Invalid quantity"
   },
   "analytics": {
     "title": "Analytics",
@@ -1699,9 +1719,35 @@
     },
     "items": "items"
   },
+  "editOrder": {
+    "title": "Edit Order",
+    "info": "Modify quantities and prices. Changes will be saved to your system.",
+    "items": "Items",
+    "addProduct": "Add a product",
+    "searchProduct": "Search for a product...",
+    "noProducts": "No products available",
+    "newItem": "New",
+    "removeItem": "Remove this item",
+    "quantity": "Quantity",
+    "unitPrice": "Unit price",
+    "lineTotal": "Total",
+    "wasQuantity": "Was",
+    "wasPrice": "Was",
+    "notes": "Notes",
+    "notesPlaceholder": "Additional notes...",
+    "unsavedChanges": "You have unsaved changes.",
+    "newTotal": "New total",
+    "originalTotal": "Original total",
+    "save": "Save changes",
+    "success": "Order updated successfully!",
+    "error": "Error updating order",
+    "notAllowed": "Editing not allowed for this status"
+  },
   "orderDetail": {
     "back": "Back",
     "share": "Share link to this order",
+    "edit": "Edit order",
+    "editDisabled": "Editing not available for this status",
     "productsOrdered": "Products Ordered",
     "itemsCount": "{{count}} item(s)",
     "total": "Total",
@@ -1727,7 +1773,8 @@
       "markAsReceived": "Mark as Received",
       "startReconciliation": "Start Reconciliation",
       "generateReclamation": "Generate Reclamation",
-      "completeReconciliation": "Complete Reconciliation"
+      "completeReconciliation": "Complete Reconciliation",
+      "receiveReplacement": "Receive replacements"
     },
     "reconciliation": {
       "inProgress": "Reconciliation in progress",
