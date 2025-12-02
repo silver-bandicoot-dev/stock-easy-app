@@ -53,7 +53,7 @@ export async function updateShopifyInventory(companyId, updates) {
       skus: updates.map(u => u.sku)
     });
 
-    const response = await fetch(`${GADGET_API_URL}/api/update-shopify-inventory`, {
+    const response = await fetch(`${GADGET_API_URL}/update-shopify-inventory`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
