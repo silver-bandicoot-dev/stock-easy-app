@@ -7,9 +7,32 @@ export const run = async ({ params, logger, api, connections, config }) => {
   const errors = [];
 
   try {
-    // Load the shop
-    const shop = await api.shopifyShop.findOne(shopId);
-    logger.info({ shopId, shopName: shop.name }, "Starting inventory sync for shop");
+    // Load the shop with defaultLocationId
+    const shop = await api.shopifyShop.findOne(shopId, {
+      select: {
+        id: true,
+        name: true,
+        defaultLocationId: true
+      }
+    });
+    
+    // Validate that a default location is configured
+    if (!shop.defaultLocationId) {
+      logger.error({ shopId }, "No defaultLocationId configured for this shop. Please set the default location in Gadget.");
+      return {
+        success: false,
+        error: "No default location configured for this shop",
+        inventoriesSynced: 0,
+        errors: 1
+      };
+    }
+    
+    // Construct the location GID
+    const locationGid = shop.defaultLocationId.startsWith('gid://') 
+      ? shop.defaultLocationId 
+      : `gid://shopify/Location/${shop.defaultLocationId}`;
+    
+    logger.info({ shopId, shopName: shop.name, defaultLocationId: shop.defaultLocationId, locationGid }, "Starting inventory sync for shop (single location mode)");
 
     // Get all productMappings for this shop
     const mappings = await api.productMapping.findMany({
@@ -44,23 +67,26 @@ export const run = async ({ params, logger, api, connections, config }) => {
           continue;
         }
 
-        // Construct Shopify GID
-        const inventoryItemGid = `gid://shopify/InventoryItem/${mapping.shopifyInventoryItemId}`;
+        // Construct Shopify GID for inventory item
+        const rawInventoryItemId = String(mapping.shopifyInventoryItemId);
+        const inventoryItemGid = rawInventoryItemId.startsWith('gid://') 
+          ? rawInventoryItemId 
+          : `gid://shopify/InventoryItem/${rawInventoryItemId}`;
 
-        // Fetch inventory levels from Shopify
+        // Fetch inventory level for the SPECIFIC location only (Plan Basic = 1 location)
         const query = `
-          query GetInventoryLevels($id: ID!) {
-            inventoryItem(id: $id) {
+          query GetInventoryLevelAtLocation($inventoryItemId: ID!, $locationId: ID!) {
+            inventoryItem(id: $inventoryItemId) {
               id
-              inventoryLevels(first: 50) {
-                edges {
-                  node {
-                    available
-                    location {
-                      id
-                      name
-                    }
-                  }
+              inventoryLevel(locationId: $locationId) {
+                id
+                quantities(names: ["available"]) {
+                  name
+                  quantity
+                }
+                location {
+                  id
+                  name
                 }
               }
             }
@@ -68,13 +94,15 @@ export const run = async ({ params, logger, api, connections, config }) => {
         `;
 
         const response = await shopify.graphql(query, {
-          id: inventoryItemGid
+          inventoryItemId: inventoryItemGid,
+          locationId: locationGid
         });
 
         if (!response?.inventoryItem) {
           logger.warn({ 
             mappingId: mapping.id, 
-            inventoryItemId: mapping.shopifyInventoryItemId 
+            inventoryItemId: mapping.shopifyInventoryItemId,
+            locationGid
           }, "Inventory item not found in Shopify");
           
           await api.syncLog.create({
@@ -96,17 +124,42 @@ export const run = async ({ params, logger, api, connections, config }) => {
           continue;
         }
 
-        // Sum all locations' inventory
-        const inventoryLevels = response.inventoryItem.inventoryLevels.edges.map(edge => edge.node);
-        const totalAvailable = inventoryLevels.reduce((sum, level) => sum + (level.available || 0), 0);
+        // Get the quantity at the specific location only
+        const inventoryLevel = response.inventoryItem.inventoryLevel;
+        
+        if (!inventoryLevel) {
+          logger.warn({ 
+            mappingId: mapping.id, 
+            inventoryItemId: mapping.shopifyInventoryItemId,
+            locationGid
+          }, "Inventory item is not stocked at the selected location");
+          
+          await api.syncLog.create({
+            shop: { _link: shopId },
+            entity: "inventory",
+            operation: "sync",
+            status: "warning",
+            direction: "shopify_to_stockeasy",
+            shopifyId: mapping.shopifyInventoryItemId,
+            stockEasySku: mapping.stockEasySku,
+            message: `Inventory item not stocked at location ${locationGid}`
+          });
+          
+          // Continue with quantity 0 for items not stocked at this location
+          // This is intentional - if the item isn't at this location, stock should be 0
+        }
+        
+        // Extract "available" quantity from the quantities array
+        const availableQuantity = inventoryLevel?.quantities?.find(q => q.name === "available")?.quantity || 0;
 
         logger.info({ 
           sku: mapping.stockEasySku, 
-          totalAvailable, 
-          locationCount: inventoryLevels.length 
-        }, "Calculated total inventory");
+          availableQuantity,
+          locationId: shop.defaultLocationId,
+          locationName: inventoryLevel?.location?.name || "N/A"
+        }, "📦 Retrieved inventory for single location (Plan Basic)");
 
-        // Update Supabase
+        // Update Supabase with inventory from the SINGLE selected location
         const supabaseResponse = await fetch(
           `${config.SUPABASE_URL}/rest/v1/produits?sku=eq.${encodeURIComponent(mapping.stockEasySku)}`,
           {
@@ -118,7 +171,7 @@ export const run = async ({ params, logger, api, connections, config }) => {
               'Prefer': 'return=minimal'
             },
             body: JSON.stringify({ 
-              stock_actuel: totalAvailable,
+              stock_actuel: availableQuantity,
               sync_source: 'shopify'  // CRITICAL: Prevent trigger from firing
             })
           }
@@ -141,7 +194,7 @@ export const run = async ({ params, logger, api, connections, config }) => {
             shopifyId: mapping.shopifyInventoryItemId,
             stockEasySku: mapping.stockEasySku,
             message: `Failed to update Stockeasy: ${errorText}`,
-            payload: { totalAvailable, locationCount: inventoryLevels.length }
+            payload: { availableQuantity, locationId: shop.defaultLocationId }
           });
           
           errorCount++;
@@ -161,8 +214,8 @@ export const run = async ({ params, logger, api, connections, config }) => {
           direction: "shopify_to_stockeasy",
           shopifyId: mapping.shopifyInventoryItemId,
           stockEasySku: mapping.stockEasySku,
-          message: `Successfully synced inventory: ${totalAvailable}`,
-          payload: { totalAvailable, locationCount: inventoryLevels.length }
+          message: `✅ Synced inventory from location ${shop.defaultLocationId}: ${availableQuantity}`,
+          payload: { availableQuantity, locationId: shop.defaultLocationId }
         });
 
         successCount++;

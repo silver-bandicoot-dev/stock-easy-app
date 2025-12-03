@@ -6,6 +6,7 @@
 
 import { toast } from 'sonner';
 import { REFACTOR_FLAGS } from '../config/feature-flags';
+import { invalidateOnMutation } from '../services/cacheService';
 
 console.log('📁 Loading orderHandlers.js - Phase 8 & 10');
 
@@ -56,6 +57,8 @@ export const handleCreateOrder = async (
     };
 
     await api.createOrder(orderData);
+    // Invalider le cache avant de recharger les données
+    invalidateOnMutation('create_order');
     await loadData();
     toast.success(`Commande créée pour ${supplier} !`);
   } catch (error) {
@@ -177,6 +180,8 @@ export const handleCreateOrderFromTable = async (
         await api.createOrder(orderData);
       }
       
+      // Invalider le cache avant de recharger les données
+      invalidateOnMutation('create_order');
       await loadData();
       toast.success(`${Object.keys(productsBySupplier).length} commande(s) créée(s) !`, {
         duration: 4000
@@ -252,6 +257,8 @@ export const handleSendOrder = async (
     };
 
     await api.createOrder(orderData);
+    // Invalider le cache avant de recharger les données
+    invalidateOnMutation('create_order');
     await loadData();
     
     // Générer et envoyer l'email
@@ -337,6 +344,8 @@ export const handleCreateOrderWithoutEmail = async (
     };
 
     await api.createOrder(orderData);
+    // Invalider le cache avant de recharger les données
+    invalidateOnMutation('create_order');
     await loadData();
     
     inlineModals.emailOrderModal.closeEmailModal();

@@ -7,15 +7,47 @@ export const schema: GadgetModel = {
   type: "gadget/model-schema/v2",
   storageKey: "DataModel-Shopify-Shop",
   fields: {
+    billingActivatedAt: {
+      type: "dateTime",
+      includeTime: true,
+      storageKey: "billing-activated-at",
+    },
     defaultLocationId: {
       type: "string",
       storageKey: "Drj386y1GY1H",
       filterIndex: false,
       searchIndex: false,
     },
+    shopifySubscriptionId: {
+      type: "string",
+      storageKey: "billing-shopify-subscription-id",
+    },
     stockEasyCompanyId: {
       type: "string",
       storageKey: "l8xRsYW24z-0",
+    },
+    subscriptionPlan: {
+      type: "string",
+      default: "basic",
+      storageKey: "billing-subscription-plan",
+    },
+    subscriptionStatus: {
+      type: "enum",
+      default: "pending",
+      acceptMultipleSelections: false,
+      acceptUnlistedOptions: false,
+      options: ["active", "cancelled", "frozen", "pending", "trial"],
+      storageKey: "billing-subscription-status",
+    },
+    trialEndsAt: {
+      type: "dateTime",
+      includeTime: true,
+      storageKey: "billing-trial-ends-at",
+    },
+    trialStartedAt: {
+      type: "dateTime",
+      includeTime: true,
+      storageKey: "billing-trial-started-at",
     },
   },
   shopify: {

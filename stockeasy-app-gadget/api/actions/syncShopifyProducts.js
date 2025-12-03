@@ -14,9 +14,16 @@ export const run = async ({ params, logger, api, connections }) => {
   let errors = 0;
   
   try {
-    // Load the shop
-    const shop = await api.shopifyShop.findOne(shopId);
-    logger.info({ shopId, domain: shop.domain }, "Starting product sync for shop");
+    // Load the shop with defaultLocationId
+    const shop = await api.shopifyShop.findOne(shopId, {
+      select: {
+        id: true,
+        domain: true,
+        stockEasyCompanyId: true,
+        defaultLocationId: true
+      }
+    });
+    logger.info({ shopId, domain: shop.domain, defaultLocationId: shop.defaultLocationId }, "Starting product sync for shop");
     
     // Check if shop has stockEasyCompanyId
     if (!shop.stockEasyCompanyId) {
@@ -112,7 +119,40 @@ export const run = async ({ params, logger, api, connections }) => {
           const inventoryItemNumericId = extractNumericId(inventoryItemGid);
           const variantTitle = variant.title || "";
           const price = parseFloat(variant.price) || 0;
-          const stock = variant.inventoryQuantity || 0;
+          
+          // CORRECTION: Récupérer le stock uniquement pour l'emplacement sélectionné (Plan Basic)
+          let stock = 0;
+          if (inventoryItemGid && shop.defaultLocationId) {
+            try {
+              const locationGid = shop.defaultLocationId.startsWith('gid://') 
+                ? shop.defaultLocationId 
+                : `gid://shopify/Location/${shop.defaultLocationId}`;
+              
+              const inventoryResponse = await shopify.graphql(`
+                query GetInventoryLevelAtLocation($inventoryItemId: ID!, $locationId: ID!) {
+                  inventoryItem(id: $inventoryItemId) {
+                    inventoryLevel(locationId: $locationId) {
+                      quantities(names: ["available"]) {
+                        name
+                        quantity
+                      }
+                    }
+                  }
+                }
+              `, {
+                inventoryItemId: inventoryItemGid,
+                locationId: locationGid
+              });
+              
+              stock = inventoryResponse.inventoryItem?.inventoryLevel?.quantities?.find(q => q.name === 'available')?.quantity || 0;
+              logger.debug({ sku: variant.sku, stock, locationId: shop.defaultLocationId }, "📦 Stock at selected location");
+            } catch (invError) {
+              logger.warn({ sku: variant.sku, error: invError.message }, "Failed to fetch inventory at location, using 0");
+              stock = 0;
+            }
+          } else {
+            logger.warn({ sku: variant.sku, hasInventoryItem: !!inventoryItemGid, hasDefaultLocation: !!shop.defaultLocationId }, "Missing inventory item or default location, using stock 0");
+          }
           
           // Get image URL - prefer variant image, fallback to product image
           const imageUrl = variant.image?.url || product.featuredImage?.url || null;

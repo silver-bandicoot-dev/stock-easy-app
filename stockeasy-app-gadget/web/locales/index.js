@@ -100,12 +100,41 @@ export const translations = {
     // Navigation
     home: "Accueil",
     productsToCheck: "Produits à vérifier",
+    plans: "Plans",
     
     // 404
     pageNotFound: "Page non trouvée. Redirection...",
     
     // Unauthenticated
-    openFromShopify: "Veuillez ouvrir cette application depuis votre admin Shopify."
+    openFromShopify: "Veuillez ouvrir cette application depuis votre admin Shopify.",
+    
+    // Billing
+    billingTitle: "Choisissez votre plan",
+    billingSubtitle: "Commencez avec un essai gratuit de 14 jours",
+    billingBasicPlan: "Basic",
+    billingPrice: "29$/mois",
+    billingTrialDays: "14 jours d'essai gratuit",
+    billingFeatureUnlimitedSkus: "SKUs illimités",
+    billingFeatureRealtimeSync: "Sync Shopify temps réel",
+    billingFeatureSupplierOrders: "Gestion complète des commandes fournisseurs",
+    billingFeatureDashboard: "Dashboard complet",
+    billingFeatureAiPredictions: "Prédictions IA",
+    billingFeatureAdvancedReports: "Rapports avancés",
+    billingFeatureOneLocation: "1 emplacement de sync des stocks",
+    billingStartTrial: "Démarrer l'essai gratuit",
+    billingSubscribing: "Redirection...",
+    billingSubscriptionActive: "Abonnement actif",
+    billingSubscriptionTrial: "Période d'essai",
+    billingTrialDaysRemaining: "{{count}} jour(s) restant(s)",
+    billingTrialEnds: "Fin de l'essai le",
+    billingNextBilling: "Prochaine facturation",
+    billingCancelSubscription: "Annuler l'abonnement",
+    billingCancelling: "Annulation...",
+    billingCancelConfirm: "Êtes-vous sûr de vouloir annuler votre abonnement ? Vous perdrez l'accès à toutes les fonctionnalités.",
+    billingCancelled: "Abonnement annulé",
+    billingResubscribe: "Se réabonner",
+    billingEverythingYouNeed: "Tout ce qu'il faut pour gérer votre inventaire.",
+    billingError: "Une erreur est survenue lors de la souscription. Veuillez réessayer."
   },
   
   en: {
@@ -204,12 +233,41 @@ export const translations = {
     // Navigation
     home: "Home",
     productsToCheck: "Products to check",
+    plans: "Plans",
     
     // 404
     pageNotFound: "Page not found. Redirecting...",
     
     // Unauthenticated
-    openFromShopify: "Please open this application from your Shopify admin."
+    openFromShopify: "Please open this application from your Shopify admin.",
+    
+    // Billing
+    billingTitle: "Choose your plan",
+    billingSubtitle: "Start with a 14-day free trial",
+    billingBasicPlan: "Basic",
+    billingPrice: "$29/month",
+    billingTrialDays: "14-day free trial",
+    billingFeatureUnlimitedSkus: "Unlimited SKUs",
+    billingFeatureRealtimeSync: "Real-time Shopify sync",
+    billingFeatureSupplierOrders: "Complete supplier order management",
+    billingFeatureDashboard: "Complete dashboard",
+    billingFeatureAiPredictions: "AI predictions",
+    billingFeatureAdvancedReports: "Advanced reports",
+    billingFeatureOneLocation: "1 stock sync location",
+    billingStartTrial: "Start free trial",
+    billingSubscribing: "Redirecting...",
+    billingSubscriptionActive: "Active subscription",
+    billingSubscriptionTrial: "Trial period",
+    billingTrialDaysRemaining: "{{count}} day(s) remaining",
+    billingTrialEnds: "Trial ends on",
+    billingNextBilling: "Next billing",
+    billingCancelSubscription: "Cancel subscription",
+    billingCancelling: "Cancelling...",
+    billingCancelConfirm: "Are you sure you want to cancel your subscription? You will lose access to all features.",
+    billingCancelled: "Subscription cancelled",
+    billingResubscribe: "Resubscribe",
+    billingEverythingYouNeed: "Everything you need to manage your inventory.",
+    billingError: "An error occurred during subscription. Please try again."
   },
   
   es: {
@@ -308,12 +366,41 @@ export const translations = {
     // Navigation
     home: "Inicio",
     productsToCheck: "Productos a verificar",
+    plans: "Planes",
     
     // 404
     pageNotFound: "Página no encontrada. Redirigiendo...",
     
     // Unauthenticated
-    openFromShopify: "Por favor, abre esta aplicación desde tu admin de Shopify."
+    openFromShopify: "Por favor, abre esta aplicación desde tu admin de Shopify.",
+    
+    // Billing
+    billingTitle: "Elige tu plan",
+    billingSubtitle: "Comienza con una prueba gratuita de 14 días",
+    billingBasicPlan: "Básico",
+    billingPrice: "$29/mes",
+    billingTrialDays: "Prueba gratuita de 14 días",
+    billingFeatureUnlimitedSkus: "SKUs ilimitados",
+    billingFeatureRealtimeSync: "Sincronización Shopify en tiempo real",
+    billingFeatureSupplierOrders: "Gestión completa de pedidos a proveedores",
+    billingFeatureDashboard: "Dashboard completo",
+    billingFeatureAiPredictions: "Predicciones IA",
+    billingFeatureAdvancedReports: "Informes avanzados",
+    billingFeatureOneLocation: "1 ubicación de sincronización de stock",
+    billingStartTrial: "Comenzar prueba gratuita",
+    billingSubscribing: "Redirigiendo...",
+    billingSubscriptionActive: "Suscripción activa",
+    billingSubscriptionTrial: "Período de prueba",
+    billingTrialDaysRemaining: "{{count}} día(s) restante(s)",
+    billingTrialEnds: "La prueba termina el",
+    billingNextBilling: "Próxima facturación",
+    billingCancelSubscription: "Cancelar suscripción",
+    billingCancelling: "Cancelando...",
+    billingCancelConfirm: "¿Estás seguro de que deseas cancelar tu suscripción? Perderás el acceso a todas las funciones.",
+    billingCancelled: "Suscripción cancelada",
+    billingResubscribe: "Volver a suscribirse",
+    billingEverythingYouNeed: "Todo lo que necesitas para gestionar tu inventario.",
+    billingError: "Ocurrió un error durante la suscripción. Por favor, inténtalo de nuevo."
   }
 };
 

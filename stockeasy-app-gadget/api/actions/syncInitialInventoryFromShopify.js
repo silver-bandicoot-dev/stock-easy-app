@@ -6,6 +6,34 @@ export const run = async ({ params, logger, api, connections, config }) => {
   
   logger.info({ shopId }, 'Starting initial inventory sync from Shopify to Supabase');
   
+  // Load the shop with defaultLocationId
+  const shop = await api.shopifyShop.findOne(shopId, {
+    select: {
+      id: true,
+      name: true,
+      defaultLocationId: true
+    }
+  });
+  
+  // Validate that a default location is configured
+  if (!shop.defaultLocationId) {
+    logger.error({ shopId }, "No defaultLocationId configured for this shop. Please set the default location in Gadget.");
+    return {
+      success: false,
+      error: "No default location configured for this shop",
+      syncedCount: 0,
+      errorCount: 1,
+      totalMappings: 0
+    };
+  }
+  
+  // Construct the location GID
+  const locationGid = shop.defaultLocationId.startsWith('gid://') 
+    ? shop.defaultLocationId 
+    : `gid://shopify/Location/${shop.defaultLocationId}`;
+  
+  logger.info({ shopId, shopName: shop.name, defaultLocationId: shop.defaultLocationId, locationGid }, 'Using single location for initial sync (Plan Basic)');
+  
   // Get all product mappings for this shop
   const mappings = await api.productMapping.findMany({
     filter: {
@@ -14,6 +42,7 @@ export const run = async ({ params, logger, api, connections, config }) => {
     select: {
       id: true,
       shopifyVariantId: true,
+      shopifyInventoryItemId: true,
       stockEasySku: true,
       shopId: true
     }
@@ -24,31 +53,65 @@ export const run = async ({ params, logger, api, connections, config }) => {
   let successCount = 0;
   let errorCount = 0;
   
+  // Get Shopify connection once for all mappings
+  const shopify = await connections.shopify.forShopId(shopId);
+  
   for (const mapping of mappings) {
     try {
-      // Get Shopify connection
-      const shopify = await connections.shopify.forShopId(shopId);
+      // Construct the inventory item GID
+      const rawInventoryItemId = String(mapping.shopifyInventoryItemId || '');
       
-      // Handle both GID formats
-      const variantGid = mapping.shopifyVariantId.startsWith('gid://') 
-        ? mapping.shopifyVariantId 
-        : `gid://shopify/ProductVariant/${mapping.shopifyVariantId}`;
+      if (!rawInventoryItemId) {
+        logger.warn({ mappingId: mapping.id, sku: mapping.stockEasySku }, 'No shopifyInventoryItemId, skipping');
+        errorCount++;
+        continue;
+      }
       
-      // Get inventory item for this variant
-      const variantResponse = await shopify.graphql(`
-        query getVariant($id: ID!) {
-          productVariant(id: $id) {
-            inventoryItem {
+      const inventoryItemGid = rawInventoryItemId.startsWith('gid://') 
+        ? rawInventoryItemId 
+        : `gid://shopify/InventoryItem/${rawInventoryItemId}`;
+      
+      // Get inventory level for the SPECIFIC location only (Plan Basic = 1 location)
+      const inventoryResponse = await shopify.graphql(`
+        query GetInventoryLevelAtLocation($inventoryItemId: ID!, $locationId: ID!) {
+          inventoryItem(id: $inventoryItemId) {
+            id
+            inventoryLevel(locationId: $locationId) {
               id
+              quantities(names: ["available"]) {
+                name
+                quantity
+              }
+              location {
+                id
+                name
+              }
             }
-            inventoryQuantity
           }
         }
       `, {
-        id: variantGid
+        inventoryItemId: inventoryItemGid,
+        locationId: locationGid
       });
       
-      const inventoryQuantity = variantResponse.productVariant?.inventoryQuantity || 0;
+      // Extract the quantity at the specific location
+      const inventoryLevel = inventoryResponse.inventoryItem?.inventoryLevel;
+      const availableQuantity = inventoryLevel?.quantities?.find(q => q.name === "available")?.quantity || 0;
+      
+      if (!inventoryLevel) {
+        logger.warn({ 
+          sku: mapping.stockEasySku, 
+          inventoryItemGid,
+          locationGid
+        }, 'Inventory item not stocked at this location, setting quantity to 0');
+      }
+      
+      logger.info({ 
+        sku: mapping.stockEasySku, 
+        availableQuantity,
+        locationId: shop.defaultLocationId,
+        locationName: inventoryLevel?.location?.name || "N/A"
+      }, '📦 Retrieved inventory for single location');
       
       // Update Supabase with sync_source = 'shopify' to prevent trigger
       const supabaseUrl = config.SUPABASE_URL;
@@ -63,14 +126,14 @@ export const run = async ({ params, logger, api, connections, config }) => {
           'Prefer': 'return=representation'
         },
         body: JSON.stringify({
-          stock_actuel: inventoryQuantity,
+          stock_actuel: availableQuantity,
           sync_source: 'shopify'
         })
       });
       
       if (response.ok) {
         successCount++;
-        logger.info({ sku: mapping.stockEasySku, quantity: inventoryQuantity }, 'Synced inventory');
+        logger.info({ sku: mapping.stockEasySku, quantity: availableQuantity, locationId: shop.defaultLocationId }, '✅ Synced inventory from single location');
       } else {
         errorCount++;
         logger.error({ sku: mapping.stockEasySku, status: response.status }, 'Failed to sync inventory');
@@ -78,17 +141,18 @@ export const run = async ({ params, logger, api, connections, config }) => {
       
     } catch (error) {
       errorCount++;
-      logger.error({ error, mappingId: mapping.id }, 'Error syncing inventory for mapping');
+      logger.error({ error: error.message, mappingId: mapping.id, sku: mapping.stockEasySku }, 'Error syncing inventory for mapping');
     }
   }
   
-  logger.info({ successCount, errorCount, total: mappings.length }, 'Completed initial inventory sync');
+  logger.info({ successCount, errorCount, total: mappings.length, locationId: shop.defaultLocationId }, 'Completed initial inventory sync (single location)');
   
   return {
     success: true,
     syncedCount: successCount,
     errorCount: errorCount,
-    totalMappings: mappings.length
+    totalMappings: mappings.length,
+    locationId: shop.defaultLocationId
   };
 };
 

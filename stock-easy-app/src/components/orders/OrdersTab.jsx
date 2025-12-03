@@ -9,7 +9,10 @@ import {
   ChevronRight,
   X,
   Share2,
-  Check
+  Check,
+  CheckCircle,
+  Package,
+  AlertTriangle
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { OrdersKPIBar } from './OrdersKPIBar';
@@ -18,10 +21,11 @@ import { OrderDetailPanel } from './OrderDetailPanel';
 import { OrderFilters } from './OrderFilters';
 import { ReplacementReceiptModal } from '../modals/ReplacementReceiptModal';
 import { EditOrderModal } from '../modals/EditOrderModal';
+import { Modal, ModalFooter } from '../ui/Modal';
 import api from '../../services/apiAdapter';
 import { useCurrency } from '../../contexts/CurrencyContext';
 import { useAppNavigation } from '../../hooks/useAppNavigation';
-import { updateShopifyInventory, prepareStockUpdatesFromReconciliation } from '../../services/gadgetService';
+import { updateShopifyInventory, prepareStockUpdatesFromReconciliation, prepareStockUpdatesForCompletion } from '../../services/gadgetService';
 
 export const OrdersTab = ({
   // Data props - Support both naming conventions
@@ -94,6 +98,13 @@ export const OrdersTab = ({
   // État pour la modale d'édition
   const [editModalOrder, setEditModalOrder] = useState(null);
   const [isProcessingEdit, setIsProcessingEdit] = useState(false);
+  
+  // État pour la modale de confirmation de réconciliation
+  const [confirmReconciliationModal, setConfirmReconciliationModal] = useState({
+    isOpen: false,
+    order: null,
+    isProcessing: false
+  });
   
   // Filtres avancés
   const [supplierFilter, setSupplierFilter] = useState('all');
@@ -401,20 +412,35 @@ export const OrdersTab = ({
     }
   };
 
-  // Confirmation de réconciliation - Utilise l'API via le service importé
+  // Confirmation de réconciliation (bouton "Compléter") - Ajoute les quantités MANQUANTES au stock
   const handleConfirmReconciliation = async (orderId) => {
+    const toastId = toast.loading(t('ordersPage.confirmingReconciliation', 'Confirmation en cours...'));
+    
     try {
-      console.log('🔄 Confirmation réconciliation pour:', orderId);
+      console.log('🔄 Confirmation réconciliation (Compléter) pour:', orderId);
       
-      // 1. Trouver la commande dans la liste
-      const order = localOrders.find(o => o.id === orderId);
+      // 1. Trouver la commande dans la liste (utilise enrichedOrders qui contient les items)
+      const order = enrichedOrders.find(o => o.id === orderId);
       if (!order) {
         console.error('❌ Commande non trouvée:', orderId);
-        toast.error(t('ordersPage.reconciliationError'));
+        toast.error(t('ordersPage.orderNotFound', { id: orderId }), { id: toastId });
         return;
       }
       
-      // 2. Confirmer la réconciliation dans Supabase (met à jour le stock local)
+      // Vérifier le statut avant d'appeler l'API
+      if (order.status !== 'reconciliation') {
+        console.error('❌ Commande pas en réconciliation, statut:', order.status);
+        toast.error(t('ordersPage.notInReconciliation', 'La commande n\'est pas en état de réconciliation'), { id: toastId });
+        return;
+      }
+      
+      console.log('📦 Données de réconciliation:', {
+        missingQuantitiesBySku: order.missingQuantitiesBySku,
+        damagedQuantitiesBySku: order.damagedQuantitiesBySku,
+        items: order.items?.map(i => ({ sku: i.sku, qty: i.quantity }))
+      });
+      
+      // 2. Confirmer la réconciliation dans Supabase (met à jour le stock local avec les quantités manquantes)
       const result = await api.confirmOrderReconciliation(orderId);
       console.log('📦 Résultat confirmOrderReconciliation:', result);
       
@@ -422,61 +448,272 @@ export const OrdersTab = ({
       const isSuccess = result?.success === true || (result && !result.error);
       
       if (isSuccess) {
-        // 3. Préparer et envoyer les mises à jour vers Shopify via Gadget
-        const productsList = products || enrichedProducts || [];
-        const stockUpdates = prepareStockUpdatesFromReconciliation(order, productsList);
+        // 3. Récupérer le stock FRAIS depuis Supabase (après la mise à jour locale)
+        const skus = order.items?.map(i => i.sku) || [];
+        let freshProductsData = [];
         
-        if (stockUpdates.length > 0 && order.company_id) {
-          console.log('🔄 Envoi mise à jour Shopify pour', stockUpdates.length, 'produits');
+        if (skus.length > 0) {
+          const { supabase } = await import('../../lib/supabaseClient');
+          const { data } = await supabase
+            .from('produits')
+            .select('sku, stock_actuel')
+            .in('sku', skus);
+          freshProductsData = data || [];
+          console.log('📦 Stock frais depuis Supabase:', freshProductsData);
+        }
+        
+        // 4. Préparer les mises à jour pour Shopify - UNIQUEMENT les quantités manquantes qui sont revenues
+        // Utiliser prepareStockUpdatesForCompletion au lieu de prepareStockUpdatesFromReconciliation
+        const stockUpdates = prepareStockUpdatesForCompletion(order, freshProductsData);
+        
+        console.log('📦 Mises à jour Shopify préparées (quantités manquantes):', stockUpdates);
+        
+        if (stockUpdates.length > 0) {
+          // Récupérer le company_id
+          const companyId = order.company_id || await getCurrentUserCompanyId();
           
-          const shopifyResult = await updateShopifyInventory(order.company_id, stockUpdates);
-          
-          if (shopifyResult.success) {
-            console.log('✅ Inventaire Shopify mis à jour:', shopifyResult);
-            toast.success(t('ordersPage.reconciliationConfirmed') + ` (${shopifyResult.processed} produits synchronisés)`);
-          } else {
-            console.warn('⚠️ Mise à jour Shopify partielle ou échouée:', shopifyResult);
-            // On affiche quand même le succès car la réconciliation locale a fonctionné
-            toast.success(t('ordersPage.reconciliationConfirmed'));
-            if (shopifyResult.error) {
-              toast.warning(t('ordersPage.shopifySyncWarning', 'Synchronisation Shopify en attente - vérifiez la configuration'));
+          if (companyId) {
+            console.log('🔄 Envoi mise à jour Shopify pour', stockUpdates.length, 'produits (quantités manquantes)');
+            
+            const shopifyResult = await updateShopifyInventory(companyId, stockUpdates);
+            
+            if (shopifyResult.success) {
+              console.log('✅ Inventaire Shopify mis à jour (quantités manquantes):', shopifyResult);
+              toast.success(t('ordersPage.reconciliationConfirmed') + ` (${shopifyResult.processed || stockUpdates.length} produits synchronisés)`, { id: toastId });
+            } else {
+              console.warn('⚠️ Mise à jour Shopify partielle ou échouée:', shopifyResult);
+              toast.success(t('ordersPage.reconciliationConfirmed'), { id: toastId });
+              if (shopifyResult.error) {
+                toast.warning(t('ordersPage.shopifySyncWarning', 'Synchronisation Shopify en attente - vérifiez la configuration'));
+              }
             }
+          } else {
+            console.warn('⚠️ Pas de company_id, synchronisation Shopify ignorée');
+            toast.success(t('ordersPage.reconciliationConfirmed'), { id: toastId });
           }
         } else {
-          toast.success(t('ordersPage.reconciliationConfirmed'));
+          console.log('ℹ️ Pas de quantités manquantes à synchroniser avec Shopify');
+          toast.success(t('ordersPage.reconciliationConfirmed'), { id: toastId });
         }
         
-        // 4. Rafraîchir les données locales et globales
-        fetchOrders();
+        // 5. Rafraîchir les données locales et globales immédiatement
+        await fetchOrders();
         if (typeof loadData === 'function') {
-          await loadData();
+          await loadData({ forceRefresh: true });
         }
       } else {
-        toast.error(result?.error || result?.message || t('ordersPage.reconciliationError'));
+        // Afficher l'erreur spécifique retournée par l'API
+        const errorMessage = result?.error || result?.message || t('ordersPage.reconciliationError');
+        console.error('❌ Erreur API:', errorMessage);
+        toast.error(errorMessage, { id: toastId });
       }
     } catch (error) {
       console.error('❌ Erreur lors de la confirmation de la réconciliation:', error);
-      toast.error(t('ordersPage.reconciliationError'));
+      toast.error(error.message || t('ordersPage.reconciliationError'), { id: toastId });
+    }
+  };
+  
+  // Helper pour récupérer le company_id de l'utilisateur actuel
+  const getCurrentUserCompanyId = async () => {
+    try {
+      const { supabase } = await import('../../lib/supabaseClient');
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return null;
+      
+      const { data: profile } = await supabase
+        .from('user_profiles')
+        .select('company_id')
+        .eq('id', user.id)
+        .single();
+      
+      return profile?.company_id || null;
+    } catch (error) {
+      console.error('❌ Erreur récupération company_id:', error);
+      return null;
     }
   };
 
   // Générer une réclamation fournisseur
   const handleGenerateReclamation = (order) => {
+    console.log('📧 Génération réclamation pour:', order.id);
+    console.log('📧 order.items:', order.items);
+    console.log('📧 order.missingQuantitiesBySku:', order.missingQuantitiesBySku);
+    console.log('📧 order.damagedQuantitiesBySku:', order.damagedQuantitiesBySku);
+    
+    // Générer le contenu de l'email
+    let emailContent = null;
+    
+    // Essayer avec emailGeneration.generateReclamationEmail
+    if (emailGeneration?.generateReclamationEmail) {
+      const receivedItems = {};
+      const damages = {};
+      
+      // Utiliser order.items s'ils existent, sinon construire depuis les SKUs
+      const items = order.items && order.items.length > 0 
+        ? order.items 
+        : Object.keys(order.missingQuantitiesBySku || {}).concat(
+            Object.keys(order.damagedQuantitiesBySku || {})
+          ).filter((v, i, a) => a.indexOf(v) === i).map(sku => {
+            // Trouver le produit pour avoir la quantité commandée
+            const product = (products || enrichedProducts)?.find(p => p.sku?.toLowerCase() === sku?.toLowerCase());
+            // Essayer de retrouver la quantité commandée
+            const missingQty = order.missingQuantitiesBySku?.[sku] || 0;
+            const damagedQty = order.damagedQuantitiesBySku?.[sku] || 0;
+            // Estimer la quantité commandée (on prend les valeurs totales si disponibles)
+            const estimatedOrdered = (order.missing_quantity_total || 0) + (order.damaged_quantity_total || 0) + 10; // Fallback
+            return { sku, quantity: missingQty + damagedQty + 10, name: product?.nom || sku };
+          });
+      
+      console.log('📧 Items utilisés:', items);
+      
+      // Reconstituer les données de réception depuis les quantités manquantes/endommagées
+      items.forEach(item => {
+        const sku = item.sku;
+        const missingQty = order.missingQuantitiesBySku?.[sku] || 0;
+        const damagedQty = order.damagedQuantitiesBySku?.[sku] || 0;
+        const orderedQty = item.quantity || 0;
+        const receivedQty = orderedQty - missingQty - damagedQty;
+        
+        console.log(`📧 SKU ${sku}: commandé=${orderedQty}, manquant=${missingQty}, endommagé=${damagedQty}, reçu=${receivedQty}`);
+        
+        receivedItems[sku] = receivedQty;
+        if (damagedQty > 0) {
+          damages[sku] = damagedQty;
+        }
+      });
+      
+      console.log('📧 receivedItems:', receivedItems);
+      console.log('📧 damages:', damages);
+      
+      emailContent = emailGeneration.generateReclamationEmail(
+        order,
+        receivedItems,
+        damages,
+        '', // notes
+        products || enrichedProducts
+      );
+      console.log('📧 Email généré via emailGeneration:', emailContent);
+    } else if (generateReclamationEmail) {
+      // Fallback direct
+      emailContent = generateReclamationEmail(order);
+      console.log('📧 Email généré via generateReclamationEmail:', emailContent);
+    }
+    
+    // Si pas de contenu généré, construire manuellement
+    if (!emailContent || emailContent.includes('Aucun problème spécifique')) {
+      console.log('📧 Construction manuelle de l\'email...');
+      
+      const poNumber = order.poNumber || order.id || 'N/A';
+      let body = `Bonjour,\n\nNous avons réceptionné la commande ${poNumber} et constatons les problèmes suivants :\n\n`;
+      
+      // Ajouter les quantités manquantes
+      if (order.missingQuantitiesBySku && Object.keys(order.missingQuantitiesBySku).length > 0) {
+        body += '🔴 QUANTITÉS MANQUANTES\n';
+        body += '-'.repeat(40) + '\n';
+        Object.entries(order.missingQuantitiesBySku).forEach(([sku, qty]) => {
+          if (qty > 0) {
+            const product = (products || enrichedProducts)?.find(p => p.sku?.toLowerCase() === sku?.toLowerCase());
+            body += `\n> ${product?.nom || sku}\n`;
+            body += `  SKU: ${sku}\n`;
+            body += `  ⚠️ Manquant: ${qty} unité(s)\n`;
+          }
+        });
+        body += '\n';
+      }
+      
+      // Ajouter les quantités endommagées
+      if (order.damagedQuantitiesBySku && Object.keys(order.damagedQuantitiesBySku).length > 0) {
+        body += '⚠️ PRODUITS ENDOMMAGÉS\n';
+        body += '-'.repeat(40) + '\n';
+        Object.entries(order.damagedQuantitiesBySku).forEach(([sku, qty]) => {
+          if (qty > 0) {
+            const product = (products || enrichedProducts)?.find(p => p.sku?.toLowerCase() === sku?.toLowerCase());
+            body += `\n> ${product?.nom || sku}\n`;
+            body += `  SKU: ${sku}\n`;
+            body += `  ⚠️ Endommagé: ${qty} unité(s)\n`;
+          }
+        });
+        body += '\n';
+      }
+      
+      body += '-'.repeat(40) + '\n';
+      body += 'Merci de procéder rapidement au remplacement ou à l\'envoi des articles manquants/endommagés.\n\n';
+      body += 'Cordialement,\n';
+      
+      emailContent = body;
+      console.log('📧 Email construit manuellement:', emailContent);
+    }
+    
+    // Ouvrir la modale
     if (reclamationEmailModalHandlers?.open) {
-      reclamationEmailModalHandlers.open(order);
+      reclamationEmailModalHandlers.open(order, emailContent);
     } else if (reclamationEmailModal?.openReclamationEmailModal) {
-      reclamationEmailModal.openReclamationEmailModal(order);
+      reclamationEmailModal.openReclamationEmailModal(order, emailContent);
     } else {
       console.warn('⚠️ Modale de réclamation non disponible');
       toast.error(t('ordersPage.reclamationModalUnavailable', 'Impossible d\'ouvrir la modale de réclamation'));
     }
   };
 
-  // Compléter la réconciliation (archiver la commande)
+  // Compléter la réconciliation (archiver la commande) - Ouvre le modal de confirmation
   const handleCompleteReconciliation = async (orderId) => {
-    await handleConfirmReconciliation(orderId);
-    // Désélectionner la commande après archivage
-    setSelectedOrder(null);
+    // Trouver la commande pour vérifier si les données de réconciliation existent
+    const order = enrichedOrders.find(o => o.id === orderId);
+    
+    if (!order) {
+      toast.error(t('ordersPage.orderNotFound', { id: orderId }));
+      return;
+    }
+    
+    // Vérifier si la commande est bien en statut reconciliation
+    if (order.status !== 'reconciliation') {
+      console.warn('⚠️ Commande pas en réconciliation, statut actuel:', order.status);
+      toast.error(t('ordersPage.notInReconciliation', 'Cette commande n\'est pas en état de réconciliation'));
+      return;
+    }
+    
+    // Vérifier si les données de réconciliation ont été saisies
+    const hasReconciliationData = order.missingQuantitiesBySku || order.damagedQuantitiesBySku || 
+      order.items?.some(item => item.receivedQuantity !== undefined);
+    
+    if (!hasReconciliationData) {
+      // Si pas de données de réconciliation, ouvrir le modal pour les saisir
+      console.log('📋 Pas de données de réconciliation, ouverture du modal...');
+      toast.info(t('ordersPage.pleaseEnterQuantities', 'Veuillez d\'abord saisir les quantités reçues'));
+      handleStartReconciliation(order);
+      return;
+    }
+    
+    // Ouvrir le modal de confirmation
+    setConfirmReconciliationModal({
+      isOpen: true,
+      order: order,
+      isProcessing: false
+    });
+  };
+  
+  // Confirmer la réconciliation depuis le modal
+  const handleConfirmReconciliationFromModal = async () => {
+    const order = confirmReconciliationModal.order;
+    if (!order) return;
+    
+    setConfirmReconciliationModal(prev => ({ ...prev, isProcessing: true }));
+    
+    try {
+      await handleConfirmReconciliation(order.id);
+      setConfirmReconciliationModal({ isOpen: false, order: null, isProcessing: false });
+      setSelectedOrder(null);
+    } catch (error) {
+      console.error('❌ Erreur confirmation réconciliation:', error);
+      setConfirmReconciliationModal(prev => ({ ...prev, isProcessing: false }));
+    }
+  };
+  
+  // Fermer le modal de confirmation
+  const handleCloseConfirmReconciliationModal = () => {
+    if (!confirmReconciliationModal.isProcessing) {
+      setConfirmReconciliationModal({ isOpen: false, order: null, isProcessing: false });
+    }
   };
 
   // Ouvrir la modale de réception de remplacement
@@ -786,6 +1023,111 @@ export const OrdersTab = ({
         onSave={handleSaveOrderEdit}
         isProcessing={isProcessingEdit}
       />
+      
+      {/* Modal de confirmation de réconciliation */}
+      <Modal
+        isOpen={confirmReconciliationModal.isOpen}
+        onClose={handleCloseConfirmReconciliationModal}
+        title={t('ordersPage.confirmReconciliation', 'Terminer la réconciliation')}
+        icon={CheckCircle}
+        size="md"
+        footer={
+          <ModalFooter align="right">
+            <button
+              onClick={handleCloseConfirmReconciliationModal}
+              disabled={confirmReconciliationModal.isProcessing}
+              className="px-4 py-2 text-neutral-600 hover:text-neutral-800 font-medium transition-colors disabled:opacity-50"
+            >
+              {t('common.cancel', 'Annuler')}
+            </button>
+            <button
+              onClick={handleConfirmReconciliationFromModal}
+              disabled={confirmReconciliationModal.isProcessing}
+              className="px-6 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors disabled:opacity-50 flex items-center gap-2"
+            >
+              {confirmReconciliationModal.isProcessing ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  {t('common.processing', 'Traitement...')}
+                </>
+              ) : (
+                <>
+                  <Check className="w-4 h-4" />
+                  {t('ordersPage.confirmAndUpdateStock', 'Confirmer et mettre à jour le stock')}
+                </>
+              )}
+            </button>
+          </ModalFooter>
+        }
+      >
+        {confirmReconciliationModal.order && (
+          <div className="space-y-6">
+            {/* Message principal */}
+            <div className="text-center">
+              <div className="w-16 h-16 mx-auto mb-4 bg-green-100 rounded-full flex items-center justify-center">
+                <Package className="w-8 h-8 text-green-600" />
+              </div>
+              <h4 className="text-lg font-semibold text-neutral-900 mb-2">
+                {t('ordersPage.replacementsReceived', 'Produits de remplacement reçus ?')}
+              </h4>
+              <p className="text-neutral-600">
+                {t('ordersPage.confirmReplacementsArrived', 'Confirmez que les produits manquants ou de remplacement sont bien arrivés.')}
+              </p>
+            </div>
+            
+            {/* Liste des quantités manquantes */}
+            {confirmReconciliationModal.order.missingQuantitiesBySku && 
+              Object.entries(confirmReconciliationModal.order.missingQuantitiesBySku).some(([, qty]) => qty > 0) && (
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <div className="flex items-center gap-2 text-blue-700 font-medium mb-3">
+                  <Package className="w-5 h-5" />
+                  {t('ordersPage.missingItemsToAdd', 'Quantités manquantes à ajouter au stock')}
+                </div>
+                <ul className="space-y-2">
+                  {Object.entries(confirmReconciliationModal.order.missingQuantitiesBySku).map(([sku, qty]) => {
+                    if (qty <= 0) return null;
+                    const product = (products || enrichedProducts)?.find(p => p.sku?.toLowerCase() === sku?.toLowerCase());
+                    return (
+                      <li key={sku} className="flex justify-between items-center text-sm">
+                        <span className="text-neutral-700">{product?.nom || sku}</span>
+                        <span className="font-semibold text-blue-700">+{qty} unité(s)</span>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            )}
+            
+            {/* Liste des quantités endommagées remplacées */}
+            {confirmReconciliationModal.order.damagedQuantitiesBySku && 
+              Object.entries(confirmReconciliationModal.order.damagedQuantitiesBySku).some(([, qty]) => qty > 0) && (
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                <div className="flex items-center gap-2 text-amber-700 font-medium mb-3">
+                  <AlertTriangle className="w-5 h-5" />
+                  {t('ordersPage.damagedItemsReplaced', 'Remplacements pour produits endommagés')}
+                </div>
+                <ul className="space-y-2">
+                  {Object.entries(confirmReconciliationModal.order.damagedQuantitiesBySku).map(([sku, qty]) => {
+                    if (qty <= 0) return null;
+                    const product = (products || enrichedProducts)?.find(p => p.sku?.toLowerCase() === sku?.toLowerCase());
+                    return (
+                      <li key={sku} className="flex justify-between items-center text-sm">
+                        <span className="text-neutral-700">{product?.nom || sku}</span>
+                        <span className="font-semibold text-amber-700">+{qty} unité(s)</span>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            )}
+            
+            {/* Info */}
+            <div className="bg-neutral-50 rounded-lg p-3 text-sm text-neutral-600 text-center">
+              {t('ordersPage.stockWillBeUpdatedAuto', 'Le stock sera automatiquement mis à jour dans Stockeasy et Shopify.')}
+            </div>
+          </div>
+        )}
+      </Modal>
     </motion.div>
   );
 };

@@ -11,6 +11,50 @@ import { supabase } from '../lib/supabaseClient';
 console.log('📁 Loading reconciliationHandlers.js - Phase 9 & 13');
 
 /**
+ * Récupère le stock actuel FRAIS depuis Supabase pour une liste de SKUs
+ * Nécessaire car la variable `products` peut être périmée/en cache
+ * @param {Array<string>} skus - Liste des SKUs à récupérer
+ * @returns {Promise<Object>} Map SKU -> stock_actuel
+ */
+async function getFreshStockFromSupabase(skus) {
+  try {
+    console.log('🔍 Récupération stock frais pour SKUs:', skus);
+    
+    // Convertir tous les SKUs en minuscules pour la recherche
+    const skusLower = skus.map(s => s?.toLowerCase()).filter(Boolean);
+    
+    // Requête avec ILIKE pour gérer la casse (ou filtrage côté client)
+    const { data, error } = await supabase
+      .from('produits')
+      .select('sku, stock_actuel');
+    
+    if (error) {
+      console.error('❌ Erreur Supabase:', error);
+      throw error;
+    }
+    
+    console.log('📦 Données brutes Supabase:', data?.length, 'produits');
+    
+    // Créer une map SKU -> stock (insensible à la casse)
+    // Filtrer pour ne garder que les SKUs demandés
+    const stockMap = {};
+    (data || []).forEach(p => {
+      const skuLower = p.sku?.toLowerCase();
+      if (skusLower.includes(skuLower)) {
+        stockMap[skuLower] = p.stock_actuel ?? 0;
+        console.log(`  → ${p.sku}: ${p.stock_actuel}`);
+      }
+    });
+    
+    console.log('📦 Stock frais depuis Supabase:', stockMap);
+    return stockMap;
+  } catch (e) {
+    console.error('❌ Impossible de récupérer le stock frais:', e.message || e);
+    return {};
+  }
+}
+
+/**
  * Récupère le company_id de l'utilisateur actuel
  * @returns {Promise<string|null>} company_id ou null si non trouvé
  */
@@ -47,7 +91,8 @@ export const confirmReconciliationWithQuantities = async (
   api,
   loadData,
   setDiscrepancyTypes,
-  setActiveTab
+  setActiveTab,
+  products = [] // AJOUTÉ: Liste des produits pour calculer le stock total
 ) => {
 
   try {
@@ -155,11 +200,50 @@ export const confirmReconciliationWithQuantities = async (
     
     if (stockUpdates.length > 0) {
       await api.updateStock(stockUpdates);
-      console.log('✅ Stock mis à jour avec succès');
+      console.log('✅ Stock local mis à jour avec succès');
+      
+      // CORRECTION: Synchroniser avec Shopify en envoyant le STOCK TOTAL
+      const companyId = await getCurrentUserCompanyId();
+      if (companyId && products && products.length > 0) {
+        console.log('🔄 Synchronisation Shopify - Réconciliation...');
+        
+        // Récupérer le stock FRAIS depuis Supabase (products en mémoire peut être périmé)
+        const skus = stockUpdates.map(u => u.sku);
+        const freshStock = await getFreshStockFromSupabase(skus);
+        
+        const shopifyUpdates = stockUpdates.map(update => {
+          const skuLower = update.sku?.toLowerCase();
+          const currentStock = freshStock[skuLower] ?? 0;
+          // IMPORTANT: Le stock est DÉJÀ mis à jour dans Supabase, on l'envoie tel quel
+          const finalStock = currentStock; // Pas d'addition !
+          
+          console.log(`📦 ${update.sku}: stock final après MAJ locale = ${finalStock} (envoi à Shopify)`);
+          
+          return {
+            sku: update.sku,
+            stock_actuel: finalStock  // Stock déjà mis à jour dans Supabase
+          };
+        }).filter(u => u.sku);
+        
+        if (shopifyUpdates.length > 0) {
+          try {
+            const shopifyResult = await updateShopifyInventory(companyId, shopifyUpdates);
+            if (shopifyResult.success) {
+              console.log('✅ Shopify synchronisé (réconciliation):', shopifyResult);
+            } else {
+              console.warn('⚠️ Synchronisation Shopify partielle:', shopifyResult);
+            }
+          } catch (shopifyError) {
+            console.error('❌ Erreur sync Shopify:', shopifyError);
+          }
+        }
+      } else {
+        console.warn('⚠️ Synchronisation Shopify ignorée (company_id ou products manquants)');
+      }
     }
     
     // Recharger les données
-    await loadData();
+    await loadData({ forceRefresh: true });
     
     // Fermer la modal et nettoyer les états
     inlineModals.reconciliationModal.closeReconciliationModal();
@@ -294,17 +378,25 @@ export const handleReconciliationConfirm = async (
       // Synchroniser avec Shopify si company_id est disponible
       if (companyId && stockUpdates.length > 0) {
         console.log('🔄 Synchronisation Shopify (avec écarts) - Préparation des mises à jour...');
+        console.log('📦 stockUpdates:', JSON.stringify(stockUpdates));
+        
+        // Récupérer le stock FRAIS depuis Supabase (APRÈS la mise à jour locale)
+        // Le stock a DÉJÀ été incrémenté par api.updateStock(), donc on l'envoie tel quel à Shopify
+        const skus = stockUpdates.map(u => u.sku);
+        const freshStock = await getFreshStockFromSupabase(skus);
         
         const shopifyUpdates = stockUpdates.map(update => {
-          const product = products?.find(p => p.sku === update.sku);
-          const currentStock = product?.stock_actuel || 0;
-          const newStock = currentStock + update.quantityToAdd;
+          const skuLower = update.sku?.toLowerCase();
+          // IMPORTANT: Le stock est DÉJÀ mis à jour dans Supabase, on l'envoie tel quel
+          const finalStock = freshStock[skuLower] ?? 0;
+          
+          console.log(`📦 ${update.sku}: stock final après MAJ locale = ${finalStock} (envoi à Shopify)`);
           
           return {
             sku: update.sku,
-            stock_actuel: newStock
+            stock_actuel: finalStock  // PAS d'addition, le stock est déjà correct
           };
-        }).filter(u => u.sku);
+        }).filter(u => u.sku && u.stock_actuel > 0);
         
         if (shopifyUpdates.length > 0) {
           try {
@@ -360,16 +452,24 @@ export const handleReconciliationConfirm = async (
       // Synchroniser avec Shopify si company_id est disponible
       if (companyId && stockUpdates.length > 0) {
         console.log('🔄 Synchronisation Shopify - Préparation des mises à jour...');
+        console.log('📦 stockUpdates:', JSON.stringify(stockUpdates));
         
-        // Préparer les mises à jour pour Shopify (stock actuel = stock existant + quantité reçue)
+        // Récupérer le stock ACTUEL depuis Supabase (car products peut être périmé)
+        // Récupérer le stock FRAIS depuis Supabase
+        const skus = stockUpdates.map(u => u.sku);
+        const freshStock = await getFreshStockFromSupabase(skus);
+        
         const shopifyUpdates = stockUpdates.map(update => {
-          const product = products?.find(p => p.sku === update.sku);
-          const currentStock = product?.stock_actuel || 0;
-          const newStock = currentStock + update.quantityToAdd;
+          const skuLower = update.sku?.toLowerCase();
+          const currentStock = freshStock[skuLower] ?? 0;
+          // IMPORTANT: Le stock est DÉJÀ mis à jour dans Supabase, on l'envoie tel quel
+          const finalStock = currentStock; // Pas d'addition !
+          
+          console.log(`📦 ${update.sku}: stock final après MAJ locale = ${finalStock} (envoi à Shopify)`);
           
           return {
             sku: update.sku,
-            stock_actuel: newStock
+            stock_actuel: finalStock
           };
         }).filter(u => u.sku);
         
@@ -402,8 +502,8 @@ export const handleReconciliationConfirm = async (
       reconciliationModalHandlers.close();
     }
     
-    // Recharger les données
-    await loadData();
+    // Recharger les données avec forceRefresh pour ignorer le cache
+    await loadData({ forceRefresh: true });
     
   } catch (error) {
     console.error('Erreur lors de la réconciliation:', error);
@@ -552,7 +652,43 @@ export const submitUnifiedReconciliation = async (
     console.log('Stock updates:', stockUpdates);
     await api.updateStock(stockUpdates);
     
-    await loadData();
+    // CORRECTION: Synchroniser avec Shopify en envoyant le STOCK TOTAL
+    const companyId = await getCurrentUserCompanyId();
+    if (companyId && stockUpdates.length > 0 && products && products.length > 0) {
+      console.log('🔄 Synchronisation Shopify - Réconciliation unifiée...');
+      
+      // Récupérer le stock FRAIS depuis Supabase
+      const skus = stockUpdates.map(u => u.sku);
+      const freshStock = await getFreshStockFromSupabase(skus);
+      
+      const shopifyUpdates = stockUpdates.map(update => {
+        const skuLower = update.sku?.toLowerCase();
+        // IMPORTANT: Le stock est DÉJÀ mis à jour dans Supabase, on l'envoie tel quel
+        const finalStock = freshStock[skuLower] ?? 0;
+        
+        console.log(`📦 ${update.sku}: stock final après MAJ locale = ${finalStock} (envoi à Shopify)`);
+        
+        return {
+          sku: update.sku,
+          stock_actuel: finalStock
+        };
+      }).filter(u => u.sku && u.stock_actuel > 0);
+      
+      if (shopifyUpdates.length > 0) {
+        try {
+          const shopifyResult = await updateShopifyInventory(companyId, shopifyUpdates);
+          if (shopifyResult.success) {
+            console.log('✅ Shopify synchronisé (réconciliation unifiée):', shopifyResult);
+          } else {
+            console.warn('⚠️ Synchronisation Shopify partielle:', shopifyResult);
+          }
+        } catch (shopifyError) {
+          console.error('❌ Erreur sync Shopify:', shopifyError);
+        }
+      }
+    }
+    
+    await loadData({ forceRefresh: true });
     setUnifiedReconciliationModalOpen(false);
     setUnifiedReconciliationItems({});
     setReconciliationNotes('');
@@ -620,6 +756,43 @@ export const submitDamageReport = async (
     });
     
     await api.updateStock(stockUpdates);
+    
+    // CORRECTION: Synchroniser avec Shopify en envoyant le STOCK TOTAL
+    const companyId = await getCurrentUserCompanyId();
+    if (companyId && stockUpdates.length > 0 && products && products.length > 0) {
+      console.log('🔄 Synchronisation Shopify - Rapport de dommages...');
+      
+      // Récupérer le stock FRAIS depuis Supabase
+      const skus = stockUpdates.map(u => u.sku);
+      const freshStock = await getFreshStockFromSupabase(skus);
+      
+      const shopifyUpdates = stockUpdates.map(update => {
+        const skuLower = update.sku?.toLowerCase();
+        // IMPORTANT: Le stock est DÉJÀ mis à jour dans Supabase, on l'envoie tel quel
+        const finalStock = freshStock[skuLower] ?? 0;
+        
+        console.log(`📦 ${update.sku}: stock final après MAJ locale = ${finalStock} (envoi à Shopify)`);
+        
+        return {
+          sku: update.sku,
+          stock_actuel: finalStock
+        };
+      }).filter(u => u.sku && u.stock_actuel > 0);
+      
+      if (shopifyUpdates.length > 0) {
+        try {
+          const shopifyResult = await updateShopifyInventory(companyId, shopifyUpdates);
+          if (shopifyResult.success) {
+            console.log('✅ Shopify synchronisé (rapport dommages):', shopifyResult);
+          } else {
+            console.warn('⚠️ Synchronisation Shopify partielle:', shopifyResult);
+          }
+        } catch (shopifyError) {
+          console.error('❌ Erreur sync Shopify:', shopifyError);
+        }
+      }
+    }
+    
     await api.updateOrderStatus(reconciliationOrder.id, {
       status: 'reconciliation',
       receivedAt: new Date().toISOString().split('T')[0],
@@ -627,7 +800,7 @@ export const submitDamageReport = async (
       damageReport: true
     });
     
-    await loadData();
+    await loadData({ forceRefresh: true });
     setDamageModalOpen(false);
     setDamageItems({});
     setDamageNotes('');
@@ -708,7 +881,8 @@ export const confirmReconciliation = async (
   api,
   loadData,
   setReconciliationModalOpen,
-  setReconciliationOrder
+  setReconciliationOrder,
+  products // AJOUTÉ: Liste des produits pour calculer le stock total
 ) => {
   try {
     if (hasDiscrepancy) {
@@ -731,8 +905,45 @@ export const confirmReconciliation = async (
       
       console.log('Stock updates:', stockUpdates);
       
-      // Mettre à jour le stock AVANT de marquer comme completed
+      // Mettre à jour le stock local AVANT de marquer comme completed
       await api.updateStock(stockUpdates);
+      
+      // CORRECTION: Synchroniser avec Shopify en envoyant le STOCK TOTAL (pas juste la quantité ajoutée)
+      const companyId = await getCurrentUserCompanyId();
+      if (companyId && stockUpdates.length > 0 && products) {
+        console.log('🔄 Synchronisation Shopify - Réception conforme...');
+        
+        // Récupérer le stock FRAIS depuis Supabase
+        const skus = stockUpdates.map(u => u.sku);
+        const freshStock = await getFreshStockFromSupabase(skus);
+        
+        const shopifyUpdates = stockUpdates.map(update => {
+          const skuLower = update.sku?.toLowerCase();
+          const currentStock = freshStock[skuLower] ?? 0;
+          // IMPORTANT: Le stock est DÉJÀ mis à jour dans Supabase, on l'envoie tel quel
+          const finalStock = currentStock; // Pas d'addition !
+          
+          console.log(`📦 ${update.sku}: stock final après MAJ locale = ${finalStock} (envoi à Shopify)`);
+          
+          return {
+            sku: update.sku,
+            stock_actuel: finalStock  // Stock déjà mis à jour dans Supabase
+          };
+        }).filter(u => u.sku);
+        
+        if (shopifyUpdates.length > 0) {
+          try {
+            const shopifyResult = await updateShopifyInventory(companyId, shopifyUpdates);
+            if (shopifyResult.success) {
+              console.log('✅ Shopify synchronisé (réception conforme):', shopifyResult);
+            } else {
+              console.warn('⚠️ Synchronisation Shopify partielle:', shopifyResult);
+            }
+          } catch (shopifyError) {
+            console.error('❌ Erreur sync Shopify:', shopifyError);
+          }
+        }
+      }
       
       // Puis marquer la commande comme complétée
       await api.updateOrderStatus(reconciliationOrder.id, {
@@ -741,7 +952,7 @@ export const confirmReconciliation = async (
         completedAt: new Date().toISOString().split('T')[0]
       });
       
-      await loadData();
+      await loadData({ forceRefresh: true });
       setReconciliationModalOpen(false);
       setReconciliationOrder(null);
       

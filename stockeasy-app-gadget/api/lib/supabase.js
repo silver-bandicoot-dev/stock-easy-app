@@ -428,6 +428,90 @@ export const insertUnmappedProducts = async (unmappedProducts) => {
  * @param {boolean} options.includeCancellations - Also delete cancellation entries (default: false)
  * @returns {Promise<{data: any, error: any, deletedCount: number}>}
  */
+/**
+ * Updates billing/subscription information for a company in Supabase.
+ * Syncs the Shopify subscription status to Supabase for visibility.
+ * 
+ * @param {string} companyId - The company UUID in Supabase
+ * @param {object} billingData - The billing data to update
+ * @param {string} [billingData.subscriptionPlan] - Plan name (basic, pro, plus)
+ * @param {string} [billingData.subscriptionStatus] - Status (active, cancelled, frozen, pending, trial)
+ * @param {string} [billingData.shopifySubscriptionId] - Shopify subscription GraphQL ID
+ * @param {Date} [billingData.trialStartedAt] - Trial start date
+ * @param {Date} [billingData.trialEndsAt] - Trial end date
+ * @param {Date} [billingData.billingActivatedAt] - Billing activation date
+ * @param {number} [billingData.maxSyncLocations] - Max locations for plan
+ * @returns {Promise<boolean>} True if update was successful
+ * @throws {Error} If the update fails
+ */
+export const updateCompanyBilling = async (companyId, billingData) => {
+  if (!companyId) {
+    throw new Error("companyId is required");
+  }
+
+  try {
+    const supabase = getSupabaseClient();
+
+    const { data, error } = await supabase.rpc('update_company_billing', {
+      p_company_id: companyId,
+      p_subscription_plan: billingData.subscriptionPlan || null,
+      p_subscription_status: billingData.subscriptionStatus || null,
+      p_shopify_subscription_id: billingData.shopifySubscriptionId || null,
+      p_trial_started_at: billingData.trialStartedAt ? new Date(billingData.trialStartedAt).toISOString() : null,
+      p_trial_ends_at: billingData.trialEndsAt ? new Date(billingData.trialEndsAt).toISOString() : null,
+      p_billing_activated_at: billingData.billingActivatedAt ? new Date(billingData.billingActivatedAt).toISOString() : null,
+      p_max_sync_locations: billingData.maxSyncLocations || null
+    });
+
+    if (error) {
+      throw new Error(`Failed to update company billing: ${error.message}`);
+    }
+
+    return data === true;
+  } catch (error) {
+    throw new Error(`Error updating company billing in Supabase: ${error.message}`);
+  }
+};
+
+/**
+ * Updates billing info by Shopify shop ID (domain).
+ * Finds the company by shopify_shop_id and updates billing.
+ * 
+ * @param {string} shopifyShopId - The Shopify shop ID (e.g., "mystore.myshopify.com")
+ * @param {object} billingData - The billing data to update
+ * @returns {Promise<boolean>} True if update was successful
+ */
+export const updateCompanyBillingByShopifyId = async (shopifyShopId, billingData) => {
+  if (!shopifyShopId) {
+    throw new Error("shopifyShopId is required");
+  }
+
+  try {
+    const supabase = getSupabaseClient();
+
+    // First, find the company by Shopify shop ID
+    const { data: company, error: findError } = await supabase
+      .from('companies')
+      .select('id')
+      .eq('shopify_shop_id', shopifyShopId)
+      .single();
+
+    if (findError && findError.code !== 'PGRST116') {
+      throw new Error(`Failed to find company: ${findError.message}`);
+    }
+
+    if (!company) {
+      // Company not found - might not be synced yet
+      return false;
+    }
+
+    // Update the billing info
+    return await updateCompanyBilling(company.id, billingData);
+  } catch (error) {
+    throw new Error(`Error updating company billing by Shopify ID: ${error.message}`);
+  }
+};
+
 export const deleteSalesHistoryByOrderId = async (companyId, shopifyOrderId, options = {}) => {
   const { includeCancellations = false } = options;
 

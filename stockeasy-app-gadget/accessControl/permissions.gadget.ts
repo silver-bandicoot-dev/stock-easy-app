@@ -130,8 +130,12 @@ export const permissions: GadgetPermissions = {
         },
       },
       actions: {
+        activateSubscription: true,
+        cancelSubscription: true,
         connectShopToCompany: true,
+        createSubscription: true,
         getShopLocations: true,
+        getSubscriptionStatus: true,
         getSupabaseStats: true,
         syncInitialInventoryFromShopify: true,
         syncOrdersToSupabase: true,

@@ -62,7 +62,7 @@ export const useEmailGeneration = () => {
    * @param {Object} order - La commande concernée
    * @param {Object} receivedItems - Items reçus
    * @param {Object} damagedQuantities - Quantités endommagées
-   * @param {string} notes - Notes additionnelles
+   * @param {string} notes - Notes additionnelles ou signature
    * @param {Array} allProducts - Liste de tous les produits
    * @param {Object} supplier - Infos du fournisseur (optionnel)
    * @returns {string} Le contenu de l'email
@@ -82,7 +82,7 @@ export const useEmailGeneration = () => {
       products: allProducts,
       supplier,
       notes,
-      signature: userSignature || ''
+      signature: notes || ''  // notes contient souvent la signature utilisateur
     });
 
     return email.body;

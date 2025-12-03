@@ -8,6 +8,7 @@ import { formatConfirmedDate, calculateETA, formatETA } from '../../utils/dateUt
 import { roundToTwoDecimals } from '../../utils/decimalUtils';
 import { formatTrackingUrl, getTrackingLinkText, isValidUrl } from '../../utils/trackingUtils';
 import { useCurrency } from '../../contexts/CurrencyContext';
+import { useTranslation } from 'react-i18next';
 
 export const ReconciliationModalInline = ({
   isOpen,
@@ -24,6 +25,7 @@ export const ReconciliationModalInline = ({
 }) => {
   const [showDetails, setShowDetails] = React.useState(true);
   const { format: formatCurrency } = useCurrency();
+  const { t } = useTranslation();
 
   if (!isOpen || !reconciliationOrder) return null;
 
@@ -47,7 +49,7 @@ export const ReconciliationModalInline = ({
     <Modal
       isOpen={isOpen && reconciliationOrder}
       onClose={onClose}
-      title="Vérification de la réception"
+      title={t('reconciliationModal.title', 'Vérification de la réception')}
       size="large"
       footer={
         <div className="flex justify-end gap-3">
@@ -55,7 +57,7 @@ export const ReconciliationModalInline = ({
             variant="outline" 
             onClick={onClose}
           >
-            Annuler
+            {t('reconciliationModal.cancel', 'Annuler')}
           </Button>
           <Button 
             variant="success" 
@@ -67,7 +69,7 @@ export const ReconciliationModalInline = ({
               confirmReconciliationWithQuantities();
             }}
           >
-            Valider la réception
+            {t('reconciliationModal.validateReception', 'Valider la réception')}
           </Button>
         </div>
       }
@@ -92,20 +94,20 @@ export const ReconciliationModalInline = ({
                   </motion.div>
                 </div>
                 <span className="px-3 py-1 rounded-full text-xs font-medium border bg-red-50 text-[#EF1C43] border-red-200">
-                  À réconcilier
+                  {t('reconciliationModal.toReconcile', 'À réconcilier')}
                 </span>
               </div>
               
               {/* Ligne 2: Fournisseur */}
               <div className="flex items-center gap-2">
-                <span className="text-[#666663] text-sm">Fournisseur:</span>
+                <span className="text-[#666663] text-sm">{t('reconciliationModal.supplier', 'Fournisseur:')}</span>
                 <span className="text-[#191919] font-medium text-sm">{reconciliationOrder.supplier}</span>
               </div>
               
               {/* Ligne 3: Entrepôt */}
               {warehouseName && (
                 <div className="flex items-center gap-2">
-                  <span className="text-[#666663] text-sm">Entrepôt de livraison:</span>
+                  <span className="text-[#666663] text-sm">{t('reconciliationModal.deliveryWarehouse', 'Entrepôt de livraison:')}</span>
                   <span className="text-[#191919] font-medium text-sm">{warehouseName}</span>
                 </div>
               )}
@@ -113,18 +115,18 @@ export const ReconciliationModalInline = ({
               {/* Ligne 4: Infos principales */}
               <div className="text-sm space-y-1">
                 <div>
-                  <span className="text-[#666663]">Date: </span>
+                  <span className="text-[#666663]">{t('reconciliationModal.date', 'Date:')} </span>
                   <span className="text-[#191919]">{formatConfirmedDate(reconciliationOrder.createdAt)}</span>
                 </div>
                 <div>
-                  <span className="text-[#666663]">Total: </span>
+                  <span className="text-[#666663]">{t('reconciliationModal.total', 'Total:')} </span>
                   <span className="text-[#191919] font-bold">{formatCurrency(roundToTwoDecimals(reconciliationOrder.total))}</span>
                 </div>
                 {/* ETA - Livraison estimée */}
                 {etaInfo && (
                   <div className="flex items-center gap-1 flex-wrap">
                     <Calendar className="w-3 h-3 text-[#666663]" />
-                    <span className="text-[#666663]">Livraison estimée: </span>
+                    <span className="text-[#666663]">{t('reconciliationModal.estimatedDelivery', 'Livraison estimée:')} </span>
                     <span className={`font-medium ${
                       etaInfo.isPast ? 'text-red-600' :
                       etaInfo.isUrgent ? 'text-orange-600' :
@@ -138,10 +140,10 @@ export const ReconciliationModalInline = ({
                         etaInfo.isUrgent ? 'bg-orange-100 text-orange-700' :
                         'bg-blue-50 text-blue-700'
                       }`}>
-                        {etaInfo.isPast ? `${Math.abs(etaInfo.daysRemaining)}j de retard` :
-                         etaInfo.daysRemaining === 0 ? 'Aujourd\'hui' :
-                         etaInfo.daysRemaining === 1 ? 'Demain' :
-                         `dans ${etaInfo.daysRemaining}j`}
+                        {etaInfo.isPast ? t('reconciliationModal.daysLate', '{{count}}j de retard', { count: Math.abs(etaInfo.daysRemaining) }) :
+                         etaInfo.daysRemaining === 0 ? t('reconciliationModal.today', 'Aujourd\'hui') :
+                         etaInfo.daysRemaining === 1 ? t('reconciliationModal.tomorrow', 'Demain') :
+                         t('reconciliationModal.inDays', 'dans {{count}}j', { count: etaInfo.daysRemaining })}
                       </span>
                     )}
                   </div>
@@ -153,7 +155,7 @@ export const ReconciliationModalInline = ({
                 <div className="flex items-center justify-between bg-[#FAFAF7] border border-[#E5E4DF] rounded-lg px-3 py-2 mt-2">
                   <div className="flex items-center gap-2">
                     <Truck className="w-3 h-3 text-[#666663]" />
-                    <span className="text-xs text-[#666663]">Numéro de suivi:</span>
+                    <span className="text-xs text-[#666663]">{t('reconciliationModal.trackingNumber', 'Numéro de suivi:')}</span>
                     {reconciliationOrder.trackingNumber && (
                       <span className="text-xs text-[#191919] font-mono font-medium">{reconciliationOrder.trackingNumber}</span>
                     )}
@@ -186,7 +188,7 @@ export const ReconciliationModalInline = ({
                 className="border-t border-[#E5E4DF] bg-white"
               >
                 <div className="p-4">
-                  <h4 className="font-semibold text-sm text-[#666663] mb-3">Produits commandés:</h4>
+                  <h4 className="font-semibold text-sm text-[#666663] mb-3">{t('reconciliationModal.orderedProducts', 'Produits commandés:')}</h4>
                   
                   <div className="space-y-2">
                     {reconciliationOrder.items?.map((item, idx) => {
@@ -207,16 +209,16 @@ export const ReconciliationModalInline = ({
                             {/* Infos quantité et prix */}
                             <div className="grid grid-cols-2 gap-2 text-xs pt-2 border-t border-[#E5E4DF]">
                               <div>
-                                <div className="text-[#666663]">Quantité</div>
-                                <div className="font-bold text-[#191919]">{item.quantity} unités</div>
+                                <div className="text-[#666663]">{t('reconciliationModal.quantity', 'Quantité')}</div>
+                                <div className="font-bold text-[#191919]">{item.quantity} {t('reconciliationModal.units', 'unités')}</div>
                               </div>
                               <div className="text-right">
-                                <div className="text-[#666663]">Prix unitaire</div>
+                                <div className="text-[#666663]">{t('reconciliationModal.unitPrice', 'Prix unitaire')}</div>
                                 <div className="font-medium text-[#191919]">{formatCurrency(roundToTwoDecimals(item.pricePerUnit))}</div>
                               </div>
                               <div className="col-span-2 pt-1 border-t border-[#E5E4DF]">
                                 <div className="flex justify-between items-center">
-                                  <span className="text-[#666663] font-medium">Total ligne</span>
+                                  <span className="text-[#666663] font-medium">{t('reconciliationModal.lineTotal', 'Total ligne')}</span>
                                   <span className="font-bold text-[#191919] text-sm">{formatCurrency(roundToTwoDecimals(item.quantity * item.pricePerUnit))}</span>
                                 </div>
                               </div>
@@ -229,7 +231,7 @@ export const ReconciliationModalInline = ({
                   
                   {/* Total de la commande */}
                   <div className="mt-3 pt-3 border-t border-[#E5E4DF] flex justify-between">
-                    <span className="font-semibold text-[#666663] text-sm">Total:</span>
+                    <span className="font-semibold text-[#666663] text-sm">{t('reconciliationModal.total', 'Total:')}</span>
                     <span className="font-bold text-[#191919]">{formatCurrency(roundToTwoDecimals(reconciliationOrder.total))}</span>
                   </div>
                   
@@ -251,9 +253,9 @@ export const ReconciliationModalInline = ({
           <div className="flex items-start gap-3">
             <Info className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
             <div>
-              <h4 className="font-semibold text-blue-900 mb-1">Instructions de réconciliation</h4>
+              <h4 className="font-semibold text-blue-900 mb-1">{t('reconciliationModal.instructionsTitle', 'Instructions de réconciliation')}</h4>
               <p className="text-sm text-blue-700">
-                Saisissez les quantités réellement reçues et leur état pour chaque produit.
+                {t('reconciliationModal.instructionsText', 'Saisissez les quantités réellement reçues et leur état pour chaque produit.')}
               </p>
             </div>
           </div>
@@ -261,7 +263,7 @@ export const ReconciliationModalInline = ({
         
         {/* Formulaire de réconciliation */}
         <div className="space-y-3">
-          <h4 className="font-semibold text-base text-[#191919]">Quantités reçues</h4>
+          <h4 className="font-semibold text-base text-[#191919]">{t('reconciliationModal.receivedQuantities', 'Quantités reçues')}</h4>
           {reconciliationOrder.items.map((item, idx) => {
             const product = products.find(p => p.sku === item.sku);
             const currentReceivedRaw = discrepancyItems[item.sku]?.received !== undefined 
@@ -299,7 +301,7 @@ export const ReconciliationModalInline = ({
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                   {/* Quantité commandée */}
                   <div>
-                    <label className="text-xs font-medium text-[#666663] block mb-1">📦 Commandé</label>
+                    <label className="text-xs font-medium text-[#666663] block mb-1">{t('reconciliationModal.ordered', '📦 Commandé')}</label>
                     <input 
                       type="number" 
                       value={item.quantity}
@@ -310,7 +312,7 @@ export const ReconciliationModalInline = ({
                   
                   {/* Quantité reçue saine */}
                   <div>
-                    <label className="text-xs font-medium text-[#666663] block mb-1">✅ Reçu sain</label>
+                    <label className="text-xs font-medium text-[#666663] block mb-1">{t('reconciliationModal.receivedHealthy', '✅ Reçu sain')}</label>
                     <input 
                       type="number" 
                       min="0"
@@ -331,7 +333,7 @@ export const ReconciliationModalInline = ({
                   
                   {/* Quantité endommagée */}
                   <div>
-                    <label className="text-xs font-medium text-[#666663] block mb-1">🔴 Endommagé</label>
+                    <label className="text-xs font-medium text-[#666663] block mb-1">{t('reconciliationModal.damaged', '🔴 Endommagé')}</label>
                     <input 
                       type="number" 
                       min="0"
@@ -349,39 +351,39 @@ export const ReconciliationModalInline = ({
                   
                   {/* Résumé avec écarts */}
                   <div className="sm:col-span-1 col-span-2">
-                    <label className="text-xs font-medium text-[#666663] block mb-1">📊 Statut</label>
+                    <label className="text-xs font-medium text-[#666663] block mb-1">{t('reconciliationModal.status', '📊 Statut')}</label>
                     <div className="text-xs space-y-1">
                       {/* État général */}
                       {!hasMissing && !hasExcess && !hasDamaged && (
                         <div className="px-2 py-1.5 rounded-lg bg-green-50 text-green-700 font-medium border border-green-200">
-                          ✅ Conforme
+                          {t('reconciliationModal.compliant', '✅ Conforme')}
                         </div>
                       )}
                       
                       {/* Manquants */}
                       {hasMissing && (
                         <div className="px-2 py-1.5 rounded-lg bg-red-50 text-red-700 font-medium border border-red-200">
-                          ❌ {missingQuantity} manquant{missingQuantity > 1 ? 's' : ''}
+                          {t('reconciliationModal.missing', '❌ {{count}} faltante(s)', { count: missingQuantity })}
                         </div>
                       )}
                       
                       {/* Excédent */}
                       {hasExcess && (
                         <div className="px-2 py-1.5 rounded-lg bg-blue-50 text-blue-700 font-medium border border-blue-200">
-                          📈 +{excessQuantity} en plus
+                          {t('reconciliationModal.excess', '📈 +{{count}} de más', { count: excessQuantity })}
                         </div>
                       )}
                       
                       {/* Endommagés */}
                       {hasDamaged && (
                         <div className="px-2 py-1.5 rounded-lg bg-orange-50 text-orange-700 font-medium border border-orange-200">
-                          ⚠️ {currentDamaged} endommagé{currentDamaged > 1 ? 's' : ''}
+                          {t('reconciliationModal.damagedStatus', '⚠️ {{count}} dañado(s)', { count: currentDamaged })}
                         </div>
                       )}
                       
                       {/* Total reçu */}
                       <div className="px-2 py-1.5 rounded-lg bg-gray-50 text-gray-700 font-medium border border-gray-200">
-                        Total: {totalReceived}
+                        {t('reconciliationModal.totalReceived', 'Total: {{count}}', { count: totalReceived })}
                       </div>
                     </div>
                   </div>
@@ -392,7 +394,7 @@ export const ReconciliationModalInline = ({
                   <div className="mt-3 pt-3 border-t border-[#E5E4DF] grid grid-cols-2 gap-3 text-xs">
                     {hasMissing && (
                       <div className="bg-red-50 rounded-lg p-2 border border-red-200">
-                        <div className="text-red-600 font-medium">Perte manquants</div>
+                        <div className="text-red-600 font-medium">{t('reconciliationModal.missingLoss', 'Perte manquants')}</div>
                         <div className="text-red-700 font-bold text-sm">
                           {formatCurrency(-roundToTwoDecimals(missingQuantity * item.pricePerUnit))}
                         </div>
@@ -400,7 +402,7 @@ export const ReconciliationModalInline = ({
                     )}
                     {hasDamaged && (
                       <div className="bg-orange-50 rounded-lg p-2 border border-orange-200">
-                        <div className="text-orange-600 font-medium">Perte endommagés</div>
+                        <div className="text-orange-600 font-medium">{t('reconciliationModal.damagedLoss', 'Perte endommagés')}</div>
                         <div className="text-orange-700 font-bold text-sm">
                           {formatCurrency(-roundToTwoDecimals(currentDamaged * item.pricePerUnit))}
                         </div>
@@ -446,22 +448,22 @@ export const ReconciliationModalInline = ({
           
           return hasIssues ? (
             <div className="bg-gradient-to-r from-red-50 to-orange-50 border-2 border-red-200 rounded-xl p-6">
-              <h4 className="font-bold text-red-900 text-lg mb-4">⚠️ Résumé des écarts</h4>
+              <h4 className="font-bold text-red-900 text-lg mb-4">{t('reconciliationModal.discrepancySummary', '⚠️ Résumé des écarts')}</h4>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div className="bg-white rounded-lg p-4 border border-red-200">
-                  <div className="text-red-600 text-xs font-medium mb-1">Total manquants</div>
+                  <div className="text-red-600 text-xs font-medium mb-1">{t('reconciliationModal.totalMissing', 'Total manquants')}</div>
                   <div className="text-red-900 font-bold text-2xl">{totalMissing}</div>
                   <div className="text-red-700 text-sm mt-1">{formatCurrency(-roundToTwoDecimals(totalLossMissing))}</div>
                 </div>
                 <div className="bg-white rounded-lg p-4 border border-orange-200">
-                  <div className="text-orange-600 text-xs font-medium mb-1">Total endommagés</div>
+                  <div className="text-orange-600 text-xs font-medium mb-1">{t('reconciliationModal.totalDamaged', 'Total endommagés')}</div>
                   <div className="text-orange-900 font-bold text-2xl">{totalDamaged}</div>
                   <div className="text-orange-700 text-sm mt-1">{formatCurrency(-roundToTwoDecimals(totalLossDamaged))}</div>
                 </div>
                 <div className="bg-white rounded-lg p-4 border border-red-300">
-                  <div className="text-red-700 text-xs font-medium mb-1">Perte totale</div>
+                  <div className="text-red-700 text-xs font-medium mb-1">{t('reconciliationModal.totalLoss', 'Perte totale')}</div>
                   <div className="text-red-900 font-bold text-2xl">{formatCurrency(-roundToTwoDecimals(totalLossMissing + totalLossDamaged))}</div>
-                  <div className="text-red-600 text-xs mt-1">À réclamer au fournisseur</div>
+                  <div className="text-red-600 text-xs mt-1">{t('reconciliationModal.claimToSupplier', 'À réclamer au fournisseur')}</div>
                 </div>
               </div>
             </div>
@@ -470,8 +472,8 @@ export const ReconciliationModalInline = ({
               <div className="flex items-center gap-3">
                 <Check className="w-6 h-6 text-green-600" />
                 <div>
-                  <h4 className="font-bold text-green-900 text-base">Livraison conforme</h4>
-                  <p className="text-sm text-green-700">Tous les produits sont reçus en bon état et en quantité correcte.</p>
+                  <h4 className="font-bold text-green-900 text-base">{t('reconciliationModal.compliantDelivery', 'Livraison conforme')}</h4>
+                  <p className="text-sm text-green-700">{t('reconciliationModal.allProductsReceivedCorrectly', 'Tous les produits sont reçus en bon état et en quantité correcte.')}</p>
                 </div>
               </div>
             </div>

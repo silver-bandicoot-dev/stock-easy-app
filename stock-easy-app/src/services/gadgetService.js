@@ -110,7 +110,8 @@ export async function isProductTrackedInShopify(sku) {
 }
 
 /**
- * Prépare les mises à jour de stock à partir des données de réconciliation
+ * Prépare les mises à jour de stock à partir des données de réconciliation INITIALE
+ * Utilisé lors de la première réconciliation (quantités reçues en bon état)
  * @param {Object} order - La commande réconciliée
  * @returns {Array<{sku: string, stock_actuel: number}>}
  */
@@ -150,9 +151,57 @@ export function prepareStockUpdatesFromReconciliation(order, currentProducts) {
   return updates;
 }
 
+/**
+ * Prépare les mises à jour de stock lors de la COMPLÉTION d'une réconciliation
+ * Utilisé quand les quantités manquantes sont finalement arrivées
+ * 
+ * IMPORTANT: Cette fonction est appelée APRÈS que api.confirmOrderReconciliation()
+ * a déjà mis à jour le stock dans Supabase. On récupère donc le stock FINAL
+ * et on l'envoie tel quel à Shopify (pas d'addition).
+ * 
+ * @param {Object} order - La commande en réconciliation
+ * @param {Array} currentProducts - Liste des produits avec stock actuel (APRÈS mise à jour)
+ * @returns {Array<{sku: string, stock_actuel: number}>}
+ */
+export function prepareStockUpdatesForCompletion(order, currentProducts) {
+  if (!order || !order.items) {
+    console.log('⚠️ prepareStockUpdatesForCompletion: pas d\'items');
+    return [];
+  }
+
+  const updates = [];
+
+  order.items.forEach(item => {
+    const sku = item.sku;
+    
+    // Obtenir les quantités manquantes (pour savoir si on doit synchroniser)
+    const missingQty = order.missingQuantitiesBySku?.[sku] || 0;
+    
+    console.log(`📦 Complétion - SKU ${sku}: quantités manquantes = ${missingQty}`);
+    
+    if (missingQty > 0) {
+      // Le stock a DÉJÀ été mis à jour par confirmOrderReconciliation()
+      // On récupère juste le stock actuel et on l'envoie tel quel à Shopify
+      const product = currentProducts?.find(p => p.sku?.toLowerCase() === sku?.toLowerCase());
+      const finalStock = product?.stock_actuel || product?.stock || 0;
+      
+      console.log(`📦 Complétion - SKU ${sku}: stock final après MAJ = ${finalStock} (envoi à Shopify)`);
+      
+      updates.push({
+        sku,
+        stock_actuel: finalStock  // PAS d'addition, le stock est déjà correct
+      });
+    }
+  });
+
+  console.log('📦 prepareStockUpdatesForCompletion résultat:', updates);
+  return updates;
+}
+
 export default {
   updateShopifyInventory,
   isProductTrackedInShopify,
-  prepareStockUpdatesFromReconciliation
+  prepareStockUpdatesFromReconciliation,
+  prepareStockUpdatesForCompletion
 };
 

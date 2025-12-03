@@ -6,9 +6,9 @@ export const run = async ({ params, logger, api, config, connections }) => {
 
   logger.info({ productId, shopId }, "Starting product sync to Supabase");
 
-  // Load shop from Gadget
+  // Load shop from Gadget with defaultLocationId
   const shop = await api.shopifyShop.findOne(shopId, {
-    select: { domain: true }
+    select: { domain: true, defaultLocationId: true }
   });
 
   if (!shop) {
@@ -130,35 +130,48 @@ export const run = async ({ params, logger, api, config, connections }) => {
       );
     }
 
-    // Fetch inventory levels for this variant
+    // CORRECTION: Fetch inventory level ONLY for the selected location (Plan Basic = 1 emplacement)
     let stockActuel = 0;
-    if (variant.inventoryItem?.id) {
+    if (variant.inventoryItem?.id && shop.defaultLocationId) {
       try {
+        const locationGid = shop.defaultLocationId.startsWith('gid://') 
+          ? shop.defaultLocationId 
+          : `gid://shopify/Location/${shop.defaultLocationId}`;
+        
         const inventoryResponse = await shopify.graphql(`
-          query getInventoryLevels($id: ID!) {
+          query getInventoryLevelAtLocation($id: ID!, $locationId: ID!) {
             inventoryItem(id: $id) {
-              inventoryLevels(first: 50) {
-                edges {
-                  node {
-                    quantities(names: ["available"]) {
-                      name
-                      quantity
-                    }
-                  }
+              inventoryLevel(locationId: $locationId) {
+                quantities(names: ["available"]) {
+                  name
+                  quantity
                 }
               }
             }
           }
-        `, { id: variant.inventoryItem.id });
+        `, { 
+          id: variant.inventoryItem.id,
+          locationId: locationGid
+        });
         
-        const levels = inventoryResponse.inventoryItem?.inventoryLevels?.edges || [];
-        stockActuel = levels.reduce((sum, level) => {
-          const availableQty = level.node.quantities?.find(q => q.name === 'available');
-          return sum + (availableQty?.quantity || 0);
-        }, 0);
+        // Récupérer la quantité uniquement pour l'emplacement sélectionné
+        stockActuel = inventoryResponse.inventoryItem?.inventoryLevel?.quantities?.find(q => q.name === 'available')?.quantity || 0;
+        
+        logger.info({ 
+          variantId: variant.id, 
+          sku: variantSku, 
+          stockActuel, 
+          locationId: shop.defaultLocationId 
+        }, '📦 Stock at selected location (not sum of all locations)');
       } catch (err) {
-        logger.warn({ variantId: variant.id, error: err.message }, 'Failed to fetch inventory levels');
+        logger.warn({ variantId: variant.id, error: err.message }, 'Failed to fetch inventory at location');
       }
+    } else {
+      logger.warn({ 
+        variantId: variant.id, 
+        hasInventoryItem: !!variant.inventoryItem?.id, 
+        hasDefaultLocation: !!shop.defaultLocationId 
+      }, 'Missing inventory item or default location, using stock 0');
     }
     
     // UPSERT into produits table

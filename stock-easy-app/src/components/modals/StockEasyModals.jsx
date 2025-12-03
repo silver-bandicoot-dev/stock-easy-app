@@ -200,7 +200,8 @@ export const StockeasyModals = () => {
           api,
           loadData,
           setDiscrepancyTypes,
-          setActiveTab
+          setActiveTab,
+          products  // AJOUTÉ: Pour calculer le stock total lors de la sync Shopify
         )}
         reclamationEmailModal={inlineModals.reclamationEmailModal}
       />

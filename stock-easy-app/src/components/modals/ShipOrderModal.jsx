@@ -2,6 +2,7 @@ import React from 'react';
 import { Truck, Link2 } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { Modal, ModalFooter, ModalSection } from '../ui/Modal';
+import { useTranslation } from 'react-i18next';
 
 export const ShipOrderModal = ({
   isOpen,
@@ -13,6 +14,8 @@ export const ShipOrderModal = ({
   setTrackingUrl,
   isLoading = false
 }) => {
+  const { t } = useTranslation();
+  
   const handleSubmit = (e) => {
     e.preventDefault();
     onConfirm(trackingNumber, trackingUrl);
@@ -28,7 +31,7 @@ export const ShipOrderModal = ({
     <Modal
       isOpen={isOpen}
       onClose={handleClose}
-      title="Expédier la commande"
+      title={t('shipOrderModal.title', 'Expédier la commande')}
       icon={Truck}
       size="md"
       variant="centered"
@@ -40,27 +43,27 @@ export const ShipOrderModal = ({
             <Truck className="w-7 h-7 text-primary-600" />
           </div>
           <h3 className="text-lg font-semibold text-neutral-900 mb-1">
-            Confirmer l'expédition
+            {t('shipOrderModal.confirmShipment', "Confirmer l'expédition")}
           </h3>
           <p className="text-sm text-neutral-500">
-            Saisissez les informations de suivi pour cette commande
+            {t('shipOrderModal.description', 'Saisissez les informations de suivi pour cette commande')}
           </p>
         </div>
 
         {/* Numéro de suivi */}
         <ModalSection>
           <label className="label-base">
-            Numéro de suivi
+            {t('shipOrderModal.trackingNumber', 'Numéro de suivi')}
           </label>
           <input
             type="text"
             value={trackingNumber}
             onChange={(e) => setTrackingNumber(e.target.value)}
-            placeholder="Ex: 1Z999AA1234567890"
+            placeholder={t('shipOrderModal.trackingNumberPlaceholder', 'Ex: 1Z999AA1234567890')}
             className="input-base"
           />
           <p className="helper-text">
-            Numéro de suivi fourni par le transporteur
+            {t('shipOrderModal.trackingNumberHelper', 'Numéro de suivi fourni par le transporteur')}
           </p>
         </ModalSection>
 
@@ -68,17 +71,17 @@ export const ShipOrderModal = ({
         <ModalSection>
           <label className="label-base flex items-center gap-1.5">
             <Link2 className="w-4 h-4" />
-            URL de suivi
+            {t('shipOrderModal.trackingUrl', 'URL de suivi')}
           </label>
           <input
             type="url"
             value={trackingUrl}
             onChange={(e) => setTrackingUrl(e.target.value)}
-            placeholder="https://www.ups.com/track?trackingNumber=..."
+            placeholder={t('shipOrderModal.trackingUrlPlaceholder', 'https://www.ups.com/track?trackingNumber=...')}
             className="input-base"
           />
           <p className="helper-text">
-            Lien direct vers le suivi de la commande
+            {t('shipOrderModal.trackingUrlHelper', 'Lien direct vers le suivi de la commande')}
           </p>
         </ModalSection>
 
@@ -91,7 +94,7 @@ export const ShipOrderModal = ({
               onClick={handleClose}
               disabled={isLoading}
             >
-              Annuler
+              {t('shipOrderModal.cancel', 'Annuler')}
             </Button>
             <Button
               type="submit"
@@ -99,7 +102,7 @@ export const ShipOrderModal = ({
               icon={Truck}
               loading={isLoading}
             >
-              Expédier
+              {t('shipOrderModal.ship', 'Expédier')}
             </Button>
           </ModalFooter>
         </div>

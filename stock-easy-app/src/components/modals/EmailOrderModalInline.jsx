@@ -110,20 +110,20 @@ export const EmailOrderModalInline = ({
     <Modal
       isOpen={isOpen && selectedSupplier}
       onClose={onClose}
-      title={`Commande - ${selectedSupplier}`}
+      title={t('emailOrderModal.title', 'Commande - {{supplier}}', { supplier: selectedSupplier })}
       icon={Mail}
       size="lg"
       footer={
         <ModalFooter>
           <Button variant="outline" onClick={onClose}>
-            Annuler
+            {t('emailOrderModal.cancel', 'Annuler')}
           </Button>
           <Button 
             variant="secondary" 
             onClick={handleCreateOrderWithoutEmail}
             disabled={!selectedWarehouse}
           >
-            Créer sans email
+            {t('emailOrderModal.createWithoutEmail', 'Créer sans email')}
           </Button>
           <Button 
             variant="primary" 
@@ -131,20 +131,20 @@ export const EmailOrderModalInline = ({
             onClick={handleSendOrder}
             disabled={!selectedWarehouse || !isEmailValid}
           >
-            Envoyer et créer
+            {t('emailOrderModal.sendAndCreate', 'Envoyer et créer')}
           </Button>
         </ModalFooter>
       }
     >
       {/* Sélection de l'entrepôt */}
-      <ModalSection title="Entrepôt de livraison" className="mb-6">
+      <ModalSection title={t('emailOrderModal.deliveryWarehouse', 'Entrepôt de livraison')} className="mb-6">
         {Object.keys(warehouses || {}).length === 0 ? (
           <div className="bg-warning-50 border border-warning-200 rounded-lg p-4 flex items-start gap-3">
             <AlertCircle className="w-5 h-5 text-warning-600 shrink-0 mt-0.5" />
             <div>
-              <p className="text-sm text-warning-800 font-medium">Aucun entrepôt configuré</p>
+              <p className="text-sm text-warning-800 font-medium">{t('emailOrderModal.noWarehouseConfigured', 'Aucun entrepôt configuré')}</p>
               <p className="text-sm text-warning-700 mt-1">
-                Veuillez d'abord créer un entrepôt dans Paramètres → Entrepôts
+                {t('emailOrderModal.createWarehouseFirst', "Veuillez d'abord créer un entrepôt dans Paramètres → Entrepôts")}
               </p>
             </div>
           </div>
@@ -164,7 +164,7 @@ export const EmailOrderModalInline = ({
             </select>
             {warehouseInfo && (
               <div className="mt-2 text-sm text-neutral-600 bg-neutral-50 p-3 rounded-lg border border-neutral-100">
-                <p className="font-medium text-neutral-900 mb-1">Adresse de livraison :</p>
+                <p className="font-medium text-neutral-900 mb-1">{t('emailOrderModal.deliveryAddress', 'Adresse de livraison :')}</p>
                 <p>{warehouseInfo.address}</p>
                 <p>{warehouseInfo.postalCode} {warehouseInfo.city}</p>
                 <p>{warehouseInfo.country}</p>
@@ -175,7 +175,7 @@ export const EmailOrderModalInline = ({
       </ModalSection>
 
       {/* Section d'édition des quantités */}
-      <ModalSection title="Produits à commander" className="mb-6">
+      <ModalSection title={t('emailOrderModal.productsToOrder', 'Produits à commander')} className="mb-6">
         <div className="bg-primary-50 border border-primary-200 rounded-lg p-4">
           <div className="space-y-2 max-h-60 overflow-y-auto custom-scrollbar">
             {productsToOrder.map(p => (
@@ -196,7 +196,7 @@ export const EmailOrderModalInline = ({
                     <div className="min-w-0">
                       <div className="font-medium text-neutral-900 text-sm truncate">{p.name}</div>
                       <div className="text-xs text-neutral-500">
-                        SKU: {p.sku} • Rec: {Math.ceil(p.qtyToOrder || 0)}
+                        {t('emailOrderModal.sku', 'SKU')}: {p.sku} • {t('emailOrderModal.rec', 'Rec')}: {Math.ceil(p.qtyToOrder || 0)}
                       </div>
                     </div>
                   </div>
@@ -221,7 +221,7 @@ export const EmailOrderModalInline = ({
             ))}
           </div>
           <div className="mt-3 pt-3 border-t border-primary-200 flex justify-between items-center">
-            <span className="text-sm font-medium text-neutral-700">Total commande :</span>
+            <span className="text-sm font-medium text-neutral-700">{t('emailOrderModal.orderTotal', 'Total commande :')}</span>
             <span className="text-xl font-bold text-neutral-900">{formatCurrency(totalAmount)}</span>
           </div>
         </div>
@@ -229,15 +229,15 @@ export const EmailOrderModalInline = ({
       
       {/* Prévisualisation email */}
       <ModalSection 
-        title="Email de commande" 
-        description="Vérifiez et modifiez le contenu avant envoi"
+        title={t('emailOrderModal.orderEmail', 'Email de commande')}
+        description={t('emailOrderModal.emailDescription', 'Vérifiez et modifiez le contenu avant envoi')}
         className="mb-4"
       >
         <div className="space-y-4">
           {/* Destinataire */}
           <div>
             <label className="label-base flex items-center gap-2">
-              À:
+              {t('emailOrderModal.to', 'À:')}
               {isEmailValid ? (
                 <CheckCircle2 className="w-4 h-4 text-success-500" />
               ) : editableEmail && (
@@ -252,25 +252,25 @@ export const EmailOrderModalInline = ({
               placeholder="email@fournisseur.com"
             />
             {!isEmailValid && editableEmail && (
-              <p className="helper-text text-warning-600">Adresse email invalide</p>
+              <p className="helper-text text-warning-600">{t('emailOrderModal.invalidEmail', 'Adresse email invalide')}</p>
             )}
           </div>
 
           {/* Objet */}
           <div>
-            <label className="label-base">Objet:</label>
+            <label className="label-base">{t('emailOrderModal.subject', 'Objet:')}</label>
             <input 
               type="text"
               value={editableSubject} 
               onChange={(e) => setEditableSubject(e.target.value)}
               className="input-base"
-              placeholder="Objet de l'email"
+              placeholder={t('emailOrderModal.subjectPlaceholder', "Objet de l'email")}
             />
           </div>
 
           {/* Corps du message */}
           <div>
-            <label className="label-base">Message:</label>
+            <label className="label-base">{t('emailOrderModal.message', 'Message:')}</label>
             <textarea 
               value={editableBody} 
               onChange={(e) => setEditableBody(e.target.value)}

@@ -20,6 +20,8 @@ import { exportInventoryReport } from '../../utils/exportInventory';
 import { useCurrency } from '../../contexts/CurrencyContext';
 import { ImagePreview } from '../ui/ImagePreview';
 import api from '../../services/apiAdapter';
+import { updateShopifyInventory } from '../../services/gadgetService';
+import { supabase } from '../../lib/supabaseClient';
 
 /**
  * Helper pour formater le prix avec le contexte de devise
@@ -174,7 +176,7 @@ export const InventoryTab = ({ products = [], suppliers = [], loadData }) => {
       const currentStock = product?.stock || 0;
       const difference = newQuantity - currentStock;
 
-      // Appel API pour mettre à jour le stock (qui sync avec Shopify via Gadget)
+      // Appel API pour mettre à jour le stock local (Supabase)
       const result = await api.updateStock([{
         sku,
         quantityToAdd: difference
@@ -184,11 +186,44 @@ export const InventoryTab = ({ products = [], suppliers = [], loadData }) => {
         throw new Error(result.error || 'Update failed');
       }
 
+      // Synchroniser avec Shopify via Gadget
+      try {
+        // Récupérer le company_id de l'utilisateur
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const { data: profile } = await supabase
+            .from('user_profiles')
+            .select('company_id')
+            .eq('id', user.id)
+            .single();
+          
+          if (profile?.company_id) {
+            console.log('🔄 Synchronisation Shopify - SKU:', sku, 'Nouveau stock:', newQuantity);
+            const shopifyResult = await updateShopifyInventory(profile.company_id, [{
+              sku,
+              stock_actuel: newQuantity
+            }]);
+            
+            if (shopifyResult.success) {
+              console.log('✅ Shopify synchronisé:', shopifyResult);
+            } else {
+              console.warn('⚠️ Erreur synchronisation Shopify:', shopifyResult.error);
+              // On ne bloque pas l'opération, juste un warning
+            }
+          } else {
+            console.warn('⚠️ company_id non trouvé, synchronisation Shopify ignorée');
+          }
+        }
+      } catch (shopifyError) {
+        console.error('❌ Erreur synchronisation Shopify:', shopifyError);
+        // On ne bloque pas l'opération si Shopify échoue
+      }
+
       toast.success(t('inventory.stockUpdated', { sku, quantity: newQuantity }), { id: toastId });
       
-      // Rafraîchir les données
+      // Rafraîchir les données avec forceRefresh pour ignorer le cache
       if (loadData) {
-        await loadData();
+        await loadData({ forceRefresh: true });
       }
     } catch (error) {
       console.error('Erreur mise à jour stock:', error);

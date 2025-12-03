@@ -10,6 +10,7 @@ import { ACTIONS_TABS } from '../../constants/stockEasyConstants';
 import { toast } from 'sonner';
 import api from '../../services/apiAdapter';
 import { useCurrency } from '../../contexts/CurrencyContext';
+import { invalidateOnMutation } from '../../services/cacheService';
 
 export const ActionsTab = ({
   productsByStatus,
@@ -185,6 +186,8 @@ export const ActionsTab = ({
         console.log('📧 Email à envoyer:', emailData);
       }
 
+      // Invalider le cache avant de recharger les données
+      invalidateOnMutation('create_order');
       await loadData();
       setCustomOrderModalOpen(false);
       toast.success(t('orders.messages.created'));
@@ -348,7 +351,6 @@ export const ActionsTab = ({
         onClose={() => setCustomOrderModalOpen(false)}
         selectedProducts={selectedProductsForModal}
         warehouses={warehouses}
-        emailGeneration={emailGeneration}
         getUserSignature={getUserSignature}
         suppliers={suppliers}
         onConfirm={handleConfirmCustomOrder}
