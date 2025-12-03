@@ -25,7 +25,12 @@ import { Modal, ModalFooter } from '../ui/Modal';
 import api from '../../services/apiAdapter';
 import { useCurrency } from '../../contexts/CurrencyContext';
 import { useAppNavigation } from '../../hooks/useAppNavigation';
-import { updateShopifyInventory, prepareStockUpdatesFromReconciliation, prepareStockUpdatesForCompletion } from '../../services/gadgetService';
+import { 
+  updateShopifyInventory, 
+  prepareStockUpdatesFromReconciliation, 
+  prepareStockUpdatesForCompletion,
+  fetchProductsBySkusCaseInsensitive
+} from '../../services/gadgetService';
 
 export const OrdersTab = ({
   // Data props - Support both naming conventions
@@ -449,17 +454,16 @@ export const OrdersTab = ({
       
       if (isSuccess) {
         // 3. Récupérer le stock FRAIS depuis Supabase (après la mise à jour locale)
+        // IMPORTANT: Utiliser un matching case-insensitive pour éviter les pertes de données
+        // si les SKUs ont des casings différents entre les commandes et la base de données.
+        // Sans cela, prepareStockUpdatesForCompletion ne trouve pas les produits et envoie stock=0 à Shopify.
         const skus = order.items?.map(i => i.sku) || [];
         let freshProductsData = [];
         
         if (skus.length > 0) {
           const { supabase } = await import('../../lib/supabaseClient');
-          const { data } = await supabase
-            .from('produits')
-            .select('sku, stock_actuel')
-            .in('sku', skus);
-          freshProductsData = data || [];
-          console.log('📦 Stock frais depuis Supabase:', freshProductsData);
+          freshProductsData = await fetchProductsBySkusCaseInsensitive(supabase, skus);
+          console.log('📦 Stock frais depuis Supabase (case-insensitive):', freshProductsData);
         }
         
         // 4. Préparer les mises à jour pour Shopify - UNIQUEMENT les quantités manquantes qui sont revenues
@@ -1131,4 +1135,3 @@ export const OrdersTab = ({
     </motion.div>
   );
 };
-
