@@ -4,11 +4,19 @@ import { notifyMentionedUsers, extractMentions } from './mentionNotificationsSer
 // Récupérer les commentaires d'une commande
 export async function getOrderComments(orderId: string) {
   try {
+    console.log('🔍 getOrderComments - Début, orderId:', orderId);
+    
     const { data, error } = await supabase
       .from('order_comments')
       .select('*')
       .eq('order_id', orderId)
       .order('created_at', { ascending: true });
+
+    console.log('🔍 getOrderComments - Résultat brut:', { 
+      dataLength: data?.length, 
+      error: error?.message,
+      data: data 
+    });
 
     if (error) throw error;
 
@@ -88,17 +96,31 @@ export async function getOrderComments(orderId: string) {
 // Ajouter un commentaire
 export async function addComment(orderId: string, content: string, mentions: string[] = []) {
   try {
+    console.log('📝 addComment - Début, orderId:', orderId);
+    
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error('Non authentifié');
 
+    console.log('📝 addComment - User:', user.id);
+
     // Récupérer l'ID de l'entreprise de l'utilisateur
-    const { data: profile } = await supabase
+    const { data: profile, error: profileError } = await supabase
       .from('user_profiles')
       .select('company_id')
       .eq('id', user.id)
       .single();
 
+    if (profileError) {
+      console.error('❌ addComment - Erreur récupération profil:', profileError);
+    }
+
     const companyId = profile?.company_id;
+    console.log('📝 addComment - CompanyId:', companyId);
+
+    if (!companyId) {
+      console.error('❌ addComment - CompanyId manquant pour l\'utilisateur');
+      throw new Error('Company ID manquant. Veuillez vous reconnecter.');
+    }
 
     // Si pas de mentions fournies, extraire automatiquement du contenu
     let mentionedUserIds = mentions;
@@ -107,18 +129,27 @@ export async function addComment(orderId: string, content: string, mentions: str
     }
 
     // Créer le commentaire
+    // Note: On passe explicitement company_id car la politique RLS le vérifie
+    // avant que le trigger ne puisse le définir
+    console.log('📝 addComment - Insertion du commentaire...');
     const { data, error } = await supabase
       .from('order_comments')
       .insert({
         order_id: orderId,
         user_id: user.id,
         content: content,
-        mentioned_users: mentionedUserIds
+        mentioned_users: mentionedUserIds,
+        company_id: companyId
       })
       .select()
       .single();
 
-    if (error) throw error;
+    if (error) {
+      console.error('❌ addComment - Erreur insertion:', error);
+      throw error;
+    }
+
+    console.log('✅ addComment - Commentaire créé:', data);
 
     // Créer des notifications pour les utilisateurs mentionnés
     if (mentionedUserIds.length > 0) {
@@ -128,7 +159,7 @@ export async function addComment(orderId: string, content: string, mentions: str
 
     return { data, error: null };
   } catch (error) {
-    console.error('Erreur addComment:', error);
+    console.error('❌ addComment - Erreur:', error);
     return { data: null, error };
   }
 }

@@ -44,7 +44,8 @@ export const run = async ({ params, logger, api }) => {
     logger.info({ shopId: shop.id }, "Enqueueing syncs");
 
     await api.enqueue(api.syncShopifyProducts, { shopId: shop.id });
-    await api.enqueue(api.syncSalesMetrics, { shopId: shop.id });
+    // syncSalesMetrics supprimé - ventes_totales_30j est maintenant calculé
+    // automatiquement par les triggers PostgreSQL (migration 088)
 
     const result = {
       success: true,

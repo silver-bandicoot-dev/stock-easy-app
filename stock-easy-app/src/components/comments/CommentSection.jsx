@@ -50,12 +50,15 @@ export default function CommentSection({ purchaseOrderId, purchaseOrderNumber })
 
   const loadComments = async () => {
     try {
+      console.log('🔄 Chargement des commentaires pour order:', purchaseOrderId);
       const { data, error } = await getOrderComments(purchaseOrderId);
       
       if (error) {
+        console.error('❌ Erreur getOrderComments:', error);
         throw error;
       }
 
+      console.log('✅ Commentaires chargés:', data?.length || 0, 'commentaires');
       setComments(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error('Erreur chargement commentaires:', error);
@@ -156,7 +159,15 @@ export default function CommentSection({ purchaseOrderId, purchaseOrderNumber })
     try {
       const mentionedUserIds = extractMentions(newComment);
       
-      await addComment(purchaseOrderId, newComment.trim(), mentionedUserIds);
+      const { data, error } = await addComment(purchaseOrderId, newComment.trim(), mentionedUserIds);
+      
+      if (error) {
+        console.error('Erreur ajout commentaire:', error);
+        toast.error(t('comments.addError'));
+        return;
+      }
+
+      console.log('✅ Commentaire ajouté avec succès:', data);
       
       setNewComment('');
       toast.success(t('comments.added'));
@@ -165,7 +176,7 @@ export default function CommentSection({ purchaseOrderId, purchaseOrderNumber })
       // (ne pas dépendre uniquement du real-time qui peut avoir des délais)
       await loadComments();
     } catch (error) {
-      console.error('Erreur ajout commentaire:', error);
+      console.error('Erreur inattendue ajout commentaire:', error);
       toast.error(t('comments.addError'));
     } finally {
       setLoading(false);
@@ -179,7 +190,13 @@ export default function CommentSection({ purchaseOrderId, purchaseOrderNumber })
     }
 
     try {
-      await updateComment(commentId, editContent.trim());
+      const { error } = await updateComment(commentId, editContent.trim());
+      
+      if (error) {
+        console.error('Erreur modification commentaire:', error);
+        toast.error(t('comments.editError'));
+        return;
+      }
       
       setEditingCommentId(null);
       setEditContent('');
@@ -188,7 +205,7 @@ export default function CommentSection({ purchaseOrderId, purchaseOrderNumber })
       // Recharger explicitement les commentaires après modification
       await loadComments();
     } catch (error) {
-      console.error('Erreur modification commentaire:', error);
+      console.error('Erreur inattendue modification commentaire:', error);
       toast.error(t('comments.editError'));
     }
   };
@@ -199,13 +216,20 @@ export default function CommentSection({ purchaseOrderId, purchaseOrderNumber })
     }
 
     try {
-      await deleteComment(commentId);
+      const { error } = await deleteComment(commentId);
+      
+      if (error) {
+        console.error('Erreur suppression commentaire:', error);
+        toast.error(t('comments.deleteError'));
+        return;
+      }
+      
       toast.success(t('comments.deleted'));
       
       // Recharger explicitement les commentaires après suppression
       await loadComments();
     } catch (error) {
-      console.error('Erreur suppression commentaire:', error);
+      console.error('Erreur inattendue suppression commentaire:', error);
       toast.error(t('comments.deleteError'));
     }
   };
