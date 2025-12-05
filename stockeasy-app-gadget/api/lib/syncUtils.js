@@ -22,11 +22,16 @@ export const SyncDirection = {
  * Vérifie si une synchro récente a eu lieu dans la direction opposée
  * Utilisé pour éviter les boucles infinies
  * 
+ * AMÉLIORATION v2: Utilise aussi lastSyncedStockValue pour éviter les faux positifs
+ * Si la valeur de stock est DIFFÉRENTE de ce qu'on a envoyé, c'est une vraie action
+ * (ex: commande client) et on doit synchroniser même si c'est dans la fenêtre de temps.
+ * 
  * @param {object} mapping - Le record productMapping
  * @param {string} currentDirection - La direction actuelle (supabase_to_shopify ou shopify_to_supabase)
+ * @param {number|null} incomingStockValue - La valeur de stock entrante (optionnel, pour éviter faux positifs)
  * @returns {{shouldSkip: boolean, reason: string, timeSinceLastSync: number|null}}
  */
-export const shouldSkipSync = (mapping, currentDirection) => {
+export const shouldSkipSync = (mapping, currentDirection, incomingStockValue = null) => {
   if (!mapping) {
     return { shouldSkip: false, reason: "no_mapping", timeSinceLastSync: null };
   }
@@ -38,15 +43,28 @@ export const shouldSkipSync = (mapping, currentDirection) => {
   const timeSinceLastSync = Date.now() - new Date(mapping.lastSyncedAt).getTime();
   const isWithinWindow = timeSinceLastSync < SYNC_DEDUPLICATION_WINDOW_MS;
   
-  // Si la dernière synchro était dans la direction opposée ET récente, on skip
+  // Si la dernière synchro était dans la direction opposée ET récente, on vérifie plus en détail
   if (currentDirection === SyncDirection.SHOPIFY_TO_SUPABASE) {
     // On veut synchroniser vers Supabase (webhook Shopify reçu)
-    // Si la dernière synchro était de Supabase vers Shopify et récente,
-    // c'est le webhook Shopify en réponse à notre update → SKIP
+    // Si la dernière synchro était de Supabase vers Shopify et récente...
     if (mapping.lastSyncDirection === SyncDirection.SUPABASE_TO_SHOPIFY && isWithinWindow) {
+      // AMÉLIORATION: Si la valeur de stock est DIFFÉRENTE de ce qu'on a envoyé,
+      // c'est probablement une vraie action (commande, ajustement manuel) → on synchronise
+      if (incomingStockValue !== null && mapping.lastSyncedStockValue !== null) {
+        if (Number(incomingStockValue) !== Number(mapping.lastSyncedStockValue)) {
+          return { 
+            shouldSkip: false, 
+            reason: "stock_value_changed_real_action", 
+            timeSinceLastSync,
+            expectedStock: mapping.lastSyncedStockValue,
+            actualStock: incomingStockValue
+          };
+        }
+      }
+      // Même valeur de stock → c'est le webhook de réponse à notre sync → SKIP
       return { 
         shouldSkip: true, 
-        reason: "recent_supabase_to_shopify_sync", 
+        reason: "recent_supabase_to_shopify_sync_same_value", 
         timeSinceLastSync 
       };
     }
@@ -54,12 +72,25 @@ export const shouldSkipSync = (mapping, currentDirection) => {
   
   if (currentDirection === SyncDirection.SUPABASE_TO_SHOPIFY) {
     // On veut synchroniser vers Shopify (webhook Supabase reçu)
-    // Si la dernière synchro était de Shopify vers Supabase et récente,
-    // c'est le webhook Supabase en réponse à notre update → SKIP
+    // Si la dernière synchro était de Shopify vers Supabase et récente...
     if (mapping.lastSyncDirection === SyncDirection.SHOPIFY_TO_SUPABASE && isWithinWindow) {
+      // AMÉLIORATION: Si la valeur de stock est DIFFÉRENTE de ce qu'on a envoyé,
+      // c'est probablement une vraie action → on synchronise
+      if (incomingStockValue !== null && mapping.lastSyncedStockValue !== null) {
+        if (Number(incomingStockValue) !== Number(mapping.lastSyncedStockValue)) {
+          return { 
+            shouldSkip: false, 
+            reason: "stock_value_changed_real_action", 
+            timeSinceLastSync,
+            expectedStock: mapping.lastSyncedStockValue,
+            actualStock: incomingStockValue
+          };
+        }
+      }
+      // Même valeur de stock → c'est le webhook de réponse à notre sync → SKIP
       return { 
         shouldSkip: true, 
-        reason: "recent_shopify_to_supabase_sync", 
+        reason: "recent_shopify_to_supabase_sync_same_value", 
         timeSinceLastSync 
       };
     }
@@ -74,13 +105,21 @@ export const shouldSkipSync = (mapping, currentDirection) => {
  * @param {object} api - L'API Gadget
  * @param {string} mappingId - L'ID du productMapping
  * @param {string} direction - La direction de synchro
+ * @param {number|null} stockValue - La valeur de stock qu'on synchronise (pour éviter faux positifs)
  * @returns {Promise<void>}
  */
-export const updateSyncMetadata = async (api, mappingId, direction) => {
-  await api.productMapping.update(mappingId, {
+export const updateSyncMetadata = async (api, mappingId, direction, stockValue = null) => {
+  const updateData = {
     lastSyncDirection: direction,
     lastSyncedAt: new Date(),
-  });
+  };
+  
+  // Stocker la valeur de stock pour pouvoir détecter les vraies actions vs nos syncs
+  if (stockValue !== null) {
+    updateData.lastSyncedStockValue = Math.floor(Number(stockValue));
+  }
+  
+  await api.productMapping.update(mappingId, updateData);
 };
 
 /**

@@ -4,8 +4,8 @@ import {
   shouldSkipSync, 
   updateSyncMetadata, 
   logSyncDecision 
-} from "../lib/syncUtils.js";
-import { validateStockUpdate, isValidNumber, isNonEmptyString } from "../lib/validation.js";
+} from "../../lib/syncUtils.js";
+import { validateStockUpdate, isValidNumber, isNonEmptyString } from "../../lib/validation.js";
 
 /**
  * Route handler for receiving stock updates from Supabase webhook
@@ -100,7 +100,8 @@ const route = async ({ request, reply, api, logger, connections, config }) => {
           stockEasySku: true,
           productTitle: true,
           lastSyncDirection: true,
-          lastSyncedAt: true
+          lastSyncedAt: true,
+          lastSyncedStockValue: true
         }
       });
     } catch (error) {
@@ -116,8 +117,9 @@ const route = async ({ request, reply, api, logger, connections, config }) => {
 
     // ═══════════════════════════════════════════════════════════════════
     // 🔄 ANTI-LOOP CHECK: Is this update a response to Shopify → Supabase?
+    // AMÉLIORATION v2: On passe la valeur de stock pour détecter les vraies actions
     // ═══════════════════════════════════════════════════════════════════
-    const syncCheck = shouldSkipSync(mapping, SyncDirection.SUPABASE_TO_SHOPIFY);
+    const syncCheck = shouldSkipSync(mapping, SyncDirection.SUPABASE_TO_SHOPIFY, newStock);
     
     logSyncDecision(logger, {
       action: 'supabase_webhook_stock_update',
@@ -128,12 +130,18 @@ const route = async ({ request, reply, api, logger, connections, config }) => {
       reason: syncCheck.reason,
       timeSinceLastSync: syncCheck.timeSinceLastSync,
       lastSyncDirection: mapping.lastSyncDirection,
+      lastSyncedStockValue: mapping.lastSyncedStockValue,
       newStock,
       oldStock
     });
 
     if (syncCheck.shouldSkip) {
-      logger.info({ sku, reason: syncCheck.reason }, '🔄 SKIPPING Supabase→Shopify sync to prevent loop');
+      logger.info({ 
+        sku, 
+        reason: syncCheck.reason,
+        lastSyncedStockValue: mapping.lastSyncedStockValue,
+        incomingStock: newStock
+      }, '🔄 SKIPPING Supabase→Shopify sync to prevent loop');
       await reply.send({ 
         success: true, 
         message: 'Skipped to prevent sync loop',
@@ -144,11 +152,11 @@ const route = async ({ request, reply, api, logger, connections, config }) => {
     }
 
     // ═══════════════════════════════════════════════════════════════════
-    // 📝 MARK SYNC DIRECTION BEFORE calling Shopify API
+    // 📝 MARK SYNC DIRECTION + STOCK VALUE BEFORE calling Shopify API
     // This prevents the resulting Shopify webhook from triggering a reverse sync
     // ═══════════════════════════════════════════════════════════════════
-    await updateSyncMetadata(api, mapping.id, SyncDirection.SUPABASE_TO_SHOPIFY);
-    logger.info({ mappingId: mapping.id, direction: SyncDirection.SUPABASE_TO_SHOPIFY }, '📝 Marked sync direction');
+    await updateSyncMetadata(api, mapping.id, SyncDirection.SUPABASE_TO_SHOPIFY, newStock);
+    logger.info({ mappingId: mapping.id, direction: SyncDirection.SUPABASE_TO_SHOPIFY, stockValue: newStock }, '📝 Marked sync direction with stock value');
 
     // Get Shopify connection for this shop
     const shopify = await connections.shopify.forShopId(mapping.shopId);

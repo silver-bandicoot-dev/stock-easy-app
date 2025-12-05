@@ -99,7 +99,8 @@ export const onSuccess = async ({ record, api, logger, connections }) => {
           shopifyVariantId: true,
           productTitle: true,
           lastSyncDirection: true,
-          lastSyncedAt: true
+          lastSyncedAt: true,
+          lastSyncedStockValue: true
         }
       });
     } catch (error) {
@@ -129,8 +130,9 @@ export const onSuccess = async ({ record, api, logger, connections }) => {
 
     // ═══════════════════════════════════════════════════════════════════
     // 2. 🔄 ANTI-LOOP CHECK: Is this webhook a response to Supabase → Shopify?
+    // AMÉLIORATION v2: On passe la valeur de stock pour détecter les vraies actions
     // ═══════════════════════════════════════════════════════════════════
-    const syncCheck = shouldSkipSync(mapping, SyncDirection.SHOPIFY_TO_SUPABASE);
+    const syncCheck = shouldSkipSync(mapping, SyncDirection.SHOPIFY_TO_SUPABASE, available);
     
     logSyncDecision(logger, {
       action: 'shopify_inventory_level_update',
@@ -142,6 +144,7 @@ export const onSuccess = async ({ record, api, logger, connections }) => {
       reason: syncCheck.reason,
       timeSinceLastSync: syncCheck.timeSinceLastSync,
       lastSyncDirection: mapping.lastSyncDirection,
+      lastSyncedStockValue: mapping.lastSyncedStockValue,
       newStock: available
     });
 
@@ -149,7 +152,9 @@ export const onSuccess = async ({ record, api, logger, connections }) => {
       logger.info({ 
         sku, 
         reason: syncCheck.reason,
-        timeSinceLastSync: syncCheck.timeSinceLastSync 
+        timeSinceLastSync: syncCheck.timeSinceLastSync,
+        lastSyncedStockValue: mapping.lastSyncedStockValue,
+        incomingStock: available
       }, '🔄 SKIPPING Shopify→Supabase sync to prevent loop');
       return;
     }
@@ -186,14 +191,15 @@ export const onSuccess = async ({ record, api, logger, connections }) => {
     }
 
     // ═══════════════════════════════════════════════════════════════════
-    // 4. 📝 MARK SYNC DIRECTION BEFORE updating Supabase
+    // 4. 📝 MARK SYNC DIRECTION + STOCK VALUE BEFORE updating Supabase
     // This prevents the resulting Supabase webhook from triggering a reverse sync
     // ═══════════════════════════════════════════════════════════════════
-    await updateSyncMetadata(api, mapping.id, SyncDirection.SHOPIFY_TO_SUPABASE);
+    await updateSyncMetadata(api, mapping.id, SyncDirection.SHOPIFY_TO_SUPABASE, available);
     logger.info({ 
       mappingId: mapping.id, 
-      direction: SyncDirection.SHOPIFY_TO_SUPABASE 
-    }, '📝 Marked sync direction');
+      direction: SyncDirection.SHOPIFY_TO_SUPABASE,
+      stockValue: available
+    }, '📝 Marked sync direction with stock value');
 
     // ═══════════════════════════════════════════════════════════════════
     // 5. Update stock in Supabase
@@ -240,6 +246,6 @@ export const options = {
   actionType: "update",
   triggers: {
     api: true,
-    // Re-enable Shopify webhook trigger
+    shopify: true  // Trigger for Shopify inventory_levels/update webhook
   }
 };

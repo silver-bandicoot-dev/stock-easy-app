@@ -130,51 +130,12 @@ export const run = async ({ params, logger, api, config, connections }) => {
       );
     }
 
-    // CORRECTION: Fetch inventory level ONLY for the selected location (Plan Basic = 1 emplacement)
-    let stockActuel = 0;
-    if (variant.inventoryItem?.id && shop.defaultLocationId) {
-      try {
-        const locationGid = shop.defaultLocationId.startsWith('gid://') 
-          ? shop.defaultLocationId 
-          : `gid://shopify/Location/${shop.defaultLocationId}`;
-        
-        const inventoryResponse = await shopify.graphql(`
-          query getInventoryLevelAtLocation($id: ID!, $locationId: ID!) {
-            inventoryItem(id: $id) {
-              inventoryLevel(locationId: $locationId) {
-                quantities(names: ["available"]) {
-                  name
-                  quantity
-                }
-              }
-            }
-          }
-        `, { 
-          id: variant.inventoryItem.id,
-          locationId: locationGid
-        });
-        
-        // Récupérer la quantité uniquement pour l'emplacement sélectionné
-        stockActuel = inventoryResponse.inventoryItem?.inventoryLevel?.quantities?.find(q => q.name === 'available')?.quantity || 0;
-        
-        logger.info({ 
-          variantId: variant.id, 
-          sku: variantSku, 
-          stockActuel, 
-          locationId: shop.defaultLocationId 
-        }, '📦 Stock at selected location (not sum of all locations)');
-      } catch (err) {
-        logger.warn({ variantId: variant.id, error: err.message }, 'Failed to fetch inventory at location');
-      }
-    } else {
-      logger.warn({ 
-        variantId: variant.id, 
-        hasInventoryItem: !!variant.inventoryItem?.id, 
-        hasDefaultLocation: !!shop.defaultLocationId 
-      }, 'Missing inventory item or default location, using stock 0');
-    }
-    
-    // UPSERT into produits table
+    // UPSERT into produits table - METADATA ONLY (no stock_actuel for existing products)
+    // ⚠️ IMPORTANT: stock_actuel is NOT included here to prevent infinite sync loops!
+    // Stock is managed exclusively by:
+    //   - inventory_levels/update webhook → Supabase (via shopifyInventoryLevel/actions/update.js)
+    //   - Supabase webhook → Shopify (via POST-stock-update.js)
+    // These use the anti-loop mechanism (lastSyncDirection/lastSyncedAt) to prevent loops.
     const nomProduit = shopifyResponse.product.title || variant.title;
     const imageUrl = variant.image?.url || shopifyResponse.product.featuredImage?.url;
     const prixVente = parseFloat(variant.price) || 0;
@@ -183,31 +144,99 @@ export const run = async ({ params, logger, api, config, connections }) => {
       : null;
     
     try {
-      const { error: productError } = await supabase
+      // First, check if product already exists
+      // Using maybeSingle() to avoid error when no row found (returns null instead of error)
+      // Note: produits uses 'sku' as primary key, not 'id'
+      const { data: existingProduct, error: selectError } = await supabase
         .from('produits')
-        .upsert({
-          sku: variantSku,
-          company_id: companyId,
-          nom_produit: nomProduit,
-          image_url: imageUrl,
-          stock_actuel: stockActuel,
-          prix_vente: prixVente,
-          prix_achat: prixAchat
-        }, {
-          onConflict: 'sku,company_id',
-          ignoreDuplicates: false
-        });
+        .select('sku, stock_actuel')
+        .eq('sku', variantSku)
+        .eq('company_id', companyId)
+        .maybeSingle();
       
-      if (productError) {
-        logger.error(
-          { variantId: variant.id, sku: variantSku, error: productError.message },
-          'Failed to upsert product in produits table'
-        );
+      if (selectError) {
+        logger.warn({ sku: variantSku, error: selectError.message }, 'Error checking if product exists, will try INSERT');
+      }
+      
+      if (existingProduct) {
+        // Product exists → UPDATE metadata ONLY (preserve stock_actuel)
+        const { error: updateError } = await supabase
+          .from('produits')
+          .update({
+            nom_produit: nomProduit,
+            image_url: imageUrl,
+            prix_vente: prixVente,
+            prix_achat: prixAchat
+          })
+          .eq('sku', variantSku)
+          .eq('company_id', companyId);
+        
+        if (updateError) {
+          logger.error(
+            { variantId: variant.id, sku: variantSku, error: updateError.message },
+            'Failed to update product metadata in produits table'
+          );
+        } else {
+          logger.info(
+            { variantId: variant.id, sku: variantSku, prixVente, preservedStock: existingProduct.stock_actuel },
+            '✅ Updated product metadata (stock preserved to prevent loop)'
+          );
+        }
       } else {
-        logger.info(
-          { variantId: variant.id, sku: variantSku, stockActuel, prixVente },
-          'Successfully synced product to produits table'
-        );
+        // Product doesn't exist → INSERT with initial stock from Shopify
+        // Fetch inventory ONLY for new products (not for updates to prevent loops)
+        let stockActuel = 0;
+        if (variant.inventoryItem?.id && shop.defaultLocationId) {
+          try {
+            const locationGid = shop.defaultLocationId.startsWith('gid://') 
+              ? shop.defaultLocationId 
+              : `gid://shopify/Location/${shop.defaultLocationId}`;
+            
+            const inventoryResponse = await shopify.graphql(`
+              query getInventoryLevelAtLocation($id: ID!, $locationId: ID!) {
+                inventoryItem(id: $id) {
+                  inventoryLevel(locationId: $locationId) {
+                    quantities(names: ["available"]) {
+                      name
+                      quantity
+                    }
+                  }
+                }
+              }
+            `, { 
+              id: variant.inventoryItem.id,
+              locationId: locationGid
+            });
+            
+            stockActuel = inventoryResponse.inventoryItem?.inventoryLevel?.quantities?.find(q => q.name === 'available')?.quantity || 0;
+          } catch (err) {
+            logger.warn({ variantId: variant.id, error: err.message }, 'Failed to fetch inventory at location for new product');
+          }
+        }
+        
+        const { error: insertError } = await supabase
+          .from('produits')
+          .insert({
+            sku: variantSku,
+            company_id: companyId,
+            nom_produit: nomProduit,
+            image_url: imageUrl,
+            stock_actuel: stockActuel,
+            prix_vente: prixVente,
+            prix_achat: prixAchat
+          });
+        
+        if (insertError) {
+          logger.error(
+            { variantId: variant.id, sku: variantSku, error: insertError.message },
+            'Failed to insert product in produits table'
+          );
+        } else {
+          logger.info(
+            { variantId: variant.id, sku: variantSku, stockActuel, prixVente },
+            '✅ Inserted NEW product with initial stock'
+          );
+        }
       }
     } catch (error) {
       logger.error(

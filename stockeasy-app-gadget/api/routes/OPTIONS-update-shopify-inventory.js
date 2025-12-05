@@ -31,3 +31,4 @@ const route = async ({ request, reply, logger }) => {
 
 export default route;
 
+

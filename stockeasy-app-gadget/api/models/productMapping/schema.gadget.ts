@@ -21,6 +21,11 @@ export const schema: GadgetModel = {
       includeTime: true,
       storageKey: "xPJI1RIVGMp4",
     },
+    lastSyncedStockValue: {
+      type: "number",
+      decimals: 0,
+      storageKey: "lastSyncedStock_v1",
+    },
     productTitle: { type: "string", storageKey: "9p7Sn7mynwte" },
     shop: {
       type: "belongsTo",
