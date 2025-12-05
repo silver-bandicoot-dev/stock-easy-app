@@ -1104,7 +1104,7 @@
     },
     "integrations": {
       "title": "Intégrations",
-      "subtitle": "Connectez Stockeasy à vos outils existants. Choisissez <strong>une plateforme e‑commerce</strong> pour synchroniser vos produits et <strong>un service email</strong> pour envoyer des notifications directement depuis votre compte.",
+      "subtitle": "Connectez Stockeasy à vos outils existants. Choisissez <strong>une plateforme e‑commerce</strong> pour synchroniser vos produits.",
       "deploymentNotice": "Ces intégrations sont en cours de déploiement. En attendant, vous pouvez préparer votre configuration.",
       "ecommerce": {
         "title": "Plateforme E-commerce",
@@ -2235,6 +2235,7 @@
   "emailOrderModal": {
     "title": "Commande - {{supplier}}",
     "cancel": "Annuler",
+    "createOrder": "Créer la commande",
     "createWithoutEmail": "Créer sans email",
     "sendAndCreate": "Envoyer et créer",
     "deliveryWarehouse": "Entrepôt de livraison",
@@ -2256,6 +2257,7 @@
   "customOrderModal": {
     "title": "Commande personnalisée - {{supplier}}",
     "cancel": "Annuler",
+    "createOrder": "Créer la commande",
     "createWithoutEmail": "Créer sans email",
     "sendAndCreate": "Envoyer et créer",
     "deliveryWarehouse": "Entrepôt de livraison",

@@ -595,10 +595,18 @@ export const AnalyticsTab = ({
           { id: ANALYTICS_TABS.FORECAST, label: t('analytics.tabs.forecast'), icon: Brain }
         ].map(tab => {
           const Icon = tab.icon;
+          const handleTabClick = (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            if (setAnalyticsSubTab && typeof setAnalyticsSubTab === 'function') {
+              setAnalyticsSubTab(tab.id);
+            }
+          };
           return (
             <button
               key={tab.id}
-              onClick={() => setAnalyticsSubTab ? setAnalyticsSubTab(tab.id) : null}
+              type="button"
+              onClick={handleTabClick}
               className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all ${
                 analyticsSubTab === tab.id
                   ? 'bg-[#191919] text-white shadow-sm'

@@ -58,22 +58,24 @@ export const useEmailGeneration = () => {
   };
 
   /**
-   * Génère un email de réclamation
+   * Génère un email de réclamation (retourne le body comme chaîne)
    * @param {Object} order - La commande concernée
    * @param {Object} receivedItems - Items reçus
    * @param {Object} damagedQuantities - Quantités endommagées
-   * @param {string} notes - Notes additionnelles ou signature
+   * @param {string} notes - Notes additionnelles (optionnel)
    * @param {Array} allProducts - Liste de tous les produits
    * @param {Object} supplier - Infos du fournisseur (optionnel)
-   * @returns {string} Le contenu de l'email
+   * @param {string} signature - Signature de l'utilisateur (optionnel)
+   * @returns {string} Le contenu du body de l'email
    */
   const generateReclamationEmail = (
     order, 
     receivedItems, 
     damagedQuantities, 
-    notes, 
+    notes = '', 
     allProducts = [],
-    supplier = null
+    supplier = null,
+    signature = ''
   ) => {
     const email = emailService.generateReclamationEmail({
       order,
@@ -81,11 +83,42 @@ export const useEmailGeneration = () => {
       damagedQuantities,
       products: allProducts,
       supplier,
-      notes,
-      signature: notes || ''  // notes contient souvent la signature utilisateur
+      notes, // Notes additionnelles - seulement si l'utilisateur a écrit quelque chose
+      signature // Signature séparée - ne doit pas apparaître dans les notes
     });
 
-    return email.body;
+    return email.body; // Retourner le body comme chaîne pour compatibilité avec les usages existants
+  };
+
+  /**
+   * Génère un email de réclamation (retourne l'objet complet avec to, subject, body)
+   * @param {Object} order - La commande concernée
+   * @param {Object} receivedItems - Items reçus
+   * @param {Object} damagedQuantities - Quantités endommagées
+   * @param {string} notes - Notes additionnelles (optionnel)
+   * @param {Array} allProducts - Liste de tous les produits
+   * @param {Object} supplier - Infos du fournisseur (optionnel)
+   * @param {string} signature - Signature de l'utilisateur (optionnel)
+   * @returns {Object} L'objet email complet { to, subject, body, isValid }
+   */
+  const generateReclamationEmailObject = (
+    order, 
+    receivedItems, 
+    damagedQuantities, 
+    notes = '', 
+    allProducts = [],
+    supplier = null,
+    signature = ''
+  ) => {
+    return emailService.generateReclamationEmail({
+      order,
+      receivedItems,
+      damagedQuantities,
+      products: allProducts,
+      supplier,
+      notes,
+      signature
+    });
   };
 
   /**
@@ -128,6 +161,7 @@ export const useEmailGeneration = () => {
   return {
     generateOrderEmailDraft,
     generateReclamationEmail,
+    generateReclamationEmailObject,
     copyToClipboard,
     openInEmailClient,
     parseEmail,

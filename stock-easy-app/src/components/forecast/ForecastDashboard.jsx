@@ -299,11 +299,17 @@ function DataQualityCard({ quality, t }) {
  */
 function AccuracyCard({ accuracy, t }) {
   // Vérifier que accuracy existe et a les bonnes propriétés
-  if (!accuracy || accuracy === null || typeof accuracy.accuracy !== 'number') {
+  // Vérifier aussi que ce n'est pas NaN
+  if (!accuracy || accuracy === null || typeof accuracy.accuracy !== 'number' || isNaN(accuracy.accuracy)) {
     return null;
   }
 
   const accuracyValue = Number(accuracy.accuracy);
+  // Vérifier que accuracyValue n'est pas NaN après conversion
+  if (isNaN(accuracyValue)) {
+    return null;
+  }
+  
   const mapeValue = accuracy.mape || 0;
   
   // Déterminer la couleur basée sur la qualité

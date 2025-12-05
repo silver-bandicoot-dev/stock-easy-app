@@ -117,18 +117,9 @@ export const CustomOrderModal = ({
     }));
   };
 
-  // Handler pour créer sans email
-  const handleCreateWithoutEmail = () => {
+  // Handler pour créer la commande (sans envoyer d'email - l'envoi se fait via Gmail/Outlook)
+  const handleCreateOrder = () => {
     onConfirm('without_email', selectedWarehouse, orderQuantities);
-  };
-
-  // Handler pour envoyer et créer
-  const handleSendAndCreate = () => {
-    onConfirm('with_email', selectedWarehouse, orderQuantities, {
-      to: editableEmail,
-      subject: editableSubject,
-      body: editableBody
-    });
   };
 
   if (!isOpen || !selectedProducts || selectedProducts.length === 0) return null;
@@ -146,19 +137,12 @@ export const CustomOrderModal = ({
             {t('customOrderModal.cancel', 'Annuler')}
           </Button>
           <Button 
-            variant="secondary" 
-            onClick={handleCreateWithoutEmail}
+            variant="primary" 
+            icon={Package} 
+            onClick={handleCreateOrder}
             disabled={!selectedWarehouse}
           >
-            {t('customOrderModal.createWithoutEmail', 'Créer sans email')}
-          </Button>
-          <Button 
-            variant="primary" 
-            icon={Mail} 
-            onClick={handleSendAndCreate}
-            disabled={!selectedWarehouse || !isEmailValid}
-          >
-            {t('customOrderModal.sendAndCreate', 'Envoyer et créer')}
+            {t('customOrderModal.createOrder', 'Créer la commande')}
           </Button>
         </ModalFooter>
       }

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Mail, AlertCircle, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import { Mail, AlertCircle, AlertTriangle, CheckCircle2, Package } from 'lucide-react';
 import { Modal, ModalFooter, ModalSection } from '../ui/Modal';
 import { Button } from '../ui/Button';
 import { roundToTwoDecimals } from '../../utils/decimalUtils';
@@ -119,19 +119,12 @@ export const EmailOrderModalInline = ({
             {t('emailOrderModal.cancel', 'Annuler')}
           </Button>
           <Button 
-            variant="secondary" 
+            variant="primary" 
+            icon={Package} 
             onClick={handleCreateOrderWithoutEmail}
             disabled={!selectedWarehouse}
           >
-            {t('emailOrderModal.createWithoutEmail', 'Créer sans email')}
-          </Button>
-          <Button 
-            variant="primary" 
-            icon={Mail} 
-            onClick={handleSendOrder}
-            disabled={!selectedWarehouse || !isEmailValid}
-          >
-            {t('emailOrderModal.sendAndCreate', 'Envoyer et créer')}
+            {t('emailOrderModal.createOrder', 'Créer la commande')}
           </Button>
         </ModalFooter>
       }

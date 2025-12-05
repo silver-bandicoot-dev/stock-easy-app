@@ -1,22 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Mail, ShoppingBag, Check, ChevronDown, ExternalLink } from 'lucide-react';
-
-// Options pour les emails
-const emailOptions = [
-  {
-    value: 'gmail',
-    label: 'Gmail',
-    logo: '/logos/gmail.webp',
-    url: 'https://workspace.google.com/marketplace',
-  },
-  {
-    value: 'outlook',
-    label: 'Microsoft Outlook',
-    logo: '/logos/outlook.png',
-    url: 'https://appsource.microsoft.com/',
-  },
-];
+import { ShoppingBag, Check, ChevronDown, ExternalLink } from 'lucide-react';
 
 // Options pour les plateformes e-commerce
 const commerceOptions = [
@@ -220,7 +204,6 @@ export const IntegrationsSettings = ({ products = [], loading = false }) => {
   const { t } = useTranslation();
   
   // États pour les sélections
-  const [selectedEmail, setSelectedEmail] = useState(null);
   const [selectedCommerce, setSelectedCommerce] = useState(null);
   
   // Déterminer si connecté à une plateforme commerce (basé sur la présence de produits synchronisés)
@@ -239,12 +222,6 @@ export const IntegrationsSettings = ({ products = [], loading = false }) => {
       <div className="bg-white rounded-xl shadow-sm border border-[#E5E4DF] p-6">
         <h2 className="text-xl font-bold text-[#191919] mb-1">{t('settings.integrations.title')}</h2>
         <p className="text-sm text-[#666663] max-w-2xl" dangerouslySetInnerHTML={{ __html: t('settings.integrations.subtitle') }} />
-        <div className="flex items-center gap-2 mt-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
-          <div className="w-2 h-2 bg-amber-400 rounded-full" />
-          <p className="text-xs text-amber-700">
-            {t('settings.integrations.deploymentNotice')}
-          </p>
-        </div>
       </div>
 
       {/* Plateforme E-commerce */}
@@ -279,31 +256,8 @@ export const IntegrationsSettings = ({ products = [], loading = false }) => {
         />
       </section>
 
-      {/* Service Email */}
-      <section className="bg-white rounded-xl shadow-sm border border-[#E5E4DF] p-5">
-        <div className="flex items-center gap-3 mb-4">
-          <div className="w-10 h-10 rounded-lg bg-[#FAFAF7] flex items-center justify-center border border-[#E5E4DF]">
-            <Mail className="w-5 h-5 text-[#191919]" />
-          </div>
-          <div>
-            <h3 className="text-base font-semibold text-[#191919]">{t('settings.integrations.email.title')}</h3>
-            <p className="text-xs text-[#666663]">
-              {t('settings.integrations.email.subtitle')}
-            </p>
-          </div>
-        </div>
-        
-        <IntegrationSelect
-          options={emailOptions}
-          value={selectedEmail}
-          onChange={setSelectedEmail}
-          placeholder={t('settings.integrations.ecommerce.choosePlatform')}
-          t={t}
-        />
-      </section>
-
       {/* Résumé de configuration */}
-      {(selectedCommerce || selectedEmail) && (
+      {selectedCommerce && (
         <div className="bg-[#FAFAF7] rounded-xl border border-[#E5E4DF] p-5">
           <h4 className="text-sm font-semibold text-[#191919] mb-3">{t('settings.integrations.summary.title')}</h4>
           <div className="space-y-2">
@@ -312,14 +266,6 @@ export const IntegrationsSettings = ({ products = [], loading = false }) => {
               <span className="font-medium text-[#191919]">
                 {selectedCommerce 
                   ? commerceOptions.find(o => o.value === selectedCommerce)?.label 
-                  : '—'}
-              </span>
-            </div>
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-[#666663]">{t('settings.integrations.summary.emailService')}</span>
-              <span className="font-medium text-[#191919]">
-                {selectedEmail 
-                  ? emailOptions.find(o => o.value === selectedEmail)?.label 
                   : '—'}
               </span>
             </div>

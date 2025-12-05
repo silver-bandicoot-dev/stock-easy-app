@@ -86,21 +86,8 @@ export const EmailOrderModal = ({
   // Validation de l'email
   const isEmailValid = emailService.isValidEmail(editableEmail);
 
-  // Handlers
-  const handleSendEmail = async () => {
-    setIsProcessing(true);
-    try {
-      await onSendEmail();
-      onClose();
-    } catch (error) {
-      console.error('Erreur lors de l\'envoi:', error);
-      toast.error('Erreur lors de l\'envoi de la commande');
-    } finally {
-      setIsProcessing(false);
-    }
-  };
-
-  const handleCreateWithoutEmail = async () => {
+  // Handler pour créer la commande (sans envoyer d'email - l'envoi se fait via Gmail/Outlook)
+  const handleCreateOrder = async () => {
     setIsProcessing(true);
     try {
       await onCreateWithoutEmail();
@@ -132,22 +119,13 @@ export const EmailOrderModal = ({
             Annuler
           </Button>
           <Button
-            variant="secondary"
-            icon={FileText}
-            onClick={handleCreateWithoutEmail}
+            variant="primary"
+            icon={Package}
+            onClick={handleCreateOrder}
             disabled={isProcessing || !selectedWarehouse}
             loading={isProcessing}
           >
-            Créer sans email
-          </Button>
-          <Button
-            variant="primary"
-            icon={Send}
-            onClick={handleSendEmail}
-            disabled={isProcessing || !selectedWarehouse || !isEmailValid}
-            loading={isProcessing}
-          >
-            Envoyer et créer
+            Créer la commande
           </Button>
         </ModalFooter>
       }

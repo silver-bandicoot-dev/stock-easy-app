@@ -413,14 +413,24 @@ export class SmartForecastEngine {
       }
   
       if (errors.length === 0) return null;
-  
+
       const mape = this.average(errors) * 100; // Convertir en pourcentage
+      
+      // Vérifier que mape n'est pas NaN
+      if (isNaN(mape) || !isFinite(mape)) {
+        return null;
+      }
       
       // Calculer la précision (100 - MAPE)
       // Si MAPE > 100%, cela signifie que l'erreur moyenne est supérieure à 100%
       // Dans ce cas, on limite l'accuracy à 0% minimum
       const rawAccuracy = 100 - mape;
       const accuracy = Math.max(0, Math.min(100, rawAccuracy)); // Limiter entre 0% et 100%
+      
+      // Vérifier que accuracy n'est pas NaN
+      if (isNaN(accuracy) || !isFinite(accuracy)) {
+        return null;
+      }
       
       return {
         mape: mape,

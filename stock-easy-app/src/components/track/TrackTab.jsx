@@ -152,12 +152,18 @@ export const TrackTab = ({
         reconciliationModalHandlers.close();
         
         // Générer l'email de réclamation si nécessaire
+        // Notes: seulement si l'utilisateur a écrit quelque chose, sinon vide
+        const notes = reconciliationData.notes && reconciliationData.notes.trim() !== 'L\'équipe Stockeasy' 
+          ? reconciliationData.notes 
+          : '';
         const emailContent = emailGeneration.generateReclamationEmail(
           order,
           reconciliationData.receivedItems,
           reconciliationData.damages,
-          reconciliationData.notes || 'L\'équipe Stockeasy',
-          products
+          notes, // notes - seulement si l'utilisateur a écrit quelque chose
+          products,
+          null, // supplier
+          'L\'équipe Stockeasy' // signature par défaut si getUserSignature n'est pas disponible
         );
         
         if (emailContent) {

@@ -419,8 +419,10 @@ export const handleReconciliationConfirm = async (
         order,
         reconciliationData.receivedItems,
         reconciliationData.damages,
-        reconciliationData.notes || getUserSignature(),
-        products
+        reconciliationData.notes || '', // Notes additionnelles - seulement si l'utilisateur a écrit quelque chose
+        products,
+        null, // supplier
+        getUserSignature() // Signature - sera ajoutée à la fin, pas dans les notes
       );
       
       if (emailContent) {

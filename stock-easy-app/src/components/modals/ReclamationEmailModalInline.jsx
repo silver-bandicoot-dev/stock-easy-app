@@ -16,9 +16,38 @@ export const ReclamationEmailModalInline = ({
   
   if (!isOpen || !currentReclamationOrder) return null;
 
-  const email = emailGeneration.generateReclamationEmail(
+  // Extraire les données nécessaires depuis currentReclamationOrder
+  const receivedItems = {};
+  const damagedQuantities = {};
+  
+  if (currentReclamationOrder.items) {
+    currentReclamationOrder.items.forEach(item => {
+      const sku = item.sku;
+      // Calculer la quantité reçue saine (commandée - manquante - endommagée)
+      const ordered = item.quantity || 0;
+      const missing = item.missing || 0;
+      const damaged = item.damaged || 0;
+      const received = Math.max(0, ordered - missing - damaged);
+      
+      receivedItems[sku] = received;
+      if (damaged > 0) {
+        damagedQuantities[sku] = damaged;
+      }
+    });
+  }
+
+  // Générer l'email avec les bons paramètres
+  // notes doit être vide si l'utilisateur n'a rien écrit
+  // La signature sera ajoutée automatiquement à la fin, pas dans les notes
+  // Utiliser generateReclamationEmailObject pour obtenir l'objet complet { to, subject, body }
+  const email = emailGeneration.generateReclamationEmailObject(
     currentReclamationOrder,
-    getUserSignature()
+    receivedItems,
+    damagedQuantities,
+    '', // notes - vide car l'utilisateur n'a rien écrit
+    [], // allProducts - peut être vide, le service les récupérera si nécessaire
+    null, // supplier - peut être null, le service le récupérera si nécessaire
+    getUserSignature() // signature - sera ajoutée à la fin de l'email, pas dans les notes
   );
 
   // Vérifier s'il y a des photos attachées

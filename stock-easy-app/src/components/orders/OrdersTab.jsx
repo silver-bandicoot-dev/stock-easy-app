@@ -593,8 +593,10 @@ export const OrdersTab = ({
         order,
         receivedItems,
         damages,
-        '', // notes
-        products || enrichedProducts
+        '', // notes - vide car l'utilisateur n'a rien écrit
+        products || enrichedProducts,
+        null, // supplier
+        getUserSignature() // signature - sera ajoutée à la fin, pas dans les notes
       );
       console.log('📧 Email généré via emailGeneration:', emailContent);
     } else if (generateReclamationEmail) {
@@ -956,7 +958,7 @@ export const OrdersTab = ({
             onShipOrder={handleShipOrder}
             onReceiveOrder={handleReceiveOrder}
             onStartReconciliation={handleStartReconciliation}
-            onConfirmReconciliation={handleConfirmReconciliation}
+            onConfirmReconciliation={handleCompleteReconciliation}
           />
 
           {/* Pagination */}
