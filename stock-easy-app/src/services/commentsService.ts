@@ -223,4 +223,3 @@ export function subscribeToComments(orderId: string, callback: (comments: any[])
 
 // Alias pour compatibilité
 export const subscribeToOrderComments = subscribeToComments;
-
