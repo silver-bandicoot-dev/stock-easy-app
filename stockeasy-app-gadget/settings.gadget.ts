@@ -10,6 +10,7 @@ export const settings: GadgetSettings = {
         enabledModels: [
           "shopifyAppInstallation",
           "shopifyInventoryItem",
+          "shopifyInventoryLevel",
           "shopifyLocation",
           "shopifyOrder",
           "shopifyOrderLineItem",

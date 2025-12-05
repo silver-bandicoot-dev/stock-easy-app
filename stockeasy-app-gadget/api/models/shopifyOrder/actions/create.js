@@ -43,4 +43,6 @@ export const onSuccess = async ({ record, logger, api }) => {
 };
 
 /** @type { ActionOptions } */
-export const options = { actionType: "create" };
+export const options = { 
+  actionType: "create"
+};

@@ -29,4 +29,6 @@ export const onSuccess = async ({ record, api, logger }) => {
 };
 
 /** @type { ActionOptions } */
-export const options = { actionType: "update" };
+export const options = { 
+  actionType: "update"
+};

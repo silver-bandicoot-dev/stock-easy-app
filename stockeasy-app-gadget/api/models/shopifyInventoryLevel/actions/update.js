@@ -35,6 +35,9 @@ export const run = async ({ params, record, logger, api }) => {
  * @type { ActionOnSuccess }
  */
 export const onSuccess = async ({ record, api, logger, connections }) => {
+  // DEBUG: First line to confirm onSuccess is being called
+  logger.info('🔔 shopifyInventoryLevel.update.onSuccess CALLED');
+  
   const inventoryItemId = record.inventoryItemId;
   const shopId = record.shopId;
   const locationId = record.locationId; // The location this update is for
@@ -243,9 +246,5 @@ export const onSuccess = async ({ record, api, logger, connections }) => {
 
 /** @type { ActionOptions } */
 export const options = {
-  actionType: "update",
-  triggers: {
-    api: true,
-    shopify: true  // Trigger for Shopify inventory_levels/update webhook
-  }
+  actionType: "update"
 };

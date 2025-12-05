@@ -160,6 +160,10 @@ export default function CommentSection({ purchaseOrderId, purchaseOrderNumber })
       
       setNewComment('');
       toast.success(t('comments.added'));
+      
+      // Recharger explicitement les commentaires après l'ajout
+      // (ne pas dépendre uniquement du real-time qui peut avoir des délais)
+      await loadComments();
     } catch (error) {
       console.error('Erreur ajout commentaire:', error);
       toast.error(t('comments.addError'));
@@ -180,6 +184,9 @@ export default function CommentSection({ purchaseOrderId, purchaseOrderNumber })
       setEditingCommentId(null);
       setEditContent('');
       toast.success(t('comments.edited'));
+      
+      // Recharger explicitement les commentaires après modification
+      await loadComments();
     } catch (error) {
       console.error('Erreur modification commentaire:', error);
       toast.error(t('comments.editError'));
@@ -194,6 +201,9 @@ export default function CommentSection({ purchaseOrderId, purchaseOrderNumber })
     try {
       await deleteComment(commentId);
       toast.success(t('comments.deleted'));
+      
+      // Recharger explicitement les commentaires après suppression
+      await loadComments();
     } catch (error) {
       console.error('Erreur suppression commentaire:', error);
       toast.error(t('comments.deleteError'));

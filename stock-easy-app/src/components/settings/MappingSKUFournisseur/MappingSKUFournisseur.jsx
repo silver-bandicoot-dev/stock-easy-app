@@ -80,12 +80,22 @@ export function MappingSKUFournisseur({
   );
 
   useEffect(() => {
+    console.log('🔄 useEffect[products, suppliers] - Reconstruction des assignments', {
+      productsCount: products.length,
+      suppliersCount: Object.keys(suppliers).length
+    });
     const next = buildAssignmentsFromProducts(products, suppliers);
+    console.log('📊 Nouveaux initialAssignments:', 
+      Object.fromEntries(
+        Object.entries(next).map(([k, v]) => [k, Array.from(v)])
+      )
+    );
     setInitialAssignments(next);
     setLastSavedAt(new Date());
   }, [products, suppliers]);
 
   useEffect(() => {
+    console.log('🔄 useEffect[initialAssignments] - Mise à jour des assignments');
     setAssignments(cloneAssignments(initialAssignments));
   }, [initialAssignments]);
 
@@ -279,22 +289,34 @@ export function MappingSKUFournisseur({
       !selectedSupplier ||
       !(assignments[selectedSupplier] instanceof Set)
     ) {
+      console.warn('⚠️ handleSave: conditions non remplies', {
+        hasCallback: !!onSaveSupplierMapping,
+        selectedSupplier,
+        hasAssignments: assignments[selectedSupplier] instanceof Set
+      });
       return;
     }
 
     const payloadSkus = Array.from(assignments[selectedSupplier] ?? new Set());
+    console.log('💾 handleSave appelé:', { selectedSupplier, payloadSkus });
 
     try {
       setSavingSupplier(selectedSupplier);
       await onSaveSupplierMapping(selectedSupplier, payloadSkus);
-      setInitialAssignments((prev) => {
+      // Note: Ne pas mettre à jour manuellement initialAssignments ici
+      // Le useEffect([products, suppliers]) va se déclencher après loadData()
+      // et reconstruire correctement les assignments depuis les nouvelles données
+      setLastSavedAt(new Date());
+      console.log('✅ Sauvegarde terminée avec succès');
+    } catch (error) {
+      console.error('❌ Erreur lors de la sauvegarde du mapping fournisseur:', error);
+      // En cas d'erreur, restaurer l'état initial pour ce fournisseur
+      // car les données n'ont pas été sauvegardées
+      setAssignments((prev) => {
         const next = cloneAssignments(prev);
-        next[selectedSupplier] = new Set(payloadSkus);
+        next[selectedSupplier] = new Set(initialAssignments[selectedSupplier] ?? []);
         return next;
       });
-      setLastSavedAt(new Date());
-    } catch (error) {
-      console.error('Erreur lors de la sauvegarde du mapping fournisseur:', error);
     } finally {
       setSavingSupplier('');
     }

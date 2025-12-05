@@ -4,6 +4,7 @@
 // ============================================
 
 import { toast } from 'sonner';
+import { invalidateCache } from '../services/cacheService';
 
 console.log('📁 Loading mappingHandlers.js - Phase 5');
 
@@ -31,6 +32,8 @@ export const handleAssignSupplier = async (
 
     await api.assignSupplierToProduct(productToMap.sku, selectedSupplier);
     console.log(`✅ Fournisseur assigné à ${productToMap.sku}`);
+    // Invalider le cache AVANT de recharger les données
+    invalidateCache(['products', 'allData']);
     await loadData();
     
     if (handleCloseAssignSupplierModal) {
@@ -72,6 +75,8 @@ export const handleRemoveSupplierFromProduct = async (
     const supplierName = product?.supplier || null;
     await api.removeSupplierFromProduct(sku, supplierName);
     console.log(`✅ Fournisseur retiré de ${sku}`);
+    // Invalider le cache AVANT de recharger les données
+    invalidateCache(['products', 'allData']);
     await loadData();
     toast.success('Fournisseur retiré avec succès');
   } catch (error) {
@@ -101,6 +106,7 @@ export const handleSaveSupplierMapping = async (
 ) => {
   try {
     if (!supplierName) {
+      console.warn('⚠️ handleSaveSupplierMapping: supplierName est vide, abandon');
       return;
     }
 
@@ -112,13 +118,20 @@ export const handleSaveSupplierMapping = async (
     const desiredSet = new Set(desiredSkus);
     const currentSet = new Set(currentSkus);
 
+    // SKUs à assigner (nouveaux)
     const skusToAssign = desiredSkus.filter((sku) => !currentSet.has(sku));
+    // SKUs à retirer
     const skusToRemove = currentSkus.filter((sku) => !desiredSet.has(sku));
 
-    const hasDifferences =
-      skusToAssign.length > 0 ||
-      skusToRemove.length > 0 ||
-      desiredSkus.length !== currentSkus.length;
+    console.log('📊 handleSaveSupplierMapping - Analyse des changements:', {
+      supplierName,
+      desiredSkus,
+      currentSkus,
+      skusToAssign,
+      skusToRemove
+    });
+
+    const hasDifferences = skusToAssign.length > 0 || skusToRemove.length > 0;
 
     if (!hasDifferences) {
       toast.info('Aucune modification à sauvegarder pour ce fournisseur.');
@@ -129,13 +142,60 @@ export const handleSaveSupplierMapping = async (
       setIsSavingSupplierMapping(true);
     }
 
-    await Promise.all([
-      ...desiredSkus.map((sku) => api.assignSupplierToProduct(sku, supplierName)),
-      ...skusToRemove.map((sku) => api.removeSupplierFromProduct(sku, supplierName))
-    ]);
+    // Traiter les assignations - SEULEMENT les nouveaux SKUs
+    const assignResults = [];
+    for (const sku of skusToAssign) {
+      try {
+        console.log(`🔗 Assignation de ${sku} à ${supplierName}...`);
+        const result = await api.assignSupplierToProduct(sku, supplierName);
+        console.log(`✅ ${sku} assigné avec succès:`, result);
+        assignResults.push({ sku, success: true, result });
+      } catch (error) {
+        console.error(`❌ Erreur assignation de ${sku}:`, error);
+        assignResults.push({ sku, success: false, error: error.message });
+      }
+    }
 
-    toast.success(`Mapping fournisseur mis à jour pour ${supplierName}`);
+    // Traiter les retraits
+    const removeResults = [];
+    for (const sku of skusToRemove) {
+      try {
+        console.log(`🔓 Retrait de ${sku} du fournisseur ${supplierName}...`);
+        const result = await api.removeSupplierFromProduct(sku, supplierName);
+        console.log(`✅ ${sku} retiré avec succès:`, result);
+        removeResults.push({ sku, success: true, result });
+      } catch (error) {
+        console.error(`❌ Erreur retrait de ${sku}:`, error);
+        removeResults.push({ sku, success: false, error: error.message });
+      }
+    }
+
+    // Vérifier les résultats
+    const failedAssigns = assignResults.filter(r => !r.success);
+    const failedRemoves = removeResults.filter(r => !r.success);
+    const totalFailed = failedAssigns.length + failedRemoves.length;
+
+    console.log('📋 Résultats du mapping:', {
+      assignResults,
+      removeResults,
+      totalFailed
+    });
+
+    if (totalFailed > 0) {
+      const errorMessages = [
+        ...failedAssigns.map(r => `Assignation ${r.sku}: ${r.error}`),
+        ...failedRemoves.map(r => `Retrait ${r.sku}: ${r.error}`)
+      ];
+      toast.error(`Erreur pour ${totalFailed} produit(s): ${errorMessages.join(', ')}`);
+    } else {
+      toast.success(`Mapping fournisseur mis à jour pour ${supplierName}`);
+    }
+
+    // Invalider le cache AVANT de recharger les données pour forcer une lecture fraîche
+    console.log('🔄 Invalidation du cache et rechargement des données...');
+    invalidateCache(['products', 'allData']);
     await loadData();
+    console.log('✅ Données rechargées depuis Supabase');
   } catch (error) {
     console.error('❌ Erreur sauvegarde mapping fournisseur:', error);
     const errorMessage = error?.message || 'Erreur lors de la sauvegarde du mapping fournisseur';

@@ -5,7 +5,7 @@ import { convertToShopDate } from "../lib/dateUtils";
 export const run = async ({ params, logger, api }) => {
   const { orderId, shopId } = params;
   
-  logger.info({ orderId, shopId }, "Starting order sync to Supabase");
+  logger.info({ orderId, shopId }, "🚀 Starting order sync to Supabase (v2 with shopifyCreatedAt)");
 
   // Load the order with line items from Gadget
   const order = await api.shopifyOrder.maybeFindOne(orderId, {
@@ -13,6 +13,7 @@ export const run = async ({ params, logger, api }) => {
       id: true,
       name: true,
       createdAt: true,
+      shopifyCreatedAt: true,  // This is the actual Shopify order creation date
       lineItems: {
         edges: {
           node: {
@@ -126,8 +127,28 @@ export const run = async ({ params, logger, api }) => {
     }
 
     // Calculate sale date (using shop timezone) and revenue
-    const saleDate = convertToShopDate(order.createdAt, shop.timezone);
+    // Use shopifyCreatedAt (original Shopify date) or fallback to createdAt (Gadget date)
+    const orderDate = order.shopifyCreatedAt || order.createdAt;
+    
+    // DEBUG: Log raw date values to understand the format
+    logger.info({ 
+      orderId: order.id,
+      shopifyCreatedAt: order.shopifyCreatedAt,
+      createdAt: order.createdAt,
+      orderDateUsed: orderDate,
+      orderDateType: typeof orderDate,
+      shopTimezone: shop.timezone
+    }, '🔍 DEBUG: Raw date values before conversion');
+    
+    const saleDate = convertToShopDate(orderDate, shop.timezone);
     const revenue = parseFloat(lineItem.price) * lineItem.quantity;
+    
+    logger.info({ 
+      orderId: order.id, 
+      orderDate, 
+      saleDate, 
+      lineItemId: lineItem.id 
+    }, '📅 Processing line item for sales_history');
 
     // Insert into sales_history with UPSERT to handle duplicates gracefully
     const { data: insertedData, error: insertError } = await supabase

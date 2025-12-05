@@ -763,19 +763,28 @@ export async function recalculateAllInvestments() {
 
 export async function assignSupplierToProduct(sku, supplierName) {
   try {
+    console.log(`🔗 API assignSupplierToProduct: sku=${sku}, supplier=${supplierName}`);
+    
     const { data, error } = await supabase.rpc('assign_supplier_to_product', {
       p_sku: sku,
       p_supplier_name: supplierName
     });
 
-    if (error) throw error;
+    console.log('📥 Réponse RPC assign_supplier_to_product:', { data, error });
+
+    if (error) {
+      console.error('❌ Erreur Supabase RPC:', error);
+      throw error;
+    }
     
     // Vérifier si la fonction RPC a retourné une erreur dans le JSON
-    if (data && !data.success) {
+    if (data && data.success === false) {
       const errorMessage = data.error || 'Erreur lors de l\'assignation du fournisseur';
+      console.error('❌ Erreur logique RPC:', errorMessage);
       throw new Error(errorMessage);
     }
     
+    console.log(`✅ Assignation réussie: ${sku} → ${supplierName}`);
     return { success: true, data };
   } catch (error) {
     console.error('❌ Erreur assignation fournisseur:', error);
@@ -789,19 +798,28 @@ export async function assignSupplierToProduct(sku, supplierName) {
 
 export async function removeSupplierFromProduct(sku, supplierName) {
   try {
+    console.log(`🔓 API removeSupplierFromProduct: sku=${sku}, supplier=${supplierName}`);
+    
     const { data, error } = await supabase.rpc('remove_supplier_from_product', {
       p_sku: sku,
       p_supplier_name: supplierName
     });
 
-    if (error) throw error;
+    console.log('📥 Réponse RPC remove_supplier_from_product:', { data, error });
+
+    if (error) {
+      console.error('❌ Erreur Supabase RPC:', error);
+      throw error;
+    }
     
     // Vérifier si la fonction RPC a retourné une erreur dans le JSON
-    if (data && !data.success) {
+    if (data && data.success === false) {
       const errorMessage = data.error || 'Erreur lors du retrait du fournisseur';
+      console.error('❌ Erreur logique RPC:', errorMessage);
       throw new Error(errorMessage);
     }
     
+    console.log(`✅ Retrait réussi: ${sku} ✕ ${supplierName}`);
     return { success: true, data };
   } catch (error) {
     console.error('❌ Erreur retrait fournisseur du produit:', error);
