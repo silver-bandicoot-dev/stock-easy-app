@@ -45,7 +45,11 @@
     "optional": "Optionnel",
     "required": "Requis",
     "allRightsReserved": "Tous droits réservés.",
-    "retry": "Réessayer"
+    "retry": "Réessayer",
+    "justNow": "à l'instant",
+    "minutesAgo": "il y a {{count}} min",
+    "hoursAgo": "il y a {{count}}h",
+    "daysAgo": "il y a {{count}}j"
   },
   "seo": {
     "title": "Stockeasy - Gestion de Stock Shopify, Prévisions IA & Réapprovisionnement",
@@ -139,6 +143,7 @@
     "helpCenter": "Centre d'aide",
     "kpis": "KPIs",
     "aiForecast": "Prévisions IA",
+    "mlHealth": "Santé ML",
     "generalSettings": "Paramètres Généraux",
     "multipliers": "Multiplicateurs",
     "supplierManagement": "Gestion Fournisseurs",
@@ -625,6 +630,7 @@
     "exportSuccess": "Rapport exporté ! {{count}} produits, {{value}} de valeur",
     "exportError": "Erreur lors de l'export",
     "columns": {
+      "product": "Produit",
       "sku": "SKU",
       "productName": "Nom du produit",
       "supplier": "Fournisseur",
@@ -656,7 +662,84 @@
     "mlCalculating": "Calcul ML en cours...",
     "tabs": {
       "kpis": "KPIs",
-      "forecast": "Prévisions IA"
+      "forecast": "Prévisions IA",
+      "forecastDesc": "Prédictions de demande produit",
+      "mlHealth": "Santé ML",
+      "mlHealthDesc": "Performance du système ML"
+    },
+    "mlHealth": {
+      "systemHealth": "Santé du système ML",
+      "title": "Santé du Machine Learning",
+      "subtitle": "Monitoring des performances ML en temps réel",
+      "scoreLabel": "Score de Santé ML",
+      "excellent": "Excellent",
+      "good": "Bon",
+      "warning": "À surveiller",
+      "critical": "Critique",
+      "accuracy": "Précision",
+      "accuracySubtitle": "Précision des prévisions",
+      "mape": "MAPE",
+      "mapeSubtitle": "Erreur moyenne",
+      "features": "Features",
+      "featuresSubtitle": "Produits analysés",
+      "cacheHit": "Cache Hit",
+      "cacheHitSubtitle": "Efficacité du cache",
+      "alertsTitle": "Alertes & Recommandations",
+      "actionsTitle": "Actions ML",
+      "technicalDetails": "Détails Techniques",
+      "lastEvaluation": "Dernière évaluation",
+      "lastRetraining": "Dernier réentraînement",
+      "status": "Statut",
+      "autoRetraining": "Auto-retraining",
+      "enabled": "Activé",
+      "disabled": "Désactivé",
+      "never": "Jamais",
+      "retrainingHistory": "Historique des réentraînements",
+      "evaluateTitle": "Évaluer le modèle",
+      "evaluateDesc": "Rafraîchit les métriques de performance",
+      "evaluateButton": "Évaluer",
+      "recalculateTitle": "Recalculer",
+      "recalculateDesc": "Vide les caches et recalcule les métriques",
+      "recalculateButton": "Recalculer",
+      "alerts": {
+        "highMape": "Performance dégradée",
+        "highMapeDesc": "MAPE à {{mape}}% (seuil: {{threshold}}%)",
+        "moderateMape": "Performance à surveiller",
+        "moderateMapeDesc": "MAPE à {{mape}}%",
+        "noEvaluation": "Évaluation nécessaire",
+        "noEvaluationDesc": "Aucune évaluation du modèle effectuée. Lancez une évaluation pour mesurer les performances.",
+        "oldEvaluation": "Évaluation ancienne",
+        "oldEvaluationDesc": "Dernière évaluation il y a {{hours}}h",
+        "retrainingAvailable": "Réentraînement disponible",
+        "retrainingAvailableDesc": "Le modèle peut être amélioré",
+        "lowCacheHit": "Cache peu efficace",
+        "lowCacheHitDesc": "Taux de cache: {{rate}}%",
+        "performanceDegraded": "Performance dégradée (MAPE: {{mape}}%). Réentraînement recommandé.",
+        "fix": "Corriger"
+      },
+      "statusLabels": {
+        "idle": "En attente",
+        "evaluating": "Évaluation...",
+        "training": "Entraînement...",
+        "validating": "Validation..."
+      },
+      "feedback": {
+        "refreshed": "Métriques rafraîchies !",
+        "cachesCleared": "Caches vidés !",
+        "evaluationStarted": "Évaluation lancée !",
+        "modelEvaluated": "Modèle évalué !",
+        "metricsRefreshed": "Métriques ML rafraîchies !",
+        "retrainingStarted": "Réentraînement lancé !",
+        "modelRetrained": "Modèle réentraîné !",
+        "cachesRecalculated": "Caches vidés et métriques recalculées !",
+        "error": "Erreur"
+      },
+      "recommendations": {
+        "noEvaluation": "Aucune évaluation effectuée. Lancez une évaluation pour mesurer les performances du modèle.",
+        "performanceDegraded": "Performance dégradée (MAPE: {{mape}}%). Réentraînement recommandé.",
+        "retrainingScheduled": "Réentraînement disponible après le {{date}}",
+        "goodPerformance": "Modèle performant (Précision: {{accuracy}}%)"
+      }
     },
     "period": {
       "title": "Période",
@@ -751,6 +834,8 @@
       "forecastVisualization": "Visualisation des Prévisions",
       "chartComingSoon": "Graphique disponible prochainement",
       "chartComingSoonDesc": "En attendant, consultez les valeurs ci-dessus",
+      "insufficientData": "Données insuffisantes pour la visualisation",
+      "insufficientDataDesc": "Minimum 7 jours d'historique requis pour générer les graphiques",
       "errorGenerating": "Erreur lors de la génération des prévisions",
       "noForecastAvailable": "Aucune prévision disponible. Collectez plus de données.",
       "recommendations": {
@@ -764,6 +849,52 @@
         "lowConfidenceAction": "Augmenter la marge de sécurité de 50%",
         "overstock": "Stock potentiellement excessif",
         "overstockAction": "Envisager une promotion ou réduire les commandes"
+      },
+      "summary": {
+        "title": "Vue d'ensemble des Prévisions",
+        "subtitle": "{{count}} produits actifs analysés",
+        "totalForecast30d": "Prévisions 30j",
+        "unitsExpected": "unités prévues",
+        "productsAtRisk": "Produits à risque",
+        "needsAttention": "nécessitent attention",
+        "trendingUp": "En hausse",
+        "demandIncreasing": "demande croissante",
+        "avgConfidence": "Confiance moyenne",
+        "modelReliability": "fiabilité du modèle",
+        "criticalAlert": "{{count}} produit(s) en risque critique de rupture",
+        "criticalAlertDesc": "Ces produits pourraient être en rupture de stock sous 7 jours",
+        "viewCritical": "Voir les produits critiques",
+        "searchPlaceholder": "Rechercher un produit (nom ou SKU)...",
+        "filterAll": "Tous les produits",
+        "filterAlerts": "Avec alertes",
+        "filterLowStock": "Stock faible",
+        "filterHighDemand": "Demande en hausse",
+        "sortRisk": "Trier par risque",
+        "sortForecast": "Trier par prévision",
+        "sortStock": "Trier par stock",
+        "sortName": "Trier par nom",
+        "product": "Produit",
+        "stock": "Stock",
+        "forecast7d": "Prévu 7j",
+        "forecast30d": "Prévu 30j",
+        "trend": "Tendance",
+        "risk": "Risque",
+        "actions": "Actions",
+        "daysLeft": "{{days}}j restants",
+        "trendUp": "Hausse",
+        "trendDown": "Baisse",
+        "trendStable": "Stable",
+        "riskCritical": "Critique",
+        "riskHigh": "Élevé",
+        "riskMedium": "Moyen",
+        "riskLow": "Faible",
+        "viewDetails": "Détails",
+        "noProducts": "Aucun produit trouvé",
+        "showing": "Affichage de {{shown}} sur {{total}} produits",
+        "stockoutRisk": "Rupture possible dans {{days}} jours",
+        "demandIncrease": "Demande en augmentation",
+        "overstock": "Surstock détecté",
+        "backToSummary": "← Retour au récapitulatif"
       }
     },
     "stockKpi": {
@@ -1294,16 +1425,18 @@
     },
     "hero": {
       "badge": "Disponible sur Shopify App Store",
-      "title": "Gérez votre stock Shopify",
-      "titleHighlight": "intelligemment",
-      "subtitle": "Prédictions IA, synchronisation temps réel, et alertes intelligentes. Évitez les ruptures de stock et maximisez vos ventes.",
-      "cta": "Essayer gratuitement",
-      "demo": "Voir la démo",
+      "title": "Ne perdez plus de ventes à cause des ruptures de stock",
+      "subtitle": "Stockeasy synchronise votre Shopify en temps réel, prédit vos ruptures avant qu'elles n'arrivent, et envoie vos commandes fournisseurs en 1 clic. Sans Excel. Sans imports manuels.",
+      "cta": "Démarrer l'essai gratuit",
+      "demo": "Voir comment ça marche",
       "merchants": "500+ marchands",
       "stats": {
-        "reduction": "réduction des ruptures",
-        "timeSaved": "économisées / semaine",
-        "activeMerchants": "marchands actifs"
+        "ordersManaged": "commandes fournisseurs gérées",
+        "stockOptimized": "de stock optimisé"
+      },
+      "trustIndicators": {
+        "freeTrial": "14 jours gratuits",
+        "quickSetup": "Configuration en 15 minutes"
       },
       "dashboardPreview": {
         "welcome": "Content de vous revoir 👋",
@@ -1332,6 +1465,74 @@
         "dropshippers": "Dropshippers",
         "wholesalers": "Grossistes",
         "marketplaces": "Marketplaces"
+      }
+    },
+    "painPoints": {
+      "title": "Pourquoi les marchands Shopify perdent de l'argent chaque jour",
+      "subtitle": "Les problèmes coûteux que Stockeasy résout pour vous",
+      "stockouts": {
+        "title": "Ruptures de stock",
+        "description": "Vous perdez des ventes chaque semaine parce qu'un produit n'est plus en stock. Les ruptures coûtent en moyenne 15-20% de chiffre d'affaires aux e-commerçants."
+      },
+      "overstock": {
+        "title": "Surstock qui tue votre trésorerie",
+        "description": "Trop commander = argent bloqué dans des cartons. Vous manquez de cash pour investir dans le marketing ou de nouveaux produits."
+      },
+      "timeWasted": {
+        "title": "Temps perdu sur Excel",
+        "description": "2 à 4 heures par semaine à importer des CSV, croiser des données, calculer vos commandes. C'est 200+ heures par an que vous pourriez passer à développer votre business."
+      }
+    },
+    "solution": {
+      "title": "Comment Stockeasy optimise automatiquement votre inventaire",
+      "subtitle": "Trois piliers pour maîtriser votre stock et booster vos ventes",
+      "learnMore": "Découvrir les fonctionnalités",
+      "neverLoseASale": {
+        "title": "Ne perdez plus jamais une vente",
+        "subtitle": "PRÉDICTIONS IA",
+        "description": "L'IA de Stockeasy analyse vos ventes passées, vos tendances saisonnières, et vos délais fournisseurs pour prédire vos besoins de stock.",
+        "benefit1": "Alertes automatiques AVANT la rupture (pas après)",
+        "benefit2": "Recommandations de commande précises au produit près",
+        "benefit3": "Sync temps réel avec Shopify : zéro import manuel, zéro décalage"
+      },
+      "freeCashFlow": {
+        "title": "Libérez votre trésorerie",
+        "subtitle": "OPTIMISATION FINANCIÈRE",
+        "description": "Stockeasy identifie vos produits en surstock et ceux qui partent trop vite. Vous visualisez en un coup d'œil où est bloqué votre argent.",
+        "benefit1": "Dashboard de rotation des stocks : repérez le stock mort instantanément",
+        "benefit2": "Alertes de sur-stockage : arrêtez de commander ce qui ne se vend pas",
+        "benefit3": "Rapports de profitabilité : concentrez-vous sur vos best-sellers"
+      },
+      "saveTime": {
+        "title": "Gagnez 4 heures par semaine",
+        "subtitle": "AUTOMATISATION COMPLÈTE",
+        "description": "Plus besoin d'Excel, de calculer les MOQ, ou de rédiger des emails. Stockeasy fait tout.",
+        "benefit1": "Génération automatique des bons de commande selon les MOQ fournisseurs",
+        "benefit2": "Envoi email direct depuis l'app",
+        "benefit3": "Réconciliation facile quand vous recevez la commande",
+        "benefit4": "Historique complet de toutes les communications centralisé"
+      },
+      "visual": {
+        "predictions": {
+          "title": "Prédictions de Rupture",
+          "subtitle": "Vos 3 prochaines ruptures",
+          "stockout": "Rupture dans {{days}} jours"
+        },
+        "rotation": {
+          "title": "Rotation des Stocks",
+          "rotationRate": "Taux de rotation: {{rate}}%",
+          "realTime": "Temps réel"
+        },
+        "supplier": {
+          "title": "Commande Fournisseur",
+          "subtitle": "Prêt à envoyer",
+          "to": "À",
+          "subject": "Objet",
+          "orderNumber": "Commande PO-2024-045",
+          "greeting": "Bonjour,",
+          "products": "Nous souhaitons commander :",
+          "sent": "Envoyé"
+        }
       }
     },
     "features": {
@@ -1483,8 +1684,8 @@
       }
     },
     "pricing": {
-      "title": "Simple et transparent",
-      "subtitle": "Un seul plan avec toutes les fonctionnalités dont vous avez besoin",
+      "title": "Tarif simple et transparent",
+      "subtitle": "Tout ce dont vous avez besoin pour optimiser votre stock dès aujourd'hui",
       "monthly": "Mensuel",
       "yearly": "Annuel",
       "perMonth": "/mois",
@@ -1494,6 +1695,10 @@
       "comingSoon": "En développement",
       "guarantee": "✨ Installation en 2 minutes • Support inclus • Annulation à tout moment",
       "faqTitle": "Questions fréquentes",
+      "priceAnchoring": {
+        "title": "💡 Économie substantielle",
+        "description": "Les solutions alternatives coûtent entre 60€ et 400€/mois. Stockeasy vous donne les mêmes fonctionnalités pour le prix de 2 cafés par jour."
+      },
       "plans": {
         "basic": {
           "description": "Tout ce qu'il faut pour gérer votre inventaire",
@@ -1551,15 +1756,52 @@
       }
     },
     "cta": {
-      "badge": "Rejoignez 500+ marchands Shopify",
-      "title": "Prêt à optimiser votre gestion de stock ?",
-      "subtitle": "Commencez votre essai gratuit aujourd'hui.",
+      "urgencyBadge": "Rejoignez 50+ boutiques ce mois-ci",
+      "title": "Prêt à arrêter de perdre des ventes à cause des ruptures de stock ?",
+      "subtitle": "Rejoignez les marchands Shopify qui ont pris le contrôle de leur inventaire. Essayez Stockeasy gratuitement pendant 14 jours.",
+      "mainButton": "Démarrer l'essai gratuit maintenant",
       "installButton": "Installer sur Shopify",
       "contactButton": "Nous contacter",
+      "urgencyNote": "Configuration en 15 minutes · Support francophone inclus",
       "benefits": {
-        "freeTrial": "14 jours d'essai gratuit",
-        "multilingualSupport": "Support FR, EN, ES",
-        "easyCancel": "Annulation en 1 clic"
+        "quickSetup": "Configuration en 15 minutes",
+        "multilingualSupport": "Support francophone inclus"
+      }
+    },
+    "faq": {
+      "title": "Questions fréquentes",
+      "subtitle": "Tout ce que vous devez savoir sur Stockeasy",
+      "stillHaveQuestions": "Vous avez encore des questions ?",
+      "contactUs": "Contactez-nous",
+      "items": {
+        "compatibility": {
+          "question": "Est-ce compatible avec mon thème Shopify ?",
+          "answer": "Oui, Stockeasy fonctionne avec tous les thèmes et plans Shopify. L'intégration se fait en 1 clic via l'App Store Shopify."
+        },
+        "setupTime": {
+          "question": "Combien de temps pour configurer l'application ?",
+          "answer": "15 minutes chrono. Connectez votre boutique Shopify, ajoutez vos fournisseurs, et Stockeasy commence immédiatement à analyser vos données."
+        },
+        "afterTrial": {
+          "question": "Que se passe-t-il après les 14 jours d'essai ?",
+          "answer": "Si vous êtes satisfait, vous passez automatiquement au plan à 29€/mois. Sinon, votre compte est simplement désactivé. Aucun engagement."
+        },
+        "dataSecurity": {
+          "question": "Mes données sont-elles sécurisées ?",
+          "answer": "Absolument. Vos données sont hébergées en Europe (conformité RGPD), chiffrées, et jamais partagées. Nous ne vendons aucune donnée à des tiers."
+        },
+        "importSuppliers": {
+          "question": "Puis-je importer mes fournisseurs existants ?",
+          "answer": "Oui, vous pouvez ajouter autant de fournisseurs que vous voulez avec leurs coordonnées, délais de livraison et MOQ."
+        },
+        "aiAccuracy": {
+          "question": "L'IA fonctionne-t-elle dès le début ?",
+          "answer": "L'IA commence à apprendre dès votre première semaine. Plus vous utilisez Stockeasy, plus les prédictions deviennent précises. Après 30 jours, la précision est généralement supérieure à 75%."
+        },
+        "cancellation": {
+          "question": "Puis-je annuler à tout moment ?",
+          "answer": "Oui, sans aucune pénalité. Vous restez facturé jusqu'à la fin de votre mois en cours, puis l'abonnement s'arrête automatiquement."
+        }
       }
     },
     "footer": {

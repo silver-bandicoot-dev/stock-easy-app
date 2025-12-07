@@ -80,7 +80,7 @@ const Features = () => {
         </motion.div>
 
         {/* Main Features */}
-        <div className="grid md:grid-cols-3 gap-8 mb-14">
+        <div className="grid md:grid-cols-3 gap-8 mb-20">
           {mainFeatures.map((feature, index) => (
             <motion.div
               key={feature.title}
@@ -88,25 +88,25 @@ const Features = () => {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ delay: index * 0.1 }}
-              className="card p-6 hover:border-[#191919]/20"
+              className="card p-8 hover:border-[#191919]/20"
             >
               {/* Icon */}
-              <div className="w-12 h-12 rounded-lg bg-[#FAFAF7] border border-[#E5E4DF] flex items-center justify-center mb-4">
+              <div className="w-12 h-12 rounded-lg bg-[#FAFAF7] border border-[#E5E4DF] flex items-center justify-center mb-5">
                 <feature.icon size={24} className="text-[#191919]" />
               </div>
 
               {/* Subtitle */}
-              <div className="text-xs font-medium text-[#191919]/40 tracking-wider mb-2">
+              <div className="text-xs font-medium text-[#191919]/40 tracking-wider mb-3">
                 {feature.subtitle}
               </div>
 
               {/* Title */}
-              <h3 className="text-lg font-semibold text-[#191919] mb-3">
+              <h3 className="text-lg font-semibold text-[#191919] mb-4">
                 {feature.title}
               </h3>
 
               {/* Description */}
-              <p className="text-sm text-[#191919]/60 leading-relaxed mb-4">
+              <p className="text-sm text-[#191919]/60 leading-relaxed mb-5">
                 {feature.description}
               </p>
 
@@ -126,17 +126,17 @@ const Features = () => {
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          className="card p-8"
+          className="card p-10 mb-20"
         >
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-10">
             {secondaryFeatures.map((feature, index) => (
-              <div key={feature.title} className="flex items-start gap-3">
+              <div key={feature.title} className="flex items-start gap-4">
                 <div className="w-9 h-9 rounded-lg bg-[#FAFAF7] border border-[#E5E4DF] flex items-center justify-center flex-shrink-0">
                   <feature.icon size={18} className="text-[#191919]/70" />
                 </div>
                 <div>
-                  <h4 className="font-medium text-[#191919] mb-0.5">{feature.title}</h4>
-                  <p className="text-sm text-[#191919]/50">{feature.description}</p>
+                  <h4 className="font-medium text-[#191919] mb-1.5">{feature.title}</h4>
+                  <p className="text-sm text-[#191919]/50 leading-relaxed">{feature.description}</p>
                 </div>
               </div>
             ))}
@@ -148,10 +148,10 @@ const Features = () => {
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          className="mt-16 grid lg:grid-cols-2 gap-12 items-center"
+          className="mt-24 grid lg:grid-cols-2 gap-16 items-center"
         >
           {/* Left - Content */}
-          <div className="space-y-6">
+          <div className="space-y-8">
             <span className="badge badge-success">{t('landing.features.supplierSection.badge', 'Nouveau')}</span>
             <h3 className="text-2xl md:text-3xl font-semibold text-[#191919]">
               {t('landing.features.supplierSection.title', 'Gestion des commandes fournisseurs')}
@@ -159,14 +159,14 @@ const Features = () => {
             <p className="text-[#191919]/60 leading-relaxed">
               {t('landing.features.supplierSection.description', "Créez, suivez et gérez vos commandes fournisseurs directement depuis l'application. Plus besoin de jongler entre Excel et votre boutique.")}
             </p>
-            <ul className="space-y-3">
+            <ul className="space-y-4">
               {[
                 { icon: FileText, text: t('landing.features.supplierSection.items.autoGeneration', "Génération automatique des bons de commande") },
                 { icon: Truck, text: t('landing.features.supplierSection.items.deliveryTracking', "Suivi des livraisons en temps réel") },
                 { icon: Check, text: t('landing.features.supplierSection.items.oneClickReceive', "Réception et mise à jour du stock en 1 clic") },
                 { icon: Clock, text: t('landing.features.supplierSection.items.orderHistory', "Historique complet des commandes") },
               ].map((item, i) => (
-                <li key={i} className="flex items-center gap-3">
+                <li key={i} className="flex items-center gap-4">
                   <div className="w-8 h-8 rounded-lg bg-[#ECFDF5] flex items-center justify-center">
                     <item.icon size={16} className="text-[#059669]" />
                   </div>
@@ -251,7 +251,7 @@ const Features = () => {
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          className="mt-16 grid lg:grid-cols-2 gap-12 items-center"
+          className="mt-24 grid lg:grid-cols-2 gap-16 items-center"
         >
           {/* Left - Visual Mockup */}
           <div className="relative order-2 lg:order-1">
@@ -347,7 +347,7 @@ const Features = () => {
           </div>
 
           {/* Right - Content */}
-          <div className="space-y-6 order-1 lg:order-2">
+          <div className="space-y-8 order-1 lg:order-2">
             <span className="badge badge-neutral">{t('landing.features.teamSection.badge', 'Collaboratif')}</span>
             <h3 className="text-2xl md:text-3xl font-semibold text-[#191919]">
               {t('landing.features.teamSection.title', 'Travaillez en équipe, efficacement')}
@@ -355,14 +355,14 @@ const Features = () => {
             <p className="text-[#191919]/60 leading-relaxed">
               {t('landing.features.teamSection.description', 'Invitez vos collaborateurs, partagez des commentaires sur les produits et coordonnez vos actions de réapprovisionnement en temps réel.')}
             </p>
-            <ul className="space-y-3">
+            <ul className="space-y-4">
               {[
                 { icon: UserPlus, text: t('landing.features.teamSection.items.inviteMembers', "Invitez des membres avec différents rôles") },
                 { icon: MessageSquare, text: t('landing.features.teamSection.items.commentProducts', "Commentez directement sur les produits") },
                 { icon: AtSign, text: t('landing.features.teamSection.items.mentionColleagues', "Mentionnez vos collègues pour les notifier") },
                 { icon: Users, text: t('landing.features.teamSection.items.trackActivity', "Suivez l'activité de votre équipe") },
               ].map((item, i) => (
-                <li key={i} className="flex items-center gap-3">
+                <li key={i} className="flex items-center gap-4">
                   <div className="w-8 h-8 rounded-lg bg-[#F3E8FF] flex items-center justify-center">
                     <item.icon size={16} className="text-[#7C3AED]" />
                   </div>
@@ -370,27 +370,6 @@ const Features = () => {
                 </li>
               ))}
             </ul>
-          </div>
-        </motion.div>
-
-        {/* Quote */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          className="mt-16 text-center"
-        >
-          <blockquote className="text-xl md:text-2xl text-[#191919]/80 italic max-w-2xl mx-auto">
-            {t('landing.features.quote.text', '"Nous avons réduit nos ruptures de stock de')} <span className="font-semibold not-italic">40%</span> {t('landing.features.quote.textEnd', 'le premier mois."')}
-          </blockquote>
-          <div className="mt-4 flex items-center justify-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-[#E5E4DF] flex items-center justify-center text-sm font-medium text-[#191919]">
-              M
-            </div>
-            <div className="text-left">
-              <div className="font-medium text-[#191919]">Marc Dubois</div>
-              <div className="text-sm text-[#191919]/50">CEO, FashionStore.fr</div>
-            </div>
           </div>
         </motion.div>
       </div>

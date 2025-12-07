@@ -12,19 +12,48 @@ import { InfoTooltip, tooltips } from '../ui/InfoTooltip';
 
 export function PredictionVsReality({ comparisonData, product }) {
   // Préparer les données pour le graphique
-  const chartData = comparisonData?.map(item => ({
-    date: format(new Date(item.date), 'dd/MM', { locale: fr }),
-    fullDate: item.date,
-    reel: item.actual,
-    prevu: item.predicted,
-    ecart: item.actual - item.predicted,
-    ecartPercent: item.predicted > 0 
-      ? ((item.actual - item.predicted) / item.predicted * 100).toFixed(1)
-      : 0
-  })) || [];
+  const chartData = comparisonData?.map(item => {
+    try {
+      const dateObj = new Date(item.date);
+      if (isNaN(dateObj.getTime())) return null; // Skip invalid dates
+      const actual = Number(item.actual) || 0;
+      const predicted = Number(item.predicted) || 0;
+      return {
+        date: format(dateObj, 'dd/MM', { locale: fr }),
+        fullDate: item.date,
+        reel: actual,
+        prevu: predicted,
+        ecart: actual - predicted,
+        ecartPercent: predicted > 0 
+          ? ((actual - predicted) / predicted * 100).toFixed(1)
+          : 0
+      };
+    } catch (e) {
+      console.warn('Date invalide:', item.date);
+      return null;
+    }
+  }).filter(Boolean) || [];
 
   // Calculer les métriques de performance
   const metrics = calculateMetrics(comparisonData || []);
+  
+  // Calculer les statistiques pour l'échelle
+  const allValues = chartData.flatMap(d => [d.reel, d.prevu, Math.abs(d.ecart)]);
+  const maxValue = Math.max(...allValues, 1);
+  const minValue = Math.min(...allValues.filter(v => v !== 0), 0);
+  
+  // Debug log pour vérifier les données - DÉTAILLÉ
+  console.log('📊 PredictionVsReality - données DÉTAILLÉES:', {
+    comparisonDataCount: comparisonData?.length || 0,
+    chartDataCount: chartData.length,
+    chartDataFull: JSON.stringify(chartData),
+    firstItem: chartData[0],
+    lastItem: chartData[chartData.length - 1],
+    metrics,
+    maxValue,
+    minValue,
+    allValues
+  });
 
   return (
     <div className="bg-white rounded-xl shadow-sm border border-[#E5E4DF] p-6">
@@ -75,39 +104,84 @@ export function PredictionVsReality({ comparisonData, product }) {
 
       {/* Graphique comparatif */}
       {chartData.length > 0 ? (
-        <ResponsiveContainer width="100%" height={300}>
-          <BarChart data={chartData} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#E5E4DF" />
-            <XAxis 
-              dataKey="date" 
-              stroke="#666663"
-              style={{ fontSize: '12px' }}
-            />
-            <YAxis 
-              stroke="#666663"
-              style={{ fontSize: '12px' }}
-              label={{ value: 'Quantité', angle: -90, position: 'insideLeft', style: { fontSize: '12px' } }}
-            />
-            <Tooltip 
-              contentStyle={{ 
-                backgroundColor: '#fff', 
-                border: '1px solid #E5E4DF',
-                borderRadius: '8px',
-                padding: '12px'
-              }}
-              formatter={(value, name) => {
-                if (name === 'Écart') return [`${value > 0 ? '+' : ''}${value}`, name];
-                return [value, name];
-              }}
-            />
-            <Legend />
-            <ReferenceLine y={0} stroke="#666663" strokeDasharray="3 3" />
-            
-            <Bar dataKey="reel" fill="#3b82f6" name="Réel" radius={[4, 4, 0, 0]} />
-            <Bar dataKey="prevu" fill="#8b5cf6" name="Prévu" radius={[4, 4, 0, 0]} />
-            <Bar dataKey="ecart" fill="#f59e0b" name="Écart" radius={[4, 4, 0, 0]} />
-          </BarChart>
-        </ResponsiveContainer>
+        <>
+          {/* Message si données très faibles */}
+          {maxValue < 5 && (
+            <div className="mb-2 p-2 bg-yellow-50 border border-yellow-200 rounded text-xs text-yellow-700">
+              ⚠️ Les valeurs sont très faibles (max: {maxValue}). Le graphique peut sembler plat.
+            </div>
+          )}
+          {/* Debug: Afficher les données brutes */}
+          {console.log('📊 PredictionVsReality - chartData pour rendu:', chartData)}
+          <ResponsiveContainer width="100%" height={300}>
+            <BarChart 
+              data={chartData} 
+              margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+              barCategoryGap="15%"
+              barGap={2}
+            >
+              <CartesianGrid strokeDasharray="3 3" stroke="#E5E4DF" />
+              <XAxis 
+                dataKey="date" 
+                stroke="#666663"
+                style={{ fontSize: '12px' }}
+                tick={{ fill: '#666663' }}
+              />
+              <YAxis 
+                stroke="#666663"
+                style={{ fontSize: '12px' }}
+                tick={{ fill: '#666663' }}
+                domain={['auto', 'auto']}
+                allowDataOverflow={false}
+              />
+              <Tooltip 
+                contentStyle={{ 
+                  backgroundColor: '#fff', 
+                  border: '1px solid #E5E4DF',
+                  borderRadius: '8px',
+                  padding: '12px'
+                }}
+                formatter={(value, name) => {
+                  if (name === 'Écart') return [`${value > 0 ? '+' : ''}${value}`, name];
+                  return [value, name];
+                }}
+              />
+              <Legend wrapperStyle={{ paddingTop: '10px' }} />
+              <ReferenceLine y={0} stroke="#666663" strokeDasharray="3 3" />
+              
+              <Bar 
+                dataKey="prevu" 
+                fill="#8b5cf6" 
+                stroke="#8b5cf6"
+                strokeWidth={1}
+                name="Prévu" 
+                radius={[4, 4, 0, 0]}
+                isAnimationActive={false}
+                minPointSize={5}
+              />
+              <Bar 
+                dataKey="reel" 
+                fill="#3b82f6" 
+                stroke="#3b82f6"
+                strokeWidth={1}
+                name="Réel" 
+                radius={[4, 4, 0, 0]}
+                isAnimationActive={false}
+                minPointSize={5}
+              />
+              <Bar 
+                dataKey="ecart" 
+                fill="#f59e0b" 
+                stroke="#f59e0b"
+                strokeWidth={1}
+                name="Écart" 
+                radius={[4, 4, 0, 0]}
+                isAnimationActive={false}
+                minPointSize={5}
+              />
+            </BarChart>
+          </ResponsiveContainer>
+        </>
       ) : (
         <div className="text-center py-12 text-[#666663]">
           <AlertCircle className="w-12 h-12 mx-auto mb-3 opacity-50" />

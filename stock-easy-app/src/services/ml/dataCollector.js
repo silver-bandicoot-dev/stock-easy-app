@@ -4,9 +4,9 @@
  */
 
 import { getAllData, getSalesHistory as fetchSalesHistory } from '../apiAdapter';
+import { isHoliday, getImpactFactor, isNearHoliday } from './holidayService';
 
 const DEFAULT_HISTORY_DAYS = 180;
-const FIXED_HOLIDAYS = new Set(['01-01', '05-01', '05-08', '07-14', '08-15', '11-01', '11-11', '12-25']);
 
 /**
  * Collecte l'historique des ventes depuis l'API
@@ -68,6 +68,10 @@ export async function collectSalesHistory(products = [], options = {}) {
       const aggregate = skuAggregates[row.sku];
       const avgSales = aggregate?.count ? aggregate.sum / aggregate.count : deriveAvgSalesFromProduct(product);
 
+      // Enrichir avec les données de jours fériés dynamiques
+      const holidayImpact = getImpactFactor(date);
+      const nearHoliday = isNearHoliday(date, 2, 2);
+      
       history.push({
         sku: row.sku,
         date: formatDate(date),
@@ -76,6 +80,9 @@ export async function collectSalesHistory(products = [], options = {}) {
         month: date.getMonth() + 1,
         isWeekend: isWeekend(date),
         isHoliday: isHoliday(date),
+        holidayImpact: holidayImpact.factor,
+        holidayType: holidayImpact.type,
+        isNearHoliday: !!nearHoliday,
         price: Number(product?.sellPrice ?? product?.prixVente ?? 0),
         avgSales: Number(Number(avgSales ?? 0).toFixed(2))
       });
@@ -138,10 +145,8 @@ function isWeekend(date) {
   return day === 0 || day === 6;
 }
 
-function isHoliday(date) {
-  const key = formatDate(date).slice(5);
-  return FIXED_HOLIDAYS.has(key);
-}
+// Note: isHoliday est maintenant importé de holidayService.js
+// qui gère les jours fériés fixes ET mobiles (Pâques, Ascension, etc.)
 
 /**
  * Filtre les données par SKU

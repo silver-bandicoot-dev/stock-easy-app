@@ -72,7 +72,8 @@ const Sidebar = ({
       hasSubMenu: true,
       subItems: [
         { id: 'kpis', label: t('navigation.kpis'), icon: BarChart3 },
-        { id: 'forecast', label: t('navigation.aiForecast'), icon: Brain }
+        { id: 'forecast', label: t('navigation.aiForecast'), icon: Brain },
+        { id: 'mlHealth', label: t('navigation.mlHealth'), icon: Activity }
       ]
     },
     { 
@@ -127,12 +128,16 @@ const Sidebar = ({
   
   const handleSubMenuClick = (parentId, subItem) => {
     if (parentId === 'analytics') {
-      // Naviguer directement vers le sous-onglet analytics
-      // Ne pas appeler setActiveTab car setAnalyticsSubTab gère déjà la navigation complète
+      // S'assurer qu'on est sur l'onglet Analytics avant de changer le sous-onglet
+      if (activeTab !== 'analytics') {
+        setActiveTab('analytics');
+      }
       setAnalyticsSubTab(subItem.id);
     } else if (parentId === 'settings') {
-      // Naviguer directement vers le sous-onglet settings
-      // Ne pas appeler setActiveTab car setSettingsSubTab gère déjà la navigation complète
+      // S'assurer qu'on est sur l'onglet Settings avant de changer le sous-onglet
+      if (activeTab !== 'settings') {
+        setActiveTab('settings');
+      }
       setSettingsSubTab(subItem.id);
     }
     setMobileMenuOpen(false);

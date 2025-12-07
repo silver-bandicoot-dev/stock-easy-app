@@ -34,6 +34,7 @@ export function useOnboardingTourLogic(options = {}) {
   const driverRef = useRef(null);
   const hasInitialized = useRef(false);
   const autoStartTimeoutRef = useRef(null);
+  const closeHandlerRef = useRef(null); // Référence stable pour le handler de fermeture
 
   /**
    * Gère la navigation vers la bonne section AVANT d'afficher le highlight
@@ -65,11 +66,41 @@ export function useOnboardingTourLogic(options = {}) {
 
   // Initialiser l'instance Driver.js
   const initDriver = useCallback(() => {
+    // Nettoyer l'ancien handler s'il existe avant de créer un nouveau driver
+    if (closeHandlerRef.current) {
+      document.removeEventListener('click', closeHandlerRef.current, true);
+      closeHandlerRef.current = null;
+    }
+
     if (driverRef.current) {
       driverRef.current.destroy();
     }
 
     const steps = getMainTourSteps(t);
+    
+    // Handler global pour le bouton de fermeture - délégation d'événements
+    // Utiliser une référence stable stockée dans closeHandlerRef
+    const handleCloseButtonClick = (e) => {
+      // Vérifier si le clic est sur le bouton de fermeture ou un de ses enfants
+      const target = e.target;
+      const closeButton = target.closest('.driver-popover-close-btn');
+      
+      if (closeButton && driverRef.current) {
+        e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation();
+        
+        // Détruire le driver
+        driverRef.current.destroy();
+        return false;
+      }
+    };
+    
+    // Stocker la référence du handler dans le ref pour pouvoir le retirer correctement
+    closeHandlerRef.current = handleCloseButtonClick;
+    
+    // Ajouter le listener au document avec capture pour intercepter avant Driver.js
+    document.addEventListener('click', closeHandlerRef.current, true);
     
     driverRef.current = driver({
       showProgress: true,
@@ -88,15 +119,35 @@ export function useOnboardingTourLogic(options = {}) {
       // Driver.js gère automatiquement la navigation
       onDestroyStarted: () => {
         setIsTourActive(false);
+        // Retirer le listener global quand le tour est détruit
+        if (closeHandlerRef.current) {
+          document.removeEventListener('click', closeHandlerRef.current, true);
+          closeHandlerRef.current = null;
+        }
       },
       onDestroyed: () => {
         setIsTourActive(false);
+        // Retirer le listener global (double sécurité)
+        if (closeHandlerRef.current) {
+          document.removeEventListener('click', closeHandlerRef.current, true);
+          closeHandlerRef.current = null;
+        }
         // Marquer comme complété (sans await pour éviter les blocages)
         markTourCompleted('main_tour').then(() => {
           setHasCompletedTour(true);
         });
       }
     });
+
+    // Nettoyer le listener quand le driver est détruit manuellement
+    const originalDestroy = driverRef.current.destroy;
+    driverRef.current.destroy = function() {
+      if (closeHandlerRef.current) {
+        document.removeEventListener('click', closeHandlerRef.current, true);
+        closeHandlerRef.current = null;
+      }
+      return originalDestroy.call(this);
+    };
 
     return driverRef.current;
   }, [t, handleTourNavigation]);
@@ -120,6 +171,11 @@ export function useOnboardingTourLogic(options = {}) {
     return () => {
       if (autoStartTimeoutRef.current) {
         clearTimeout(autoStartTimeoutRef.current);
+      }
+      // Nettoyer le handler de fermeture
+      if (closeHandlerRef.current) {
+        document.removeEventListener('click', closeHandlerRef.current, true);
+        closeHandlerRef.current = null;
       }
       if (driverRef.current) {
         driverRef.current.destroy();
@@ -154,6 +210,11 @@ export function useOnboardingTourLogic(options = {}) {
 
   // Arrêter le tour
   const stopTour = useCallback(() => {
+    // Nettoyer le handler de fermeture
+    if (closeHandlerRef.current) {
+      document.removeEventListener('click', closeHandlerRef.current, true);
+      closeHandlerRef.current = null;
+    }
     if (driverRef.current) {
       driverRef.current.destroy();
     }

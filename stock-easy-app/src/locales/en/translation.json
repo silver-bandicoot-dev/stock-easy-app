@@ -45,7 +45,11 @@
     "optional": "Optional",
     "required": "Required",
     "allRightsReserved": "All rights reserved.",
-    "retry": "Retry"
+    "retry": "Retry",
+    "justNow": "just now",
+    "minutesAgo": "{{count}} min ago",
+    "hoursAgo": "{{count}}h ago",
+    "daysAgo": "{{count}}d ago"
   },
   "seo": {
     "title": "Stockeasy - Shopify Inventory Management, AI Forecasting & Restock Alerts",
@@ -139,6 +143,7 @@
     "helpCenter": "Help Center",
     "kpis": "KPIs",
     "aiForecast": "AI Forecast",
+    "mlHealth": "ML Health",
     "generalSettings": "General Settings",
     "multipliers": "Multipliers",
     "supplierManagement": "Supplier Management",
@@ -658,6 +663,7 @@
     "exportSuccess": "Report exported! {{count}} products, {{value}} value",
     "exportError": "Export error",
     "columns": {
+      "product": "Product",
       "sku": "SKU",
       "productName": "Product name",
       "supplier": "Supplier",
@@ -689,7 +695,84 @@
     "mlCalculating": "ML calculation in progress...",
     "tabs": {
       "kpis": "KPIs",
-      "forecast": "AI Forecast"
+      "forecast": "AI Forecast",
+      "forecastDesc": "Product demand predictions",
+      "mlHealth": "ML Health",
+      "mlHealthDesc": "ML system performance"
+    },
+    "mlHealth": {
+      "systemHealth": "ML System Health",
+      "title": "Machine Learning Health",
+      "subtitle": "Real-time ML performance monitoring",
+      "scoreLabel": "ML Health Score",
+      "excellent": "Excellent",
+      "good": "Good",
+      "warning": "Warning",
+      "critical": "Critical",
+      "accuracy": "Accuracy",
+      "accuracySubtitle": "Forecast accuracy",
+      "mape": "MAPE",
+      "mapeSubtitle": "Mean error",
+      "features": "Features",
+      "featuresSubtitle": "Products analyzed",
+      "cacheHit": "Cache Hit",
+      "cacheHitSubtitle": "Cache efficiency",
+      "alertsTitle": "Alerts & Recommendations",
+      "actionsTitle": "ML Actions",
+      "technicalDetails": "Technical Details",
+      "lastEvaluation": "Last evaluation",
+      "lastRetraining": "Last retraining",
+      "status": "Status",
+      "autoRetraining": "Auto-retraining",
+      "enabled": "Enabled",
+      "disabled": "Disabled",
+      "never": "Never",
+      "retrainingHistory": "Retraining history",
+      "evaluateTitle": "Evaluate model",
+      "evaluateDesc": "Refresh performance metrics",
+      "evaluateButton": "Evaluate",
+      "recalculateTitle": "Recalculate",
+      "recalculateDesc": "Clear caches and recalculate metrics",
+      "recalculateButton": "Recalculate",
+      "alerts": {
+        "highMape": "Degraded performance",
+        "highMapeDesc": "MAPE at {{mape}}% (threshold: {{threshold}}%)",
+        "moderateMape": "Performance to monitor",
+        "moderateMapeDesc": "MAPE at {{mape}}%",
+        "noEvaluation": "Evaluation needed",
+        "noEvaluationDesc": "No model evaluation performed. Run evaluation to assess performance.",
+        "oldEvaluation": "Old evaluation",
+        "oldEvaluationDesc": "Last evaluation {{hours}}h ago",
+        "retrainingAvailable": "Retraining available",
+        "retrainingAvailableDesc": "Model can be improved",
+        "lowCacheHit": "Low cache efficiency",
+        "lowCacheHitDesc": "Cache rate: {{rate}}%",
+        "performanceDegraded": "Performance degraded (MAPE: {{mape}}%). Retraining recommended.",
+        "fix": "Fix"
+      },
+      "statusLabels": {
+        "idle": "Idle",
+        "evaluating": "Evaluating...",
+        "training": "Training...",
+        "validating": "Validating..."
+      },
+      "feedback": {
+        "refreshed": "Metrics refreshed!",
+        "cachesCleared": "Caches cleared!",
+        "evaluationStarted": "Evaluation started!",
+        "modelEvaluated": "Model evaluated!",
+        "metricsRefreshed": "ML metrics refreshed!",
+        "retrainingStarted": "Retraining started!",
+        "modelRetrained": "Model retrained!",
+        "cachesRecalculated": "Caches cleared and metrics recalculated!",
+        "error": "Error"
+      },
+      "recommendations": {
+        "noEvaluation": "No evaluation performed yet. Run evaluation to assess model performance.",
+        "performanceDegraded": "Model performance degraded (MAPE: {{mape}}%). Retraining recommended.",
+        "retrainingScheduled": "Retraining will be available after {{date}}",
+        "goodPerformance": "Model performing well (Accuracy: {{accuracy}}%)"
+      }
     },
     "period": {
       "title": "Period",
@@ -784,6 +867,8 @@
       "forecastVisualization": "Forecast Visualization",
       "chartComingSoon": "Chart coming soon",
       "chartComingSoonDesc": "In the meantime, refer to the values above",
+      "insufficientData": "Insufficient data for visualization",
+      "insufficientDataDesc": "Minimum 7 days of history required to generate charts",
       "errorGenerating": "Error generating forecasts",
       "noForecastAvailable": "No forecast available. Collect more data.",
       "recommendations": {
@@ -797,6 +882,52 @@
         "lowConfidenceAction": "Increase safety margin by 50%",
         "overstock": "Potentially excess stock",
         "overstockAction": "Consider a promotion or reduce orders"
+      },
+      "summary": {
+        "title": "Forecast Overview",
+        "subtitle": "{{count}} active products analyzed",
+        "totalForecast30d": "30-Day Forecast",
+        "unitsExpected": "units expected",
+        "productsAtRisk": "Products at Risk",
+        "needsAttention": "need attention",
+        "trendingUp": "Trending Up",
+        "demandIncreasing": "demand increasing",
+        "avgConfidence": "Avg. Confidence",
+        "modelReliability": "model reliability",
+        "criticalAlert": "{{count}} product(s) at critical stockout risk",
+        "criticalAlertDesc": "These products could be out of stock within 7 days",
+        "viewCritical": "View critical products",
+        "searchPlaceholder": "Search product (name or SKU)...",
+        "filterAll": "All products",
+        "filterAlerts": "With alerts",
+        "filterLowStock": "Low stock",
+        "filterHighDemand": "High demand",
+        "sortRisk": "Sort by risk",
+        "sortForecast": "Sort by forecast",
+        "sortStock": "Sort by stock",
+        "sortName": "Sort by name",
+        "product": "Product",
+        "stock": "Stock",
+        "forecast7d": "Forecast 7d",
+        "forecast30d": "Forecast 30d",
+        "trend": "Trend",
+        "risk": "Risk",
+        "actions": "Actions",
+        "daysLeft": "{{days}}d left",
+        "trendUp": "Up",
+        "trendDown": "Down",
+        "trendStable": "Stable",
+        "riskCritical": "Critical",
+        "riskHigh": "High",
+        "riskMedium": "Medium",
+        "riskLow": "Low",
+        "viewDetails": "Details",
+        "noProducts": "No products found",
+        "showing": "Showing {{shown}} of {{total}} products",
+        "stockoutRisk": "Stockout possible in {{days}} days",
+        "demandIncrease": "Demand increasing",
+        "overstock": "Overstock detected",
+        "backToSummary": "← Back to overview"
       }
     },
     "stockKpi": {
@@ -1312,16 +1443,18 @@
     },
     "hero": {
       "badge": "Available on Shopify App Store",
-      "title": "Manage your Shopify stock",
-      "titleHighlight": "intelligently",
-      "subtitle": "AI predictions, real-time sync, and smart alerts. Avoid stockouts and maximize your sales.",
-      "cta": "Try for free",
-      "demo": "See demo",
+      "title": "Never lose a sale to out-of-stock again",
+      "subtitle": "Stockeasy syncs your Shopify in real-time, predicts your stockouts before they happen, and sends supplier orders in 1 click. No Excel. No manual imports.",
+      "cta": "Start free trial",
+      "demo": "See how it works",
       "merchants": "500+ merchants",
       "stats": {
-        "reduction": "stockout reduction",
-        "timeSaved": "saved / week",
-        "activeMerchants": "active merchants"
+        "ordersManaged": "supplier orders managed",
+        "stockOptimized": "of optimized stock"
+      },
+      "trustIndicators": {
+        "freeTrial": "14 days free",
+        "quickSetup": "15-minute setup"
       },
       "dashboardPreview": {
         "welcome": "Welcome back 👋",
@@ -1350,6 +1483,74 @@
         "dropshippers": "Dropshippers",
         "wholesalers": "Wholesalers",
         "marketplaces": "Marketplaces"
+      }
+    },
+    "painPoints": {
+      "title": "Why Shopify merchants lose money every day",
+      "subtitle": "The costly problems Stockeasy solves for you",
+      "stockouts": {
+        "title": "Stockouts",
+        "description": "You lose sales every week because a product is out of stock. Stockouts cost e-merchants an average of 15-20% in revenue."
+      },
+      "overstock": {
+        "title": "Overstock killing your cash flow",
+        "description": "Ordering too much = money locked in boxes. You lack cash to invest in marketing or new products."
+      },
+      "timeWasted": {
+        "title": "Time wasted on Excel",
+        "description": "2 to 4 hours per week importing CSVs, cross-checking data, calculating orders. That's 200+ hours per year you could spend growing your business."
+      }
+    },
+    "solution": {
+      "title": "How Stockeasy automatically optimizes your inventory",
+      "subtitle": "Three pillars to master your stock and boost your sales",
+      "learnMore": "Explore features",
+      "neverLoseASale": {
+        "title": "Never lose a sale again",
+        "subtitle": "AI PREDICTIONS",
+        "description": "Stockeasy's AI analyzes your past sales, seasonal trends, and supplier lead times to predict your stock needs.",
+        "benefit1": "Automatic alerts BEFORE stockout (not after)",
+        "benefit2": "Precise product-level order recommendations",
+        "benefit3": "Real-time Shopify sync: zero manual import, zero lag"
+      },
+      "freeCashFlow": {
+        "title": "Free up your cash flow",
+        "subtitle": "FINANCIAL OPTIMIZATION",
+        "description": "Stockeasy identifies overstocked products and those selling too fast. See at a glance where your money is tied up.",
+        "benefit1": "Stock rotation dashboard: spot dead stock instantly",
+        "benefit2": "Overstock alerts: stop ordering what doesn't sell",
+        "benefit3": "Profitability reports: focus on your bestsellers"
+      },
+      "saveTime": {
+        "title": "Save 4 hours per week",
+        "subtitle": "COMPLETE AUTOMATION",
+        "description": "No more Excel, calculating MOQs, or writing emails. Stockeasy does it all.",
+        "benefit1": "Automatic purchase order generation according to supplier MOQs",
+        "benefit2": "Direct email sending from the app",
+        "benefit3": "Easy reconciliation when you receive the order",
+        "benefit4": "Complete history of all centralized communications"
+      },
+      "visual": {
+        "predictions": {
+          "title": "Stockout Predictions",
+          "subtitle": "Your next 3 stockouts",
+          "stockout": "Stockout in {{days}} days"
+        },
+        "rotation": {
+          "title": "Stock Rotation",
+          "rotationRate": "Rotation rate: {{rate}}%",
+          "realTime": "Real-time"
+        },
+        "supplier": {
+          "title": "Supplier Order",
+          "subtitle": "Ready to send",
+          "to": "To",
+          "subject": "Subject",
+          "orderNumber": "Order PO-2024-045",
+          "greeting": "Hello,",
+          "products": "We would like to order:",
+          "sent": "Sent"
+        }
       }
     },
     "features": {
@@ -1501,8 +1702,8 @@
       }
     },
     "pricing": {
-      "title": "Simple and transparent",
-      "subtitle": "One plan with all the features you need",
+      "title": "Simple and transparent pricing",
+      "subtitle": "Everything you need to optimize your stock today",
       "monthly": "Monthly",
       "yearly": "Yearly",
       "perMonth": "/month",
@@ -1512,6 +1713,10 @@
       "comingSoon": "In development",
       "guarantee": "✨ 2-minute setup • Support included • Cancel anytime",
       "faqTitle": "Frequently asked questions",
+      "priceAnchoring": {
+        "title": "💡 Substantial savings",
+        "description": "Alternative solutions cost between $60 and $400/month. Stockeasy gives you the same features for the price of 2 coffees per day."
+      },
       "plans": {
         "basic": {
           "description": "Everything you need to manage your inventory",
@@ -1569,15 +1774,52 @@
       }
     },
     "cta": {
-      "badge": "Join 500+ Shopify merchants",
-      "title": "Ready to optimize your stock management?",
-      "subtitle": "Start your free trial today.",
+      "urgencyBadge": "Join 50+ stores this month",
+      "title": "Ready to stop losing sales to out-of-stock?",
+      "subtitle": "Join Shopify merchants who have taken control of their inventory. Try Stockeasy free for 14 days.",
+      "mainButton": "Start free trial now",
       "installButton": "Install on Shopify",
       "contactButton": "Contact us",
+      "urgencyNote": "15-minute setup · Support included",
       "benefits": {
-        "freeTrial": "14-day free trial",
-        "multilingualSupport": "Support FR, EN, ES",
-        "easyCancel": "Cancel in 1 click"
+        "quickSetup": "15-minute setup",
+        "multilingualSupport": "Support included"
+      }
+    },
+    "faq": {
+      "title": "Frequently asked questions",
+      "subtitle": "Everything you need to know about Stockeasy",
+      "stillHaveQuestions": "Still have questions?",
+      "contactUs": "Contact us",
+      "items": {
+        "compatibility": {
+          "question": "Is it compatible with my Shopify theme?",
+          "answer": "Yes, Stockeasy works with all Shopify themes and plans. Integration is done in 1 click via the Shopify App Store."
+        },
+        "setupTime": {
+          "question": "How long does it take to set up the app?",
+          "answer": "15 minutes flat. Connect your Shopify store, add your suppliers, and Stockeasy immediately starts analyzing your data."
+        },
+        "afterTrial": {
+          "question": "What happens after the 14-day trial?",
+          "answer": "If you're satisfied, you automatically move to the $29/month plan. Otherwise, your account is simply deactivated. No commitment."
+        },
+        "dataSecurity": {
+          "question": "Is my data secure?",
+          "answer": "Absolutely. Your data is hosted in Europe (GDPR compliant), encrypted, and never shared. We don't sell any data to third parties."
+        },
+        "importSuppliers": {
+          "question": "Can I import my existing suppliers?",
+          "answer": "Yes, you can add as many suppliers as you want with their contact details, delivery times and MOQs."
+        },
+        "aiAccuracy": {
+          "question": "Does the AI work from the start?",
+          "answer": "The AI starts learning from your first week. The more you use Stockeasy, the more accurate the predictions become. After 30 days, accuracy is generally over 75%."
+        },
+        "cancellation": {
+          "question": "Can I cancel at any time?",
+          "answer": "Yes, with no penalty. You remain billed until the end of your current month, then the subscription stops automatically."
+        }
       }
     },
     "footer": {

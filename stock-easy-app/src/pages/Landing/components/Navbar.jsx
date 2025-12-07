@@ -27,7 +27,6 @@ const Navbar = ({ isLegalPage = false }) => {
   const navLinks = [
     { name: t('landing.navbar.features'), href: '#features' },
     { name: t('landing.navbar.howItWorks'), href: '#how-it-works' },
-    { name: t('landing.navbar.testimonials'), href: '#testimonials' },
     { name: t('landing.navbar.pricing'), href: '#pricing' },
   ];
 

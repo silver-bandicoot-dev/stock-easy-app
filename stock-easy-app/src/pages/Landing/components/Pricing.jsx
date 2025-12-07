@@ -242,20 +242,20 @@ const Pricing = () => {
             <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
-            <span>{t('landing.pricing.benefits.quickSetup', 'Installation en 2 minutes')}</span>
+            <span>{t('landing.pricing.benefits.quickSetup')}</span>
           </div>
           <div className="flex items-center gap-2">
             <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
-            <span>{t('landing.pricing.benefits.supportIncluded', 'Support inclus')}</span>
+            <span>{t('landing.pricing.benefits.supportIncluded')}</span>
           </div>
           <div className="flex items-center gap-2">
             <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <circle cx="12" cy="12" r="10"/>
               <path d="M8 12l2 2 4-4" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
-            <span>{t('landing.pricing.benefits.cancelAnytime', 'Annulation à tout moment')}</span>
+            <span>{t('landing.pricing.benefits.cancelAnytime')}</span>
           </div>
         </motion.div>
       </div>

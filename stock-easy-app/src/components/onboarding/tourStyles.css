@@ -52,9 +52,20 @@
   border-top: 1px solid #E5E4DF !important;
   border-radius: 0 0 12px 12px !important;
   display: flex !important;
+  flex-direction: row !important;
+  flex-wrap: nowrap !important;
   justify-content: space-between !important;
   align-items: center !important;
   gap: 8px !important;
+}
+
+/* Forcer l'alignement horizontal des boutons - règles très spécifiques */
+.driver-popover-footer .driver-popover-btn,
+.driver-popover-footer button {
+  display: inline-flex !important;
+  flex-direction: row !important;
+  flex-shrink: 0 !important;
+  white-space: nowrap !important;
 }
 
 /* Boutons génériques */
@@ -66,6 +77,7 @@
   padding: 8px 16px !important;
   cursor: pointer !important;
   transition: all 0.2s ease !important;
+  margin: 0 !important;
 }
 
 /* Bouton Précédent */
@@ -118,11 +130,17 @@
   border-radius: 6px !important;
   cursor: pointer !important;
   transition: all 0.2s ease !important;
+  z-index: 100001 !important;
+  pointer-events: auto !important;
 }
 
 .driver-popover-close-btn:hover {
   background-color: #E5E4DF !important;
   color: #191919 !important;
+}
+
+.driver-popover-close-btn:active {
+  transform: scale(0.95) !important;
 }
 
 /* Indicateur de progression */

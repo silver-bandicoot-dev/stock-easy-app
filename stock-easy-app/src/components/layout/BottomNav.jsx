@@ -160,7 +160,8 @@ export const BottomNavMoreMenu = ({
       icon: TrendingUp,
       subItems: [
         { id: 'kpis', label: 'KPIs' },
-        { id: 'forecast', label: 'Prévisions IA' }
+        { id: 'forecast', label: 'Prévisions IA' },
+        { id: 'mlHealth', label: 'Santé ML' }
       ]
     },
     { 

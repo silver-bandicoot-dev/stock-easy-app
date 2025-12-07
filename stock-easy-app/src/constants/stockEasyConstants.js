@@ -113,7 +113,8 @@ export const SETTINGS_TABS = {
 // Sous-onglets Analytics
 export const ANALYTICS_TABS = {
   KPIS: 'kpis',
-  FORECAST: 'forecast'
+  FORECAST: 'forecast',
+  ML_HEALTH: 'mlHealth'
 };
 
 

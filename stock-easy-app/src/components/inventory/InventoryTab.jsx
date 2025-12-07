@@ -425,24 +425,14 @@ export const InventoryTab = ({ products = [], suppliers = [], loadData }) => {
           <table className="w-full">
             <thead>
               <tr className="bg-[#FAFAF7] border-b border-[#E5E4DF]">
-                {/* Image + Nom du produit en premier */}
+                {/* Image + Nom du produit + SKU combinés */}
                 <th 
                   className="px-4 py-3 text-left text-xs font-semibold text-[#666663] uppercase tracking-wider cursor-pointer hover:bg-[#E5E4DF]/50 transition-colors"
                   onClick={() => handleSort('name')}
                 >
                   <div className="flex items-center gap-1.5">
-                    {t('inventory.columns.productName')}
+                    {t('inventory.columns.product')}
                     <SortIcon columnKey="name" />
-                  </div>
-                </th>
-                {/* SKU ensuite */}
-                <th 
-                  className="px-4 py-3 text-left text-xs font-semibold text-[#666663] uppercase tracking-wider cursor-pointer hover:bg-[#E5E4DF]/50 transition-colors"
-                  onClick={() => handleSort('sku')}
-                >
-                  <div className="flex items-center gap-1.5">
-                    {t('inventory.columns.sku')}
-                    <SortIcon columnKey="sku" />
                   </div>
                 </th>
                 <th 
@@ -492,7 +482,7 @@ export const InventoryTab = ({ products = [], suppliers = [], loadData }) => {
             <tbody className="divide-y divide-[#E5E4DF]">
               {filteredProducts.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="px-4 py-12 text-center">
+                  <td colSpan={7} className="px-4 py-12 text-center">
                     <div className="flex flex-col items-center gap-2">
                       <Package className="w-12 h-12 text-[#E5E4DF]" />
                       <p className="text-[#666663]">{t('inventory.noProductsFound')}</p>
@@ -521,7 +511,7 @@ export const InventoryTab = ({ products = [], suppliers = [], loadData }) => {
                       key={product.sku || index}
                       className={`hover:bg-[#FAFAF7] transition-colors ${isOutOfStock ? 'bg-red-50/30' : ''}`}
                     >
-                      {/* Image + Nom du produit en premier */}
+                      {/* Image + Nom du produit + SKU combinés */}
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-3">
                           {product.imageUrl || product.sku ? (
@@ -536,16 +526,15 @@ export const InventoryTab = ({ products = [], suppliers = [], loadData }) => {
                               <Package className="w-5 h-5 text-[#666663]" />
                             </div>
                           )}
-                          <span className="text-sm text-[#191919] line-clamp-2 font-medium">
-                            {product.name || '-'}
-                          </span>
+                          <div className="min-w-0 flex-1">
+                            <span className="text-sm text-[#191919] line-clamp-2 font-medium block">
+                              {product.name || '-'}
+                            </span>
+                            <span className="font-mono text-xs text-[#666663] mt-0.5 block">
+                              {product.sku || '-'}
+                            </span>
+                          </div>
                         </div>
-                      </td>
-                      {/* SKU ensuite */}
-                      <td className="px-4 py-3">
-                        <span className="font-mono text-sm text-[#666663]">
-                          {product.sku || '-'}
-                        </span>
                       </td>
                       <td className="px-4 py-3">
                         <span className="text-sm text-[#666663]">
@@ -588,7 +577,7 @@ export const InventoryTab = ({ products = [], suppliers = [], loadData }) => {
             {filteredProducts.length > 0 && (
               <tfoot>
                 <tr className="bg-[#FAFAF7] border-t-2 border-[#E5E4DF]">
-                  <td className="px-4 py-3 font-semibold text-[#191919]" colSpan={3}>
+                  <td className="px-4 py-3 font-semibold text-[#191919]" colSpan={2}>
                     {t('inventory.total')} ({filteredProducts.length} {t('inventory.products')})
                   </td>
                   <td className="px-4 py-3 text-right font-semibold text-[#191919]">

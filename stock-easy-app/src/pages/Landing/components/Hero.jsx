@@ -1,15 +1,9 @@
 import { motion } from 'framer-motion';
-import { ArrowRight, Package, TrendingUp, Zap, Check } from 'lucide-react';
+import { ArrowRight, Package, TrendingUp, Zap, Check, ShoppingCart } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 const Hero = () => {
   const { t } = useTranslation();
-
-  const stats = [
-    { value: '40%', label: t('landing.hero.stats.reduction') },
-    { value: '3h', label: t('landing.hero.stats.timeSaved') },
-    // { value: '500+', label: t('landing.hero.stats.activeMerchants') }, - Temporairement retiré, sera réintégré plus tard
-  ];
 
   return (
     <section className="relative min-h-screen flex items-center pt-24 pb-16">
@@ -35,13 +29,12 @@ const Hero = () => {
               </span>
             </motion.div>
 
-            {/* Headline */}
+            {/* Headline - Orienté bénéfice, pas feature */}
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-semibold leading-tight">
-              {t('landing.hero.title')}{' '}
-              <span className="text-[#191919]">{t('landing.hero.titleHighlight')}</span>
+              {t('landing.hero.title')}
             </h1>
 
-            {/* Subheadline */}
+            {/* Subheadline - Développer la proposition de valeur */}
             <p className="text-lg text-[#191919]/60 leading-relaxed max-w-md">
               {t('landing.hero.subtitle')}
             </p>
@@ -67,6 +60,18 @@ const Hero = () => {
               <a href="#how-it-works" className="btn-secondary text-base px-6 py-3">
                 {t('landing.hero.demo')}
               </a>
+            </div>
+
+            {/* Trust indicators sous le CTA */}
+            <div className="flex flex-wrap items-center gap-4 pt-2 text-sm text-[#191919]/60">
+              <div className="flex items-center gap-1.5">
+                <Check size={16} className="text-[#10B981]" />
+                <span>{t('landing.hero.trustIndicators.freeTrial')}</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <Check size={16} className="text-[#10B981]" />
+                <span>{t('landing.hero.trustIndicators.quickSetup')}</span>
+              </div>
             </div>
 
             {/* Trust indicators - Temporairement caché, sera réintégré plus tard */}
@@ -175,23 +180,6 @@ const Hero = () => {
             </motion.div>
           </motion.div>
         </div>
-
-        {/* Stats Bar */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.4 }}
-          className="grid grid-cols-2 gap-8 mt-12 pt-8 border-t border-[#E5E4DF]"
-        >
-          {stats.map((stat) => (
-            <div key={stat.label} className="text-center">
-              <div className="text-3xl md:text-4xl font-semibold text-[#191919] stat-number">
-                {stat.value}
-              </div>
-              <div className="text-sm text-[#191919]/50 mt-1">{stat.label}</div>
-            </div>
-          ))}
-        </motion.div>
       </div>
     </section>
   );

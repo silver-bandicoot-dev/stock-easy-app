@@ -15,6 +15,8 @@ import { calculateTotalPotentialRevenueML } from '../../services/ml/revenueForec
 import { DemandForecastModel } from '../../services/ml/demandForecastModel';
 import { ANALYTICS_TABS } from '../../constants/stockEasyConstants';
 import AIMainDashboard from '../ml/AIMainDashboard';
+import { MLHealthDashboard } from '../ml/MLHealthDashboard';
+import { ForecastSummary } from '../forecast/ForecastSummary';
 import { getSalesHistory } from '../../utils/salesHistoryGenerator';
 
 export const AnalyticsTab = ({
@@ -592,12 +594,13 @@ export const AnalyticsTab = ({
       <div className="flex items-center gap-2 overflow-x-auto pb-1">
         {[
           { id: ANALYTICS_TABS.KPIS, label: t('analytics.tabs.kpis'), icon: TrendingUp },
-          { id: ANALYTICS_TABS.FORECAST, label: t('analytics.tabs.forecast'), icon: Brain }
+          { id: ANALYTICS_TABS.FORECAST, label: t('analytics.tabs.forecast'), icon: Brain },
+          { id: ANALYTICS_TABS.ML_HEALTH, label: t('analytics.tabs.mlHealth'), icon: Activity }
         ].map(tab => {
           const Icon = tab.icon;
           const handleTabClick = (e) => {
             e.preventDefault();
-            e.stopPropagation();
+            // Ne pas utiliser stopPropagation pour permettre la navigation normale
             if (setAnalyticsSubTab && typeof setAnalyticsSubTab === 'function') {
               setAnalyticsSubTab(tab.id);
             }
@@ -642,105 +645,63 @@ export const AnalyticsTab = ({
       )}
 
       {/* Contenu des sous-onglets */}
-      {analyticsSubTab === ANALYTICS_TABS.FORECAST ? (
+      {analyticsSubTab === ANALYTICS_TABS.ML_HEALTH ? (
+        <MLHealthDashboard />
+      ) : analyticsSubTab === ANALYTICS_TABS.FORECAST ? (
         <div className="space-y-6">
-          {/* Sélecteur de produit - Style compact */}
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 p-3 bg-[#F6F6F7] rounded-lg">
-            <div className="flex-1 relative">
-              <select
-                value={selectedProductForForecast?.sku || ''}
-                onChange={async (e) => {
-                  const product = products.find(p => p.sku === e.target.value);
-                  setSelectedProductForForecast(product || null);
-                  
-                  // Charger l'historique depuis Supabase quand un produit est sélectionné
-                  if (product) {
-                    setLoadingSalesHistory(true);
-                    try {
-                      const history = await getSalesHistory(product, orders, 90);
-                      setSalesHistoryForForecast(history);
-                    } catch (error) {
-                      console.error('❌ Erreur chargement historique:', error);
-                      setSalesHistoryForForecast([]);
-                    } finally {
-                      setLoadingSalesHistory(false);
-                    }
-                  } else {
-                    setSalesHistoryForForecast([]);
-                  }
-                }}
-                className="w-full px-4 py-2.5 bg-white border border-[#E1E3E5] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#191919] focus:border-transparent appearance-none cursor-pointer"
-              >
-                <option value="">{t('analytics.forecast.selectProduct')}</option>
-                {/* Groupe 1: Produits avec historique de ventes (triés par ventes décroissantes) */}
-                {products.filter(p => (p.salesPerDay || 0) > 0).length > 0 && (
-                  <optgroup label={t('analytics.forecast.productsWithHistory')}>
-                    {products
-                      .filter(p => (p.salesPerDay || 0) > 0)
-                      .sort((a, b) => (b.salesPerDay || 0) - (a.salesPerDay || 0))
-                      .map(product => (
-                        <option key={product.sku} value={product.sku}>
-                          {product.name} ({product.sku}) - {(product.salesPerDay || 0).toFixed(1)} {t('analytics.forecast.salesPerDay')}
-                        </option>
-                      ))}
-                  </optgroup>
-                )}
-                {/* Groupe 2: Produits sans historique (triés par nom) */}
-                {products.filter(p => (p.salesPerDay || 0) === 0 && (p.stock || 0) > 0).length > 0 && (
-                  <optgroup label={t('analytics.forecast.productsInStock')}>
-                    {products
-                      .filter(p => (p.salesPerDay || 0) === 0 && (p.stock || 0) > 0)
-                      .sort((a, b) => (a.name || '').localeCompare(b.name || ''))
-                      .slice(0, 50) // Limiter à 50 pour performance
-                      .map(product => (
-                        <option key={product.sku} value={product.sku}>
-                          {product.name} ({product.sku}) - {t('analytics.forecast.stock')}: {product.stock || 0}
-                        </option>
-                      ))}
-                  </optgroup>
-                )}
-              </select>
-              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#6B7177] pointer-events-none" />
-            </div>
-            {selectedProductForForecast && (
-              <span className="text-sm text-[#6B7177] whitespace-nowrap">
-                {products.filter(p => (p.salesPerDay || 0) > 0).length} {t('analytics.forecast.withHistory')} / {products.length} {t('analytics.forecast.total')}
-              </span>
-            )}
-          </div>
-
-          {/* Dashboard de prévisions */}
+          {/* Vue détaillée d'un produit sélectionné */}
           {selectedProductForForecast ? (
-            loadingSalesHistory ? (
-              <div className="bg-white rounded-lg border border-[#E1E3E5] p-12 text-center">
-                <RefreshCw className="w-12 h-12 mx-auto text-[#6B7177] mb-4 animate-spin" />
-                <h3 className="text-lg font-medium text-[#191919] mb-2">
-                  {t('analytics.forecast.loadingHistory')}
-                </h3>
-                <p className="text-sm text-[#6B7177]">
-                  {t('analytics.forecast.loadingHistoryDesc')}
-                </p>
-              </div>
-            ) : (
-              <AIMainDashboard
-                product={selectedProductForForecast}
-                salesHistory={salesHistoryForForecast}
-                currentStock={selectedProductForForecast.stock || 0}
-                reorderPoint={selectedProductForForecast.reorderPoint || 0}
-              />
-            )
+            <>
+              {/* Bouton retour au récapitulatif */}
+              <button
+                onClick={() => {
+                  setSelectedProductForForecast(null);
+                  setSalesHistoryForForecast([]);
+                }}
+                className="inline-flex items-center gap-2 px-4 py-2 text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"
+              >
+                <ChevronDown className="w-4 h-4 rotate-90" />
+                {t('analytics.forecast.summary.backToSummary')}
+              </button>
+              
+              {loadingSalesHistory ? (
+                <div className="bg-white rounded-lg border border-[#E1E3E5] p-12 text-center">
+                  <RefreshCw className="w-12 h-12 mx-auto text-[#6B7177] mb-4 animate-spin" />
+                  <h3 className="text-lg font-medium text-[#191919] mb-2">
+                    {t('analytics.forecast.loadingHistory')}
+                  </h3>
+                  <p className="text-sm text-[#6B7177]">
+                    {t('analytics.forecast.loadingHistoryDesc')}
+                  </p>
+                </div>
+              ) : (
+                <AIMainDashboard
+                  product={selectedProductForForecast}
+                  salesHistory={salesHistoryForForecast}
+                  currentStock={selectedProductForForecast.stock || 0}
+                  reorderPoint={selectedProductForForecast.reorderPoint || 0}
+                />
+              )}
+            </>
           ) : (
-            <div className="bg-white rounded-lg border border-[#E1E3E5] p-12 text-center">
-              <div className="w-16 h-16 mx-auto mb-4 bg-[#F6F6F7] rounded-full flex items-center justify-center">
-                <Brain className="w-8 h-8 text-[#6B7177]" />
-              </div>
-              <h3 className="text-lg font-medium text-[#191919] mb-2">
-                {t('analytics.forecast.selectProductTitle')}
-              </h3>
-              <p className="text-sm text-[#6B7177] max-w-md mx-auto">
-                {t('analytics.forecast.selectProductDesc')}
-              </p>
-            </div>
+            /* Vue récapitulative de tous les produits */
+            <ForecastSummary
+              products={products}
+              orders={orders}
+              onSelectProduct={async (product) => {
+                setSelectedProductForForecast(product);
+                setLoadingSalesHistory(true);
+                try {
+                  const history = await getSalesHistory(product, orders, 90);
+                  setSalesHistoryForForecast(history);
+                } catch (error) {
+                  console.error('❌ Erreur chargement historique:', error);
+                  setSalesHistoryForForecast([]);
+                } finally {
+                  setLoadingSalesHistory(false);
+                }
+              }}
+            />
           )}
         </div>
       ) : (
