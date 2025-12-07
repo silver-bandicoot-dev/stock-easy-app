@@ -545,8 +545,8 @@ export async function updateParameter(paramName, paramValue) {
     const expectedValue = String(paramValue);
     const { data: verificationRows, error: verificationError } = await supabase
       .from('parametres')
-      .select('nom_parametre, valeur, company_id, updated_at')
-      .eq('nom_parametre', paramName)
+      .select('param_name, value, company_id, updated_at')
+      .eq('param_name', paramName)
       .order('updated_at', { ascending: false })
       .limit(1);
 
@@ -556,7 +556,7 @@ export async function updateParameter(paramName, paramValue) {
     }
 
     const latestRow = verificationRows?.[0];
-    const matches = latestRow?.valeur === expectedValue;
+    const matches = latestRow?.value === expectedValue;
 
     if (!matches) {
       console.error('❌ La valeur vérifiée ne correspond pas à la valeur attendue', {
@@ -566,7 +566,7 @@ export async function updateParameter(paramName, paramValue) {
       });
       return {
         success: false,
-        error: `La valeur '${latestRow?.valeur ?? 'null'}' ne correspond pas à '${expectedValue}'`,
+        error: `La valeur '${latestRow?.value ?? 'null'}' ne correspond pas à '${expectedValue}'`,
         data,
         verification: latestRow
       };

@@ -479,6 +479,10 @@ const StockeasyUI = ({
                           handleResetParameters={parameterEditing.handleResetParameters}
                           isDirty={parameterEditing.isDirty}
                           isSavingParameters={parameterEditing.isSaving}
+                          // Handlers legacy pour sauvegarde directe dans Supabase
+                          onUpdateSeuilSurstock={parameterEditing.onUpdateSeuilSurstock}
+                          onUpdateDevise={parameterEditing.onUpdateDevise}
+                          onUpdateMultiplicateur={parameterEditing.onUpdateMultiplicateur}
                           products={enrichedProducts}
                           suppliers={suppliers}
                           warehouses={warehouses}

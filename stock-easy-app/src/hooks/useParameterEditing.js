@@ -43,9 +43,14 @@ export const useParameterEditing = (api, loadData, setParameters, setters) => {
 
   return {
     unsavedParameterChanges,
-    isSavingParameters,
+    isSaving: isSavingParameters,
+    isSavingParameters, // Legacy alias
+    isDirty: Object.keys(unsavedParameterChanges).length > 0,
     handleParameterChange,
+    handleInputChange: handleParameterChange, // Alias pour compatibilité avec SettingsTab
     saveAllParameters,
+    handleSaveParameters: saveAllParameters, // Alias pour compatibilité
+    handleResetParameters: () => setUnsavedParameterChanges({}), // Reset unsaved changes
     onUpdateSeuilSurstock,
     onUpdateDevise,
     onUpdateMultiplicateur

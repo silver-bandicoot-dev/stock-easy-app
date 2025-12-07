@@ -2035,7 +2035,7 @@
       "autonomy": "Autonomie",
       "daysRemaining": "jours restants",
       "salesPerDay": "Ventes/Jour",
-      "mlAdjusted": "ajustées ML",
+      "mlAdjusted": "historiques (moyenne 30j)",
       "rotation": "Rotation",
       "perYear": "par an"
     },
