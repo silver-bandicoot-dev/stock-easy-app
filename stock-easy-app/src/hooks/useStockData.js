@@ -152,6 +152,13 @@ export const useStockData = () => {
       // Transformer et appliquer les données
       const processed = processData(data);
       
+      // DEBUG: Vérifier si les commandes ont warehouseName
+      console.log('🏭 DEBUG commandes avec warehouse:', data.orders?.slice(0, 3)?.map(o => ({
+        id: o.id,
+        warehouseId: o.warehouseId,
+        warehouseName: o.warehouseName
+      })));
+      
       setSuppliers(processed.suppliersMap);
       setWarehouses(processed.warehousesMap);
       setProducts(processed.products);

@@ -242,3 +242,4 @@ Si un champ est calculé dans ces fonctions, il ne doit **JAMAIS** être modifi�
 
 
 
+

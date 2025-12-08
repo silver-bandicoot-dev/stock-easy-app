@@ -64,10 +64,13 @@ export async function getSalesHistory({ sku, startDate, endDate } = {}) {
 // Créer une commande
 export async function createOrder(orderData) {
   try {
+    // Support les deux noms de propriété pour l'entrepôt : warehouseId ou warehouse
+    const warehouseValue = orderData.warehouseId || orderData.warehouse || null;
+    
     const payload = {
-      p_order_id: orderData.id,
+      p_order_id: orderData.id || orderData.poNumber,
       p_supplier: orderData.supplier,
-      p_warehouse_id: orderData.warehouseId,
+      p_warehouse_id: warehouseValue,
       p_items: orderData.items.map(item => ({
         sku: item.sku,
         quantity: Number(item.quantity ?? 0),
