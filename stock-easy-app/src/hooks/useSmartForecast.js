@@ -198,8 +198,15 @@ export function useForecastAccuracy(salesHistory) {
 /**
  * Hook pour obtenir des recommandations basées sur les prévisions
  * Retourne des clés de traduction pour permettre l'internationalisation
+ * 
+ * @param {Object} forecast - Prévisions générées
+ * @param {number} currentStock - Stock actuel
+ * @param {number} reorderPoint - Point de commande
+ * @param {Object} options - Options supplémentaires
+ * @param {number} options.securityStock - Stock de sécurité du produit (en unités)
+ * @param {number} options.leadTimeDays - Délai de livraison en jours
  */
-export function useForecastRecommendations(forecast, currentStock, reorderPoint) {
+export function useForecastRecommendations(forecast, currentStock, reorderPoint, options = {}) {
   return useMemo(() => {
     if (!forecast || !forecast.predictions) {
       return null;
@@ -207,9 +214,22 @@ export function useForecastRecommendations(forecast, currentStock, reorderPoint)
 
     const recommendations = [];
     const { total, average, avgConfidence } = forecast;
-
+    
+    // Utiliser le securityStock du produit si fourni, sinon calculer avec la formule standard
+    // Formule cohérente avec le backend: salesPerDay × leadTime × 0.2
+    const leadTimeDays = options.leadTimeDays || 30; // Délai par défaut si non fourni
+    let safetyStock;
+    
+    if (options.securityStock !== undefined && options.securityStock > 0) {
+      // Utiliser le securityStock du produit (déjà en unités)
+      safetyStock = options.securityStock;
+    } else {
+      // Calculer avec la formule standard: average × leadTime × 0.2
+      // Où average est la moyenne des ventes prédites par jour
+      safetyStock = Math.ceil(average * leadTimeDays * 0.2);
+    }
+    
     // Recommandation 1: Stock de sécurité
-    const safetyStock = Math.ceil(average * 7); // 1 semaine de marge
     if (currentStock < safetyStock) {
       recommendations.push({
         type: 'safety_stock',
@@ -288,7 +308,7 @@ export function useForecastRecommendations(forecast, currentStock, reorderPoint)
     }
 
     return recommendations;
-  }, [forecast, currentStock, reorderPoint]);
+  }, [forecast, currentStock, reorderPoint, options]);
 }
 
 /**

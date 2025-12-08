@@ -122,7 +122,20 @@ const NotificationsPage = () => {
   };
 
   const formatDate = (dateString) => {
+    // Validation de la date
+    if (!dateString) {
+      console.warn('formatDate: dateString est null ou undefined');
+      return 'Date inconnue';
+    }
+
     const date = new Date(dateString);
+    
+    // Vérifier si la date est valide
+    if (isNaN(date.getTime())) {
+      console.error('formatDate: Date invalide reçue:', dateString);
+      return 'Date invalide';
+    }
+
     const now = new Date();
     const diffMs = now - date;
     const diffMins = Math.floor(diffMs / 60000);

@@ -14,19 +14,29 @@ import {
 /**
  * Calcule le stock de sécurité
  * @param {Object} product - Le produit
- * @returns {number} Stock de sécurité en unités
+ * @returns {number} Stock de sécurité en UNITÉS (cohérent avec backend et calculations.js)
  */
 export const calculateSecurityStock = (product) => {
-  // Utiliser le stock personnalisé si défini
+  // Utiliser le stock personnalisé si défini (déjà en unités)
   if (product.customSecurityStock !== undefined && 
       product.customSecurityStock !== null && 
       product.customSecurityStock > 0) {
     return roundToInteger(product.customSecurityStock);
   }
   
-  // Sinon, calculer : 20% du délai de livraison
+  // Sinon, calculer en UNITÉS : salesPerDay × (leadTime × 0.2)
+  // Cohérent avec le backend: stock_securite = CEIL(v_sales_per_day * v_lead_time * 0.2)
+  const salesPerDay = product.salesPerDay || product.adjustedSales || 0;
   const leadTime = product.leadTimeDays || product.leadTime || 30;
-  return Math.max(1, roundToInteger(multiplyWithPrecision(leadTime, 0.2, 0)));
+  
+  if (salesPerDay > 0) {
+    // Calculer en unités : salesPerDay × leadTime × 0.2
+    const securityStockDays = multiplyWithPrecision(leadTime, 0.2, 0); // Jours
+    return Math.max(1, roundToInteger(multiplyWithPrecision(salesPerDay, securityStockDays, 0)));
+  } else {
+    // Fallback : au moins 1 unité si pas de ventes
+    return Math.max(1, roundToInteger(multiplyWithPrecision(leadTime, 0.2, 0)));
+  }
 };
 
 /**
@@ -44,10 +54,11 @@ export const calculateReorderPoint = (product) => {
     return product.moq || 1;
   }
   
-  // Formule : (Ventes/jour × Délai) + (Ventes/jour × Stock sécurité)
+  // Formule cohérente avec le backend: (salesPerDay × leadTime) + securityStock
+  // Où securityStock est déjà en UNITÉS (cohérent avec calculations.js et backend)
   const reorderPoint = addWithPrecision(
     multiplyWithPrecision(salesPerDay, leadTime, 0),
-    multiplyWithPrecision(salesPerDay, securityStock, 0)
+    securityStock  // Déjà en unités, pas besoin de multiplier par salesPerDay
   );
   
   // S'assurer que le point de commande est au moins égal au MOQ
@@ -250,8 +261,8 @@ export const analyzeProductCalculation = (product) => {
     },
     
     formules: {
-      stockSecurite: '20% du délai de livraison',
-      pointCommande: '(Ventes/jour × Délai) + (Ventes/jour × Stock sécu)',
+      stockSecurite: 'salesPerDay × (leadTime × 0.2) en unités',
+      pointCommande: '(salesPerDay × leadTime) + securityStock',
       quantiteCommander: 'Point commande - Stock + Buffer, arrondi au MOQ'
     },
     

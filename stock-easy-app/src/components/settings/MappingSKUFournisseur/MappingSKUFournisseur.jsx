@@ -1,5 +1,6 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { toast } from 'sonner';
 import {
   Users,
   Package,
@@ -8,7 +9,8 @@ import {
   Search,
   PackagePlus,
   PackageMinus,
-  AlertCircle
+  AlertCircle,
+  Check
 } from 'lucide-react';
 import { Button } from '../../ui/Button';
 import { ImagePreview } from '../../ui/ImagePreview';
@@ -322,27 +324,102 @@ export function MappingSKUFournisseur({
     }
   };
 
+  // État pour suivre les MOQ en cours de sauvegarde et ceux sauvegardés avec succès
+  const [savingMoqSkus, setSavingMoqSkus] = useState(new Set());
+  const [savedMoqSkus, setSavedMoqSkus] = useState(new Set());
+  
+  // Ref pour stocker les timeouts de l'indicateur de succès MOQ (évite les memory leaks)
+  const moqSuccessTimeoutsRef = useRef(new Map());
+  
+  // Cleanup des timeouts au démontage du composant
+  useEffect(() => {
+    const timeoutsMap = moqSuccessTimeoutsRef.current;
+    return () => {
+      // Annuler tous les timeouts en cours lors du démontage
+      timeoutsMap.forEach((timeoutId) => clearTimeout(timeoutId));
+      timeoutsMap.clear();
+    };
+  }, []);
+
   const handleUpdateProductMoq = useCallback(async (product, rawValue) => {
     const parsed = Number(rawValue);
     const moq = Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+    
+    console.log('🔄 handleUpdateProductMoq appelé:', {
+      sku: product.sku,
+      rawValue,
+      parsedMoq: moq,
+      currentProductMoq: product.moq,
+      typeOfNewMoq: typeof moq,
+      typeOfCurrentMoq: typeof product.moq
+    });
+    
+    // Si la valeur n'a pas changé, ne rien faire (comparaison avec coercion de type)
+    const currentMoq = product.moq !== null && product.moq !== undefined ? Number(product.moq) : null;
+    if (moq === currentMoq) {
+      console.log('ℹ️ MOQ identique, pas de mise à jour nécessaire');
+      return;
+    }
+
+    // Marquer comme en cours de sauvegarde
+    setSavingMoqSkus(prev => new Set(prev).add(product.sku));
 
     try {
+      console.log('📤 Appel API updateProduct avec:', { sku: product.sku, moq, moq_source: 'manuel' });
+      
       const result = await supabaseApi.updateProduct(product.sku, {
         // Seul le MOQ est mis à jour, les autres champs restent inchangés côté SQL
         moq,
-        // Marquer que le MOQ est modifié manuellement par l'utilisateur
+        // ✅ Marquer que le MOQ est modifié manuellement par l'utilisateur
         moq_source: 'manuel'
       });
+
+      console.log('📥 Résultat API updateProduct:', result);
 
       if (!result.success) {
         throw new Error(result.error || 'Échec de la mise à jour du MOQ produit');
       }
 
-      console.log('✅ MOQ produit mis à jour manuellement', { sku: product.sku, moq, moq_source: 'manuel' });
+      console.log('✅ MOQ produit mis à jour manuellement', { sku: product.sku, moq });
+      
+      // Afficher un toast de succès
+      toast.success(t('settings.mapping.moqSaved', { sku: product.sku }), { duration: 2000 });
+      
+      // Marquer comme sauvegardé avec succès (pour l'icône verte)
+      setSavedMoqSkus(prev => new Set(prev).add(product.sku));
+      
+      // Annuler un éventuel timeout précédent pour ce SKU
+      const existingTimeout = moqSuccessTimeoutsRef.current.get(product.sku);
+      if (existingTimeout) {
+        clearTimeout(existingTimeout);
+      }
+      
+      // Retirer l'indicateur de succès après 3 secondes (avec cleanup)
+      const timeoutId = setTimeout(() => {
+        setSavedMoqSkus(prev => {
+          const next = new Set(prev);
+          next.delete(product.sku);
+          return next;
+        });
+        // Nettoyer la référence du timeout
+        moqSuccessTimeoutsRef.current.delete(product.sku);
+      }, 3000);
+      
+      // Stocker le timeout pour permettre le cleanup
+      moqSuccessTimeoutsRef.current.set(product.sku, timeoutId);
+      
     } catch (error) {
       console.error('❌ Erreur mise à jour MOQ produit:', error);
+      toast.error(t('settings.mapping.moqError', { sku: product.sku }));
+    } finally {
+      // Retirer du set des sauvegardes en cours
+      setSavingMoqSkus(prev => {
+        const next = new Set(prev);
+        next.delete(product.sku);
+        return next;
+      });
     }
-  }, []);
+  }, [t]);
 
   const handleBulkSyncMoqFromSupplier = useCallback(async () => {
     if (!selectedSupplier) return;
@@ -729,15 +806,32 @@ export function MappingSKUFournisseur({
                               <div className="text-xs text-neutral-500">
                                 {t('settings.mapping.productMoq')}
                               </div>
-                              <input
-                                type="number"
-                                min="1"
-                                defaultValue={product.moq ?? ''}
-                                onBlur={(event) =>
-                                  handleUpdateProductMoq(product, event.target.value)
-                                }
-                                className="w-20 px-2 py-1 border border-neutral-200 rounded text-right text-sm"
-                              />
+                              <div className="relative flex items-center gap-1">
+                                <input
+                                  type="number"
+                                  min="1"
+                                  defaultValue={product.moq ?? ''}
+                                  onBlur={(event) =>
+                                    handleUpdateProductMoq(product, event.target.value)
+                                  }
+                                  disabled={savingMoqSkus.has(product.sku)}
+                                  className={`w-20 px-2 py-1 border rounded text-right text-sm transition-colors ${
+                                    savingMoqSkus.has(product.sku) 
+                                      ? 'border-amber-300 bg-amber-50' 
+                                      : savedMoqSkus.has(product.sku)
+                                        ? 'border-emerald-400 bg-emerald-50'
+                                        : 'border-neutral-200'
+                                  }`}
+                                />
+                                {savingMoqSkus.has(product.sku) && (
+                                  <div className="absolute -right-5 animate-spin">
+                                    <div className="w-4 h-4 border-2 border-amber-500 border-t-transparent rounded-full" />
+                                  </div>
+                                )}
+                                {savedMoqSkus.has(product.sku) && !savingMoqSkus.has(product.sku) && (
+                                  <Check className="absolute -right-5 w-4 h-4 text-emerald-500" />
+                                )}
+                              </div>
                               <div className="text-[10px] text-neutral-400">
                                 {t('settings.mapping.source')} : {product.moqSource || t('settings.mapping.notDefined')}
                               </div>

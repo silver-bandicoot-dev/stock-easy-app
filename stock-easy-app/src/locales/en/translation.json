@@ -1135,7 +1135,9 @@
       "selectSupplier": "Select a supplier to start",
       "selectSupplierHelp": "Use the left column to choose a supplier and manage their catalog.",
       "pendingSummary": "Pending changes: {{added}} addition(s) · {{removed}} removal(s)",
-      "saveReminder": "Remember to save each modified supplier."
+      "saveReminder": "Remember to save each modified supplier.",
+      "moqSaved": "MOQ saved for {{sku}} ✓",
+      "moqError": "Error saving MOQ for {{sku}}"
     },
     "warehouses": {
       "title": "Warehouse Management",

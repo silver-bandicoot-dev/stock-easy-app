@@ -1133,7 +1133,9 @@
       "selectSupplier": "Selecciona un proveedor para comenzar",
       "selectSupplierHelp": "Usa la columna izquierda para elegir un proveedor y gestionar su catálogo.",
       "pendingSummary": "Cambios pendientes: {{added}} adición(es) · {{removed}} eliminación(es)",
-      "saveReminder": "Recuerda guardar cada proveedor modificado."
+      "saveReminder": "Recuerda guardar cada proveedor modificado.",
+      "moqSaved": "MOQ guardado para {{sku}} ✓",
+      "moqError": "Error al guardar MOQ para {{sku}}"
     },
     "warehouses": {
       "title": "Gestión de Almacenes",

@@ -58,7 +58,11 @@ export function ForecastDashboard({
   const recommendations = useForecastRecommendations(
     forecast,
     currentStock,
-    reorderPoint
+    reorderPoint,
+    {
+      securityStock: product?.securityStock,
+      leadTimeDays: product?.leadTimeDays || product?.leadTime
+    }
   );
 
   const dataQuality = useDataQuality(salesHistory);

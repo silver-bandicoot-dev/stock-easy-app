@@ -1102,7 +1102,9 @@
       "selectSupplier": "Sélectionnez un fournisseur pour commencer",
       "selectSupplierHelp": "Utilisez la colonne de gauche pour choisir un fournisseur et gérer son catalogue.",
       "pendingSummary": "Modifications en attente : {{added}} ajout(s) · {{removed}} retrait(s)",
-      "saveReminder": "Pensez à sauvegarder chaque fournisseur modifié."
+      "saveReminder": "Pensez à sauvegarder chaque fournisseur modifié.",
+      "moqSaved": "MOQ sauvegardé pour {{sku}} ✓",
+      "moqError": "Erreur lors de la sauvegarde du MOQ pour {{sku}}"
     },
     "warehouses": {
       "title": "Gestion Entrepôts",

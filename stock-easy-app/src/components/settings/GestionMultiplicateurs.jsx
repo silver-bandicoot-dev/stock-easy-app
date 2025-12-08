@@ -8,6 +8,7 @@ import api from '../../services/apiAdapter';
 import { multiplierOptimizer } from '../../services/ml/multiplierOptimizer';
 import { collectSalesHistory } from '../../services/ml/dataCollector';
 import { ImagePreview } from '../ui/ImagePreview';
+import { invalidateCache } from '../../services/cacheService';
 
 /**
  * Composant pour gérer les multiplicateurs de prévision de tous les produits
@@ -131,6 +132,10 @@ export function GestionMultiplicateurs({ products, loadData, multiplicateurDefau
       if (error) throw error;
 
       if (data.success) {
+        // ✅ Invalider le cache pour refléter les changements immédiatement
+        invalidateCache(['products', 'allData']);
+        console.log('🔄 Cache invalidé après mise à jour multiplicateurs en masse');
+        
         toast.success(t('settings.multipliers.messages.updateSuccess', { count: data.updated_count }));
         setSelectedSkus(new Set());
         setShowBulkActions(false);
@@ -162,6 +167,10 @@ export function GestionMultiplicateurs({ products, loadData, multiplicateurDefau
       if (error) throw error;
 
       if (data.success) {
+        // ✅ Invalider le cache pour refléter les changements immédiatement
+        invalidateCache(['products', 'allData']);
+        console.log('🔄 Cache invalidé après réinitialisation multiplicateurs en masse');
+        
         toast.success(t('settings.multipliers.messages.resetSuccess', { count: data.updated_count }));
         setSelectedSkus(new Set());
         setShowBulkActions(false);
@@ -316,6 +325,10 @@ export function GestionMultiplicateurs({ products, loadData, multiplicateurDefau
         }
 
         if (data && data.success) {
+          // ✅ Invalider le cache pour refléter les changements immédiatement
+          invalidateCache(['products', 'allData']);
+          console.log('🔄 Cache invalidé après application suggestions ML');
+          
           toast.success(t('settings.multipliers.messages.mlApplied', { count: data.updated_count }));
           setMlSuggestions(null);
           setShowMLModal(false);
@@ -357,6 +370,10 @@ export function GestionMultiplicateurs({ products, loadData, multiplicateurDefau
           }
 
           if (successCount > 0) {
+            // ✅ Invalider le cache pour refléter les changements immédiatement
+            invalidateCache(['products', 'allData']);
+            console.log('🔄 Cache invalidé après application ML individuelle');
+            
             toast.success(`${successCount} multiplicateur(s) ML appliqué(s)${errorCount > 0 ? `, ${errorCount} erreur(s)` : ''}`, {
               duration: 5000
             });

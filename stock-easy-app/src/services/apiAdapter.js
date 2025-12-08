@@ -268,6 +268,7 @@ const api = {
   recalculateAllInvestments: supabaseApi.recalculateAllInvestments,
   updateProductMultiplier: async (sku, multiplier) => {
     const { supabase } = await import('../lib/supabaseClient');
+    const { invalidateCache } = await import('./cacheService');
     try {
       const { data, error } = await supabase.rpc('update_product_multiplier', {
         p_sku: sku,
@@ -275,6 +276,11 @@ const api = {
       });
       
       if (error) throw error;
+      
+      // ✅ Invalider le cache pour refléter les changements immédiatement
+      invalidateCache(['products', 'allData']);
+      console.log('🔄 Cache invalidé après mise à jour multiplicateur');
+      
       return { success: true, data };
     } catch (error) {
       console.error('❌ Erreur mise à jour multiplicateur:', error);
@@ -283,12 +289,18 @@ const api = {
   },
   resetProductMultiplier: async (sku) => {
     const { supabase } = await import('../lib/supabaseClient');
+    const { invalidateCache } = await import('./cacheService');
     try {
       const { data, error } = await supabase.rpc('reset_product_multiplier_to_default', {
         p_sku: sku
       });
       
       if (error) throw error;
+      
+      // ✅ Invalider le cache pour refléter les changements immédiatement
+      invalidateCache(['products', 'allData']);
+      console.log('🔄 Cache invalidé après réinitialisation multiplicateur');
+      
       return { success: true, data };
     } catch (error) {
       console.error('❌ Erreur réinitialisation multiplicateur:', error);

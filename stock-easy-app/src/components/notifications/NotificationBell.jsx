@@ -141,7 +141,20 @@ const NotificationBell = ({ variant = 'floating' }) => {
 
   // Formater la date relative
   const formatRelativeTime = (dateString) => {
+    // Validation de la date
+    if (!dateString) {
+      console.warn('formatRelativeTime: dateString est null ou undefined');
+      return 'Date inconnue';
+    }
+
     const date = new Date(dateString);
+    
+    // Vérifier si la date est valide
+    if (isNaN(date.getTime())) {
+      console.error('formatRelativeTime: Date invalide reçue:', dateString);
+      return 'Date invalide';
+    }
+
     const now = new Date();
     const diffMs = now - date;
     const diffMins = Math.floor(diffMs / 60000);
