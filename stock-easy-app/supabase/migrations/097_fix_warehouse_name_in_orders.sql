@@ -110,3 +110,4 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 COMMENT ON FUNCTION public.get_all_data() IS 
   'Récupère les données (produits, fournisseurs...) et les commandes actives/récentes (90j) avec le nom de l''entrepôt';
 
+

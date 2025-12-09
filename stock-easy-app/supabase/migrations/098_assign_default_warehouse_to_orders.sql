@@ -53,3 +53,4 @@ BEGIN
   RAISE NOTICE 'Commandes sans entrepôt: %', v_total_null;
 END $$;
 
+
