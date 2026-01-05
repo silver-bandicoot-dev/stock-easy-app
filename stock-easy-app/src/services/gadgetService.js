@@ -63,7 +63,8 @@ export async function updateShopifyInventory(companyId, updates) {
         company_id: companyId,
         updates: updates.map(u => ({
           sku: u.sku,
-          stock_actuel: Math.floor(u.stock_actuel || u.newStock || 0)
+          // S'assurer que stock_actuel est >= 0 (validation Gadget requiert >= 0)
+          stock_actuel: Math.max(0, Math.floor(u.stock_actuel ?? u.newStock ?? 0))
         }))
       })
     });

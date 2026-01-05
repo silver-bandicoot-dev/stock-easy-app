@@ -215,7 +215,8 @@ export const confirmReconciliationWithQuantities = async (
           const skuLower = update.sku?.toLowerCase();
           const currentStock = freshStock[skuLower] ?? 0;
           // IMPORTANT: Le stock est DÉJÀ mis à jour dans Supabase, on l'envoie tel quel
-          const finalStock = currentStock; // Pas d'addition !
+          // S'assurer que le stock est >= 0 (validation Gadget)
+          const finalStock = Math.max(0, currentStock);
           
           console.log(`📦 ${update.sku}: stock final après MAJ locale = ${finalStock} (envoi à Shopify)`);
           
@@ -223,7 +224,7 @@ export const confirmReconciliationWithQuantities = async (
             sku: update.sku,
             stock_actuel: finalStock  // Stock déjà mis à jour dans Supabase
           };
-        }).filter(u => u.sku);
+        }).filter(u => u.sku && u.stock_actuel >= 0);
         
         if (shopifyUpdates.length > 0) {
           try {
@@ -388,7 +389,8 @@ export const handleReconciliationConfirm = async (
         const shopifyUpdates = stockUpdates.map(update => {
           const skuLower = update.sku?.toLowerCase();
           // IMPORTANT: Le stock est DÉJÀ mis à jour dans Supabase, on l'envoie tel quel
-          const finalStock = freshStock[skuLower] ?? 0;
+          // S'assurer que le stock est >= 0 (validation Gadget)
+          const finalStock = Math.max(0, freshStock[skuLower] ?? 0);
           
           console.log(`📦 ${update.sku}: stock final après MAJ locale = ${finalStock} (envoi à Shopify)`);
           
@@ -396,7 +398,7 @@ export const handleReconciliationConfirm = async (
             sku: update.sku,
             stock_actuel: finalStock  // PAS d'addition, le stock est déjà correct
           };
-        }).filter(u => u.sku && u.stock_actuel > 0);
+        }).filter(u => u.sku && u.stock_actuel >= 0);
         
         if (shopifyUpdates.length > 0) {
           try {
@@ -465,7 +467,8 @@ export const handleReconciliationConfirm = async (
           const skuLower = update.sku?.toLowerCase();
           const currentStock = freshStock[skuLower] ?? 0;
           // IMPORTANT: Le stock est DÉJÀ mis à jour dans Supabase, on l'envoie tel quel
-          const finalStock = currentStock; // Pas d'addition !
+          // S'assurer que le stock est >= 0 (validation Gadget)
+          const finalStock = Math.max(0, currentStock);
           
           console.log(`📦 ${update.sku}: stock final après MAJ locale = ${finalStock} (envoi à Shopify)`);
           
@@ -473,7 +476,7 @@ export const handleReconciliationConfirm = async (
             sku: update.sku,
             stock_actuel: finalStock
           };
-        }).filter(u => u.sku);
+        }).filter(u => u.sku && u.stock_actuel >= 0);
         
         if (shopifyUpdates.length > 0) {
           try {
@@ -666,7 +669,8 @@ export const submitUnifiedReconciliation = async (
       const shopifyUpdates = stockUpdates.map(update => {
         const skuLower = update.sku?.toLowerCase();
         // IMPORTANT: Le stock est DÉJÀ mis à jour dans Supabase, on l'envoie tel quel
-        const finalStock = freshStock[skuLower] ?? 0;
+        // S'assurer que le stock est >= 0 (validation Gadget)
+        const finalStock = Math.max(0, freshStock[skuLower] ?? 0);
         
         console.log(`📦 ${update.sku}: stock final après MAJ locale = ${finalStock} (envoi à Shopify)`);
         
@@ -674,7 +678,7 @@ export const submitUnifiedReconciliation = async (
           sku: update.sku,
           stock_actuel: finalStock
         };
-      }).filter(u => u.sku && u.stock_actuel > 0);
+      }).filter(u => u.sku && u.stock_actuel >= 0);
       
       if (shopifyUpdates.length > 0) {
         try {
@@ -771,7 +775,8 @@ export const submitDamageReport = async (
       const shopifyUpdates = stockUpdates.map(update => {
         const skuLower = update.sku?.toLowerCase();
         // IMPORTANT: Le stock est DÉJÀ mis à jour dans Supabase, on l'envoie tel quel
-        const finalStock = freshStock[skuLower] ?? 0;
+        // S'assurer que le stock est >= 0 (validation Gadget)
+        const finalStock = Math.max(0, freshStock[skuLower] ?? 0);
         
         console.log(`📦 ${update.sku}: stock final après MAJ locale = ${finalStock} (envoi à Shopify)`);
         
@@ -779,7 +784,7 @@ export const submitDamageReport = async (
           sku: update.sku,
           stock_actuel: finalStock
         };
-      }).filter(u => u.sku && u.stock_actuel > 0);
+      }).filter(u => u.sku && u.stock_actuel >= 0);
       
       if (shopifyUpdates.length > 0) {
         try {
@@ -923,7 +928,8 @@ export const confirmReconciliation = async (
           const skuLower = update.sku?.toLowerCase();
           const currentStock = freshStock[skuLower] ?? 0;
           // IMPORTANT: Le stock est DÉJÀ mis à jour dans Supabase, on l'envoie tel quel
-          const finalStock = currentStock; // Pas d'addition !
+          // S'assurer que le stock est >= 0 (validation Gadget)
+          const finalStock = Math.max(0, currentStock);
           
           console.log(`📦 ${update.sku}: stock final après MAJ locale = ${finalStock} (envoi à Shopify)`);
           
@@ -931,7 +937,7 @@ export const confirmReconciliation = async (
             sku: update.sku,
             stock_actuel: finalStock  // Stock déjà mis à jour dans Supabase
           };
-        }).filter(u => u.sku);
+        }).filter(u => u.sku && u.stock_actuel >= 0);
         
         if (shopifyUpdates.length > 0) {
           try {
