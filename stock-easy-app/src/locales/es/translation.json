@@ -1934,6 +1934,7 @@
       "poNumber": "N° PO",
       "date": "Fecha",
       "supplier": "Proveedor",
+      "eta": "Entrega",
       "warehouse": "Almacén",
       "total": "Total",
       "status": "Estado",
@@ -1954,6 +1955,15 @@
       "validateReceipt": "Validar recepción",
       "startReconciliation": "Iniciar conciliación",
       "confirmReconciliation": "Confirmar conciliación"
+    },
+    "eta": {
+      "pendingConfirmation": "Pendiente",
+      "today": "Hoy",
+      "inDays": "en {{count}}d",
+      "late": "{{count}}d retraso",
+      "onTime": "A tiempo",
+      "deliveredEarly": "+{{count}}d adelanto",
+      "deliveredLate": "-{{count}}d retraso"
     },
     "empty": {
       "title": "Sin pedidos",
@@ -2000,6 +2010,9 @@
     "estimatedDelivery": "Entrega Estimada",
     "timelineComments": "Timeline y Comentarios",
     "daysLate": "{{count}}d de retraso",
+    "deliveredLate": "Entregado con {{count}}d de retraso",
+    "deliveredOnTime": "Entregado a tiempo",
+    "deliveredEarly": "Entregado {{count}}d antes",
     "today": "Hoy",
     "tomorrow": "Mañana",
     "inDays": "en {{count}}d",

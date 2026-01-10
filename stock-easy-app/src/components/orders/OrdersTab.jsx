@@ -993,7 +993,7 @@ export const OrdersTab = ({
             <OrderDetailPanel
               order={selectedOrder}
               suppliers={suppliers}
-              products={products}
+              products={productsList}
               warehouses={warehouses}
               onClose={handleClosePanel}
               onConfirm={handleConfirmOrder}

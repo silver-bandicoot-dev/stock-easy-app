@@ -1936,6 +1936,7 @@
       "poNumber": "PO #",
       "date": "Date",
       "supplier": "Supplier",
+      "eta": "Delivery",
       "warehouse": "Warehouse",
       "total": "Total",
       "status": "Status",
@@ -1956,6 +1957,15 @@
       "validateReceipt": "Validate receipt",
       "startReconciliation": "Start reconciliation",
       "confirmReconciliation": "Confirm reconciliation"
+    },
+    "eta": {
+      "pendingConfirmation": "Pending",
+      "today": "Today",
+      "inDays": "in {{count}}d",
+      "late": "{{count}}d late",
+      "onTime": "On time",
+      "deliveredEarly": "+{{count}}d early",
+      "deliveredLate": "-{{count}}d late"
     },
     "empty": {
       "title": "No orders",
@@ -2002,6 +2012,9 @@
     "estimatedDelivery": "Estimated Delivery",
     "timelineComments": "Timeline & Comments",
     "daysLate": "{{count}}d late",
+    "deliveredLate": "Delivered {{count}}d late",
+    "deliveredOnTime": "Delivered on time",
+    "deliveredEarly": "Delivered {{count}}d early",
     "today": "Today",
     "tomorrow": "Tomorrow",
     "inDays": "in {{count}}d",

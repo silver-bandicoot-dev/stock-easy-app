@@ -46,3 +46,17 @@ echo -e "${GREEN}✅ Tous les tests des handlers sont terminés !${NC}"
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+

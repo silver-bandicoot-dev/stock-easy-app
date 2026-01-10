@@ -66,7 +66,18 @@ export const OrderDetailPanel = ({
     suppliers,
     order.supplier
   );
-  const etaInfo = formatETA(calculatedETA, true);
+  
+  // Pour les commandes complétées, utiliser la date de réception/complétion comme référence
+  // au lieu de la date actuelle pour le calcul du retard
+  const isOrderCompleted = order.status === 'completed';
+  const referenceDate = isOrderCompleted 
+    ? (order.receivedAt || order.completedAt || order.reconciliation_confirmed_at)
+    : null;
+  
+  const etaInfo = formatETA(calculatedETA, true, { 
+    referenceDate, 
+    isCompleted: isOrderCompleted 
+  });
 
   // Statut badges
   const getStatusBadge = (status) => {
@@ -333,26 +344,34 @@ export const OrderDetailPanel = ({
             
             <div className="divide-y divide-[#E5E4DF]">
               {order.items?.map((item, idx) => {
-                const product = products?.find(p => p.sku === item.sku);
+                // Recherche case-insensitive du produit pour trouver l'image et le nom
+                const product = products?.find(p => 
+                  p.sku?.toLowerCase() === item.sku?.toLowerCase()
+                );
                 const lineTotal = roundToTwoDecimals((item.quantity || 0) * (item.pricePerUnit || 0));
+                
+                // Déterminer l'image à afficher (produit trouvé ou item lui-même)
+                const imageUrl = product?.imageUrl || item.imageUrl || item.image_url;
+                // Déterminer le nom à afficher (produit trouvé, item, ou formatage du SKU)
+                const displayName = product?.name || item.name || item.productName || item.product_name;
                 
                 return (
                   <div key={idx} className="p-4 flex items-start gap-3">
-                    {product?.imageUrl ? (
+                    {imageUrl ? (
                       <ImagePreview
-                        src={product.imageUrl}
-                        alt={product?.name || item.sku}
+                        src={imageUrl}
+                        alt={displayName || item.sku}
                         thumbClassName="w-12 h-12 rounded-lg object-cover bg-[#E5E4DF] flex-shrink-0"
                       />
                     ) : (
                       <div className="w-12 h-12 rounded-lg bg-[#E5E4DF] flex items-center justify-center text-sm text-[#666663] flex-shrink-0">
-                        {(product?.name || item.sku || '?').charAt(0)}
+                        {(displayName || item.sku || '?').charAt(0).toUpperCase()}
                       </div>
                     )}
                     
                     <div className="flex-1 min-w-0">
                       <h4 className="font-medium text-[#191919] text-sm truncate">
-                        {product?.name || item.sku}
+                        {displayName || item.sku}
                       </h4>
                       <p className="text-xs text-[#666663]">SKU: {item.sku}</p>
                       
@@ -475,6 +494,7 @@ export const OrderDetailPanel = ({
               </div>
               <div className="flex items-center gap-2">
                 <span className={`text-lg font-bold ${
+                  etaInfo.isCompleted ? 'text-[#191919]' :
                   etaInfo.isPast ? 'text-red-600' :
                   etaInfo.isUrgent ? 'text-orange-600' :
                   'text-[#191919]'
@@ -483,14 +503,25 @@ export const OrderDetailPanel = ({
                 </span>
                 {etaInfo.daysRemaining !== null && (
                   <span className={`text-xs px-2 py-1 rounded-full font-medium ${
-                    etaInfo.isPast ? 'bg-red-100 text-red-700' :
-                    etaInfo.isUrgent ? 'bg-orange-100 text-orange-700' :
-                    'bg-blue-100 text-blue-700'
+                    etaInfo.isCompleted 
+                      ? (etaInfo.isPast ? 'bg-orange-100 text-orange-700' : 'bg-green-100 text-green-700')
+                      : (etaInfo.isPast ? 'bg-red-100 text-red-700' :
+                         etaInfo.isUrgent ? 'bg-orange-100 text-orange-700' :
+                         'bg-blue-100 text-blue-700')
                   }`}>
-                    {etaInfo.isPast ? t('orderDetail.daysLate', { count: Math.abs(etaInfo.daysRemaining) }) :
-                     etaInfo.daysRemaining === 0 ? t('orderDetail.today') :
-                     etaInfo.daysRemaining === 1 ? t('orderDetail.tomorrow') :
-                     t('orderDetail.inDays', { count: etaInfo.daysRemaining })}
+                    {etaInfo.isCompleted 
+                      ? (etaInfo.isPast 
+                          ? t('orderDetail.deliveredLate', { count: Math.abs(etaInfo.daysRemaining) })
+                          : etaInfo.daysRemaining === 0 
+                            ? t('orderDetail.deliveredOnTime')
+                            : t('orderDetail.deliveredEarly', { count: etaInfo.daysRemaining }))
+                      : (etaInfo.isPast 
+                          ? t('orderDetail.daysLate', { count: Math.abs(etaInfo.daysRemaining) })
+                          : etaInfo.daysRemaining === 0 
+                            ? t('orderDetail.today')
+                            : etaInfo.daysRemaining === 1 
+                              ? t('orderDetail.tomorrow')
+                              : t('orderDetail.inDays', { count: etaInfo.daysRemaining }))}
                   </span>
                 )}
               </div>

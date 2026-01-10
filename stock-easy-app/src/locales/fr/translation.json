@@ -1932,6 +1932,7 @@
       "poNumber": "N° PO",
       "date": "Date",
       "supplier": "Fournisseur",
+      "eta": "Livraison",
       "warehouse": "Entrepôt",
       "total": "Total",
       "status": "Statut",
@@ -1952,6 +1953,15 @@
       "validateReceipt": "Valider la réception",
       "startReconciliation": "Démarrer la réconciliation",
       "confirmReconciliation": "Confirmer la réconciliation"
+    },
+    "eta": {
+      "pendingConfirmation": "En attente",
+      "today": "Aujourd'hui",
+      "inDays": "dans {{count}}j",
+      "late": "{{count}}j retard",
+      "onTime": "À temps",
+      "deliveredEarly": "+{{count}}j avance",
+      "deliveredLate": "-{{count}}j retard"
     },
     "empty": {
       "title": "Aucune commande",
@@ -1998,6 +2008,9 @@
     "estimatedDelivery": "Livraison Estimée",
     "timelineComments": "Timeline & Commentaires",
     "daysLate": "{{count}}j de retard",
+    "deliveredLate": "Livré avec {{count}}j de retard",
+    "deliveredOnTime": "Livré à temps",
+    "deliveredEarly": "Livré {{count}}j en avance",
     "today": "Aujourd'hui",
     "tomorrow": "Demain",
     "inDays": "dans {{count}}j",

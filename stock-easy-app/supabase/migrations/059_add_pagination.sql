@@ -143,3 +143,17 @@ COMMENT ON FUNCTION public.get_orders_paginated IS 'Récupère les commandes ave
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+

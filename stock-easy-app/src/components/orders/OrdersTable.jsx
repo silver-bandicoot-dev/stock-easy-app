@@ -12,9 +12,12 @@ import {
   Truck,
   PackageCheck,
   FileCheck,
-  ClipboardCheck
+  ClipboardCheck,
+  Clock,
+  AlertTriangle,
+  CheckCircle2
 } from 'lucide-react';
-import { formatConfirmedDate } from '../../utils/dateUtils';
+import { formatConfirmedDate, formatETA, calculateETA } from '../../utils/dateUtils';
 import { ORDER_STATUS_COLORS } from '../../constants/stockEasyConstants';
 
 export const OrdersTable = ({
@@ -44,14 +47,107 @@ export const OrdersTable = ({
     { key: 'select', label: '', sortable: false, width: 'w-12' },
     { key: 'id', label: t('ordersTable.columns.poNumber'), sortable: true, width: 'w-32' },
     { key: 'createdAt', label: t('ordersTable.columns.date'), sortable: true, width: 'w-28' },
-    { key: 'supplier', label: t('ordersTable.columns.supplier'), sortable: true, width: 'flex-1' },
-    { key: 'warehouse', label: t('ordersTable.columns.warehouse'), sortable: false, width: 'w-32 hidden lg:table-cell' },
-    { key: 'total', label: t('ordersTable.columns.total'), sortable: true, width: 'w-28' },
+    { key: 'supplier', label: t('ordersTable.columns.supplier'), sortable: true, width: 'w-40' },
+    { key: 'eta', label: t('ordersTable.columns.eta', 'ETA'), sortable: true, width: 'w-44' },
+    { key: 'warehouse', label: t('ordersTable.columns.warehouse'), sortable: false, width: 'w-28 hidden lg:table-cell' },
+    { key: 'total', label: t('ordersTable.columns.total'), sortable: true, width: 'w-24' },
     { key: 'status', label: t('ordersTable.columns.status'), sortable: true, width: 'w-32' },
     { key: 'items', label: t('ordersTable.columns.items'), sortable: false, width: 'w-20 hidden md:table-cell' },
     { key: 'actions', label: t('ordersTable.columns.actions'), sortable: false, width: 'w-40' },
     { key: 'chevron', label: '', sortable: false, width: 'w-10' }
   ];
+
+  // Fonction pour obtenir le badge ETA avec couleur selon le statut
+  const getETABadge = (order) => {
+    // Utiliser order.eta en priorité, sinon calculer
+    // Cela garantit la cohérence avec OrderDetailPanel
+    const calculatedETA = order.eta || calculateETA(
+      order.confirmedAt || order.createdAt,
+      null,
+      suppliers,
+      order.supplier
+    );
+
+    if (!calculatedETA) {
+      return (
+        <span className="text-xs text-[#999999] italic">
+          {t('ordersTable.eta.pendingConfirmation', 'En attente')}
+        </span>
+      );
+    }
+
+    // Pour les commandes complétées, utiliser receivedAt comme référence
+    const isCompleted = order.status === 'completed';
+    const referenceDate = isCompleted ? order.receivedAt : null;
+    const etaInfo = formatETA(calculatedETA, true, { referenceDate, isCompleted });
+
+    if (!etaInfo) {
+      return (
+        <span className="text-xs text-[#999999] italic">
+          —
+        </span>
+      );
+    }
+
+    // Formatage court de la date avec année (ex: "25 déc. 2025")
+    const etaDate = new Date(calculatedETA);
+    const shortDate = etaDate.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' });
+
+    // Déterminer le style du badge selon le statut
+    let badgeClass, icon, statusText;
+
+    if (isCompleted) {
+      if (etaInfo.isPast) {
+        // Livré en retard
+        badgeClass = 'bg-red-50 text-red-700 border-red-200';
+        icon = <AlertTriangle className="w-3 h-3" />;
+        statusText = t('ordersTable.eta.deliveredLate', { count: Math.abs(etaInfo.daysRemaining) });
+      } else if (etaInfo.daysRemaining === 0) {
+        // Livré à temps
+        badgeClass = 'bg-green-50 text-green-700 border-green-200';
+        icon = <CheckCircle2 className="w-3 h-3" />;
+        statusText = t('ordersTable.eta.onTime', 'À temps');
+      } else {
+        // Livré en avance
+        badgeClass = 'bg-green-50 text-green-700 border-green-200';
+        icon = <CheckCircle2 className="w-3 h-3" />;
+        statusText = t('ordersTable.eta.deliveredEarly', { count: etaInfo.daysRemaining });
+      }
+    } else {
+      // Commande en cours
+      if (etaInfo.isPast) {
+        // En retard
+        badgeClass = 'bg-red-50 text-red-700 border-red-200';
+        icon = <AlertTriangle className="w-3 h-3" />;
+        statusText = t('ordersTable.eta.late', { count: Math.abs(etaInfo.daysRemaining) });
+      } else if (etaInfo.daysRemaining === 0) {
+        // Aujourd'hui
+        badgeClass = 'bg-amber-50 text-amber-700 border-amber-200';
+        icon = <Clock className="w-3 h-3" />;
+        statusText = t('ordersTable.eta.today', "Aujourd'hui");
+      } else if (etaInfo.daysRemaining <= 3) {
+        // Urgent (dans les 3 jours)
+        badgeClass = 'bg-amber-50 text-amber-700 border-amber-200';
+        icon = <Clock className="w-3 h-3" />;
+        statusText = t('ordersTable.eta.inDays', { count: etaInfo.daysRemaining });
+      } else {
+        // Normal
+        badgeClass = 'bg-blue-50 text-blue-700 border-blue-200';
+        icon = <Clock className="w-3 h-3" />;
+        statusText = t('ordersTable.eta.inDays', { count: etaInfo.daysRemaining });
+      }
+    }
+
+    return (
+      <div className="flex flex-col gap-0.5">
+        <span className="text-xs font-medium text-[#191919]">{shortDate}</span>
+        <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium border ${badgeClass}`}>
+          {icon}
+          <span>{statusText}</span>
+        </span>
+      </div>
+    );
+  };
 
   // Bouton d'action selon le statut
   const getActionButton = (order) => {
@@ -282,19 +378,24 @@ export const OrdersTable = ({
                 {/* Fournisseur */}
                 <td className="px-3 py-3">
                   {(!order.supplier || order.supplier === 'undefined' || order.supplier === '__unassigned__') ? (
-                    <span className="text-sm text-amber-600 font-medium truncate block max-w-[200px]">
+                    <span className="text-sm text-amber-600 font-medium truncate block max-w-[150px]">
                       {t('suppliers.unassigned', 'Fournisseur non assigné')}
                     </span>
                   ) : (
-                    <span className="text-sm text-[#191919] font-medium truncate block max-w-[200px]">
+                    <span className="text-sm text-[#191919] font-medium truncate block max-w-[150px]">
                       {order.supplier}
                     </span>
                   )}
                 </td>
 
+                {/* ETA */}
+                <td className="px-3 py-3">
+                  {getETABadge(order)}
+                </td>
+
                 {/* Entrepôt */}
                 <td className="px-3 py-3 hidden lg:table-cell">
-                  <span className="text-sm text-[#666663] truncate block max-w-[120px]">
+                  <span className="text-sm text-[#666663] truncate block max-w-[100px]">
                     {warehouseName}
                   </span>
                 </td>

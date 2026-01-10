@@ -135,9 +135,13 @@ export const calculateETA = (confirmedAt, leadTimeDays, suppliers = {}, supplier
  * Formate une date ETA pour l'affichage (avec indicateur d'urgence)
  * @param {string|null} eta - Date ETA au format ISO ou YYYY-MM-DD
  * @param {boolean} includeUrgency - Inclure l'indicateur d'urgence (jours restants)
- * @returns {Object|null} - { formatted: string, daysRemaining: number, isUrgent: boolean, isPast: boolean }
+ * @param {Object} options - Options supplémentaires
+ * @param {string|null} options.referenceDate - Date de référence pour calculer le retard (par défaut: aujourd'hui)
+ *                                              Pour les commandes complétées, utiliser receivedAt ou completedAt
+ * @param {boolean} options.isCompleted - Indique si la commande est complétée (change le mode d'affichage)
+ * @returns {Object|null} - { formatted: string, daysRemaining: number, isUrgent: boolean, isPast: boolean, isCompleted: boolean }
  */
-export const formatETA = (eta, includeUrgency = true) => {
+export const formatETA = (eta, includeUrgency = true, options = {}) => {
   if (!eta) return null;
   
   try {
@@ -155,25 +159,38 @@ export const formatETA = (eta, includeUrgency = true) => {
     });
     
     if (!includeUrgency) {
-      return { formatted, daysRemaining: null, isUrgent: false, isPast: false };
+      return { formatted, daysRemaining: null, isUrgent: false, isPast: false, isCompleted: false };
     }
     
-    // Calculer les jours restants
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    const { referenceDate, isCompleted } = options;
+    
+    // Utiliser la date de référence fournie ou aujourd'hui par défaut
+    let compareDate;
+    if (referenceDate) {
+      compareDate = new Date(referenceDate);
+      // Vérifier que la date de référence est valide
+      if (isNaN(compareDate.getTime())) {
+        compareDate = new Date();
+      }
+    } else {
+      compareDate = new Date();
+    }
+    
+    compareDate.setHours(0, 0, 0, 0);
     etaDate.setHours(0, 0, 0, 0);
     
-    const daysRemaining = Math.ceil((etaDate - today) / (1000 * 60 * 60 * 24));
+    const daysRemaining = Math.ceil((etaDate - compareDate) / (1000 * 60 * 60 * 24));
     
-    // Déterminer l'urgence
-    const isUrgent = daysRemaining <= 3 && daysRemaining >= 0;
+    // Déterminer l'urgence (seulement pour les commandes non complétées)
+    const isUrgent = !isCompleted && daysRemaining <= 3 && daysRemaining >= 0;
     const isPast = daysRemaining < 0;
     
     return {
       formatted,
       daysRemaining,
       isUrgent,
-      isPast
+      isPast,
+      isCompleted: !!isCompleted
     };
   } catch (error) {
     console.error('Erreur formatage ETA:', error);
