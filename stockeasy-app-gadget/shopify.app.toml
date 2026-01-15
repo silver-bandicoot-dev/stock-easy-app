@@ -19,6 +19,17 @@ compliance_topics = [ "customers/data_request", "customers/redact", "shop/redact
 uri = "https://stockeasy-app.gadget.app/api/webhooks/shopify"
 
 [[webhooks.subscriptions]]
+topics = [
+  "orders/create",
+  "orders/updated",
+  "products/create",
+  "products/update",
+  "inventory_levels/connect",
+  "inventory_levels/update"
+]
+uri = "https://stockeasy-app.gadget.app/api/webhooks/shopify"
+
+[[webhooks.subscriptions]]
 topics = [ "app_subscriptions/update" ]
 uri = "https://stockeasy-app.gadget.app/api/webhooks/app-subscription"
 
