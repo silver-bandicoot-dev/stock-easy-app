@@ -8,6 +8,9 @@ embedded = true
 [auth]
 redirect_urls = [ "https://stockeasy-app.gadget.app/api/connections/auth/shopify/callback" ]
 
+[access_scopes]
+scopes = "write_inventory,write_locations,write_orders,write_products,read_products,read_orders,read_inventory,read_locations"
+
 [webhooks]
 api_version = "2025-10"
 
