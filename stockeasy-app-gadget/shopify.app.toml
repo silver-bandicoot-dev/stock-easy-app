@@ -32,7 +32,3 @@ uri = "https://stockeasy-app.gadget.app/api/webhooks/shopify"
 [[webhooks.subscriptions]]
 topics = [ "app_subscriptions/update" ]
 uri = "https://stockeasy-app.gadget.app/api/webhooks/app-subscription"
-
-# App Home enabled - navigation handled via App Bridge ui-nav-menu component
-[app_home]
-enabled = true
