@@ -23,6 +23,10 @@ import { PlansPage } from "../routes/plans";
 import { useTranslations } from "../hooks/useTranslations";
 import "./App.css";
 
+// ============================================
+// Define ALL components BEFORE the router
+// ============================================
+
 function Error404() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -44,49 +48,40 @@ function Error404() {
   );
 }
 
-function App() {
-  const router = createBrowserRouter(
-    createRoutesFromElements(
-      <Route path="/" element={<Layout />}>
-        <Route index element={<SubscriptionGuard><DashboardPage /></SubscriptionGuard>} />
-        <Route path="unsynced" element={<SubscriptionGuard><UnsyncedPage /></SubscriptionGuard>} />
-        <Route path="plans" element={<SubscriptionGuard><PlansPage /></SubscriptionGuard>} />
-        <Route path="billing" element={<BillingPage />} />
-        <Route path="*" element={<Error404 />} />
-      </Route>
-    )
-  );
-
-  return <RouterProvider router={router} />;
-}
-
-function Layout() {
-  return (
-    <GadgetProvider
-      type={AppType.Embedded}
-      shopifyApiKey={window.gadgetConfig.apiKeys.shopify}
-      api={api}
-    >
-      <AuthenticatedApp />
-    </GadgetProvider>
-  );
-}
-
-function AuthenticatedApp() {
-  const { isAuthenticated, loading } = useGadget();
+function UnauthenticatedApp() {
   const { t } = useTranslations();
+  
+  return (
+    <Page>
+      <Card>
+        <Box padding="400">
+          <Text as="h1" variant="headingLg">
+            Stockeasy
+          </Text>
+          <Box paddingBlockStart="200">
+            <Text as="p" tone="subdued">
+              {t('openFromShopify')}
+            </Text>
+          </Box>
+        </Box>
+      </Card>
+    </Page>
+  );
+}
 
-  if (loading) {
-    return (
-      <Box padding="800">
-        <div style={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: "200px" }}>
-          <Spinner accessibilityLabel={t('loading')} size="large" />
-        </div>
-      </Box>
-    );
-  }
-
-  return isAuthenticated ? <EmbeddedApp /> : <UnauthenticatedApp />;
+function EmbeddedApp() {
+  const { t } = useTranslations();
+  
+  return (
+    <>
+      <ui-nav-menu>
+        <a href="/" rel="home">{t('home')}</a>
+        <a href="/unsynced">{t('productsToCheck')}</a>
+        <a href="/plans">{t('plans')}</a>
+      </ui-nav-menu>
+      <Outlet />
+    </>
+  );
 }
 
 /**
@@ -101,11 +96,14 @@ function SubscriptionGuard({ children }) {
   const { t } = useTranslations();
   
   // Check if we're in development mode - bypass billing entirely
-  const isDevelopment = window.location.hostname.includes("--development") ||
-                        window.location.hostname.includes("localhost") ||
-                        process.env.NODE_ENV === "development";
+  // Use useMemo-like pattern to keep this stable
+  const isDevelopment = typeof window !== 'undefined' && (
+    window.location.hostname.includes("--development") ||
+    window.location.hostname.includes("localhost") ||
+    process.env.NODE_ENV === "development"
+  );
   
-  // Get current shop's subscription status
+  // Get current shop's subscription status - ALWAYS call this hook
   const [{ data: shop, fetching }] = useFindFirst(api.shopifyShop, {
     select: {
       id: true,
@@ -166,40 +164,53 @@ function SubscriptionGuard({ children }) {
   return children;
 }
 
-function EmbeddedApp() {
+function AuthenticatedApp() {
+  const { isAuthenticated, loading } = useGadget();
   const { t } = useTranslations();
-  
+
+  if (loading) {
+    return (
+      <Box padding="800">
+        <div style={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: "200px" }}>
+          <Spinner accessibilityLabel={t('loading')} size="large" />
+        </div>
+      </Box>
+    );
+  }
+
+  return isAuthenticated ? <EmbeddedApp /> : <UnauthenticatedApp />;
+}
+
+function Layout() {
   return (
-    <>
-      <ui-nav-menu>
-        <a href="/" rel="home">{t('home')}</a>
-        <a href="/unsynced">{t('productsToCheck')}</a>
-        <a href="/plans">{t('plans')}</a>
-      </ui-nav-menu>
-      <Outlet />
-    </>
+    <GadgetProvider
+      type={AppType.Embedded}
+      shopifyApiKey={window.gadgetConfig.apiKeys.shopify}
+      api={api}
+    >
+      <AuthenticatedApp />
+    </GadgetProvider>
   );
 }
 
-function UnauthenticatedApp() {
-  const { t } = useTranslations();
-  
-  return (
-    <Page>
-      <Card>
-        <Box padding="400">
-          <Text as="h1" variant="headingLg">
-            Stockeasy
-          </Text>
-          <Box paddingBlockStart="200">
-            <Text as="p" tone="subdued">
-              {t('openFromShopify')}
-            </Text>
-          </Box>
-        </Box>
-      </Card>
-    </Page>
-  );
+// ============================================
+// Create router OUTSIDE of App component
+// This prevents recreation on every render (React #310 fix)
+// ============================================
+const router = createBrowserRouter(
+  createRoutesFromElements(
+    <Route path="/" element={<Layout />}>
+      <Route index element={<SubscriptionGuard><DashboardPage /></SubscriptionGuard>} />
+      <Route path="unsynced" element={<SubscriptionGuard><UnsyncedPage /></SubscriptionGuard>} />
+      <Route path="plans" element={<SubscriptionGuard><PlansPage /></SubscriptionGuard>} />
+      <Route path="billing" element={<BillingPage />} />
+      <Route path="*" element={<Error404 />} />
+    </Route>
+  )
+);
+
+function App() {
+  return <RouterProvider router={router} />;
 }
 
 export default App;

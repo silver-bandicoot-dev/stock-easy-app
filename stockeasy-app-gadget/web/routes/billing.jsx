@@ -17,6 +17,26 @@ import { useCallback, useState } from "react";
 import { api } from "../api";
 import { useTranslations } from "../hooks/useTranslations";
 
+// Feature item component - OUTSIDE of BillingPage to prevent recreation on each render
+const FeatureItem = ({ text }) => (
+  <div style={{ 
+    display: "flex", 
+    alignItems: "center", 
+    gap: "8px",
+    padding: "5px 0"
+  }}>
+    <div style={{ 
+      color: "#008060",
+      display: "flex",
+      alignItems: "center",
+      flexShrink: 0
+    }}>
+      <CheckCircleIcon width={16} height={16} />
+    </div>
+    <Text as="span" variant="bodySm">{text}</Text>
+  </div>
+);
+
 /**
  * Billing Page - Displays subscription plans and handles subscription management
  */
@@ -153,26 +173,6 @@ export function BillingPage() {
     t("billingFeatureAdvancedReports"),
     t("billingFeatureOneLocation"),
   ];
-
-  // Feature item component for clean rendering
-  const FeatureItem = ({ text }) => (
-    <div style={{ 
-      display: "flex", 
-      alignItems: "center", 
-      gap: "8px",
-      padding: "5px 0"
-    }}>
-      <div style={{ 
-        color: "#008060",
-        display: "flex",
-        alignItems: "center",
-        flexShrink: 0
-      }}>
-        <CheckCircleIcon width={16} height={16} />
-      </div>
-      <Text as="span" variant="bodySm">{text}</Text>
-    </div>
-  );
 
   // Handle dev mode skip
   const handleDevModeSkip = useCallback(() => {
