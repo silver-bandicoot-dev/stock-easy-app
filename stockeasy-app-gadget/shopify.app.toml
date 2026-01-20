@@ -2,14 +2,14 @@
 
 client_id = "17cb240cc35aedce49ed32a877805a83"
 name = "stockeasy-app"
-application_url = "https://stockeasy-app.gadget.app/api/shopify/install-or-render"
+application_url = "https://stockeasy-app.gadget.app/"
 embedded = true
+
+[access_scopes]
+scopes = "read_products,write_products,read_orders,read_inventory,write_inventory,read_locations,write_locations,write_orders"
 
 [auth]
 redirect_urls = [ "https://stockeasy-app.gadget.app/api/connections/auth/shopify/callback" ]
-
-[access_scopes]
-scopes = "write_inventory,write_locations,write_orders,write_products,read_products,read_orders,read_inventory,read_locations"
 
 [webhooks]
 api_version = "2025-10"
