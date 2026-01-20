@@ -95,31 +95,28 @@ export const run = async ({ params, logger, api }) => {
     if (!companyId) {
       logger.info('🏢 Creating new company...');
       
-      // Create company directly (simple insert)
-      const { data: newCompany, error: insertError } = await supabase
-        .from('companies')
-        .insert({
-          name: shop.name || shop.myshopifyDomain.replace('.myshopify.com', ''),
-          shopify_shop_id: shop.myshopifyDomain,
-          settings: {
-            owner_email: shop.email,
-            owner_name: shop.shopOwner,
-            source: 'shopify',
-            installed_at: new Date().toISOString(),
-            default_location_id: locationId,
-            default_location_name: location.name
-          }
-        })
-        .select('id')
-        .single();
+      // Use the RPC function to create company (consistent with other parts of the codebase)
+      const { data: newCompanyId, error: rpcError } = await supabase.rpc('create_shopify_company', {
+        p_shopify_shop_id: shop.myshopifyDomain,
+        p_shop_name: shop.name || shop.myshopifyDomain.replace('.myshopify.com', ''),
+        p_shop_domain: shop.domain || shop.myshopifyDomain,
+        p_owner_email: shop.email,
+        p_owner_first_name: shop.shopOwner?.split(' ')[0] || null,
+        p_owner_last_name: shop.shopOwner?.split(' ').slice(1).join(' ') || null
+      });
 
-      if (insertError) {
-        logger.error({ error: insertError }, '❌ Failed to create company');
-        return { success: false, message: `Database error: ${insertError.message}` };
+      if (rpcError) {
+        logger.error({ error: rpcError }, '❌ Failed to create company via RPC');
+        return { success: false, message: `Database error: ${rpcError.message}` };
       }
 
-      companyId = newCompany.id;
-      logger.info({ companyId }, '✅ Company created');
+      if (!newCompanyId) {
+        logger.error('❌ RPC returned no company ID');
+        return { success: false, message: 'Failed to create company - no ID returned' };
+      }
+
+      companyId = newCompanyId;
+      logger.info({ companyId }, '✅ Company created via RPC');
     }
 
     // Update shop with company ID and location ID
