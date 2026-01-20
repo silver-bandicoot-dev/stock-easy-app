@@ -7,16 +7,17 @@ export const run = async ({ params, logger, api, config, connections }) => {
   logger.info({ productId, shopId }, "Starting product sync to Supabase");
 
   // Load shop from Gadget with defaultLocationId
+  // IMPORTANT: Use myshopifyDomain (not domain) because companies are keyed by myshopifyDomain
   const shop = await api.shopifyShop.findOne(shopId, {
-    select: { domain: true, defaultLocationId: true }
+    select: { myshopifyDomain: true, defaultLocationId: true }
   });
 
   if (!shop) {
     throw new Error(`Shop not found with id: ${shopId}`);
   }
 
-  if (!shop.domain) {
-    throw new Error(`Shop ${shopId} is missing domain field`);
+  if (!shop.myshopifyDomain) {
+    throw new Error(`Shop ${shopId} is missing myshopifyDomain field`);
   }
 
   // Load product from Gadget
@@ -75,17 +76,18 @@ export const run = async ({ params, logger, api, config, connections }) => {
   );
 
   // Get company UUID from Supabase
+  // Use myshopifyDomain because that's what connectShopToCompany uses to create the company
   const { data: companyData, error: companyError } = await supabase.rpc(
     "get_company_by_shopify_shop_id",
-    { p_shopify_shop_id: shop.domain }
+    { p_shopify_shop_id: shop.myshopifyDomain }
   );
 
   if (companyError) {
-    throw new Error(`Failed to get company for shop ${shop.domain}: ${companyError.message}`);
+    throw new Error(`Failed to get company for shop ${shop.myshopifyDomain}: ${companyError.message}`);
   }
 
   if (!companyData) {
-    throw new Error(`No company found for Shopify shop: ${shop.domain}`);
+    throw new Error(`No company found for Shopify shop: ${shop.myshopifyDomain}`);
   }
 
   const companyId = companyData;

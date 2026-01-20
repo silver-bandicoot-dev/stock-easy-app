@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { translations } from '../locales';
 
 const SUPPORTED_LANGUAGES = ['fr', 'en', 'es'];
@@ -75,8 +75,9 @@ const detectLanguage = () => {
  * Interpolate variables in translation string
  * e.g., "{{count}} items" with {count: 5} => "5 items"
  */
-const interpolate = (str, vars = {}) => {
+const interpolate = (str, vars) => {
   if (!str || typeof str !== 'string') return str;
+  if (!vars || Object.keys(vars).length === 0) return str;
   
   return str.replace(/\{\{(\w+)\}\}/g, (match, key) => {
     return vars[key] !== undefined ? vars[key] : match;
@@ -85,6 +86,7 @@ const interpolate = (str, vars = {}) => {
 
 /**
  * Hook for translations in Stockeasy Shopify App
+ * Fixed to avoid React #310 error with useCallback dependencies
  */
 export const useTranslations = () => {
   const [language, setLanguage] = useState(() => {
@@ -101,14 +103,18 @@ export const useTranslations = () => {
     safeStorage.setItem(STORAGE_KEY, language);
   }, [language]);
 
-  // Get current translations
+  // Get current translations - use ref to avoid circular dependencies
   const currentTranslations = useMemo(() => {
     return translations[language] || translations[DEFAULT_LANGUAGE];
   }, [language]);
 
-  // Translation function
-  const t = useCallback((key, vars = {}) => {
-    const value = currentTranslations[key];
+  // Store translations in ref for stable access in callbacks
+  const translationsRef = useRef(currentTranslations);
+  translationsRef.current = currentTranslations;
+
+  // Translation function - stable reference using ref
+  const t = useCallback((key, vars) => {
+    const value = translationsRef.current[key];
     
     if (value === undefined) {
       console.warn(`Translation missing: ${key}`);
@@ -116,7 +122,7 @@ export const useTranslations = () => {
     }
     
     return interpolate(value, vars);
-  }, [currentTranslations]);
+  }, []); // No dependencies - uses ref for stable access
 
   // Change language
   const changeLanguage = useCallback((newLang) => {
@@ -125,17 +131,26 @@ export const useTranslations = () => {
     }
   }, []);
 
-  // Format time ago with translations
+  // Format time ago with translations - stable reference
   const formatTimeAgo = useCallback((date) => {
-    if (!date) return t('never');
+    const trans = translationsRef.current;
+    
+    if (!date) return trans.never || 'Never';
     
     const seconds = Math.floor((new Date() - new Date(date)) / 1000);
     
-    if (seconds < 60) return t('justNow');
-    if (seconds < 3600) return t('minutesAgo', { count: Math.floor(seconds / 60) });
-    if (seconds < 86400) return t('hoursAgo', { count: Math.floor(seconds / 3600) });
-    return t('daysAgo', { count: Math.floor(seconds / 86400) });
-  }, [t]);
+    if (seconds < 60) return trans.justNow || 'Just now';
+    if (seconds < 3600) {
+      const count = Math.floor(seconds / 60);
+      return interpolate(trans.minutesAgo, { count }) || `${count} min ago`;
+    }
+    if (seconds < 86400) {
+      const count = Math.floor(seconds / 3600);
+      return interpolate(trans.hoursAgo, { count }) || `${count}h ago`;
+    }
+    const count = Math.floor(seconds / 86400);
+    return interpolate(trans.daysAgo, { count }) || `${count} day(s) ago`;
+  }, []); // No dependencies - uses ref for stable access
 
   return {
     t,

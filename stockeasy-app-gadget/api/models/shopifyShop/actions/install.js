@@ -5,6 +5,13 @@ import { createShopifyUserAndCompany } from "../../../lib/supabase";
 export const run = async ({ params, record, logger, api, connections }) => {
   applyParams(params, record);
   await save(record);
+  
+  // Log environment check for debugging
+  logger.info({
+    hasSupabaseUrl: !!process.env.SUPABASE_URL,
+    hasSupabaseKey: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
+    supabaseUrlPrefix: process.env.SUPABASE_URL?.substring(0, 30) + '...'
+  }, '🔧 Environment variables check');
 };
 
 /** @type { ActionOnSuccess } */
@@ -59,9 +66,30 @@ export const onSuccess = async ({ params, record, logger, api, connections }) =>
   if (!companyId) {
     // Company doesn't exist yet - create it!
     try {
+      // ═══════════════════════════════════════════════════════════════════════════
+      // CRITICAL: Verify Supabase configuration before attempting to create company
+      // ═══════════════════════════════════════════════════════════════════════════
+      if (!process.env.SUPABASE_URL) {
+        const errorMsg = '❌ SUPABASE_URL is not configured in Gadget environment variables!';
+        logger.error({ shopId: record.id }, errorMsg);
+        throw new Error(errorMsg);
+      }
+      
+      if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
+        const errorMsg = '❌ SUPABASE_SERVICE_ROLE_KEY is not configured in Gadget environment variables!';
+        logger.error({ shopId: record.id }, errorMsg);
+        throw new Error(errorMsg);
+      }
+      
       // IMPORTANT: Use myshopifyDomain as the unique identifier (guaranteed to be unique)
       // This must match the lookup in syncOrderToSupabase and other sync actions
       const shopifyShopId = record.myshopifyDomain || record.domain;
+      
+      if (!shopifyShopId) {
+        const errorMsg = '❌ Shop has no myshopifyDomain or domain - cannot create company';
+        logger.error({ shopId: record.id, myshopifyDomain: record.myshopifyDomain, domain: record.domain }, errorMsg);
+        throw new Error(errorMsg);
+      }
       
       // Get shop owner email and name from Shopify
       const shopOwnerEmail = record.email || record.shopOwner || `${shopifyShopId.replace('.myshopify.com', '')}@shopify-placeholder.com`;
@@ -73,7 +101,8 @@ export const onSuccess = async ({ params, record, logger, api, connections }) =>
         domain: record.domain,
         shopifyShopIdUsed: shopifyShopId,
         email: shopOwnerEmail, 
-        name: shopOwnerName 
+        name: shopOwnerName,
+        supabaseUrl: process.env.SUPABASE_URL?.substring(0, 40) + '...'
       }, '🏢 Creating Supabase user and company for new shop installation');
 
       // Create user and company in Supabase
@@ -85,9 +114,13 @@ export const onSuccess = async ({ params, record, logger, api, connections }) =>
         shopOwnerName       // shopOwnerName
       );
       
+      if (!newCompanyId) {
+        throw new Error('createShopifyUserAndCompany returned no companyId');
+      }
+      
       companyId = newCompanyId;
       
-      logger.info({ userId, companyId }, '✅ User and company created in Supabase');
+      logger.info({ userId, companyId, shopifyShopId }, '✅ User and company created in Supabase');
 
       // Update the shop record with the new companyId
       await api.shopifyShop.update(record.id, {

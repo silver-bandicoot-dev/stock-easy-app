@@ -113,21 +113,32 @@ export const createShopifyUserAndCompany = async (shopifyShopId, shopOwnerEmail,
     throw new Error("shopOwnerEmail is required");
   }
 
+  console.log(`[createShopifyUserAndCompany] Starting for shop: ${shopifyShopId}, email: ${shopOwnerEmail}`);
+
   try {
     const supabase = getSupabaseClient();
+    console.log(`[createShopifyUserAndCompany] Supabase client created successfully`);
 
     // Check if company already exists
-    const { data: existingCompany } = await supabase
+    console.log(`[createShopifyUserAndCompany] Checking if company exists for: ${shopifyShopId}`);
+    const { data: existingCompany, error: checkError } = await supabase
       .from('companies')
       .select('id')
       .eq('shopify_shop_id', shopifyShopId)
-      .single();
+      .maybeSingle();
+
+    if (checkError) {
+      console.error(`[createShopifyUserAndCompany] Error checking existing company:`, checkError);
+      // Don't throw - continue to create
+    }
 
     if (existingCompany) {
+      console.log(`[createShopifyUserAndCompany] Company already exists: ${existingCompany.id}`);
       return { userId: null, companyId: existingCompany.id };
     }
 
     // 1. Create the Supabase Auth user using PostgreSQL function
+    console.log(`[createShopifyUserAndCompany] Creating auth user via RPC...`);
     const { data: userId, error: userError } = await supabase.rpc('create_auth_user_for_shopify', {
       p_email: shopOwnerEmail,
       p_shopify_shop_id: shopifyShopId,
@@ -136,13 +147,16 @@ export const createShopifyUserAndCompany = async (shopifyShopId, shopOwnerEmail,
     });
 
     if (userError) {
-      console.error('User creation error:', userError);
-      throw new Error(`Failed to create user: ${userError.message}`);
+      console.error('[createShopifyUserAndCompany] User creation RPC error:', JSON.stringify(userError, null, 2));
+      throw new Error(`Failed to create user via RPC create_auth_user_for_shopify: ${userError.message} (code: ${userError.code}, details: ${userError.details || 'none'})`);
     }
 
     if (!userId) {
-      throw new Error('User creation returned no user ID');
+      console.error('[createShopifyUserAndCompany] User creation returned no user ID');
+      throw new Error('RPC create_auth_user_for_shopify returned no user ID - function may not exist or returned null');
     }
+
+    console.log(`[createShopifyUserAndCompany] User created successfully: ${userId}`);
 
     // 2. Create the company with owner_id
     const extractedShopName = shopName || shopifyShopId.replace('.myshopify.com', '');
@@ -150,6 +164,7 @@ export const createShopifyUserAndCompany = async (shopifyShopId, shopOwnerEmail,
     const firstName = nameParts[0] || null;
     const lastName = nameParts.slice(1).join(' ') || null;
 
+    console.log(`[createShopifyUserAndCompany] Creating company via RPC...`);
     const { data: companyId, error: companyError } = await supabase.rpc('create_shopify_company', {
       p_shopify_shop_id: shopifyShopId,
       p_owner_id: userId,
@@ -162,12 +177,20 @@ export const createShopifyUserAndCompany = async (shopifyShopId, shopOwnerEmail,
     });
 
     if (companyError) {
-      console.error('Company creation error:', companyError);
-      throw new Error(`Failed to create company: ${companyError.message}`);
+      console.error('[createShopifyUserAndCompany] Company creation RPC error:', JSON.stringify(companyError, null, 2));
+      throw new Error(`Failed to create company via RPC create_shopify_company: ${companyError.message} (code: ${companyError.code}, details: ${companyError.details || 'none'})`);
     }
+
+    if (!companyId) {
+      console.error('[createShopifyUserAndCompany] Company creation returned no company ID');
+      throw new Error('RPC create_shopify_company returned no company ID - function may not exist or returned null');
+    }
+
+    console.log(`[createShopifyUserAndCompany] Company created successfully: ${companyId}`);
 
     return { userId, companyId };
   } catch (error) {
+    console.error(`[createShopifyUserAndCompany] FATAL ERROR:`, error);
     throw new Error(`Error creating Shopify user and company: ${error.message}`);
   }
 };
