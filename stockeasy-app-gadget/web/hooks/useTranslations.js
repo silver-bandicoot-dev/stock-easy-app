@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { translations } from '../locales';
 
 const SUPPORTED_LANGUAGES = ['fr', 'en', 'es'];
@@ -75,8 +75,9 @@ const interpolate = (str, vars) => {
 };
 
 /**
- * SIMPLIFIED Hook for translations - React 19 compatible
- * Removed useMemo and useRef to avoid React #310 error
+ * Hook for translations - React 19 compatible
+ * NO useCallback to avoid React #310 error
+ * Functions use closure to access currentTranslations
  */
 export const useTranslations = () => {
   const [language, setLanguage] = useState(detectLanguage);
@@ -86,13 +87,12 @@ export const useTranslations = () => {
     safeStorage.setItem(STORAGE_KEY, language);
   }, [language]);
 
-  // Get current translations directly (no memoization needed for this simple lookup)
+  // Get current translations directly
   const currentTranslations = translations[language] || translations[DEFAULT_LANGUAGE];
 
-  // Translation function - include language in deps to update when language changes
-  const t = useCallback((key, vars) => {
-    const trans = translations[language] || translations[DEFAULT_LANGUAGE];
-    const value = trans[key];
+  // Translation function - regular function, uses closure
+  const t = (key, vars) => {
+    const value = currentTranslations[key];
     
     if (value === undefined) {
       console.warn(`Translation missing: ${key}`);
@@ -100,35 +100,33 @@ export const useTranslations = () => {
     }
     
     return interpolate(value, vars);
-  }, [language]);
+  };
 
-  // Change language
-  const changeLanguage = useCallback((newLang) => {
+  // Change language - regular function
+  const changeLanguage = (newLang) => {
     if (SUPPORTED_LANGUAGES.includes(newLang)) {
       setLanguage(newLang);
     }
-  }, []);
+  };
 
-  // Format time ago
-  const formatTimeAgo = useCallback((date) => {
-    const trans = translations[language] || translations[DEFAULT_LANGUAGE];
-    
-    if (!date) return trans.never || 'Never';
+  // Format time ago - regular function
+  const formatTimeAgo = (date) => {
+    if (!date) return currentTranslations.never || 'Never';
     
     const seconds = Math.floor((new Date() - new Date(date)) / 1000);
     
-    if (seconds < 60) return trans.justNow || 'Just now';
+    if (seconds < 60) return currentTranslations.justNow || 'Just now';
     if (seconds < 3600) {
       const count = Math.floor(seconds / 60);
-      return interpolate(trans.minutesAgo, { count }) || `${count} min ago`;
+      return interpolate(currentTranslations.minutesAgo, { count }) || `${count} min ago`;
     }
     if (seconds < 86400) {
       const count = Math.floor(seconds / 3600);
-      return interpolate(trans.hoursAgo, { count }) || `${count}h ago`;
+      return interpolate(currentTranslations.hoursAgo, { count }) || `${count}h ago`;
     }
     const count = Math.floor(seconds / 86400);
-    return interpolate(trans.daysAgo, { count }) || `${count} day(s) ago`;
-  }, [language]);
+    return interpolate(currentTranslations.daysAgo, { count }) || `${count} day(s) ago`;
+  };
 
   return {
     t,
