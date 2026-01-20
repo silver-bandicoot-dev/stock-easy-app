@@ -48,29 +48,29 @@ function Error404() {
   );
 }
 
-function UnauthenticatedApp() {
-  const { t } = useTranslations();
-  
-  return (
-    <Page>
-      <Card>
-        <Box padding="400">
-          <Text as="h1" variant="headingLg">
-            Stockeasy
-          </Text>
-          <Box paddingBlockStart="200">
-            <Text as="p" tone="subdued">
-              {t('openFromShopify')}
-            </Text>
-          </Box>
-        </Box>
-      </Card>
-    </Page>
-  );
-}
-
 function EmbeddedApp() {
   const { t } = useTranslations();
+  const { isAuthenticated } = useGadget();
+  
+  // If not authenticated, show message but maintain same component structure
+  if (!isAuthenticated) {
+    return (
+      <Page>
+        <Card>
+          <Box padding="400">
+            <Text as="h1" variant="headingLg">
+              Stockeasy
+            </Text>
+            <Box paddingBlockStart="200">
+              <Text as="p" tone="subdued">
+                {t('openFromShopify')}
+              </Text>
+            </Box>
+          </Box>
+        </Card>
+      </Page>
+    );
+  }
   
   return (
     <>
@@ -133,9 +133,11 @@ function SubscriptionGuard({ children }) {
 }
 
 function AuthenticatedApp() {
-  const { isAuthenticated, loading } = useGadget();
+  const { loading } = useGadget();
   const { t } = useTranslations();
 
+  // CRITICAL FIX: Don't conditionally render different components
+  // Show loading overlay instead of replacing the component tree
   if (loading) {
     return (
       <Box padding="800">
@@ -146,7 +148,9 @@ function AuthenticatedApp() {
     );
   }
 
-  return isAuthenticated ? <EmbeddedApp /> : <UnauthenticatedApp />;
+  // When not loading, ALWAYS render EmbeddedApp to maintain consistent hook counts
+  // EmbeddedApp handles both authenticated and unauthenticated states internally
+  return <EmbeddedApp />;
 }
 
 function Layout() {
