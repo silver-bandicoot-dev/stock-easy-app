@@ -158,22 +158,14 @@ export const createShopifyUserAndCompany = async (shopifyShopId, shopOwnerEmail,
 
     console.log(`[createShopifyUserAndCompany] User created successfully: ${userId}`);
 
-    // 2. Create the company with owner_id
+    // 2. Create the company (RPC signature: p_shopify_shop_id, p_shop_name, p_shop_domain, p_access_token)
     const extractedShopName = shopName || shopifyShopId.replace('.myshopify.com', '');
-    const nameParts = shopOwnerName ? shopOwnerName.split(' ') : [];
-    const firstName = nameParts[0] || null;
-    const lastName = nameParts.slice(1).join(' ') || null;
 
     console.log(`[createShopifyUserAndCompany] Creating company via RPC...`);
     const { data: companyId, error: companyError } = await supabase.rpc('create_shopify_company', {
       p_shopify_shop_id: shopifyShopId,
-      p_owner_id: userId,
       p_shop_name: extractedShopName,
-      p_shop_domain: shopifyShopId,
-      p_access_token: null,
-      p_owner_email: shopOwnerEmail,
-      p_owner_first_name: firstName,
-      p_owner_last_name: lastName
+      p_shop_domain: shopifyShopId
     });
 
     if (companyError) {
@@ -187,6 +179,19 @@ export const createShopifyUserAndCompany = async (shopifyShopId, shopOwnerEmail,
     }
 
     console.log(`[createShopifyUserAndCompany] Company created successfully: ${companyId}`);
+
+    // 3. Update company with owner_id
+    const { error: updateError } = await supabase
+      .from('companies')
+      .update({ owner_id: userId })
+      .eq('id', companyId);
+
+    if (updateError) {
+      console.warn('[createShopifyUserAndCompany] Failed to set owner_id:', updateError.message);
+      // Non-fatal: company was created, owner_id is optional
+    } else {
+      console.log(`[createShopifyUserAndCompany] Set owner_id=${userId} on company ${companyId}`);
+    }
 
     return { userId, companyId };
   } catch (error) {

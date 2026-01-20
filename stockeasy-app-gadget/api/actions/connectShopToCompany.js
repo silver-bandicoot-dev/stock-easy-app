@@ -95,14 +95,11 @@ export const run = async ({ params, logger, api }) => {
     if (!companyId) {
       logger.info('🏢 Creating new company...');
       
-      // Use the RPC function to create company (consistent with other parts of the codebase)
+      // Use the RPC function to create company (signature: p_shopify_shop_id, p_shop_name, p_shop_domain, p_access_token)
       const { data: newCompanyId, error: rpcError } = await supabase.rpc('create_shopify_company', {
         p_shopify_shop_id: shop.myshopifyDomain,
         p_shop_name: shop.name || shop.myshopifyDomain.replace('.myshopify.com', ''),
-        p_shop_domain: shop.domain || shop.myshopifyDomain,
-        p_owner_email: shop.email,
-        p_owner_first_name: shop.shopOwner?.split(' ')[0] || null,
-        p_owner_last_name: shop.shopOwner?.split(' ').slice(1).join(' ') || null
+        p_shop_domain: shop.domain || shop.myshopifyDomain
       });
 
       if (rpcError) {
