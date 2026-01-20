@@ -20,11 +20,70 @@ import {
   AlertCircleIcon,
   LocationIcon
 } from '@shopify/polaris-icons';
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router";
 import { useTranslations } from "../hooks/useTranslations";
 import { LanguageSelector } from "../components/LanguageSelector";
 import { LocationSelector } from "../components/LocationSelector";
+
+// Extracted component to avoid IIFE in render (prevents React #310 error)
+const UnsyncedSummaryCard = ({ unsyncedItems, unsyncedCount, t, navigate }) => {
+  // Group items by reason for summary
+  const noSkuCount = unsyncedItems.filter(i => i.reason === 'no_sku').length;
+  const notTrackedCount = unsyncedItems.filter(i => i.reason === 'not_tracked').length;
+  const notSyncedOnlyCount = unsyncedItems.filter(i => i.reason === 'not_synced').length;
+  
+  return (
+    <Card>
+      <BlockStack gap="400">
+        <InlineStack align="space-between" blockAlign="center">
+          <InlineStack gap="300" blockAlign="center">
+            <Box
+              background="bg-fill-warning"
+              borderRadius="full"
+              padding="200"
+            >
+              <Icon source={AlertCircleIcon} tone="warning" />
+            </Box>
+            <BlockStack gap="050">
+              <Text as="h2" variant="headingMd">
+                {t('productsToVerify', { count: unsyncedCount })}
+              </Text>
+              <Text as="p" variant="bodySm" tone="subdued">
+                {t('cannotSync')}
+              </Text>
+            </BlockStack>
+          </InlineStack>
+          <Button
+            onClick={() => navigate('/unsynced')}
+            variant="secondary"
+          >
+            {t('viewDetails')}
+          </Button>
+        </InlineStack>
+        
+        {/* Quick summary badges */}
+        <InlineStack gap="200" wrap>
+          {noSkuCount > 0 && (
+            <Box background="bg-fill-critical-secondary" paddingInline="200" paddingBlock="100" borderRadius="full">
+              <Text as="span" variant="bodySm">❌ {noSkuCount} {t('noSku')}</Text>
+            </Box>
+          )}
+          {notTrackedCount > 0 && (
+            <Box background="bg-fill-warning-secondary" paddingInline="200" paddingBlock="100" borderRadius="full">
+              <Text as="span" variant="bodySm">📦 {notTrackedCount} {t('notTracked')}</Text>
+            </Box>
+          )}
+          {notSyncedOnlyCount > 0 && (
+            <Box background="bg-fill-info-secondary" paddingInline="200" paddingBlock="100" borderRadius="full">
+              <Text as="span" variant="bodySm">⏳ {notSyncedOnlyCount} {t('toSync')}</Text>
+            </Box>
+          )}
+        </InlineStack>
+      </BlockStack>
+    </Card>
+  );
+};
 
 export const DashboardPage = () => {
   const navigate = useNavigate();
@@ -75,9 +134,15 @@ export const DashboardPage = () => {
   const [, getSupabaseStats] = useAction(api.getSupabaseStats);
   const [, getShopLocations] = useAction(api.getShopLocations);
 
-  // Load selected location name
+  // Memoize filter to prevent unnecessary re-renders (React #310 fix)
+  const locationFilter = useMemo(() => {
+    if (!shop?.defaultLocationId) return undefined;
+    return { id: { equals: shop.defaultLocationId } };
+  }, [shop?.defaultLocationId]);
+
+  // Load selected location name - always call hook, use pause for conditional behavior
   const [{ data: selectedLocation }] = useFindFirst(api.shopifyLocation, {
-    filter: shop?.defaultLocationId ? { id: { equals: shop.defaultLocationId } } : undefined,
+    filter: locationFilter,
     select: { id: true, name: true },
     pause: !shop?.defaultLocationId
   });
@@ -461,63 +526,14 @@ export const DashboardPage = () => {
 
 
             {/* SKUs not synced - Summary card with link to details */}
-            {isConnected && unsyncedCount > 0 && (() => {
-              // Group items by reason for summary
-              const noSkuCount = unsyncedItems.filter(i => i.reason === 'no_sku').length;
-              const notTrackedCount = unsyncedItems.filter(i => i.reason === 'not_tracked').length;
-              const notSyncedOnlyCount = unsyncedItems.filter(i => i.reason === 'not_synced').length;
-              
-              return (
-                <Card>
-                  <BlockStack gap="400">
-                    <InlineStack align="space-between" blockAlign="center">
-                      <InlineStack gap="300" blockAlign="center">
-                        <Box
-                          background="bg-fill-warning"
-                          borderRadius="full"
-                          padding="200"
-                        >
-                          <Icon source={AlertCircleIcon} tone="warning" />
-                        </Box>
-                        <BlockStack gap="050">
-                          <Text as="h2" variant="headingMd">
-                            {t('productsToVerify', { count: unsyncedCount })}
-                          </Text>
-                          <Text as="p" variant="bodySm" tone="subdued">
-                            {t('cannotSync')}
-                          </Text>
-                        </BlockStack>
-                      </InlineStack>
-                      <Button
-                        onClick={() => navigate('/unsynced')}
-                        variant="secondary"
-                      >
-                        {t('viewDetails')}
-                      </Button>
-                    </InlineStack>
-                    
-                    {/* Quick summary badges */}
-                    <InlineStack gap="200" wrap>
-                      {noSkuCount > 0 && (
-                        <Box background="bg-fill-critical-secondary" paddingInline="200" paddingBlock="100" borderRadius="full">
-                          <Text as="span" variant="bodySm">❌ {noSkuCount} {t('noSku')}</Text>
-                        </Box>
-                      )}
-                      {notTrackedCount > 0 && (
-                        <Box background="bg-fill-warning-secondary" paddingInline="200" paddingBlock="100" borderRadius="full">
-                          <Text as="span" variant="bodySm">📦 {notTrackedCount} {t('notTracked')}</Text>
-                        </Box>
-                      )}
-                      {notSyncedOnlyCount > 0 && (
-                        <Box background="bg-fill-info-secondary" paddingInline="200" paddingBlock="100" borderRadius="full">
-                          <Text as="span" variant="bodySm">⏳ {notSyncedOnlyCount} {t('toSync')}</Text>
-                        </Box>
-                      )}
-                    </InlineStack>
-                  </BlockStack>
-                </Card>
-              );
-            })()}
+            {isConnected && unsyncedCount > 0 && (
+              <UnsyncedSummaryCard 
+                unsyncedItems={unsyncedItems}
+                unsyncedCount={unsyncedCount}
+                t={t}
+                navigate={navigate}
+              />
+            )}
 
             {/* All synced success */}
             {isConnected && unsyncedCount <= 0 && syncedCount > 0 && (

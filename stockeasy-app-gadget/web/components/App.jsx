@@ -1,3 +1,4 @@
+import React, { useEffect, useMemo } from "react";
 import {
   AppType,
   Provider as GadgetProvider,
@@ -5,7 +6,6 @@ import {
 } from "@gadgetinc/react-shopify-app-bridge";
 import { useFindFirst } from "@gadgetinc/react";
 import { Box, Card, Page, Spinner, Text } from "@shopify/polaris";
-import { useEffect } from "react";
 import {
   Outlet,
   Route,
@@ -90,20 +90,28 @@ function EmbeddedApp() {
  * 
  * DEV MODE: Bypasses billing check in development environment
  * This allows testing without configuring Shopify distribution
+ * 
+ * IMPORTANT: To avoid React #310 error, we must:
+ * 1. Always call the same hooks in the same order
+ * 2. Never return early before all hooks are called
+ * 3. Use conditional rendering at the END, not early returns
  */
 function SubscriptionGuard({ children }) {
   const navigate = useNavigate();
   const { t } = useTranslations();
   
-  // Check if we're in development mode - bypass billing entirely
-  // Use useMemo-like pattern to keep this stable
-  const isDevelopment = typeof window !== 'undefined' && (
-    window.location.hostname.includes("--development") ||
-    window.location.hostname.includes("localhost") ||
-    process.env.NODE_ENV === "development"
-  );
+  // Check if we're in development mode - computed once, stable reference
+  // Using useMemo to ensure stability across renders
+  const isDevelopment = useMemo(() => {
+    if (typeof window === 'undefined') return false;
+    return (
+      window.location.hostname.includes("--development") ||
+      window.location.hostname.includes("localhost") ||
+      process.env.NODE_ENV === "development"
+    );
+  }, []);
   
-  // Get current shop's subscription status - ALWAYS call this hook
+  // Get current shop's subscription status - ALWAYS call this hook regardless of isDevelopment
   const [{ data: shop, fetching }] = useFindFirst(api.shopifyShop, {
     select: {
       id: true,
@@ -112,6 +120,18 @@ function SubscriptionGuard({ children }) {
     },
   });
 
+  // Compute subscription status - stable calculation
+  const subscriptionCheck = useMemo(() => {
+    const hasActiveSubscription = shop?.subscriptionStatus === "active" || shop?.subscriptionStatus === "trial";
+    const now = new Date();
+    const trialEnds = shop?.trialEndsAt ? new Date(shop.trialEndsAt) : null;
+    const isInValidTrial = trialEnds && now < trialEnds;
+    const isAllowed = hasActiveSubscription || isInValidTrial;
+    
+    return { hasActiveSubscription, isInValidTrial, isAllowed };
+  }, [shop?.subscriptionStatus, shop?.trialEndsAt]);
+
+  // Handle redirect in useEffect - always called
   useEffect(() => {
     // In development mode, skip billing check entirely
     if (isDevelopment) {
@@ -121,27 +141,21 @@ function SubscriptionGuard({ children }) {
     
     if (fetching) return;
     
-    // Check if subscription is valid
-    const hasActiveSubscription = shop?.subscriptionStatus === "active" || shop?.subscriptionStatus === "trial";
-    
-    // Also check if in trial period (even if status hasn't updated yet)
-    const now = new Date();
-    const trialEnds = shop?.trialEndsAt ? new Date(shop.trialEndsAt) : null;
-    const isInValidTrial = trialEnds && now < trialEnds;
-    
-    if (!hasActiveSubscription && !isInValidTrial) {
+    if (!subscriptionCheck.isAllowed) {
       // Redirect to billing page
       navigate("/billing", { replace: true });
     }
-  }, [shop, fetching, navigate, isDevelopment]);
+  }, [fetching, navigate, isDevelopment, subscriptionCheck.isAllowed]);
 
-  // In development mode, allow access immediately
-  if (isDevelopment) {
-    return children;
-  }
+  // ALL HOOKS CALLED ABOVE THIS LINE
+  // Now we can do conditional rendering safely
 
-  // Show loading while checking subscription
-  if (fetching) {
+  // Determine what to render based on state
+  const shouldShowLoading = !isDevelopment && fetching;
+  const shouldShowContent = isDevelopment || (!fetching && subscriptionCheck.isAllowed);
+  const shouldShowNothing = !isDevelopment && !fetching && !subscriptionCheck.isAllowed;
+
+  if (shouldShowLoading) {
     return (
       <Box padding="800">
         <div style={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: "200px" }}>
@@ -151,16 +165,11 @@ function SubscriptionGuard({ children }) {
     );
   }
 
-  // Check subscription status
-  const hasActiveSubscription = shop?.subscriptionStatus === "active" || shop?.subscriptionStatus === "trial";
-  const now = new Date();
-  const trialEnds = shop?.trialEndsAt ? new Date(shop.trialEndsAt) : null;
-  const isInValidTrial = trialEnds && now < trialEnds;
-
-  if (!hasActiveSubscription && !isInValidTrial) {
+  if (shouldShowNothing) {
     return null; // Will redirect in useEffect
   }
 
+  // shouldShowContent is true - render children
   return children;
 }
 
