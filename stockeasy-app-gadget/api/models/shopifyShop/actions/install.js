@@ -59,20 +59,27 @@ export const onSuccess = async ({ params, record, logger, api, connections }) =>
   if (!companyId) {
     // Company doesn't exist yet - create it!
     try {
+      // IMPORTANT: Use myshopifyDomain as the unique identifier (guaranteed to be unique)
+      // This must match the lookup in syncOrderToSupabase and other sync actions
+      const shopifyShopId = record.myshopifyDomain || record.domain;
+      
       // Get shop owner email and name from Shopify
-      const shopOwnerEmail = record.email || record.shopOwner || `${record.domain.replace('.myshopify.com', '')}@shopify-placeholder.com`;
+      const shopOwnerEmail = record.email || record.shopOwner || `${shopifyShopId.replace('.myshopify.com', '')}@shopify-placeholder.com`;
       const shopOwnerName = record.shopOwner || null;
 
       logger.info({ 
         shopId: record.id, 
+        myshopifyDomain: record.myshopifyDomain,
         domain: record.domain,
+        shopifyShopIdUsed: shopifyShopId,
         email: shopOwnerEmail, 
         name: shopOwnerName 
       }, '🏢 Creating Supabase user and company for new shop installation');
 
       // Create user and company in Supabase
+      // CRITICAL: Use myshopifyDomain for consistent lookup across all sync actions
       const { userId, companyId: newCompanyId } = await createShopifyUserAndCompany(
-        record.domain,      // shopifyShopId
+        shopifyShopId,      // shopifyShopId - MUST be myshopifyDomain for consistency
         shopOwnerEmail,     // shopOwnerEmail  
         record.name,        // shopName
         shopOwnerName       // shopOwnerName
@@ -95,8 +102,8 @@ export const onSuccess = async ({ params, record, logger, api, connections }) =>
         operation: 'create',
         direction: 'shopify_to_stockeasy',
         status: 'success',
-        message: `Created Supabase user and company for ${record.domain}`,
-        payload: { userId, companyId }
+        message: `Created Supabase user and company for ${shopifyShopId}`,
+        payload: { userId, companyId, shopifyShopId }
       });
 
       // ═══════════════════════════════════════════════════════════════════════════
