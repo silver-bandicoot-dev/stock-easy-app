@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo } from "react";
+import React, { useEffect } from "react";
 import {
   AppType,
   Provider as GadgetProvider,
@@ -86,32 +86,21 @@ function EmbeddedApp() {
 
 /**
  * SubscriptionGuard - Redirects to billing page if no active subscription
- * Allows access if subscription is active or in trial period
  * 
- * DEV MODE: Bypasses billing check in development environment
- * This allows testing without configuring Shopify distribution
- * 
- * IMPORTANT: To avoid React #310 error, we must:
- * 1. Always call the same hooks in the same order
- * 2. Never return early before all hooks are called
- * 3. Use conditional rendering at the END, not early returns
+ * SIMPLIFIED VERSION to debug React #310 error
+ * This version always renders children but handles subscription check via useEffect redirect
  */
 function SubscriptionGuard({ children }) {
   const navigate = useNavigate();
-  const { t } = useTranslations();
   
-  // Check if we're in development mode - computed once, stable reference
-  // Using useMemo to ensure stability across renders
-  const isDevelopment = useMemo(() => {
-    if (typeof window === 'undefined') return false;
-    return (
-      window.location.hostname.includes("--development") ||
-      window.location.hostname.includes("localhost") ||
-      process.env.NODE_ENV === "development"
-    );
-  }, []);
+  // Check if we're in development mode
+  const isDevelopment = typeof window !== 'undefined' && (
+    window.location.hostname.includes("--development") ||
+    window.location.hostname.includes("localhost") ||
+    process.env.NODE_ENV === "development"
+  );
   
-  // Get current shop's subscription status - ALWAYS call this hook regardless of isDevelopment
+  // Get current shop's subscription status
   const [{ data: shop, fetching }] = useFindFirst(api.shopifyShop, {
     select: {
       id: true,
@@ -120,20 +109,8 @@ function SubscriptionGuard({ children }) {
     },
   });
 
-  // Compute subscription status - stable calculation
-  const subscriptionCheck = useMemo(() => {
-    const hasActiveSubscription = shop?.subscriptionStatus === "active" || shop?.subscriptionStatus === "trial";
-    const now = new Date();
-    const trialEnds = shop?.trialEndsAt ? new Date(shop.trialEndsAt) : null;
-    const isInValidTrial = trialEnds && now < trialEnds;
-    const isAllowed = hasActiveSubscription || isInValidTrial;
-    
-    return { hasActiveSubscription, isInValidTrial, isAllowed };
-  }, [shop?.subscriptionStatus, shop?.trialEndsAt]);
-
-  // Handle redirect in useEffect - always called
+  // Handle redirect in useEffect only
   useEffect(() => {
-    // In development mode, skip billing check entirely
     if (isDevelopment) {
       console.log("🔧 DEV MODE: Billing check bypassed");
       return;
@@ -141,35 +118,29 @@ function SubscriptionGuard({ children }) {
     
     if (fetching) return;
     
-    if (!subscriptionCheck.isAllowed) {
-      // Redirect to billing page
+    const hasActiveSubscription = shop?.subscriptionStatus === "active" || shop?.subscriptionStatus === "trial";
+    const now = new Date();
+    const trialEnds = shop?.trialEndsAt ? new Date(shop.trialEndsAt) : null;
+    const isInValidTrial = trialEnds && now < trialEnds;
+    
+    if (!hasActiveSubscription && !isInValidTrial) {
       navigate("/billing", { replace: true });
     }
-  }, [fetching, navigate, isDevelopment, subscriptionCheck.isAllowed]);
+  }, [shop, fetching, navigate, isDevelopment]);
 
-  // ALL HOOKS CALLED ABOVE THIS LINE
-  // Now we can do conditional rendering safely
-
-  // Determine what to render based on state
-  const shouldShowLoading = !isDevelopment && fetching;
-  const shouldShowContent = isDevelopment || (!fetching && subscriptionCheck.isAllowed);
-  const shouldShowNothing = !isDevelopment && !fetching && !subscriptionCheck.isAllowed;
-
-  if (shouldShowLoading) {
+  // In production, show loading spinner while checking subscription
+  // But ALWAYS render the same component structure to avoid hook count changes
+  if (!isDevelopment && fetching) {
     return (
       <Box padding="800">
         <div style={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: "200px" }}>
-          <Spinner accessibilityLabel={t('loading')} size="large" />
+          <Spinner accessibilityLabel="Loading..." size="large" />
         </div>
       </Box>
     );
   }
 
-  if (shouldShowNothing) {
-    return null; // Will redirect in useEffect
-  }
-
-  // shouldShowContent is true - render children
+  // Always render children - redirect happens via useEffect if needed
   return children;
 }
 
