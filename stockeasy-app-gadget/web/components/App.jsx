@@ -87,10 +87,8 @@ function EmbeddedApp() {
 /**
  * SubscriptionGuard - Redirects to billing page if no active subscription
  * 
- * CRITICAL FIX for React #310 error:
- * - Always render children to maintain consistent hook count
- * - Show loading overlay instead of replacing children
- * - This ensures hooks in children are always called in the same order
+ * FIXED VERSION - Removes conditional rendering entirely
+ * No spinner, no conditional returns - just always render children
  */
 function SubscriptionGuard({ children }) {
   const navigate = useNavigate();
@@ -102,21 +100,19 @@ function SubscriptionGuard({ children }) {
     process.env.NODE_ENV === "development"
   );
   
-  // Get current shop's subscription status - ALWAYS call this hook
+  // ALWAYS call this hook - use pause to skip in development
   const [{ data: shop, fetching }] = useFindFirst(api.shopifyShop, {
     select: {
       id: true,
       subscriptionStatus: true,
       trialEndsAt: true,
     },
-    // In development, pause the query to skip billing checks entirely
     pause: isDevelopment
   });
 
   // Handle redirect in useEffect only
   useEffect(() => {
     if (isDevelopment) {
-      console.log("🔧 DEV MODE: Billing check bypassed");
       return;
     }
     
@@ -132,26 +128,8 @@ function SubscriptionGuard({ children }) {
     }
   }, [shop, fetching, navigate, isDevelopment]);
 
-  // CRITICAL FIX: Always render children to maintain consistent hook count
-  // Use CSS to hide children during loading instead of not rendering them
-  const isLoading = !isDevelopment && fetching;
-  
-  return (
-    <>
-      {isLoading && (
-        <Box padding="800">
-          <div style={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: "200px" }}>
-            <Spinner accessibilityLabel="Loading..." size="large" />
-          </div>
-        </Box>
-      )}
-      {/* ALWAYS render children to keep hook count consistent */}
-      {/* Hide visually during loading but keep in DOM so hooks are called */}
-      <div style={{ display: isLoading ? 'none' : 'block' }}>
-        {children}
-      </div>
-    </>
-  );
+  // ALWAYS render children - no conditional rendering at all
+  return children;
 }
 
 function AuthenticatedApp() {
