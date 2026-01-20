@@ -316,7 +316,11 @@ export const DashboardPage = () => {
 
     setGeneratingLink(true);
     try {
-      const result = await generateMagicLink({ email: shop.email });
+      const result = await generateMagicLink({ 
+        email: shop.email,
+        shopName: shop.name,
+        shopifyShopId: shop.myshopifyDomain
+      });
       
       if (result?.data?.success && result?.data?.magicLinkUrl) {
         // Redirect to Magic Link
@@ -330,7 +334,7 @@ export const DashboardPage = () => {
       shopify.toast.show(t('magicLinkError'), { isError: true });
       setGeneratingLink(false);
     }
-  }, [shop?.email, generateMagicLink, t]);
+  }, [shop?.email, shop?.name, shop?.myshopifyDomain, generateMagicLink, t]);
 
   // Loading state
   if (shopFetching || statsLoading) {

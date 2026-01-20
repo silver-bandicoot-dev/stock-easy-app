@@ -3,11 +3,12 @@ import { getSupabaseClient } from "../lib/supabase";
 /**
  * Generates a Magic Link URL for a Shopify shop owner to login to Stockeasy.
  * Uses Supabase Admin API to generate the link directly without sending email.
+ * If the user doesn't exist, creates them first.
  */
 export const run = async ({ params, logger }) => {
-  const { email } = params;
+  const { email, shopName, shopifyShopId } = params;
   
-  logger.info({ email }, '🔗 Generating Magic Link');
+  logger.info({ email, shopName, shopifyShopId }, '🔗 Generating Magic Link');
   
   if (!email) {
     return { success: false, message: 'Email is required' };
@@ -16,8 +17,38 @@ export const run = async ({ params, logger }) => {
   try {
     const supabase = getSupabaseClient();
     
-    // Use Admin API to generate Magic Link URL directly
-    // This requires SERVICE_ROLE_KEY which we have in getSupabaseClient
+    // First check if user exists
+    const { data: existingUsers, error: listError } = await supabase.auth.admin.listUsers();
+    
+    if (listError) {
+      logger.error({ error: listError.message }, '❌ Failed to check existing users');
+    }
+    
+    const userExists = existingUsers?.users?.some(u => u.email?.toLowerCase() === email.toLowerCase());
+    
+    if (!userExists) {
+      logger.info({ email }, '👤 User does not exist, creating...');
+      
+      // Create user first with a random password (they'll use magic link)
+      const { data: newUser, error: createError } = await supabase.auth.admin.createUser({
+        email: email,
+        email_confirm: true, // Auto-confirm email
+        user_metadata: {
+          source: 'shopify_magic_link',
+          shop_name: shopName || null,
+          shopify_shop_id: shopifyShopId || null
+        }
+      });
+      
+      if (createError) {
+        logger.error({ error: createError.message }, '❌ Failed to create user');
+        return { success: false, message: `User creation failed: ${createError.message}` };
+      }
+      
+      logger.info({ userId: newUser?.user?.id }, '✅ User created');
+    }
+    
+    // Now generate Magic Link
     const { data, error } = await supabase.auth.admin.generateLink({
       type: 'magiclink',
       email: email,
@@ -32,7 +63,7 @@ export const run = async ({ params, logger }) => {
     }
 
     if (!data?.properties?.action_link) {
-      logger.error('❌ No action_link in response');
+      logger.error({ data }, '❌ No action_link in response');
       return { success: false, message: 'Failed to generate Magic Link - no URL returned' };
     }
 
@@ -46,13 +77,15 @@ export const run = async ({ params, logger }) => {
     };
 
   } catch (error) {
-    logger.error({ error: error.message }, '❌ Error generating Magic Link');
+    logger.error({ error: error.message, stack: error.stack }, '❌ Error generating Magic Link');
     return { success: false, message: error.message };
   }
 };
 
 export const params = {
-  email: { type: "string" }
+  email: { type: "string" },
+  shopName: { type: "string", required: false },
+  shopifyShopId: { type: "string", required: false }
 };
 
 export const options = {
