@@ -52,6 +52,8 @@ export const translations = {
     connectToStockeasy: "Connecter à Stockeasy",
     autoSyncInfo: "Les modifications Shopify sont synchronisées automatiquement",
     allSynced: "✅ Tous vos SKUs Shopify sont synchronisés avec Stockeasy !",
+    emailNotFound: "Email de la boutique non trouvé",
+    magicLinkError: "Erreur lors de la génération du lien de connexion",
     
     // Products to verify
     productsToVerify: "{{count}} produit(s) à vérifier",
@@ -185,6 +187,8 @@ export const translations = {
     connectToStockeasy: "Connect to Stockeasy",
     autoSyncInfo: "Shopify changes are automatically synced",
     allSynced: "✅ All your Shopify SKUs are synced with Stockeasy!",
+    emailNotFound: "Shop email not found",
+    magicLinkError: "Error generating login link",
     
     // Products to verify
     productsToVerify: "{{count}} product(s) to verify",
@@ -318,6 +322,8 @@ export const translations = {
     connectToStockeasy: "Conectar a Stockeasy",
     autoSyncInfo: "Los cambios de Shopify se sincronizan automáticamente",
     allSynced: "✅ ¡Todos tus SKUs de Shopify están sincronizados con Stockeasy!",
+    emailNotFound: "Email de la tienda no encontrado",
+    magicLinkError: "Error al generar el enlace de inicio de sesión",
     
     // Products to verify
     productsToVerify: "{{count}} producto(s) a verificar",

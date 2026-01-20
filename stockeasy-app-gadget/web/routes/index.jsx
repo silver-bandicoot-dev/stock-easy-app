@@ -91,6 +91,7 @@ export const DashboardPage = () => {
   const [connecting, setConnecting] = useState(false);
   const [disconnecting, setDisconnecting] = useState(false);
   const [syncing, setSyncing] = useState(false);
+  const [generatingLink, setGeneratingLink] = useState(false);
   const [supabaseStats, setSupabaseStats] = useState({ 
     syncedSkus: 0, 
     totalProducts: 0, 
@@ -133,6 +134,7 @@ export const DashboardPage = () => {
   const [, updateShop] = useAction(api.shopifyShop.update);
   const [, getSupabaseStats] = useAction(api.getSupabaseStats);
   const [, getShopLocations] = useAction(api.getShopLocations);
+  const [, generateMagicLink] = useAction(api.generateMagicLink);
 
   // Memoize filter to prevent unnecessary re-renders (React #310 fix)
   const locationFilter = useMemo(() => {
@@ -305,8 +307,30 @@ export const DashboardPage = () => {
     }
   }, [shop?.id, loadSupabaseStats, t]);
 
-  // Build Stockeasy dashboard URL
-  const stockeasyUrl = 'https://stock-easy-app.vercel.app';
+  // Handle opening Stockeasy with Magic Link
+  const handleOpenStockeasy = useCallback(async () => {
+    if (!shop?.email) {
+      shopify.toast.show(t('emailNotFound'), { isError: true });
+      return;
+    }
+
+    setGeneratingLink(true);
+    try {
+      const result = await generateMagicLink({ email: shop.email });
+      
+      if (result?.data?.success && result?.data?.magicLinkUrl) {
+        // Redirect to Magic Link
+        window.location.href = result.data.magicLinkUrl;
+      } else {
+        shopify.toast.show(result?.data?.message || t('magicLinkError'), { isError: true });
+        setGeneratingLink(false);
+      }
+    } catch (error) {
+      console.error('Error generating Magic Link:', error);
+      shopify.toast.show(t('magicLinkError'), { isError: true });
+      setGeneratingLink(false);
+    }
+  }, [shop?.email, generateMagicLink, t]);
 
   // Loading state
   if (shopFetching || statsLoading) {
@@ -559,8 +583,8 @@ export const DashboardPage = () => {
                     variant="primary"
                     size="large"
                     icon={ExternalIcon}
-                    url={stockeasyUrl}
-                    external
+                    onClick={handleOpenStockeasy}
+                    loading={generatingLink}
                     fullWidth
                   >
                     {t('openStockeasy')}
