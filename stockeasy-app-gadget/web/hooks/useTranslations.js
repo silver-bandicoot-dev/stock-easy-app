@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { translations } from '../locales';
 
 const SUPPORTED_LANGUAGES = ['fr', 'en', 'es'];
@@ -11,13 +11,10 @@ const STORAGE_KEY = 'stockeasy_shopify_lang';
 const safeStorage = {
   getItem: (key) => {
     try {
-      // Check if we're in a secure context first
       if (typeof window === 'undefined') return null;
       if (!window.localStorage) return null;
       return window.localStorage.getItem(key);
     } catch (e) {
-      // SecurityError in cross-origin iframe
-      console.warn('localStorage not available:', e.message);
       return null;
     }
   },
@@ -27,23 +24,22 @@ const safeStorage = {
       if (!window.localStorage) return;
       window.localStorage.setItem(key, value);
     } catch (e) {
-      console.warn('localStorage not available:', e.message);
+      // ignore
     }
   }
 };
 
 /**
  * Detect the best language to use
- * Priority: localStorage > Shopify locale > navigator language > default
  */
 const detectLanguage = () => {
-  // 1. Check localStorage (safe)
+  // 1. Check localStorage
   const stored = safeStorage.getItem(STORAGE_KEY);
   if (stored && SUPPORTED_LANGUAGES.includes(stored)) {
     return stored;
   }
 
-  // 2. Try to get Shopify locale from shopify global
+  // 2. Try Shopify locale
   try {
     if (typeof window !== 'undefined' && window.shopify?.config?.locale) {
       const shopifyLang = window.shopify.config.locale.split('-')[0];
@@ -51,11 +47,9 @@ const detectLanguage = () => {
         return shopifyLang;
       }
     }
-  } catch (e) {
-    // shopify not available
-  }
+  } catch (e) {}
 
-  // 3. Check navigator language (safe)
+  // 3. Check navigator language
   try {
     if (typeof navigator !== 'undefined' && navigator.language) {
       const navLang = navigator.language.split('-')[0];
@@ -63,17 +57,13 @@ const detectLanguage = () => {
         return navLang;
       }
     }
-  } catch (e) {
-    // navigator not available
-  }
+  } catch (e) {}
 
-  // 4. Default
   return DEFAULT_LANGUAGE;
 };
 
 /**
  * Interpolate variables in translation string
- * e.g., "{{count}} items" with {count: 5} => "5 items"
  */
 const interpolate = (str, vars) => {
   if (!str || typeof str !== 'string') return str;
@@ -85,36 +75,24 @@ const interpolate = (str, vars) => {
 };
 
 /**
- * Hook for translations in Stockeasy Shopify App
- * Fixed to avoid React #310 error with useCallback dependencies
+ * SIMPLIFIED Hook for translations - React 19 compatible
+ * Removed useMemo and useRef to avoid React #310 error
  */
 export const useTranslations = () => {
-  const [language, setLanguage] = useState(() => {
-    // Initialize synchronously to avoid hydration mismatch
-    try {
-      return detectLanguage();
-    } catch (e) {
-      return DEFAULT_LANGUAGE;
-    }
-  });
+  const [language, setLanguage] = useState(detectLanguage);
 
-  // Save language preference (safe)
+  // Save language preference
   useEffect(() => {
     safeStorage.setItem(STORAGE_KEY, language);
   }, [language]);
 
-  // Get current translations - use ref to avoid circular dependencies
-  const currentTranslations = useMemo(() => {
-    return translations[language] || translations[DEFAULT_LANGUAGE];
-  }, [language]);
+  // Get current translations directly (no memoization needed for this simple lookup)
+  const currentTranslations = translations[language] || translations[DEFAULT_LANGUAGE];
 
-  // Store translations in ref for stable access in callbacks
-  const translationsRef = useRef(currentTranslations);
-  translationsRef.current = currentTranslations;
-
-  // Translation function - stable reference using ref
+  // Translation function - include language in deps to update when language changes
   const t = useCallback((key, vars) => {
-    const value = translationsRef.current[key];
+    const trans = translations[language] || translations[DEFAULT_LANGUAGE];
+    const value = trans[key];
     
     if (value === undefined) {
       console.warn(`Translation missing: ${key}`);
@@ -122,7 +100,7 @@ export const useTranslations = () => {
     }
     
     return interpolate(value, vars);
-  }, []); // No dependencies - uses ref for stable access
+  }, [language]);
 
   // Change language
   const changeLanguage = useCallback((newLang) => {
@@ -131,9 +109,9 @@ export const useTranslations = () => {
     }
   }, []);
 
-  // Format time ago with translations - stable reference
+  // Format time ago
   const formatTimeAgo = useCallback((date) => {
-    const trans = translationsRef.current;
+    const trans = translations[language] || translations[DEFAULT_LANGUAGE];
     
     if (!date) return trans.never || 'Never';
     
@@ -150,7 +128,7 @@ export const useTranslations = () => {
     }
     const count = Math.floor(seconds / 86400);
     return interpolate(trans.daysAgo, { count }) || `${count} day(s) ago`;
-  }, []); // No dependencies - uses ref for stable access
+  }, [language]);
 
   return {
     t,
