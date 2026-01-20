@@ -134,6 +134,7 @@ export const permissions: GadgetPermissions = {
         cancelSubscription: true,
         connectShopToCompany: true,
         createSubscription: true,
+        generateMagicLink: true,
         getShopLocations: true,
         getSubscriptionStatus: true,
         getSupabaseStats: true,
