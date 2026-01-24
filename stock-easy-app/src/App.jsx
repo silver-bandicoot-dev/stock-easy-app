@@ -8,6 +8,7 @@ import { Toaster } from 'sonner';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import SupabaseLogin from './components/auth/SupabaseLogin';
 import SupabaseResetPassword from './components/auth/SupabaseResetPassword';
+import SetupPassword from './components/auth/SetupPassword';
 import AcceptInvitation from './components/auth/AcceptInvitation';
 import EmailConfirmation from './components/auth/EmailConfirmation';
 import NotificationsPage from './components/notifications/NotificationsPage';
@@ -67,6 +68,7 @@ const App = () => {
               {/* Public Routes - Sans Sentry */}
               <Route path="/login" element={<SupabaseLogin />} />
               <Route path="/forgot-password" element={<SupabaseResetPassword />} />
+              <Route path="/setup-password" element={<SetupPassword />} />
               <Route path="/confirm-email" element={<EmailConfirmation />} />
               
               {/* Invitation Route - Protected avec Sentry */}

@@ -2,12 +2,17 @@ import { getSupabaseClient } from "../lib/supabase";
 
 /**
  * Generates a Magic Link URL for a Shopify shop owner to login to Stockeasy.
- * Creates user if doesn't exist, then generates magic link.
+ * 
+ * Uses custom SQL RPCs to bypass Supabase Auth Admin API issues.
+ * 
+ * BEHAVIOR:
+ * - If user has password_configured: true → Generate Magic Link for instant login
+ * - If user doesn't have password configured → Generate recovery link to setup password
  */
-export const run = async ({ params, logger }) => {
+export const run = async ({ params, logger, api }) => {
   const { email, shopName, shopifyShopId } = params;
   
-  logger.info({ email, shopName, shopifyShopId }, '🔗 Generating Magic Link');
+  logger.info({ email, shopName, shopifyShopId }, '🔗 Processing login request');
   
   if (!email) {
     return { success: false, message: 'Email is required' };
@@ -16,73 +21,88 @@ export const run = async ({ params, logger }) => {
   try {
     const supabase = getSupabaseClient();
     
-    // First, try to generate magic link directly
-    let { data, error } = await supabase.auth.admin.generateLink({
-      type: 'magiclink',
-      email: email,
-      options: {
-        redirectTo: 'https://stockeasy.app/app'
+    // Check if user exists and has password configured (via RPC)
+    const { data: userStatus, error: statusError } = await supabase.rpc('get_user_auth_status', {
+      p_email: email
+    });
+    
+    if (statusError) {
+      logger.error({ error: statusError.message }, '❌ Failed to check user status');
+      return { success: false, message: statusError.message };
+    }
+    
+    const existingUser = userStatus && userStatus.length > 0 ? userStatus[0] : null;
+    const hasPasswordConfigured = existingUser?.has_password_configured === true;
+    
+    logger.info({ 
+      email, 
+      userExists: !!existingUser, 
+      hasPasswordConfigured 
+    }, '👤 User status check');
+
+    // CASE 1: User has password configured → Generate Magic Link
+    if (existingUser && hasPasswordConfigured) {
+      logger.info({ email }, '🔗 User has password, generating Magic Link...');
+      
+      const { data: magicData, error: magicError } = await supabase.rpc('generate_magic_link', {
+        p_email: email
+      });
+
+      if (magicError) {
+        logger.error({ error: magicError.message }, '❌ Failed to generate Magic Link');
+        return { success: false, message: magicError.message };
       }
+
+      if (!magicData || magicData.length === 0 || !magicData[0].magic_link) {
+        logger.error({}, '❌ No magic_link in response');
+        return { success: false, message: 'Failed to generate Magic Link' };
+      }
+
+      logger.info({ email }, '✅ Magic Link generated');
+      return {
+        success: true,
+        magicLinkUrl: magicData[0].magic_link,
+        email: email,
+        action: 'magic_link'
+      };
+    }
+    
+    // CASE 2: User doesn't exist → They need to install the app first
+    if (!existingUser) {
+      logger.warn({ email }, '⚠️ User not found - app may not be installed');
+      return {
+        success: false,
+        message: 'Utilisateur non trouvé. Veuillez d\'abord installer l\'application Shopify.',
+        action: 'user_not_found'
+      };
+    }
+    
+    // CASE 3: User exists but hasn't configured password → Generate recovery link
+    logger.info({ email }, '📧 User needs to configure password, generating recovery link...');
+    
+    const { data: recoveryData, error: recoveryError } = await supabase.rpc('generate_recovery_link', {
+      p_email: email
     });
 
-    // If user doesn't exist, create them first
-    if (error) {
-      logger.info({ email, error: error.message }, '👤 Creating user first...');
-      
-      // Generate a random password (user will use magic link, not password)
-      const randomPassword = crypto.randomUUID() + crypto.randomUUID();
-      
-      // Create user with admin API
-      const { data: newUser, error: createError } = await supabase.auth.admin.createUser({
-        email: email,
-        password: randomPassword,
-        email_confirm: true,
-        user_metadata: {
-          source: 'shopify_magic_link',
-          shop_name: shopName || null,
-          shopify_shop_id: shopifyShopId || null
-        }
-      });
-      
-      if (createError) {
-        // If user already exists, that's fine - continue to generate magic link
-        if (!createError.message.includes('already been registered')) {
-          logger.error({ error: createError.message }, '❌ Failed to create user');
-          return { success: false, message: createError.message };
-        }
-        logger.info({ email }, '👤 User already exists, continuing...');
-      } else {
-        logger.info({ userId: newUser?.user?.id }, '✅ User created');
-      }
-      
-      // Now try magic link again
-      const retry = await supabase.auth.admin.generateLink({
-        type: 'magiclink',
-        email: email,
-        options: {
-          redirectTo: 'https://stockeasy.app/app'
-        }
-      });
-      
-      data = retry.data;
-      error = retry.error;
+    if (recoveryError) {
+      logger.error({ error: recoveryError.message }, '❌ Failed to generate recovery link');
+      return { success: false, message: recoveryError.message };
     }
 
-    if (error) {
-      logger.error({ error: error.message }, '❌ Failed to generate Magic Link');
-      return { success: false, message: error.message };
+    if (!recoveryData || recoveryData.length === 0 || !recoveryData[0].recovery_link) {
+      logger.error({}, '❌ No recovery_link in response');
+      return { success: false, message: 'Failed to generate recovery link' };
     }
 
-    if (!data?.properties?.action_link) {
-      logger.error({ data: JSON.stringify(data) }, '❌ No action_link in response');
-      return { success: false, message: 'Failed to generate Magic Link' };
-    }
-
-    logger.info({ email }, '✅ Magic Link generated');
+    logger.info({ email }, '✅ Recovery link generated');
+    
+    // Return the recovery link directly so user can configure password
     return {
       success: true,
-      magicLinkUrl: data.properties.action_link,
-      email: email
+      magicLinkUrl: recoveryData[0].recovery_link,
+      email: email,
+      action: 'setup_password',
+      message: 'Vous allez être redirigé pour configurer votre mot de passe.'
     };
 
   } catch (error) {

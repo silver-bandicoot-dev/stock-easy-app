@@ -158,14 +158,18 @@ export const createShopifyUserAndCompany = async (shopifyShopId, shopOwnerEmail,
 
     console.log(`[createShopifyUserAndCompany] User created successfully: ${userId}`);
 
-    // 2. Create the company (RPC signature: p_shopify_shop_id, p_shop_name, p_shop_domain, p_access_token)
+    // 2. Create the company with owner_id
     const extractedShopName = shopName || shopifyShopId.replace('.myshopify.com', '');
 
-    console.log(`[createShopifyUserAndCompany] Creating company via RPC...`);
+    console.log(`[createShopifyUserAndCompany] Creating company via RPC with owner_id=${userId}...`);
     const { data: companyId, error: companyError } = await supabase.rpc('create_shopify_company', {
       p_shopify_shop_id: shopifyShopId,
+      p_owner_id: userId,
       p_shop_name: extractedShopName,
-      p_shop_domain: shopifyShopId
+      p_shop_domain: shopifyShopId,
+      p_owner_email: shopOwnerEmail,
+      p_owner_first_name: shopOwnerName ? shopOwnerName.split(' ')[0] : null,
+      p_owner_last_name: shopOwnerName ? shopOwnerName.split(' ').slice(1).join(' ') || null : null
     });
 
     if (companyError) {
@@ -178,20 +182,7 @@ export const createShopifyUserAndCompany = async (shopifyShopId, shopOwnerEmail,
       throw new Error('RPC create_shopify_company returned no company ID - function may not exist or returned null');
     }
 
-    console.log(`[createShopifyUserAndCompany] Company created successfully: ${companyId}`);
-
-    // 3. Update company with owner_id
-    const { error: updateError } = await supabase
-      .from('companies')
-      .update({ owner_id: userId })
-      .eq('id', companyId);
-
-    if (updateError) {
-      console.warn('[createShopifyUserAndCompany] Failed to set owner_id:', updateError.message);
-      // Non-fatal: company was created, owner_id is optional
-    } else {
-      console.log(`[createShopifyUserAndCompany] Set owner_id=${userId} on company ${companyId}`);
-    }
+    console.log(`[createShopifyUserAndCompany] Company created successfully: ${companyId} with owner_id=${userId}`);
 
     return { userId, companyId };
   } catch (error) {

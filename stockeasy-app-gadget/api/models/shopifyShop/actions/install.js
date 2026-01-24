@@ -140,18 +140,21 @@ export const onSuccess = async ({ params, record, logger, api, connections }) =>
       });
 
       // ═══════════════════════════════════════════════════════════════════════════
-      // 2b. SEND WELCOME EMAIL WITH PASSWORD SETUP LINK
+      // 2b. SEND INVITATION EMAIL WITH PASSWORD SETUP LINK
       // ═══════════════════════════════════════════════════════════════════════════
       try {
-        logger.info({ email: shopOwnerEmail }, '📧 Sending welcome email to new merchant');
+        logger.info({ email: shopOwnerEmail }, '📧 Sending invitation email to new merchant');
         
-        await api.enqueue(api.sendWelcomeEmail, {
+        // Use sendShopifyInvitation which uses generateLink({ type: 'invite' })
+        // This creates the user AND generates the invitation link in one call
+        await api.enqueue(api.sendShopifyInvitation, {
           email: shopOwnerEmail,
           shopName: record.name || record.domain,
+          shopifyShopId: shopifyShopId,
           ownerName: shopOwnerName
         });
         
-        logger.info({ email: shopOwnerEmail }, '✅ Welcome email enqueued');
+        logger.info({ email: shopOwnerEmail }, '✅ Invitation email enqueued');
         
         await api.syncLog.create({
           shop: { _link: record.id },
@@ -159,11 +162,11 @@ export const onSuccess = async ({ params, record, logger, api, connections }) =>
           operation: 'create',
           direction: 'stockeasy_to_merchant',
           status: 'pending',
-          message: `Welcome email enqueued for ${shopOwnerEmail}`
+          message: `Invitation email enqueued for ${shopOwnerEmail}`
         });
       } catch (emailError) {
         // Don't fail installation if email fails - just log it
-        logger.error({ error: emailError.message }, '⚠️ Failed to send welcome email (non-blocking)');
+        logger.error({ error: emailError.message }, '⚠️ Failed to send invitation email (non-blocking)');
         
         await api.syncLog.create({
           shop: { _link: record.id },
@@ -171,7 +174,7 @@ export const onSuccess = async ({ params, record, logger, api, connections }) =>
           operation: 'create',
           direction: 'stockeasy_to_merchant',
           status: 'error',
-          message: `Failed to send welcome email: ${emailError.message}`
+          message: `Failed to send invitation email: ${emailError.message}`
         });
       }
 

@@ -54,6 +54,8 @@ export const translations = {
     allSynced: "✅ Tous vos SKUs Shopify sont synchronisés avec Stockeasy !",
     emailNotFound: "Email de la boutique non trouvé",
     magicLinkError: "Erreur lors de la génération du lien de connexion",
+    invitationSent: "📧 Un email d'invitation a été envoyé. Veuillez vérifier votre boîte mail pour configurer votre mot de passe.",
+    checkEmail: "📧 Veuillez vérifier votre boîte mail.",
     
     // Products to verify
     productsToVerify: "{{count}} produit(s) à vérifier",
@@ -189,6 +191,8 @@ export const translations = {
     allSynced: "✅ All your Shopify SKUs are synced with Stockeasy!",
     emailNotFound: "Shop email not found",
     magicLinkError: "Error generating login link",
+    invitationSent: "📧 An invitation email has been sent. Please check your inbox to set up your password.",
+    checkEmail: "📧 Please check your email.",
     
     // Products to verify
     productsToVerify: "{{count}} product(s) to verify",
@@ -324,6 +328,8 @@ export const translations = {
     allSynced: "✅ ¡Todos tus SKUs de Shopify están sincronizados con Stockeasy!",
     emailNotFound: "Email de la tienda no encontrado",
     magicLinkError: "Error al generar el enlace de inicio de sesión",
+    invitationSent: "📧 Se ha enviado un correo de invitación. Por favor revisa tu bandeja de entrada para configurar tu contraseña.",
+    checkEmail: "📧 Por favor revisa tu correo electrónico.",
     
     // Products to verify
     productsToVerify: "{{count}} producto(s) a verificar",

@@ -307,7 +307,7 @@ export const DashboardPage = () => {
     }
   }, [shop?.id, loadSupabaseStats, t]);
 
-  // Handle opening Stockeasy with Magic Link
+  // Handle opening Stockeasy with Magic Link or Invitation
   const handleOpenStockeasy = useCallback(async () => {
     if (!shop?.email) {
       shopify.toast.show(t('emailNotFound'), { isError: true });
@@ -322,9 +322,24 @@ export const DashboardPage = () => {
         shopifyShopId: shop.myshopifyDomain
       });
       
-      if (result?.data?.success && result?.data?.magicLinkUrl) {
-        // Redirect to Magic Link
-        window.location.href = result.data.magicLinkUrl;
+      if (result?.data?.success) {
+        // Check if we got a magic link or an invitation was sent
+        if (result?.data?.action === 'magic_link' && result?.data?.magicLinkUrl) {
+          // User has password configured → Redirect to Magic Link
+          window.location.href = result.data.magicLinkUrl;
+        } else if (result?.data?.action === 'invitation_sent') {
+          // User needs to configure password → Show message
+          shopify.toast.show(t('invitationSent'), { duration: 5000 });
+          setGeneratingLink(false);
+        } else {
+          // Fallback for legacy magic link behavior
+          if (result?.data?.magicLinkUrl) {
+            window.location.href = result.data.magicLinkUrl;
+          } else {
+            shopify.toast.show(result?.data?.message || t('checkEmail'), { duration: 5000 });
+            setGeneratingLink(false);
+          }
+        }
       } else {
         shopify.toast.show(result?.data?.message || t('magicLinkError'), { isError: true });
         setGeneratingLink(false);
